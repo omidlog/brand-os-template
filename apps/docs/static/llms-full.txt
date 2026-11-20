@@ -69,7 +69,7 @@ Which brand choices are allowed when a tactic is tempting but off-strategy.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -200,7 +200,7 @@ Which words are allowed, required, or forbidden.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -309,7 +309,7 @@ Which master files are approved and how they may be placed.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -416,7 +416,7 @@ Which roles exist and what contrast bar they must meet.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -521,7 +521,7 @@ Which type is allowed to ship, and under what license.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -629,7 +629,7 @@ Whether a character exists and which anatomical rules are canonical.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -737,7 +737,7 @@ Which states are in the MVP set and how they are named.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -843,7 +843,7 @@ How many stages exist and what continuity must survive a stage change.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -948,7 +948,7 @@ What an illustration is allowed to contain.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1054,7 +1054,7 @@ How a symbol is drawn, named, and exported.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1160,7 +1160,7 @@ How dense a surface may be and what must stay legible.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1266,7 +1266,7 @@ Which components exist, which states they need, and what accessibility bar they 
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1378,7 +1378,7 @@ How things move, and when they must not.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1484,7 +1484,7 @@ Whether sound exists and which rights allow it.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1591,7 +1591,7 @@ What real footage is allowed to look like.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1697,7 +1697,7 @@ Which templates exist and what they may say.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1808,7 +1808,7 @@ What a campaign is allowed to claim and how it is named.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -1917,7 +1917,7 @@ Whether physical production is in scope and which specs are known.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2023,7 +2023,7 @@ Which surfaces are reference implementations.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2130,7 +2130,7 @@ Who may approve, deprecate, and publish.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2240,7 +2240,7 @@ Whether game-like visuals exist and which ethics constraints they carry.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2474,7 +2474,7 @@ What business this is, who it is for, and which claims are safe to repeat.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2607,7 +2607,7 @@ Which channels, messages, and budgets are in the current plan, and which claims 
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2738,7 +2738,7 @@ What is in scope, what is shipped, and what marketing must not imply.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2868,7 +2868,7 @@ What may be promised, discounted, and forecast.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -2997,7 +2997,7 @@ How people are onboarded, helped, and heard.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -3121,7 +3121,7 @@ Ownership, handoffs, and the system of record for work.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -3242,7 +3242,7 @@ Which financial statements are assumptions, and which systems are authoritative.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -3369,7 +3369,7 @@ How the product is built and protected, at the level another team can link to.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -3490,7 +3490,7 @@ Which legal questions are open, and which public claims must wait.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -3614,7 +3614,7 @@ Which bets are hypotheses, and how a result becomes a decision.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -3738,7 +3738,7 @@ What “good” means, and which number is a target rather than an actual.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -3861,7 +3861,7 @@ Which external relationships and risks are real, and what an outsider may be tol
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.
+3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields

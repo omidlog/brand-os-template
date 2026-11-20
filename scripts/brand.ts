@@ -3,7 +3,7 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
-import { applyInit, InterviewEngine } from '@brand-os/brand-core'
+import { applyInit, backupBrand, InterviewEngine, migrateBrand, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
 
 const [command, ...rest] = process.argv.slice(2)
 const root = process.cwd()
@@ -142,8 +142,30 @@ if (command === 'init') {
               ? getSocialTemplate(engine, values.query ?? 'unspecified')
               : getBrandStatus(engine)
   console.log(JSON.stringify(result, null, 2))
+} else if (command === 'backup') {
+  const saved = backupBrand(root)
+  console.log(`Backed up ${saved.files.length} files to ${path.relative(root, saved.directory)}`)
+} else if (command === 'restore') {
+  const { values } = parseArgs({ args: rest, options: { from: { type: 'string' } } })
+  if (!values.from) {
+    console.error('Need --from <backup-directory>.')
+    process.exit(1)
+  }
+  const restored = restoreBrand(root, path.resolve(values.from))
+  console.log(`Restored ${restored.restored.length} files.`)
+} else if (command === 'migrate') {
+  const migrated = migrateBrand(root)
+  console.log(`Migrated ${migrated.from} -> ${migrated.to}. Content files were not rewritten.`)
+} else if (command === 'reset') {
+  const { values } = parseArgs({ args: rest, options: { confirm: { type: 'string' } } })
+  if (values.confirm !== RESET_CONFIRMATION) {
+    console.error(`Refusing reset. Pass --confirm "${RESET_CONFIRMATION}"`)
+    process.exit(1)
+  }
+  const result = resetInterviewState(root, values.confirm)
+  console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query`)
+  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 

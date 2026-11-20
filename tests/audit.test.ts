@@ -89,6 +89,7 @@ test('approved public claims are published and a private brand cannot build publ
   engine.submit('Published Example')
   const proof = ensureApprovalSecret(root)
   assert.equal(engine.approve('business.identity.trade_name', 'owner', proof).status, 'approved')
+  assert.equal(engine.publishFact('business.identity.trade_name', proof).kind, 'recorded')
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'brand/brand-manifest.json'), 'utf8')) as { name: string; slug: string }
   assert.equal(manifest.name, 'Published Example')
   assert.equal(manifest.slug, 'published-example')
@@ -118,7 +119,7 @@ test('upgrade and one-stage mascot configuration keep custom data', () => {
   const before = fs.readFileSync(overview)
   upgradeCore(root)
   assert.deepEqual(fs.readFileSync(overview), before)
-  assert.match(fs.readFileSync(path.join(root, 'brand/engine.lock'), 'utf8'), /0\.1\.0/)
+  assert.match(fs.readFileSync(path.join(root, 'brand/engine.lock'), 'utf8'), /0\.2\.0/)
   const stages = path.join(root, 'brand/mascot/stages.yaml')
   fs.writeFileSync(stages, 'schema_version: 1\nstages:\n  - id: only.stage\n    order: 1\n    name: Single\n    status: draft\n')
   const report = validateRepo(root)

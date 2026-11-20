@@ -20,6 +20,35 @@ export interface AssetManifest {
   assets: AssetRecord[]
 }
 
+export function inspectAssetForPublication(
+  repoRoot: string,
+  assetPath: string,
+  expectedHash?: string | null,
+): { ok: true; realPath: string } | { ok: false; reason: string } {
+  let decoded = assetPath
+  try {
+    decoded = decodeURIComponent(assetPath)
+  } catch {
+    return { ok: false, reason: 'path' }
+  }
+  if (!decoded || decoded.includes('\0') || decoded.includes('..') || path.isAbsolute(decoded) || /^[a-z]+:/i.test(decoded)) {
+    return { ok: false, reason: 'path' }
+  }
+  if (!assetPathIsSafe(repoRoot, assetPath)) return { ok: false, reason: 'path' }
+  const full = path.resolve(repoRoot, assetPath)
+  if (!fs.existsSync(full)) return { ok: false, reason: 'missing' }
+  if (fs.lstatSync(full).isSymbolicLink()) return { ok: false, reason: 'symlink' }
+  const realPath = fs.realpathSync(full)
+  const assetsRoot = fs.realpathSync(path.resolve(repoRoot, 'brand', 'assets'))
+  if (realPath !== assetsRoot && !realPath.startsWith(`${assetsRoot}${path.sep}`)) return { ok: false, reason: 'escape' }
+  const bytes = fs.readFileSync(realPath)
+  if (expectedHash && createHash('sha256').update(bytes).digest('hex') !== expectedHash) return { ok: false, reason: 'checksum' }
+  if (realPath.toLowerCase().endsWith('.svg') && /<script|javascript:|onload=|onerror=/i.test(bytes.toString('utf8'))) {
+    return { ok: false, reason: 'active-svg' }
+  }
+  return { ok: true, realPath }
+}
+
 export function assetPathIsSafe(repoRoot: string, assetPath: string): boolean {
   if (!assetPath || assetPath.includes('..') || path.isAbsolute(assetPath)) return false
   const full = path.resolve(repoRoot, assetPath)

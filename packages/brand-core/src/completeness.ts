@@ -1,4 +1,4 @@
-import { evaluateCondition, shouldSkip, type ConditionContext } from './conditions.js'
+import { disabledModule, evaluateCondition, shouldSkip, type ConditionContext } from './conditions.js'
 import type { AnswerRecord, FieldQuestion } from './types.js'
 
 export interface ModuleScore {
@@ -51,7 +51,7 @@ export function completeness(questions: FieldQuestion[], ctx: ConditionContext):
 
   for (const question of questions) {
     const score = ensure(question.module)
-    if (shouldSkip(question.skip_when, ctx)) {
+    if (disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) {
       score.notApplicable += 1
       continue
     }

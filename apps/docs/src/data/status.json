@@ -1,12 +1,12 @@
 {
   "audience": "public",
-  "brandName": "EXAMPLE Brand",
-  "nameStatus": "placeholder",
-  "placeholderName": "EXAMPLE Brand",
+  "brandName": "Unpublished",
+  "nameStatus": "unpublished",
+  "placeholderName": null,
   "coverage": 0,
   "approval": 0,
-  "required": 157,
-  "requiredUnanswered": 157,
+  "required": 0,
+  "requiredUnanswered": 0,
   "contradictions": 0,
   "modules": [
     {
@@ -340,31 +340,9 @@
       "requiredUnanswered": 3
     }
   ],
-  "next": [
-    {
-      "id": "business.identity.new_or_existing",
-      "priority": "critical",
-      "prompt": "Is this a new venture or an existing business?"
-    },
-    {
-      "id": "business.identity.trade_name",
-      "priority": "critical",
-      "prompt": "What public trade name should the brand use?"
-    },
-    {
-      "id": "business.identity.sector",
-      "priority": "critical",
-      "prompt": "Which sector best describes the business?"
-    },
-    {
-      "id": "business.offer.summary",
-      "priority": "critical",
-      "prompt": "What product or service do you sell, in one concrete description?"
-    },
-    {
-      "id": "business.stage.current",
-      "priority": "critical",
-      "prompt": "What operating stage is the business in?"
-    }
-  ]
+  "next": [],
+  "release": {
+    "version": "0.1.0",
+    "content_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
 }

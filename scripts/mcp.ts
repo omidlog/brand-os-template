@@ -22,7 +22,7 @@ function text(result: unknown) {
 server.registerTool(
   'search_brand_docs',
   {
-    description: 'Search approved public facts. Set include_unapproved to also search draft guidance. Restricted values are never returned.',
+    description: 'Search published public facts. include_unapproved is ignored and never raises privilege.',
     inputSchema: z.object({ query: z.string(), include_unapproved: z.boolean().optional() }),
   },
   async ({ query, include_unapproved }) => text(searchBrandDocs(engine, query, include_unapproved === true)),
@@ -30,7 +30,7 @@ server.registerTool(
 server.registerTool(
   'get_brand_tokens',
   {
-    description: 'Return approved design tokens. Draft EXAMPLE values require include_unapproved.',
+    description: 'Return tokens whose approval record matches the compiled value. include_unapproved is ignored.',
     inputSchema: z.object({ include_unapproved: z.boolean().optional() }),
   },
   async ({ include_unapproved }) => text(getBrandTokens(engine, include_unapproved === true)),
@@ -46,7 +46,7 @@ server.registerTool(
 server.registerTool(
   'list_mascot_assets',
   {
-    description: 'List mascot catalog and manifest rows from YAML. Approved rows only unless include_unapproved is set.',
+    description: 'List approved mascot rows. include_unapproved is ignored. Disabled mascot returns no rows.',
     inputSchema: z.object({ include_unapproved: z.boolean().optional() }),
   },
   async ({ include_unapproved }) => text(listMascotAssets(engine, include_unapproved === true)),

@@ -36,6 +36,12 @@ Updated after the external audit remediation. “Fixed” means a test or a buil
 
 `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.
 
+## Second remediation contract
+
+`docs-internal/REMEDIATION_TRACEABILITY.md` is the ticket record. Public export is a new allowlist. Approved facts stay approved when someone passes `confirm=true`. `include_unapproved` does not grant access. A private brand cannot be built as public. Asset publication rejects symlinks, traversal, active SVG, and checksum mismatches. Backup, restore, migrate, and reset are separate commands. Journeys A, B, and C have automated tests.
+
+Still open: a full compiled Brand Book for every module, a hosted interview model, SSO, an npm-published core, Figma API sync, and a CI matrix. The local key and approval secret remain in `brand/.private`.
+
 ## Remaining security limits
 
 - The local encryption key sits next to the ciphertext in `brand/.private`. Copying that directory copies the secrets. It is not a KMS.

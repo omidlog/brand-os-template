@@ -47,9 +47,9 @@ test('interview records answers, drafts, resume, approval, and impact', () => {
   const blocked = engine.changeAnswer('brand.personality.traits', 'A different personality', false)
   assert.equal(blocked.kind, 'impact')
   assert.match(fs.readFileSync(path.join(root, 'brand/instance/approved-facts.yaml'), 'utf8'), /Calm and specific/)
-  const changed = engine.changeAnswer('brand.personality.traits', 'A different personality', true)
-  assert.equal(changed.status, 'draft')
-  assert.doesNotMatch(fs.readFileSync(path.join(root, 'brand/instance/approved-facts.yaml'), 'utf8'), /brand.personality.traits/)
+  const changed = engine.changeAnswer('brand.personality.traits', 'A different personality', true, 'owner')
+  assert.equal(changed.kind, 'impact')
+  assert.match(fs.readFileSync(path.join(root, 'brand/instance/approved-facts.yaml'), 'utf8'), /Calm and specific/)
   assert.equal(engine.approve('brand.personality.traits', 'guest', proof).kind, 'error')
 
   assert.equal(engine.isEligible('business.product.learning_model'), true)
@@ -83,12 +83,12 @@ test('unknown does not invent a name and b2b skips mascot questions', () => {
     'business.stage.current': 'established',
     'business.market.geography': 'unknown',
     'business.customer.primary_segment': 'skip',
-    'brand.mascot.enabled': 'no',
   }
   for (const [id, raw] of Object.entries(answers)) {
     assert.equal(engine.current()?.id, id, `expected ${id} but got ${engine.current()?.id}`)
     engine.submit(raw)
   }
+  assert.equal(engine.isEligible('brand.mascot.enabled'), false)
   const draft = fs.readFileSync(path.join(root, 'brand/generated/drafts/business-company.md'), 'utf8')
   assert.match(draft, /Unknown — not provided/)
   assert.equal(engine.isEligible('brand.mascot.role'), false)

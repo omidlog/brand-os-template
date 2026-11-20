@@ -9,6 +9,23 @@ function valueOf(engine: InterviewEngine, id: string): string {
   return `${String(found.value)} _(status: ${found.status})_`
 }
 
+export function allocateBudget(
+  total: number | null,
+  weights: Record<string, number>,
+): { status: 'computed' | 'missing'; lines: Array<{ name: string; amount: number | null }>; sum: number | null } {
+  const names = Object.keys(weights)
+  if (total === null || !Number.isFinite(total)) {
+    return { status: 'missing', lines: names.map((name) => ({ name, amount: null })), sum: null }
+  }
+  const weightSum = Object.values(weights).reduce((sum, weight) => sum + weight, 0)
+  if (weightSum <= 0) return { status: 'missing', lines: names.map((name) => ({ name, amount: null })), sum: null }
+  const lines = Object.entries(weights).map(([name, weight]) => ({ name, amount: Math.round((total * weight * 100) / weightSum) / 100 }))
+  const raw = lines.reduce((sum, line) => sum + (line.amount ?? 0), 0)
+  const last = lines[lines.length - 1]
+  if (last && last.amount !== null) last.amount = Math.round((last.amount + (total - raw)) * 100) / 100
+  return { status: 'computed', lines, sum: total }
+}
+
 export function renderBusinessArtifacts(engine: InterviewEngine): Record<string, string> {
   const stamp = new Date().toISOString().slice(0, 10)
   const header = (title: string) => `# ${title}\n\nGenerated ${stamp} from the interview ledger. Unknowns stay unknown. Nothing here is approved unless the cited field status says approved.\n`

@@ -36,6 +36,12 @@ function configValue(config: BrandConfig, path: string): string | null {
  * - answers[<question-id>] not_in a,b
  * Missing answers make comparisons false.
  */
+export function disabledModule(questionId: string, ctx: ConditionContext): boolean {
+  if (!ctx.config.modules.mascot.enabled && questionId.startsWith('brand.mascot.')) return true
+  if (!ctx.config.modules.gamification.enabled && questionId.startsWith('brand.gamification.')) return true
+  return false
+}
+
 export function evaluateCondition(expression: string | undefined, ctx: ConditionContext): boolean {
   if (!expression || expression.trim() === '' || expression.trim() === 'always') return true
   const expr = expression.trim()

@@ -41,7 +41,7 @@ export function renderModulePage(module: ModuleDef, questions: FieldQuestion[]):
     '',
     '1. Run `npm run brand:interview`. The agent asks one eligible question at a time.',
     '2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.',
-    '3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --actor owner`.',
+    '3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`. The actor name alone is rejected.',
     '4. Add real files to the asset manifest when you have them. Missing files stay missing.',
     '',
     '## Canonical fields',

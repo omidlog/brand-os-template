@@ -20,7 +20,7 @@ They do not see this repo unless you connect an app or paste a file. Pasting res
 - `tools/list`
 - `tools/call` with `search_brand_docs`, `get_brand_tokens`, `get_mascot_guidelines`, `list_mascot_assets`, `get_design_component`, `get_social_template`, `get_brand_status`
 
-Default calls withhold unapproved and restricted values. `include_unapproved: true` is a local review flag. It still withholds restricted values.
+Default calls return published public facts only. `include_unapproved` is ignored. It does not grant drafts, internal facts, or restricted values.
 
 ## llms.txt
 

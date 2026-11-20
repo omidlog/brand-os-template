@@ -34,6 +34,10 @@
     "brand:export": "tsx scripts/brand.ts export",
     "brand:approve": "tsx scripts/brand.ts approve",
     "brand:query": "tsx scripts/brand.ts query",
+    "brand:backup": "tsx scripts/brand.ts backup",
+    "brand:restore": "tsx scripts/brand.ts restore",
+    "brand:migrate": "tsx scripts/brand.ts migrate",
+    "brand:reset": "tsx scripts/brand.ts reset",
     "mcp:serve": "tsx scripts/mcp.ts",
     "example:education": "tsx scripts/example-run.ts education-app",
     "example:b2b": "tsx scripts/example-run.ts b2b-saas"
