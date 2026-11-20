@@ -12,15 +12,73 @@ They do not see this repo unless you connect an app or paste a file. Pasting res
 
 ## Local tools
 
-`npm run brand:query` and `npm run mcp:serve` read the checkout. They are not a hosted server.
+`npm run brand:query` and `npm run mcp:serve` read the checkout. They are not a hosted server. `mcp:serve` uses the MCP stdio transport (`@modelcontextprotocol/sdk`).
 
-`mcp:serve` speaks Content-Length framed JSON-RPC on stdin:
+### Who the server is
 
-- `initialize`
-- `tools/list`
-- `tools/call` with `search_brand_docs`, `get_brand_tokens`, `get_mascot_guidelines`, `list_mascot_assets`, `get_design_component`, `get_social_template`, `get_brand_status`
+The server decides its identity once, at startup, from `BRAND_OS_AGENT_TOKEN` in its own environment:
 
-Default calls return published public facts only. `include_unapproved` is ignored. It does not grant drafts, internal facts, or restricted values.
+- **No token:** guest. On a brand with `publish_docs: public`, a guest gets published public facts only. On a private brand every call returns `denied`.
+- **A valid token:** the agent profile the owner chose when issuing it. The agent reads approved items in its profile's modules, published or not.
+- **An unknown, revoked, or other-brand token:** the server exits with an error. It does not fall back to guest.
+
+No tool takes a token, role, or audience argument. Arguments like `include_unapproved` are ignored.
+
+### Issuing a token (owner only)
+
+Give the approval proof through the environment or the hidden prompt, never as a flag:
+
+```sh
+npm run brand:agent-token -- issue --profile internal-read --label "claude-code laptop"
+npm run brand:agent-token -- list
+npm run brand:agent-token -- revoke --id agt_…
+```
+
+The token is printed once. Store it in your agent host's secret settings, for example the `env` block of an MCP server entry:
+
+```json
+{ "command": "npm", "args": ["run", "-s", "mcp:serve"], "env": { "BRAND_OS_AGENT_TOKEN": "<paste token>" } }
+```
+
+Revoking a token takes effect when the server restarts.
+
+### Profiles
+
+All profiles are read-only and never get restricted values.
+
+| Profile | Reads |
+|---|---|
+| `internal-read` | approved facts in every module |
+| `design` | brand, visual, product UI, and mascot modules |
+| `marketing` | brand modules plus company, customer, product, sales, marketing, and growth |
+| `finance` | business modules and governance status |
+
+Restricted fields (finance figures, budgets, partner shares, board details) come back as `value: null, withheld: true` for every profile. Agents can never approve, publish, or write.
+
+### Tools
+
+`brand_retrieve` is the unified tool:
+
+- `{ "kind": "facts", "module": "brand-strategy" }`
+- `{ "kind": "facts", "ids": ["brand.strategy.purpose"] }`
+- `{ "kind": "facts", "query": "tagline" }`
+- `{ "kind": "tokens" | "mascot_assets" | "mascot_stages" | "component" | "asset" | "social_template" | "status" }`
+
+Every result has `brand_id`, `classification`, `approval_state`, `revision`, `source_path`, and `missing`. Every item has its id, source path, module, approval state, classification, revision, and value, or a withheld or missing marker.
+
+The older named tools (`search_brand_docs`, `get_brand_tokens`, `get_brand_overview`, `get_business_plan`, and the rest) use the same retrieval path and the same identity.
+
+`brand:query` takes the same token from the environment:
+
+```sh
+BRAND_OS_AGENT_TOKEN=… npm run brand:query -- --tool brand_retrieve --kind facts --module brand-strategy
+```
+
+### Access log
+
+Every call by a token, and every denial, appends one line to `brand/.private/access-log.jsonl`. A line holds the principal, tool, ids, and decision. It never holds values or query text.
+
+Design and limits: `docs-internal/adr/0003-agent-access.md`.
 
 ## llms.txt
 

@@ -19,7 +19,9 @@ If a file disagrees with an approved fact, the approved fact wins until a person
 - `npm run brand:query -- --tool get_brand_status` returns coverage and approval without answer values.
 - `npm run brand:query -- --tool get_brand_tokens` returns only tokens that are hash-approved and published. EXAMPLE values are never returned. `--include-unapproved` is ignored and grants nothing.
 - `npm run brand:query -- --tool list_mascot_assets` returns no rows until artwork is approved.
-- `brand:query` and the MCP server run as a guest. On a brand with `publish_docs: private` every tool returns `denied`. That is expected, not a bug to work around.
+- `brand:query` and the MCP server run as a guest unless the owner started them with `BRAND_OS_AGENT_TOKEN`. As a guest on a brand with `publish_docs: private`, every tool returns `denied`. That is expected, not a bug to work around. Ask the owner for a token; do not look for one in `brand/.private`.
+- With a token, `brand_retrieve` (or `npm run brand:query -- --tool brand_retrieve --kind facts --module <id>`) returns approved facts for your profile. Items marked `withheld` have no value. Do not guess them. Restricted values are never returned to agents.
+- You cannot pass a token, role, or audience as a tool argument. You cannot issue tokens, approve, or publish.
 - Read `examples/agent-requests.md` before designing a post or a mascot screen.
 
 ## What you must not do

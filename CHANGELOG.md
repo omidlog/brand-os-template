@@ -10,6 +10,11 @@
 - Fix: restore validates every path before writing anything.
 - `brand:query --include-unapproved` now says it is ignored.
 - Audit: `docs-internal/CLAUDE_INDEPENDENT_AUDIT.md`.
+- Agent access: `brand:agent-token issue|list|revoke` (needs the owner proof from env or a hidden prompt). Tokens are hashed at rest, bound to one brand, and mapped to a read-only profile: `internal-read`, `design`, `marketing`, or `finance`.
+- `mcp:serve` and `brand:query` resolve `BRAND_OS_AGENT_TOKEN` once at startup. They fail closed on an unknown, revoked, or other-brand token.
+- New MCP tool `brand_retrieve`. The 17 existing tools now share its retrieval path. Results carry brand id, classification, approval state, revision, source path, and missing ids.
+- Restricted values are never returned to agents. Agents only ever receive approved items.
+- `brand/.private/access-log.jsonl` records who read which ids, never the values. The public scan rejects token files and raw tokens.
 
 ## 0.1.0
 

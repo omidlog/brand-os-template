@@ -43,7 +43,8 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 | G7 | Fixed | Restore validates all paths before writing. Test: `tests/onboarding.test.ts`. |
 | G8 | Fixed | `brand:doctor --create-approval-secret`. Test: `tests/doctor.test.ts`. |
 | Persian routing | Fixed | Only `note:` starts capture. Test: `tests/onboarding.test.ts`. |
-| G3, G5, G6, G11 | Not fixed | Planned: proof from env or prompt, `brand:publish`, explicit `approval_grant`, agent tokens. |
+| G11 | Fixed | Owner-issued agent tokens (hashed, brand-bound, four read-only profiles) are resolved once at startup by `mcp:serve` and `brand:query`. Both use one retrieval path, `brandRetrieve`. There is an access log without values. Restricted values stay withheld from every agent. Test: `tests/agent-access.test.ts`. Design: `docs-internal/adr/0003-agent-access.md`. |
+| G3, G5, G6 | Not fixed | Planned: proof from env or prompt for `brand:approve`, `brand:publish`, explicit `approval_grant`. `brand:agent-token` already reads the proof from env or a prompt only. |
 | G4, G9 | Documented limit | Single shared proof, readable by any process running as the owner. |
 
 ## Commands that this remediation expects to pass
@@ -56,7 +57,7 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 
 `authorize()` gates submit, approval, publication, reveal, export, and the MCP tools. `include_unapproved` is not an MCP parameter. Backups and restricted values use `BRAND_OS_DATA_KEY` and fail closed when it is absent. Fact files migrate to canonical schema 2. Each module compiles a cited page that leaves missing sections missing. Figma import returns `not_configured` without credentials and does not overwrite tokens.
 
-Still external: SSO, a hosted LLM, live Figma, and npm publishing. The approval proof remains a local file. Compiled pages are not a designed brand book, and fa/tr text other than the marked draft guidance paragraphs stays English. A CI matrix is not configured.
+Still external: SSO and hosted or remote MCP authentication (the `resolveAgentContext` seam is documented in ADR 0003), a hosted LLM, live Figma, and npm publishing. The approval proof remains a local file. Compiled pages are not a designed brand book, and fa/tr text other than the marked draft guidance paragraphs stays English. A CI matrix is not configured.
 
 ## Remaining security limits
 
