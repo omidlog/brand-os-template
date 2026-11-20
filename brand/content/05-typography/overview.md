@@ -37,7 +37,7 @@ Which type is allowed to ship, and under what license.
 | --- | --- | --- | --- |
 | Type intent | yes | internal | `brand.type.intent` |
 | License status | yes | internal | `brand.type.license` |
-| Scale | yes | internal | `brand.type.scale` |
+| Type roles and scale | yes | internal | `brand.type.scale` |
 | RTL and locales | yes | internal | `brand.type.rtl` |
 | Fallback policy | yes | internal | `brand.type.fallback` |
 | Localization | canonical reference | internal | `brand.verbal.localization` |

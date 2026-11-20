@@ -491,6 +491,43 @@ questions:
     weight: 2
     sector_hints: []
     status: unanswered
+  - id: brand.verbal.voice_pairs
+    module: verbal-identity
+    field_path: brand.verbal.voice_pairs
+    label: Voice do and don’t
+    prompt:
+      en: "Give two to five do/don’t pairs for the voice, one per line: what to write | what not to
+        write."
+      fa: "دو تا پنج جفت «انجام بده / انجام نده» برای لحن بنویسید، هر جفت در یک خط: چه بنویسیم | چه
+        ننویسیم."
+      tr: "Ses için iki ila beş yap/yapma çifti yazın, her satıra bir tane: ne yazılır | ne yazılmaz."
+    why_it_matters: Paired examples are the fastest way for a writer or an agent to hear the voice. The
+      Brand Book shows them side by side.
+    question_type: voice_pairs
+    examples:
+      - "EXAMPLE ONLY: Say what happened and what to do next | Blame the user for an error; Use the
+        learner’s words | Use internal jargon"
+    required_when: always
+    depends_on:
+      - brand.personality.traits
+    priority: high
+    order: 67
+    sensitivity: internal
+    language:
+      - en
+      - fa
+      - tr
+    source_types: *a1
+    related_outputs:
+      - brand/generated/drafts/verbal-identity.md
+      - brand/generated/drafts/product-ui.md
+    related_ids: []
+    completion_rule: structured
+    allows_unknown: true
+    required: true
+    weight: 2
+    sector_hints: []
+    status: unanswered
   - id: brand.logo.variants
     module: logo-system
     field_path: brand.logo.variants
@@ -556,15 +593,21 @@ questions:
   - id: brand.logo.min_size
     module: logo-system
     field_path: brand.logo.min_size
-    label: Minimum size
+    label: Minimum size and clear space
     prompt:
-      en: Are there minimum sizes for screen and print, or is that TBD?
-      fa: برای صفحه و چاپ اندازهٔ حداقل هست، یا TBD است؟
-      tr: Ekran ve baskı için asgari boyut var mı, yoksa TBD mi?
-    why_it_matters: Favicon and print failures come from unstated minimums, but only after a master exists.
-    question_type: long_text
+      en: What is the minimum on-screen logo size in px, and the clear space around it (px, or a multiple
+        of the mark height such as 0.5x)? Optionally a minimum print size in mm. Answer unknown
+        until a master exists.
+      fa: کمترین اندازهٔ لوگو روی صفحه به px چقدر است و فضای خالی پیرامون آن چقدر (px یا ضریبی از ارتفاع
+        نشانه، مثل 0.5x)؟ در صورت نیاز کمترین اندازهٔ چاپ به mm. تا وقتی فایل اصلی نیست، unknown.
+      tr: Ekranda en küçük logo boyutu kaç px ve çevresindeki boşluk ne kadar (px veya işaret
+        yüksekliğinin katı, ör. 0.5x)? İsterseniz mm cinsinden en küçük baskı boyutu. Ana dosya
+        olana kadar unknown.
+    why_it_matters: Favicon and print failures come from unstated minimums. The values become draft logo
+      tokens after approval, but only once a master exists.
+    question_type: logo_spec
     examples:
-      - "EXAMPLE ONLY: TBD"
+      - "EXAMPLE ONLY: min-size: 24px; clear-space: 0.5x; min-print: 10mm"
     required_when: always
     depends_on: []
     priority: high
@@ -578,7 +621,7 @@ questions:
     related_outputs:
       - brand/generated/drafts/logo-system.md
     related_ids: []
-    completion_rule: non_empty
+    completion_rule: structured
     allows_unknown: true
     required: false
     weight: 1
@@ -651,15 +694,19 @@ questions:
     field_path: brand.color.roles
     label: Color roles
     prompt:
-      en: Which color roles do you need (primary, secondary, surface, semantic)? Do not invent hex values
-        in prose.
-      fa: به کدام نقش‌های رنگ نیاز دارید (اصلی، ثانویه، سطح، معنایی)؟ در متن مقدار hex نسازید.
-      tr: Hangi renk rollerine ihtiyacınız var (birincil, ikincil, yüzey, anlamsal)? Düz yazıda hex
-        uydurmayın.
-    why_it_matters: Roles survive a hue change. Loose hex values in Markdown drift from tokens.
-    question_type: long_text
+      en: "List each color role with its hex value, one per line or separated by ;: role #RRGGBB (for
+        example primary, onPrimary, surface, danger). Answer unknown if the hues are not chosen."
+      fa: "هر نقش رنگ را با مقدار hex آن بنویسید، هر کدام در یک خط یا جدا با ;: نقش #RRGGBB (مثلاً
+        primary، onPrimary، surface، danger). نام نقش لاتین است چون شناسهٔ توکن می‌شود. اگر رنگ‌ها
+        انتخاب نشده‌اند، unknown."
+      tr: "Her renk rolünü hex değeriyle yazın, her satıra bir tane veya ; ile ayırarak: rol #RRGGBB (ör.
+        primary, onPrimary, surface, danger). Rol adı Latin harfli olmalı çünkü token kimliği olur.
+        Renkler seçilmediyse unknown."
+    why_it_matters: Roles survive a hue change. An approved role and hex becomes a draft token; it still
+      needs a token approval and a contrast check before anyone ships it.
+    question_type: color
     examples:
-      - "EXAMPLE ONLY: Need primary, surface, and danger. Hues TBD."
+      - "EXAMPLE ONLY: primary #123A73; onPrimary #FFFFFF; surface #F7F5F2"
     required_when: always
     depends_on: []
     priority: high
@@ -674,7 +721,7 @@ questions:
       - brand/generated/drafts/color-system.md
       - brand/generated/drafts/product-ui.md
     related_ids: []
-    completion_rule: non_empty
+    completion_rule: structured
     allows_unknown: true
     required: true
     weight: 2
@@ -881,15 +928,20 @@ questions:
   - id: brand.type.scale
     module: typography
     field_path: brand.type.scale
-    label: Scale
+    label: Type roles and scale
     prompt:
-      en: Which type roles do you need (display, headline, body, label, caption)?
-      fa: به کدام نقش‌های تایپ نیاز دارید (نمایشی، عنوان، متن، برچسب، توضیح)؟
-      tr: Hangi yazı rollerine ihtiyacınız var (vitrin, başlık, gövde, etiket, alt yazı)?
-    why_it_matters: The token scale should match real roles.
-    question_type: long_text
+      en: "For each type role give the family, at least one fallback, and optionally a size: role: Family,
+        fallback @ 16px/1.5. One role per line or separated by ;."
+      fa: "برای هر نقش تایپ خانوادهٔ فونت، دست‌کم یک جایگزین و در صورت نیاز اندازه را بنویسید: role:
+        Family, fallback @ 16px/1.5. هر نقش در یک خط یا جدا با ;."
+      tr: "Her yazı rolü için aileyi, en az bir yedeği ve isterseniz boyutu yazın: role: Family, fallback
+        @ 16px/1.5. Her satıra bir rol veya ; ile ayırarak."
+    why_it_matters: The token scale should match real roles. An approved family, fallback and size
+      become draft typography tokens.
+    question_type: font
     examples:
-      - "EXAMPLE ONLY: Display, headline, body, label, caption. Sizes in tokens are EXAMPLE."
+      - "EXAMPLE ONLY: body: Inter, system-ui, sans-serif @ 16px/1.5; display: Georgia, serif @
+        40px/1.2"
     required_when: always
     depends_on: []
     priority: high
@@ -903,7 +955,7 @@ questions:
     related_outputs:
       - brand/generated/drafts/typography.md
     related_ids: []
-    completion_rule: non_empty
+    completion_rule: structured
     allows_unknown: true
     required: true
     weight: 2

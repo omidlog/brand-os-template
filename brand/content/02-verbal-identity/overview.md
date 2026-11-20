@@ -42,6 +42,7 @@ Which words are allowed, required, or forbidden.
 | Forbidden language | yes | internal | `brand.verbal.forbidden` |
 | Localization | yes | internal | `brand.verbal.localization` |
 | Microcopy principle | yes | internal | `brand.verbal.microcopy` |
+| Voice do and don’t | yes | internal | `brand.verbal.voice_pairs` |
 | Trade name | canonical reference | public | `business.identity.trade_name` |
 | Personality | canonical reference | internal | `brand.personality.traits` |
 

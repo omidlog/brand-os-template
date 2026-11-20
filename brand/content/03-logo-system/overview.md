@@ -37,7 +37,7 @@ Which master files are approved and how they may be placed.
 | --- | --- | --- | --- |
 | Variants needed | yes | internal | `brand.logo.variants` |
 | Clear space | yes | internal | `brand.logo.clear_space` |
-| Minimum size | optional | internal | `brand.logo.min_size` |
+| Minimum size and clear space | optional | internal | `brand.logo.min_size` |
 | Misuse rules | yes | internal | `brand.logo.misuse` |
 | Master location | yes | internal | `brand.logo.masters` |
 | Trademark status | canonical reference | internal | `business.legal.trademark` |

@@ -28,7 +28,7 @@ fields:
     sensitivity: internal
     notes: "TBD — no approved brand facts in the template"
   brand.logo.min_size:
-    label: "Minimum size"
+    label: "Minimum size and clear space"
     value: null
     status: unanswered
     sensitivity: internal

@@ -18,7 +18,7 @@
         "tr": { "type": "string", "minLength": 1 }
       }
     },
-    "question_type": { "enum": ["short_text", "long_text", "single_choice", "boolean", "number", "url"] },
+    "question_type": { "enum": ["short_text", "long_text", "single_choice", "boolean", "number", "url", "color", "font", "logo_spec", "voice_pairs"] },
     "priority": { "enum": ["critical", "high", "medium", "low"] },
     "sensitivity": { "enum": ["public", "internal", "restricted"] },
     "approval_grant": { "enum": ["financial", "visual", "public_copy", "canonical"] },

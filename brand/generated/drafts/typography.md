@@ -47,7 +47,7 @@ TBD
 <!-- field:brand.type.license end -->
 
 <!-- field:brand.type.scale start -->
-### Scale
+### Type roles and scale
 
 - Question: `brand.type.scale`
 - Field: `brand.type.scale`

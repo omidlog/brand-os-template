@@ -96,6 +96,9 @@ export {
   searchMascotAssets,
 } from './query.js'
 export type { RetrieveKind, RetrieveRequest, RetrievedItem, ToolResult } from './query.js'
+export { asciiDigits, isStructuredType, normalizeStructured, parseStructured, STRUCTURED_FORMATS, STRUCTURED_TYPES, structuredFor } from './structured.js'
+export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, VoicePair } from './structured.js'
+export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
 export { evaluateCondition } from './conditions.js'
 export { validateRepo } from './validate-repo.js'
 export { PROPOSAL_STATES } from './types.js'

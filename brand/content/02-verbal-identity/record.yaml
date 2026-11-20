@@ -57,3 +57,9 @@ fields:
     status: unanswered
     sensitivity: internal
     notes: "TBD — no approved brand facts in the template"
+  brand.verbal.voice_pairs:
+    label: "Voice do and don’t"
+    value: null
+    status: unanswered
+    sensitivity: internal
+    notes: "TBD — no approved brand facts in the template"

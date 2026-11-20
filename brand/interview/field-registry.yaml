@@ -204,6 +204,20 @@ fields:
       - brand/generated/drafts/product-ui.md
     validator: non_empty
     related_ids: []
+  - id: brand.verbal.voice_pairs
+    module: verbal-identity
+    field_path: brand.verbal.voice_pairs
+    label: Voice do and don’t
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - brand.verbal.voice_pairs
+    documents:
+      - brand/generated/drafts/verbal-identity.md
+      - brand/generated/drafts/product-ui.md
+    validator: structured
+    related_ids: []
   - id: brand.logo.variants
     module: logo-system
     field_path: brand.logo.variants
@@ -233,7 +247,7 @@ fields:
   - id: brand.logo.min_size
     module: logo-system
     field_path: brand.logo.min_size
-    label: Minimum size
+    label: Minimum size and clear space
     required: false
     weight: 1
     sensitivity: internal
@@ -241,7 +255,7 @@ fields:
       - brand.logo.min_size
     documents:
       - brand/generated/drafts/logo-system.md
-    validator: non_empty
+    validator: structured
     related_ids: []
   - id: brand.logo.misuse
     module: logo-system
@@ -281,7 +295,7 @@ fields:
     documents:
       - brand/generated/drafts/color-system.md
       - brand/generated/drafts/product-ui.md
-    validator: non_empty
+    validator: structured
     related_ids: []
   - id: brand.color.themes
     module: color-system
@@ -365,7 +379,7 @@ fields:
   - id: brand.type.scale
     module: typography
     field_path: brand.type.scale
-    label: Scale
+    label: Type roles and scale
     required: true
     weight: 2
     sensitivity: internal
@@ -373,7 +387,7 @@ fields:
       - brand.type.scale
     documents:
       - brand/generated/drafts/typography.md
-    validator: non_empty
+    validator: structured
     related_ids: []
   - id: brand.type.rtl
     module: typography

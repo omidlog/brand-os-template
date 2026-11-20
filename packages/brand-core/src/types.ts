@@ -26,6 +26,11 @@ export const QUESTION_TYPES = [
   'boolean',
   'number',
   'url',
+  // Structured brand-core types. Stored as one canonical string; see structured.ts.
+  'color',
+  'font',
+  'logo_spec',
+  'voice_pairs',
 ] as const
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 
@@ -76,7 +81,7 @@ export interface FieldQuestion {
   source_types: SourceType[]
   related_outputs: string[]
   related_ids: string[]
-  completion_rule: 'non_empty' | 'disposition' | 'one_of' | 'boolean' | 'number' | 'url'
+  completion_rule: 'non_empty' | 'disposition' | 'one_of' | 'boolean' | 'number' | 'url' | 'structured'
   allows_unknown: boolean
   required: boolean
   weight: number

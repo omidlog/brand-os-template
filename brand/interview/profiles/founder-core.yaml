@@ -45,14 +45,16 @@ question_ids:
   - brand.verbal.voice
   - brand.verbal.forbidden
   - brand.verbal.localization
-  # Visual basics (later phases turn these into draft tokens)
+  - brand.verbal.voice_pairs
+  # Visual basics. Color roles, type scale and logo size are structured answers that
+  # brand:tokens:generate turns into draft tokens once they are approved.
   - brand.logo.variants
-  - brand.logo.clear_space
+  - brand.logo.misuse
   - brand.logo.min_size
   - brand.color.roles
   - brand.color.themes
   - brand.type.intent
-  - brand.type.fallback
+  - brand.type.scale
   # Optional modules
   - brand.mascot.enabled
   - brand.gamification.enabled

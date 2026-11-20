@@ -4,10 +4,11 @@ import path from 'node:path'
 import { authorize, verifiedHumanContext, type Audience } from './auth.js'
 import { readFacts, writeFacts, type CanonicalFact } from './facts.js'
 import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
-import { t, type Locale } from './i18n.js'
+import { booleanWord, t, type Locale } from './i18n.js'
 import { canApprove, permissionFor, type ApprovalGrant } from './permissions.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import { readPublicationPolicy } from './publication.js'
+import { isStructuredType, normalizeStructured } from './structured.js'
 import type { AnswerRecord, Authority, FieldQuestion, ProposalState, SourceType, Status } from './types.js'
 
 /**
@@ -676,11 +677,11 @@ export function normalizeAnswer(
   const value = rawValue.trim()
   if (!value) return { ok: false, message: 'Empty answer. Use unknown, skip, or decide later.' }
   if (question.question_type === 'boolean') {
-    const token = value.toLowerCase()
-    if (['yes', 'y', 'true', 'بله', 'evet'].includes(token)) return { ok: true, value: 'yes' }
-    if (['no', 'n', 'false', 'خیر', 'hayır', 'hayir'].includes(token)) return { ok: true, value: 'no' }
+    const word = booleanWord(value)
+    if (word) return { ok: true, value: word }
     return { ok: false, message: 'Answer yes or no. Or say unknown.' }
   }
+  if (isStructuredType(question.question_type)) return normalizeStructured(question.question_type, value)
   if (question.question_type === 'single_choice') {
     const match = question.options?.find((option) => option.toLowerCase() === value.toLowerCase())
     if (!match) return { ok: false, message: `Choose one of: ${(question.options ?? []).join(', ')}` }

@@ -96,3 +96,20 @@ export function normalizeCommand(raw: string): string {
   const lower = trimmed.toLowerCase()
   return COMMAND_ALIASES[trimmed] ?? COMMAND_ALIASES[lower] ?? trimmed
 }
+
+/** Yes/no words per locale. English is the base; fa and tr are locale data with equal standing. */
+export const BOOLEAN_WORDS: Record<Locale, { yes: string[]; no: string[] }> = {
+  en: { yes: ['yes', 'y', 'true'], no: ['no', 'n', 'false'] },
+  fa: { yes: ['بله', 'آره'], no: ['خیر', 'نه'] },
+  tr: { yes: ['evet'], no: ['hayır', 'hayir'] },
+}
+
+/** 'yes' | 'no' for a yes/no word in any supported locale, otherwise null. */
+export function booleanWord(raw: string): 'yes' | 'no' | null {
+  const token = raw.trim().toLowerCase()
+  for (const words of Object.values(BOOLEAN_WORDS)) {
+    if (words.yes.includes(token)) return 'yes'
+    if (words.no.includes(token)) return 'no'
+  }
+  return null
+}
