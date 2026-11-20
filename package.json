@@ -33,6 +33,7 @@
     "brand:validate": "tsx scripts/brand.ts validate",
     "brand:export": "tsx scripts/brand.ts export",
     "brand:approve": "tsx scripts/brand.ts approve",
+    "brand:publish": "tsx scripts/brand.ts publish",
     "brand:query": "tsx scripts/brand.ts query",
     "brand:agent-token": "tsx scripts/brand.ts agent-token",
     "brand:doctor": "tsx scripts/brand.ts doctor",

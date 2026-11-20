@@ -4,6 +4,7 @@ import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
 import { applyInit, backupBrand, InterviewEngine, migrateBrand, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
+import type { BatchResult, ReviewQueue, Selection } from '@brand-os/brand-core'
 
 const [command, ...rest] = process.argv.slice(2)
 const root = process.cwd()
@@ -88,7 +89,22 @@ if (command === 'init') {
 } else if (command === 'status') {
   console.log(engine.statusText())
 } else if (command === 'review') {
-  console.log(engine.reviewText(false))
+  const { values } = parseArgs({
+    args: rest,
+    options: {
+      module: { type: 'string' },
+      ids: { type: 'string' },
+      all: { type: 'boolean', default: false },
+      full: { type: 'boolean', default: false },
+      json: { type: 'boolean', default: false },
+    },
+  })
+  if (values.full) {
+    console.log(engine.reviewText(false))
+  } else {
+    const queue = withSelectionErrors(() => engine.approvals().reviewQueue(selectionFrom(values), { includeSettled: values.all || Boolean(values.ids) }))
+    console.log(values.json ? JSON.stringify(queue, null, 2) : formatQueue(queue))
+  }
 } else if (command === 'validate') {
   const { validateRepo } = await import('@brand-os/brand-core')
   const report = validateRepo(root)
@@ -105,18 +121,72 @@ if (command === 'init') {
   const file = path.join(dir, values.public ? 'public-snapshot.json' : 'latest-snapshot.json')
   fs.writeFileSync(file, `${JSON.stringify(snapshot, null, 2)}\n`)
   console.log(`Wrote ${path.relative(root, file)}. Full snapshots can contain restricted answers and are gitignored.`)
-} else if (command === 'approve') {
+} else if (command === 'approve' || command === 'publish') {
   const { values } = parseArgs({
     args: rest,
-    options: { question: { type: 'string' }, actor: { type: 'string', default: 'owner' }, proof: { type: 'string' } },
+    options: {
+      module: { type: 'string' },
+      ids: { type: 'string' },
+      question: { type: 'string' },
+      actor: { type: 'string', default: 'owner' },
+      unpublish: { type: 'boolean', default: false },
+      'dry-run': { type: 'boolean', default: false },
+      json: { type: 'boolean', default: false },
+      // Declared only so it can be refused without echoing its value.
+      proof: { type: 'string' },
+    },
   })
-  if (!values.question || !values.proof) {
-    console.error('Need --question <id> --proof <human-secret>. --actor alone cannot approve.')
-    process.exit(1)
+  if (values.proof !== undefined) {
+    console.error(`--proof is not accepted: a secret on the command line leaks into shell history and the process list. Nothing was changed.`)
+    console.error('Set BRAND_OS_APPROVAL_PROOF for this one command, pipe the proof on stdin, or type it at the hidden prompt.')
+    process.exit(2)
   }
-  const result = engine.approve(values.question, values.actor ?? 'owner', values.proof)
-  console.log(result.message)
-  if (result.kind === 'error') process.exit(1)
+  if (process.env.BRAND_OS_AGENT_TOKEN) {
+    console.error(`brand:${command} refuses to run while BRAND_OS_AGENT_TOKEN is set. Approval and publication are human actions; run them from a shell without an agent token.`)
+    process.exit(2)
+  }
+  if (command === 'publish' && values.question) {
+    console.error('brand:publish takes --ids or --module.')
+    process.exit(2)
+  }
+  const ids = [values.ids, values.question].filter(Boolean).join(',')
+  const selection = selectionFrom({ module: values.module, ids: ids || undefined })
+  if (!selection.module && !selection.ids?.length) {
+    console.error(
+      command === 'approve'
+        ? 'Usage: brand:approve --module <id> | --ids <id,chg-…> [--actor owner] [--dry-run] [--json]'
+        : 'Usage: brand:publish --module <id> | --ids <id,…> [--unpublish] [--dry-run] [--json]',
+    )
+    console.error('The approval proof is read from BRAND_OS_APPROVAL_PROOF, piped stdin, or a hidden prompt. Never from argv.')
+    process.exit(2)
+  }
+  const approvals = engine.approvals()
+  if (command === 'approve') {
+    const queue = withSelectionErrors(() => approvals.reviewQueue(selection, { includeSettled: Boolean(selection.ids) }))
+    if (values['dry-run']) {
+      console.log(values.json ? JSON.stringify(queue, null, 2) : formatQueue(queue))
+      process.exit(0)
+    }
+    if (!values.json) console.error(`About to approve ${queue.pending} item(s) as ${values.actor ?? 'owner'}. Approval does not publish.`)
+    const proof = await readApprovalProof()
+    const result = withSelectionErrors(() => approvals.approveBatch(selection, proof, values.actor ?? 'owner'))
+    console.log(values.json ? JSON.stringify(result, null, 2) : formatBatch(result))
+    if (!result.ok) process.exit(1)
+  } else {
+    if (values['dry-run']) {
+      const queue = withSelectionErrors(() => approvals.reviewQueue(selection, { includeSettled: true }))
+      console.log(values.json ? JSON.stringify(queue, null, 2) : formatQueue(queue))
+      process.exit(0)
+    }
+    const proof = await readApprovalProof()
+    const result = withSelectionErrors(() => approvals.publish(selection, proof, { unpublish: values.unpublish }))
+    if (values.json) console.log(JSON.stringify(result, null, 2))
+    else {
+      for (const item of result.results) console.log(`${item.outcome.padEnd(11)} ${item.id}  ${item.reason}`)
+      console.log(result.proof === 'rejected' ? 'Proof rejected. Nothing was changed.' : `${result.changed} change(s) written to the publication allowlist.`)
+    }
+    if (!result.ok) process.exit(1)
+  }
 } else if (command === 'query') {
   const { values } = parseArgs({
     args: rest,
@@ -265,8 +335,52 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query, agent-token, doctor, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, publish, query, agent-token, doctor, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
+}
+
+function selectionFrom(values: { module?: string; ids?: string }): Selection {
+  const ids = values.ids ? values.ids.split(',').map((id) => id.trim()).filter(Boolean) : undefined
+  return { ...(values.module ? { module: values.module } : {}), ...(ids?.length ? { ids } : {}) }
+}
+
+function withSelectionErrors<T>(run: () => T): T {
+  try {
+    return run()
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : 'Request failed.')
+    process.exit(2)
+  }
+}
+
+function show(value: unknown, withheld: boolean): string {
+  if (withheld) return '[restricted withheld]'
+  if (value === null || value === undefined) return 'none'
+  return typeof value === 'string' ? value : JSON.stringify(value)
+}
+
+function formatQueue(queue: ReviewQueue): string {
+  const lines = [`# Review queue (${queue.brand_id})`, '', `${queue.pending} item(s) need a decision. Approval does not publish.`, '']
+  for (const item of queue.items) {
+    lines.push(`## ${item.question_id} [${item.state}] ${item.classification}, needs ${item.required_grant}`)
+    lines.push(`- ${item.reason}`)
+    if (item.approved) lines.push(`- Approved v${item.approved.version} (${item.approved.publication}): ${show(item.approved.value, item.withheld)}`)
+    if (item.draft) lines.push(`- Draft ${item.draft.answer_id} (${item.draft.status}, ${item.draft.authority}): ${show(item.draft.value, item.withheld)}`)
+    for (const change of item.changes) {
+      lines.push(`- Change ${change.id} against v${change.expected_version}${change.stale ? ' (stale)' : ''}: ${show(change.proposed_value, item.withheld)}`)
+    }
+    if (item.impact.documents.length) lines.push(`- Documents: ${item.impact.documents.join(', ')}`)
+    if (item.impact.questions.length) lines.push(`- Linked questions: ${item.impact.questions.join(', ')}`)
+    if (item.impact.published) lines.push('- Currently published. An approved replacement is unpublished until you run brand:publish again.')
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
+function formatBatch(result: BatchResult): string {
+  const lines = result.results.map((item) => `${item.outcome.padEnd(9)} ${item.id}${item.version ? ` v${item.version}` : ''}  ${item.reason}`)
+  lines.push(result.proof === 'rejected' ? 'Proof rejected. Nothing was changed.' : `${result.approved} approved. Nothing was published.`)
+  return lines.join('\n')
 }
 
 async function interactive(): Promise<void> {

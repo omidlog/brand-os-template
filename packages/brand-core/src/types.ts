@@ -69,6 +69,8 @@ export interface FieldQuestion {
   priority: Priority
   order: number
   sensitivity: Visibility
+  /** Explicit approval grant. Preferred over the id-based guess in permissions.ts. Restricted questions must use `financial`. */
+  approval_grant?: 'financial' | 'visual' | 'public_copy' | 'canonical'
   language: Array<'en' | 'fa' | 'tr'>
   source_types: SourceType[]
   related_outputs: string[]

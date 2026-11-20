@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { disabledModule, shouldSkip, type ConditionContext } from './conditions.js'
@@ -7,11 +6,10 @@ import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
 import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
 import { t, normalizeCommand, type Locale } from './i18n.js'
-import { canApprove } from './permissions.js'
+import { ApprovalService, normalizeAnswer, type AnswerMeta, type ApprovalStep } from './approval.js'
 import { exportPublic as projectPublic } from './projection.js'
-import { authorize, guestContext, operatorContext, verifiedHumanContext, type Audience } from './auth.js'
+import { authorize, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
 import { backupBrand, migrateBrand } from './backup.js'
-import { readFacts, writeFacts, type CanonicalFact } from './facts.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
   AnswerRecord,
@@ -462,121 +460,46 @@ export class InterviewEngine {
     return { kind: 'recorded', questionId, status: 'draft', impact, message: 'Draft updated. Not approved.' }
   }
 
-  requestChange(questionId: string, rawValue: string): { id: string; expected_version: number } {
-    const question = this.question(questionId)
-    if (!question) throw new Error(`Unknown question ${questionId}`)
-    const approved = readApprovedMap(this.root)[questionId]
-    const version = typeof approved?.version === 'number' ? approved.version : 1
-    const id = `chg-${crypto.randomBytes(6).toString('hex')}`
-    const proposals = readProposals(this.root)
-    const restricted = question.sensitivity === 'restricted'
-    proposals.push({
-      id,
-      question_id: questionId,
-      expected_version: version,
-      status: 'pending',
-      proposed_value: restricted ? null : rawValue,
-      private_ref: restricted ? new PrivateStore(this.root).put(questionId, { value: rawValue, raw: rawValue }) : null,
+  /** Approval and publication live in approval.ts. The engine lends it narrow access to its ledger. */
+  approvals(): ApprovalService {
+    return new ApprovalService({
+      root: this.root,
+      brandId: () => this.config().brand.slug,
+      locale: () => this.session().locale,
+      questions: () => this.questions(),
+      question: (id) => this.question(id),
+      latestAnswers: () => this.context().answers,
+      supersede: (answerId) => this.supersede(answerId),
+      appendAnswer: (question, value, meta) => this.appendAnswer(question, value, meta),
+      afterWrite: (question, answer) => this.afterWrite(question, answer),
+      onApproved: (question, answer) => this.applyApprovedName(question, answer),
     })
-    writeProposals(this.root, proposals)
-    return { id, expected_version: version }
   }
 
-  approveChange(changeId: string, proof: string | undefined, expectedVersion: number): StepResult {
-    if (!approvalProofMatches(this.root, proof)) {
-      return { kind: 'error', message: 'Stale, missing, or forged approval proof was rejected. The approved fact was not changed.' }
-    }
-    const proposals = readProposals(this.root)
-    const proposal = proposals.find((item) => item.id === changeId)
-    if (!proposal || proposal.status !== 'pending') return { kind: 'error', message: 'Proposal not found.' }
-    const currentFact = readFacts(this.root, 'approved', this.config().brand.slug)[proposal.question_id]
-    if (!currentFact || currentFact.status !== 'approved' || currentFact.version !== expectedVersion || proposal.expected_version !== expectedVersion) {
-      return { kind: 'error', message: 'Stale revision. Current approved fact does not match this proposal. No change was made.' }
-    }
-    const question = this.question(proposal.question_id)
-    if (!question) return { kind: 'error', message: 'Proposal question is missing.' }
-    const stored = proposal.private_ref ? new PrivateStore(this.root).get(proposal.private_ref) : null
-    if (proposal.private_ref && (!stored || stored.questionId !== question.id)) return { kind: 'error', message: 'Restricted proposal payload is missing or mismatched.' }
-    const raw = proposal.private_ref ? String(stored?.raw ?? '') : String(proposal.proposed_value ?? '')
-    const normalized = normalizeAnswer(question, raw)
-    if (!normalized.ok) return { kind: 'error', questionId: question.id, message: normalized.message }
-    const value = proposal.private_ref ? null : normalized.value
-    const latest = this.context().answers.get(question.id)
-    if (latest) this.supersede(latest.answer_id)
-    const answer = this.appendAnswer(question, value, {
-      sourceType: 'owner',
-      authority: 'confirmed_by_owner',
-      status: 'approved',
-      uncertainty: null,
-      raw: proposal.private_ref ? null : raw,
-      reviewedBy: 'authenticated-reviewer',
-      privateRef: proposal.private_ref,
-    })
-    this.writeApprovedFact(question, answer, (readApprovedMap(this.root)[question.id]?.version ?? 1) + 1)
-    proposal.status = 'approved'
-    writeProposals(this.root, proposals)
-    this.afterWrite(question, answer)
-    return { kind: 'recorded', questionId: question.id, status: 'approved', message: 'Replacement approved. Previous revision remains in the ledger.' }
+  requestChange(questionId: string, rawValue: string): { id: string; expected_version: number } {
+    return this.approvals().requestChange(questionId, rawValue)
+  }
+
+  approveChange(changeId: string, proof: string | undefined, expectedVersion: number, actor = 'owner'): StepResult {
+    return toStep(this.approvals().approveChange(changeId, proof, expectedVersion, actor))
   }
 
   approve(questionId: string, actor: string, proof?: string): StepResult {
-    const question = this.question(questionId)
-    if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
-    const locale = this.session().locale
-    if (!approvalProofMatches(this.root, proof)) {
-      return {
-        kind: 'error',
-        questionId,
-        message: 'Approval refused. An actor name is not authentication. Provide the human approval proof from brand/.private/approval-secret.',
-      }
-    }
-    const reviewer = verifiedHumanContext(this.config().brand.slug, actor)
-    const decision = reviewer
-      ? authorize(reviewer, { brand_id: this.config().brand.slug, classification: question.sensitivity as Audience, status: 'draft', publication: 'unpublished' }, 'approve')
-      : { allow: false, reason: 'actor is not a verified human role' }
-    if (!decision.allow) return { kind: 'error', questionId, message: `Approval refused. ${decision.reason}.` }
-    if (!canApprove(actor, question)) {
-      return { kind: 'error', questionId, message: t(locale, 'denied', { actor }) }
-    }
-    const latest = this.context().answers.get(questionId)
-    const previousVersion = readApprovedMap(this.root)[questionId]?.version
-    if (latest?.status === 'approved') {
-      // Re-approving would rewrite the fact and must never reset its version, because
-      // approveChange's stale-revision check depends on it. Changes go through a proposal.
-      return {
-        kind: 'error',
-        questionId,
-        message: `${questionId} is already approved (version ${typeof previousVersion === 'number' ? previousVersion : 'unknown'}). Nothing was changed. To replace it, propose a change ("change ${questionId}: …") and approve that proposal.`,
-      }
-    }
-    const hasSubstance = Boolean(latest && (latest.value !== null || latest.private_ref))
-    if (!latest || !hasSubstance || ['unknown', 'skipped', 'not_applicable', 'unanswered'].includes(latest.status)) {
-      return { kind: 'error', questionId, message: t(locale, 'cannotApprove') }
-    }
-    this.supersede(latest.answer_id)
-    const answer = this.appendAnswer(question, latest.value, {
-      sourceType: latest.source_type ?? 'owner',
-      authority: latest.authority === 'estimated' ? 'estimated' : 'confirmed_by_owner',
-      status: 'approved',
-      uncertainty: latest.uncertainty,
-      confidence: latest.confidence,
-      sourceReference: latest.source_reference,
-      raw: latest.raw_answer,
-      reviewedBy: actor,
-      privateRef: latest.private_ref ?? null,
-    })
-    // Monotonic: a field that held an approved revision before gets the next version, never 1 again.
-    this.writeApprovedFact(question, answer, typeof previousVersion === 'number' ? previousVersion + 1 : 1)
-    if (question.id === 'business.identity.trade_name' && typeof answer.value === 'string') {
-      const config = this.config()
-      config.brand.name = answer.value
-      config.brand.name_status = 'approved'
-      config.brand.working_name = answer.value
-      config.brand.working_name_status = 'approved'
-      this.saveConfig(config)
-    }
-    this.afterWrite(question, answer)
-    return { kind: 'recorded', questionId, status: 'approved', message: t(locale, 'approved', { actor }) }
+    return toStep(this.approvals().approve(questionId, actor, proof))
+  }
+
+  publishFact(questionId: string, proof?: string): StepResult {
+    return toStep(this.approvals().publishFact(questionId, proof))
+  }
+
+  private applyApprovedName(question: FieldQuestion, answer: AnswerRecord): void {
+    if (question.id !== 'business.identity.trade_name' || typeof answer.value !== 'string') return
+    const config = this.config()
+    config.brand.name = answer.value
+    config.brand.name_status = 'approved'
+    config.brand.working_name = answer.value
+    config.brand.working_name_status = 'approved'
+    this.saveConfig(config)
   }
 
   private impact(questionId: string, proposed: string): ImpactReport {
@@ -608,21 +531,7 @@ export class InterviewEngine {
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
   }
 
-  private appendAnswer(
-    question: FieldQuestion,
-    value: string | number | boolean | null,
-    meta: {
-      sourceType: SourceType | null
-      authority: Authority
-      status: Status
-      uncertainty: string | null
-      confidence?: number | null
-      sourceReference?: string | null
-      raw?: string | null
-      reviewedBy?: string | null
-      privateRef?: string | null
-    },
-  ): AnswerRecord {
+  private appendAnswer(question: FieldQuestion, value: AnswerRecord['value'], meta: AnswerMeta): AnswerRecord {
     const ledger = this.ledger()
     const sessionId = this.ensureSession()
     let storedValue = value
@@ -716,67 +625,6 @@ export class InterviewEngine {
       answer_id: answer.answer_id,
       updated: answer.last_updated,
     }
-    writeYaml(file, doc)
-  }
-
-  private writeApprovedFact(question: FieldQuestion, answer: AnswerRecord, version = 1): void {
-    const brandId = this.config().brand.slug
-    const facts = readFacts(this.root, 'approved', brandId)
-    const value = question.sensitivity === 'restricted' ? null : answer.value
-    const fact: CanonicalFact = {
-      id: question.id,
-      brand_id: brandId,
-      module: question.module,
-      value,
-      value_type: question.question_type,
-      status: 'approved',
-      classification: question.sensitivity as Audience,
-      publication: 'unpublished',
-      source: { kind: 'interview', answer_ids: [answer.answer_id], reference_ids: [], citation_paths: ['brand/instance/approved-facts.yaml'], observed_at: answer.last_updated },
-      confidence: answer.confidence ?? null,
-      assumptions: [],
-      owner: null,
-      reviewer_id: answer.reviewed_by,
-      approved_at: answer.last_updated,
-      version,
-      revision_hash: null,
-      review_due: null,
-      related_ids: question.related_ids,
-      private_ref: answer.private_ref ?? null,
-    }
-    fact.revision_hash = `${question.id}:${version}`
-    facts[question.id] = fact
-    writeFacts(this.root, 'approved', facts)
-  }
-
-  publishFact(questionId: string, proof?: string): StepResult {
-    if (!approvalProofMatches(this.root, proof)) return { kind: 'error', message: 'Publication requires the human proof. Visibility public is not publication.' }
-    const reviewer = verifiedHumanContext(this.config().brand.slug, 'owner')
-    if (!reviewer || !authorize(reviewer, { brand_id: this.config().brand.slug, classification: 'public', status: 'approved', publication: 'unpublished' }, 'approve').allow) {
-      return { kind: 'error', message: 'Publication refused.' }
-    }
-    const facts = readFacts(this.root, 'approved', this.config().brand.slug)
-    const fact = facts[questionId]
-    if (!fact || fact.status !== 'approved' || fact.classification !== 'public') {
-      return { kind: 'error', message: 'Only an approved public fact can be published.' }
-    }
-    fact.publication = 'published'
-    writeFacts(this.root, 'approved', facts)
-    const policyFile = this.file('brand', 'publication-policy.yaml')
-    const policy = exists(policyFile)
-      ? readYaml<{ schema_version: number; approved_fact_ids?: string[] }>(policyFile)
-      : { schema_version: 1, approved_fact_ids: [] as string[] }
-    policy.approved_fact_ids = policy.approved_fact_ids ?? []
-    if (!policy.approved_fact_ids.includes(questionId)) policy.approved_fact_ids.push(questionId)
-    writeYaml(policyFile, policy)
-    return { kind: 'recorded', questionId, status: 'approved', message: 'Fact published to the public projection.' }
-  }
-
-  private withdrawApproval(questionId: string): void {
-    const file = this.file('brand', 'instance', 'approved-facts.yaml')
-    if (!exists(file)) return
-    const doc = readYaml<{ schema_version: number; facts: Record<string, unknown> }>(file)
-    delete doc.facts[questionId]
     writeYaml(file, doc)
   }
 
@@ -1022,6 +870,10 @@ function extractPersianCandidates(text: string): Array<{ question_id: string; va
   return found
 }
 
+function toStep(step: ApprovalStep): StepResult {
+  return { kind: step.kind, message: step.message, questionId: step.questionId, status: step.status }
+}
+
 function formatImpact(impact: ImpactReport): string {
   return [
     `Proposed change to ${impact.questionId}`,
@@ -1030,38 +882,6 @@ function formatImpact(impact: ImpactReport): string {
     `Linked questions: ${impact.impactedQuestions.join(', ') || 'none'}`,
     impact.requiresConfirmation ? 'Confirmation required before the approved value changes.' : 'No approval is held on this field.',
   ].join('\n')
-}
-
-function normalizeAnswer(
-  question: FieldQuestion,
-  rawValue: string,
-): { ok: true; value: string | number | boolean } | { ok: false; message: string } {
-  const value = rawValue.trim()
-  if (!value) return { ok: false, message: 'Empty answer. Use unknown, skip, or decide later.' }
-  if (question.question_type === 'boolean') {
-    const token = value.toLowerCase()
-    if (['yes', 'y', 'true', 'بله', 'evet'].includes(token)) return { ok: true, value: 'yes' }
-    if (['no', 'n', 'false', 'خیر', 'hayır', 'hayir'].includes(token)) return { ok: true, value: 'no' }
-    return { ok: false, message: 'Answer yes or no. Or say unknown.' }
-  }
-  if (question.question_type === 'single_choice') {
-    const match = question.options?.find((option) => option.toLowerCase() === value.toLowerCase())
-    if (!match) return { ok: false, message: `Choose one of: ${(question.options ?? []).join(', ')}` }
-    return { ok: true, value: match }
-  }
-  if (question.question_type === 'number') {
-    const parsed = Number(value)
-    if (!Number.isFinite(parsed)) return { ok: false, message: 'Enter a number, or say unknown.' }
-    return { ok: true, value: parsed }
-  }
-  if (question.question_type === 'url') {
-    if (!/^https?:\/\//.test(value)) return { ok: false, message: 'Enter an http(s) URL, or say none is not available for this field — use unknown.' }
-    return { ok: true, value }
-  }
-  if (question.validation?.min_length && value.length < question.validation.min_length) {
-    return { ok: false, message: `Answer must be at least ${question.validation.min_length} characters.` }
-  }
-  return { ok: true, value }
 }
 
 export function assertSlug(slug: string): void {
@@ -1112,35 +932,6 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   syncManifest(root, config)
   new InterviewEngine(root).rebuildDrafts()
   return config
-}
-
-interface Proposal {
-  id: string
-  question_id: string
-  expected_version: number
-  status: 'pending' | 'approved'
-  proposed_value: string | null
-  private_ref: string | null
-}
-
-function proposalFile(root: string): string {
-  return path.join(root, 'brand', '.private', 'proposals.json')
-}
-
-function readProposals(root: string): Proposal[] {
-  const file = proposalFile(root)
-  if (!fs.existsSync(file)) return []
-  return (JSON.parse(fs.readFileSync(file, 'utf8')) as { proposals: Proposal[] }).proposals
-}
-
-function writeProposals(root: string, proposals: Proposal[]): void {
-  writeAtomic(proposalFile(root), `${JSON.stringify({ proposals })}\n`, { mode: 0o600 })
-}
-
-function readApprovedMap(root: string): Record<string, { version?: number; value?: unknown }> {
-  const file = path.join(root, 'brand', 'instance', 'approved-facts.yaml')
-  if (!fs.existsSync(file)) return {}
-  return readYaml<{ facts: Record<string, { version?: number; value?: unknown }> }>(file).facts ?? {}
 }
 
 export function syncManifest(root: string, config: BrandConfig): void {

@@ -32,7 +32,21 @@ export type { InitInput, StepResult, ImpactReport } from './engine.js'
 export { writeStarterWorkspace } from './materialize.js'
 export { completeness, latestAnswers } from './completeness.js'
 export { findContradictions } from './contradictions.js'
-export { canApprove, permissionFor } from './permissions.js'
+export { approvalGrantErrors, APPROVAL_GRANTS, canApprove, isApprovalGrant, permissionFor } from './permissions.js'
+export type { ApprovalGrant } from './permissions.js'
+export { ApprovalService, readProposals } from './approval.js'
+export type {
+  ApprovalStep,
+  BatchItemResult,
+  BatchOutcome,
+  BatchResult,
+  ChangeProposal,
+  PublishOutcome,
+  PublishResult,
+  ReviewItem,
+  ReviewQueue,
+  Selection,
+} from './approval.js'
 export {
   brandRetrieve,
   RETRIEVE_KINDS,

@@ -8,6 +8,7 @@ import { buildMascotCatalog, catalogCounts } from './content/mascot-catalog.js'
 import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
+import { approvalGrantErrors } from './permissions.js'
 import type { FieldQuestion } from './types.js'
 
 export interface ValidationReport {
@@ -93,6 +94,7 @@ function validateQuestionFiles(questions: FieldQuestion[], errors: string[]): vo
         errors.push(`${question.id} has an unsafe output path ${output}`)
       }
     }
+    errors.push(...approvalGrantErrors(question))
     for (const dependency of question.depends_on) {
       if (!questions.some((item) => item.id === dependency)) errors.push(`${question.id} depends on missing ${dependency}`)
     }
