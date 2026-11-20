@@ -17,8 +17,9 @@ If a file disagrees with an approved fact, the approved fact wins until a person
 
 - Stable ids live in `brand/interview/field-registry.yaml`, `brand/mascot/catalog.yaml`, and `brand/assets/asset-manifest.yaml`.
 - `npm run brand:query -- --tool get_brand_status` returns coverage and approval without answer values.
-- `npm run brand:query -- --tool get_brand_tokens` withholds EXAMPLE values unless you pass `--include-unapproved`.
+- `npm run brand:query -- --tool get_brand_tokens` returns only tokens that are hash-approved and published. EXAMPLE values are never returned. `--include-unapproved` is ignored and grants nothing.
 - `npm run brand:query -- --tool list_mascot_assets` returns no rows until artwork is approved.
+- `brand:query` and the MCP server run as a guest. On a brand with `publish_docs: private` every tool returns `denied`. That is expected, not a bug to work around.
 - Read `examples/agent-requests.md` before designing a post or a mascot screen.
 
 ## What you must not do

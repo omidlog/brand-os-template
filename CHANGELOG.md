@@ -9,6 +9,6 @@ First template slice of Brand OS.
 - Twenty brand modules, twelve Business OS modules, optional mascot catalog (90 states, 6 example stages, 8 angles, 15 motions), and optional gamification.
 - Interview CLI: one question at a time, ledger, drafts, resume, approval, impact, and restricted-field handling.
 - Schemas, validation, tests, and GitHub Actions.
-- Agent instructions, five skills, and a local read-only tool adapter.
+- Agent instructions, ten skills, and a local read-only tool adapter.
 
 Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand facts are included.

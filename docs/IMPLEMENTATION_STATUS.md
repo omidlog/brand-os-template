@@ -46,7 +46,7 @@ Still external: SSO, a hosted LLM, live Figma, and npm publishing. The approval 
 
 ## Remaining security limits
 
-- The local encryption key sits next to the ciphertext in `brand/.private`. Copying that directory copies the secrets. It is not a KMS.
+- Restricted answers and backups are encrypted with `BRAND_OS_DATA_KEY`, read from the environment only. The key is not written into the working tree, so copying `brand/.private` copies ciphertext without the key. Losing the key makes those files unreadable. There is no key rotation tooling and it is not a KMS.
 - The approval proof is a local shared secret, not SSO. Anyone who can read `approval-secret` can approve.
 - `brand:init --reset` rewrites the ledger after copying it into the private backup. It does not rewrite mascot catalogs or module prose.
 - A public build of a brand with `publish_docs: public` publishes approved public facts. Restricted values stay out. Internal facts stay out of the public audience.
