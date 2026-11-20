@@ -262,7 +262,7 @@ function writeData(ctx: PrepareContext): void {
     states: Array<Record<string, unknown>>
   }
   const catalog = (ctx.mascot ? catalogDoc.states : [])
-    .filter((state) => ctx.audience !== 'public' || (state.status === 'approved' && pageIsPublic(ctx.root, String(state.id))))
+    .filter((state) => ctx.audience !== 'public' || ((state.status === 'approved' || state.status === 'published') && pageIsPublic(ctx.root, String(state.id))))
     .map((state) => {
       const sources = Array.isArray(state.source_assets) ? state.source_assets.filter((item): item is string => typeof item === 'string') : []
       const preview = sources.find((assetPath) => {

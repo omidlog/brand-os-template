@@ -5,6 +5,7 @@ import { validateAssets } from '@brand-os/asset-catalog'
 import { compileTokens } from '@brand-os/design-tokens'
 import { allQuestions } from './content/index.js'
 import { buildMascotCatalog, catalogCounts } from './content/mascot-catalog.js'
+import { validateMascotLifecycle } from './mascot-lifecycle.js'
 import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
@@ -168,6 +169,7 @@ function validateMascot(root: string, errors: string[]): void {
     if (!storedIds.has(state.id)) errors.push(`Catalog file is missing ${state.id}`)
   }
   if (stored.states.length !== 90) errors.push(`Catalog file has ${stored.states.length} states, expected 90`)
+  errors.push(...validateMascotLifecycle(root, stored.states as unknown as Array<Record<string, unknown>>))
   const stages = readYaml<{ stages: Array<{ id?: string; order?: number }> }>(path.join(root, 'brand', 'mascot', 'stages.yaml'))
   const stageIds = stages.stages.map((stage) => stage.id).filter((id): id is string => Boolean(id))
   if (stageIds.length !== stages.stages.length) errors.push('Every mascot stage needs an id')

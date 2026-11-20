@@ -1,3 +1,5 @@
+import type { MascotLifecycle } from '../mascot-lifecycle.js'
+
 export interface MascotState {
   id: string
   category: 'emotion' | 'action' | 'ui' | 'learning' | 'prop' | 'seasonal'
@@ -12,7 +14,8 @@ export interface MascotState {
   animation_possible: boolean
   source_assets: string[]
   preview: null
-  status: 'draft' | 'approved'
+  /** Artwork lifecycle. The template ships every slot as `defined`: described, with no artwork. */
+  status: MascotLifecycle
   do: string[]
   dont: string[]
   tags: string[]
@@ -100,7 +103,7 @@ function row(
     animation_possible: category !== 'seasonal',
     source_assets: [],
     preview: null,
-    status: 'draft',
+    status: 'defined',
     do: BASE_DO,
     dont: BASE_DONT,
     tags: ['mascot', category, slug, mvp ? 'mvp' : 'backlog'],

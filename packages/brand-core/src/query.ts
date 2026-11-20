@@ -10,6 +10,7 @@ import { appendAccessLog, queryFingerprint } from './access-log.js'
 import { authorize, guestContext, type AgentProfile, type Audience, type AuthContext, type Role } from './auth.js'
 import { readFacts } from './facts.js'
 import { factIsPublic, readPublicationPolicy } from './publication.js'
+import { isUsableLifecycle } from './mascot-lifecycle.js'
 
 /**
  * One retrieval path for every reader (guest, profiled agent, local operator), over MCP and `brand:query`.
@@ -17,7 +18,7 @@ import { factIsPublic, readPublicationPolicy } from './publication.js'
  * Retrieval only ever returns approved items. Drafts are not knowledge.
  */
 
-export const RETRIEVE_KINDS = ['facts', 'tokens', 'mascot_assets', 'mascot_stages', 'component', 'asset', 'social_template', 'status'] as const
+export const RETRIEVE_KINDS = ['facts', 'tokens', 'mascot', 'mascot_assets', 'mascot_stages', 'component', 'asset', 'social_template', 'status'] as const
 export type RetrieveKind = (typeof RETRIEVE_KINDS)[number]
 
 export interface RetrieveRequest {
@@ -26,7 +27,22 @@ export interface RetrieveRequest {
   module?: string
   ids?: string[]
   query?: string
+  /** Filters for `kind: 'mascot'`. Every given filter must match. */
+  filters?: MascotFilters
 }
+
+export interface MascotFilters {
+  /** Emotion keyword or catalog emotion id, for example `celebrating`. */
+  emotion?: string
+  /** Stage id, stage order (`3`), or stage name. */
+  stage?: string
+  /** Use-case keyword, for example `correct-answer`. Matches `use_cases`, the state slug, surfaces and tags. */
+  use_case?: string
+  /** Angle id or short name, for example `front` or `mascot.angle.front`. */
+  angle?: string
+}
+
+export const MASCOT_FILTER_KEYS = ['emotion', 'stage', 'use_case', 'angle'] as const
 
 /** Wrapper-only options. Not reachable from MCP or CLI arguments. */
 interface InternalRequest extends RetrieveRequest {
@@ -85,6 +101,8 @@ interface Retrieval {
   missing: string[]
   source: string
   extra?: Record<string, unknown>
+  /** Plain-language reasons why nothing (or not everything) matched. */
+  explanation?: string[]
 }
 
 function audienceOf(value: unknown): Audience {
@@ -285,7 +303,8 @@ function retrieveMascotAssets(engine: InterviewEngine, ctx: AuthContext, req: Re
   for (const state of catalog.states ?? []) {
     const id = String(state.id)
     const published = pagePublished(engine, id)
-    if (!readable(ctx, brandId, { classification: published ? 'public' : 'internal', status: state.status, published, module: 'mascot-identity' }).allow) continue
+    const status = isUsableLifecycle(state.status) ? 'approved' : state.status
+    if (!readable(ctx, brandId, { classification: published ? 'public' : 'internal', status, published, module: 'mascot-identity' }).allow) continue
     const row = {
       id: state.id,
       name: state.name,
@@ -312,6 +331,178 @@ function retrieveMascotAssets(engine: InterviewEngine, ctx: AuthContext, req: Re
   const needle = (req.query ?? '').toLowerCase()
   const filtered = needle ? items.filter((item) => JSON.stringify(item.value).toLowerCase().includes(needle)) : items
   return { allow: true, reason: 'allowed', items: filtered, missing: [], source: CATALOG_PATH }
+}
+
+function norm(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-')
+}
+
+function slugOf(id: string): string {
+  return id.split('.').pop() ?? id
+}
+
+function strings(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => norm(item)) : []
+}
+
+function matchesEmotion(state: Row, wanted: string): boolean {
+  const id = String(state.id)
+  return (
+    norm(state.emotion) === wanted ||
+    (state.category === 'emotion' && (slugOf(id) === wanted || norm(state.name) === wanted || norm(id) === wanted)) ||
+    strings(state.tags).includes(wanted)
+  )
+}
+
+function matchesUseCase(state: Row, wanted: string): boolean {
+  return (
+    strings(state.use_cases).includes(wanted) ||
+    (state.category !== 'emotion' && slugOf(String(state.id)) === wanted) ||
+    strings(state.applicable_surfaces).includes(wanted) ||
+    strings(state.tags).includes(wanted)
+  )
+}
+
+function describe(filters: MascotFilters): string {
+  const parts = MASCOT_FILTER_KEYS.filter((key) => filters[key]).map((key) => `${key}=${filters[key]}`)
+  return parts.length ? parts.join(', ') : 'no filters'
+}
+
+/**
+ * Finds approved mascot artwork by emotion, stage, use case and angle.
+ * Returns only artwork whose own lifecycle is approved or published, whose state is approved or published,
+ * and whose manifest asset this principal may read (approved, checksummed, safe path, published for guests).
+ * Draft, pending, created and reviewed artwork is never returned. When nothing matches, `explanation`
+ * says what is missing. Guests get a generic explanation that reveals no unpublished rows.
+ */
+function retrieveMascot(engine: InterviewEngine, ctx: AuthContext, req: RetrieveRequest): Retrieval {
+  if (!engine.config().modules.mascot.enabled) {
+    return { allow: true, reason: 'not applicable', notApplicable: true, items: [], missing: [], source: CATALOG_PATH, explanation: ['The mascot module is disabled for this brand.'] }
+  }
+  const root = engine.workspaceRoot()
+  const brandId = engine.config().brand.slug
+  const filters: MascotFilters = req.filters ?? {}
+  const wanted = Object.fromEntries(MASCOT_FILTER_KEYS.map((key) => [key, filters[key] ? norm(filters[key]) : ''])) as Record<(typeof MASCOT_FILTER_KEYS)[number], string>
+  const label = describe(filters)
+  const detailed = ctx.audience !== 'public'
+  const explanation: string[] = []
+  const done = (items: RetrievedItem[]): Retrieval => ({
+    allow: true,
+    reason: 'allowed',
+    items,
+    missing: items.length ? [] : [`mascot: ${label}`],
+    source: CATALOG_PATH,
+    explanation: items.length ? explanation : detailed ? explanation : ['No published mascot artwork matches these filters.'],
+  })
+
+  const stages = readYamlFile<{ stages?: Row[] }>(root, STAGES_PATH, {}).stages ?? []
+  let stage: Row | null = null
+  if (wanted.stage) {
+    stage = stages.find((item) => norm(item.id) === wanted.stage || String(item.order) === wanted.stage || norm(item.name) === wanted.stage || slugOf(norm(item.id)) === wanted.stage) ?? null
+    if (!stage) {
+      explanation.push(`Stage ${filters.stage} is not configured. Configured stages: ${stages.map((item) => `${String(item.order)} ${String(item.id)}`).join(', ') || 'none'}.`)
+      return done([])
+    }
+  }
+  const stageId = stage ? String(stage.id) : null
+  const angleId = wanted.angle ? (wanted.angle.startsWith('mascot.angle.') ? wanted.angle : `mascot.angle.${wanted.angle}`) : null
+
+  const catalog = readYamlFile<{ states?: Row[] }>(root, CATALOG_PATH, {}).states ?? []
+  let candidates = catalog.filter((state) => state.status !== 'deprecated')
+  if (wanted.emotion) {
+    candidates = candidates.filter((state) => matchesEmotion(state, wanted.emotion))
+    if (candidates.length === 0) {
+      explanation.push(`No catalog state matches emotion "${filters.emotion}".`)
+      return done([])
+    }
+  }
+  if (wanted.use_case) {
+    const before = candidates
+    candidates = candidates.filter((state) => matchesUseCase(state, wanted.use_case))
+    if (candidates.length === 0) {
+      explanation.push(
+        wanted.emotion
+          ? `${before.map((state) => String(state.id)).join(', ')} match${before.length === 1 ? 'es' : ''} emotion "${filters.emotion}", but none lists use case "${filters.use_case}" in use_cases.`
+          : `No catalog state lists use case "${filters.use_case}".`,
+      )
+      return done([])
+    }
+  }
+  if (stageId) {
+    const before = candidates
+    candidates = candidates.filter((state) => {
+      const compatible = Array.isArray(state.stage_compatibility) ? state.stage_compatibility.map(String) : []
+      return compatible.includes('any') || compatible.includes(stageId)
+    })
+    if (candidates.length === 0) {
+      explanation.push(`${before.map((state) => String(state.id)).join(', ')} ${before.length === 1 ? 'is' : 'are'} not compatible with stage ${stageId}.`)
+      return done([])
+    }
+  }
+
+  const policy = readPublicationPolicy(root)
+  const assets = new Map(readableAssets(engine, ctx).map((asset) => [String(asset.id), asset]))
+  const items: RetrievedItem[] = []
+  for (const state of candidates.slice(0, 200)) {
+    const id = String(state.id)
+    const artwork = Array.isArray(state.artwork) ? (state.artwork as Row[]) : []
+    const fits = artwork.filter((art) => (!stageId || art.stage === stageId || art.stage === 'any') && (!angleId || art.angle === angleId))
+    if (fits.length === 0) {
+      const where = [stageId ? `stage ${stageId}` : '', angleId ? `angle ${angleId}` : ''].filter(Boolean).join(' and ')
+      explanation.push(`${id} is ${String(state.status)}; no artwork exists${where ? ` for ${where}` : ''}.`)
+      continue
+    }
+    for (const art of fits) {
+      const artId = String(art.id)
+      if (!isUsableLifecycle(art.status) || !isUsableLifecycle(state.status)) {
+        explanation.push(`${artId} (${id}) is ${String(art.status)}, not approved. Draft art is never returned.`)
+        continue
+      }
+      const asset = assets.get(String(art.asset_id))
+      const published = art.status === 'published' && policy.approved_asset_ids.includes(String(art.asset_id))
+      const classification: Audience = published ? 'public' : 'internal'
+      const decision = readable(ctx, brandId, { classification, status: 'approved', published, module: 'mascot-identity' })
+      if (!asset || !decision.allow) {
+        explanation.push(`${artId} (${id}) is ${String(art.status)}, but asset ${String(art.asset_id)} is not readable here (not approved in the manifest, file missing or changed, or not published for this reader).`)
+        continue
+      }
+      const preview = art.preview_asset_id ? assets.get(String(art.preview_asset_id)) : undefined
+      items.push({
+        id: artId,
+        brand_id: brandId,
+        module: 'mascot-identity',
+        source_path: CATALOG_PATH,
+        classification,
+        approval_state: 'approved',
+        publication: published ? 'published' : 'unpublished',
+        revision: String(asset.checksum_sha256),
+        version: null,
+        value: {
+          state_id: id,
+          name: state.name,
+          category: state.category,
+          emotion: state.emotion ?? (state.category === 'emotion' ? slugOf(id) : null),
+          use_cases: state.use_cases ?? [],
+          lifecycle: art.status,
+          stage: art.stage,
+          stage_order: stage?.order ?? stages.find((item) => item.id === art.stage)?.order ?? null,
+          angle: art.angle ?? null,
+          intensity: art.intensity ?? state.emotion_intensity ?? null,
+          outfit: art.outfit ?? state.outfit ?? null,
+          accessories: art.accessories ?? state.accessories ?? [],
+          animation_refs: art.animation_refs ?? state.animation_refs ?? [],
+          version: art.version,
+          license: art.license ?? state.license ?? null,
+          asset: { id: asset.id, path: asset.path, checksum_sha256: asset.checksum_sha256 },
+          preview: preview ? { id: preview.id, path: preview.path } : null,
+          source: CATALOG_PATH,
+        },
+        withheld: false,
+        reason: null,
+      })
+    }
+  }
+  return done(items)
 }
 
 function retrieveMascotStages(engine: InterviewEngine, ctx: AuthContext): Retrieval {
@@ -415,6 +606,8 @@ function retrieve(engine: InterviewEngine, ctx: AuthContext, req: InternalReques
       return retrieveFacts(engine, ctx, req)
     case 'tokens':
       return retrieveTokens(engine, ctx, req)
+    case 'mascot':
+      return retrieveMascot(engine, ctx, req)
     case 'mascot_assets':
       return retrieveMascotAssets(engine, ctx, req)
     case 'mascot_stages':
@@ -463,7 +656,7 @@ function run(engine: InterviewEngine, ctxInput: AuthContext | undefined, req: In
         requested_ids: req.ids ?? [],
         returned_ids: retrieval.items.filter((item) => !item.withheld).map((item) => item.id),
         withheld_ids: retrieval.items.filter((item) => item.withheld).map((item) => item.id),
-        query_sha256: queryFingerprint(req.query),
+        query_sha256: queryFingerprint(req.query ?? (req.filters ? JSON.stringify(req.filters) : undefined)),
         decision: retrieval.allow ? 'allow' : 'deny',
         reason: retrieval.reason,
       })
@@ -499,6 +692,18 @@ function run(engine: InterviewEngine, ctxInput: AuthContext | undefined, req: In
   }
 }
 
+function cleanFilters(input: unknown): MascotFilters | undefined {
+  if (typeof input !== 'object' || input === null) return undefined
+  const source = input as Record<string, unknown>
+  const out: MascotFilters = {}
+  for (const key of MASCOT_FILTER_KEYS) {
+    const value = source[key]
+    if (typeof value === 'string' && value.trim()) out[key] = value.trim().slice(0, 100)
+    else if (typeof value === 'number' && Number.isFinite(value)) out[key] = String(value)
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 /** The unified retrieval tool. The caller's context comes from the server, never from `request`. */
 export function brandRetrieve(engine: InterviewEngine, ctx: AuthContext | undefined, request: RetrieveRequest): ToolResult {
   const kind = RETRIEVE_KINDS.includes(request.kind) ? request.kind : null
@@ -507,6 +712,7 @@ export function brandRetrieve(engine: InterviewEngine, ctx: AuthContext | undefi
     module: typeof request.module === 'string' ? request.module : undefined,
     ids: Array.isArray(request.ids) ? request.ids.filter((id): id is string => typeof id === 'string').slice(0, 100) : undefined,
     query: typeof request.query === 'string' ? request.query : undefined,
+    filters: cleanFilters(request.filters),
   }
   return run(engine, ctx, req, {
     tool: 'brand_retrieve',
@@ -515,8 +721,15 @@ export function brandRetrieve(engine: InterviewEngine, ctx: AuthContext | undefi
     note: (retrieval) =>
       retrieval.notApplicable
         ? 'Module is disabled.'
-        : 'Approved items only. Withheld items carry no value. Missing ids stay missing.',
-    data: (retrieval) => ({ kind: req.kind, items: retrieval.items, ...(retrieval.extra ? { status: retrieval.extra } : {}) }),
+        : req.kind === 'mascot'
+          ? 'Approved or published mascot artwork only. Draft art is never returned. See explanation for what is missing.'
+          : 'Approved items only. Withheld items carry no value. Missing ids stay missing.',
+    data: (retrieval) => ({
+      kind: req.kind,
+      items: retrieval.items,
+      ...(retrieval.extra ? { status: retrieval.extra } : {}),
+      ...(retrieval.explanation ? { explanation: retrieval.explanation } : {}),
+    }),
     denied: { kind: req.kind, items: [] },
   })
 }

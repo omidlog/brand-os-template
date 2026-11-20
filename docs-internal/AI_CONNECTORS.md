@@ -62,6 +62,7 @@ Restricted fields (finance figures, budgets, partner shares, board details) come
 - `{ "kind": "facts", "module": "brand-strategy" }`
 - `{ "kind": "facts", "ids": ["brand.strategy.purpose"] }`
 - `{ "kind": "facts", "query": "tagline" }`
+- `{ "kind": "mascot", "filters": { "emotion": "celebrating", "stage": "3", "use_case": "correct-answer", "angle": "front" } }` finds approved mascot artwork. Every given filter must match. `stage` takes a stage id, its order, or its name. Only artwork whose own lifecycle is `approved` or `published`, with an approved, checksummed manifest asset, is returned. When nothing matches, `data.explanation` says what is missing (no state for that emotion, no artwork for that stage, artwork still `reviewed`, asset not readable). Guests get a generic explanation. A disabled mascot module returns `not_applicable`.
 - `{ "kind": "tokens" | "mascot_assets" | "mascot_stages" | "component" | "asset" | "social_template" | "status" }`
 
 Every result has `brand_id`, `classification`, `approval_state`, `revision`, `source_path`, and `missing`. Every item has its id, source path, module, approval state, classification, revision, and value, or a withheld or missing marker.
@@ -72,6 +73,7 @@ The older named tools (`search_brand_docs`, `get_brand_tokens`, `get_brand_overv
 
 ```sh
 BRAND_OS_AGENT_TOKEN=… npm run brand:query -- --tool brand_retrieve --kind facts --module brand-strategy
+BRAND_OS_AGENT_TOKEN=… npm run brand:query -- --tool brand_retrieve --kind mascot --emotion celebrating --stage 3 --use-case correct-answer
 ```
 
 ### Access log

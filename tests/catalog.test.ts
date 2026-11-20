@@ -13,5 +13,5 @@ test('mascot catalog has the required inventory', () => {
   assert.equal(EXAMPLE_STAGES.length, 6)
   assert.equal(CANONICAL_ANGLES.length, 8)
   assert.equal(CORE_MOTIONS.length, 15)
-  assert.ok(states.every((state) => state.preview === null && state.source_assets.length === 0 && state.status === 'draft'))
+  assert.ok(states.every((state) => state.preview === null && state.source_assets.length === 0 && state.status === 'defined'))
 })

@@ -75,15 +75,24 @@ server.registerTool(
   'brand_retrieve',
   {
     description:
-      'Unified retrieval of approved brand knowledge this server is authorized to read. kind: facts (optionally module, ids, or query), tokens, mascot_assets, mascot_stages, component, asset, social_template, status. Every item carries id, source_path, brand_id, classification, approval_state, revision, and withheld/missing markers.',
+      'Unified retrieval of approved brand knowledge this server is authorized to read. kind: facts (optionally module, ids, or query), tokens, mascot (filters: emotion, stage, use_case, angle; approved artwork or an explanation of what is missing), mascot_assets, mascot_stages, component, asset, social_template, status. Every item carries id, source_path, brand_id, classification, approval_state, revision, and withheld/missing markers.',
     inputSchema: z.object({
       kind: z.enum(RETRIEVE_KINDS),
       module: z.string().max(80).optional(),
       ids: z.array(z.string().max(200)).max(100).optional(),
       query: z.string().max(500).optional(),
+      filters: z
+        .object({
+          emotion: z.string().max(100).optional(),
+          stage: z.string().max(100).optional(),
+          use_case: z.string().max(100).optional(),
+          angle: z.string().max(100).optional(),
+        })
+        .strict()
+        .optional(),
     }),
   },
-  async ({ kind, module, ids, query }) => text(brandRetrieve(engine, caller, { kind, module, ids, query })),
+  async ({ kind, module, ids, query, filters }) => text(brandRetrieve(engine, caller, { kind, module, ids, query, filters })),
 )
 
 const transport = new StdioServerTransport()

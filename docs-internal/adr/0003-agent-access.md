@@ -50,7 +50,7 @@ Every profile has audience `internal` and the single scope `read`.
 
 ### One retrieval path
 
-`brandRetrieve(engine, ctx, { kind, module?, ids?, query? })` in `packages/brand-core/src/query.ts` serves `facts`, `tokens`, `mascot_assets`, `mascot_stages`, `component`, `asset`, `social_template`, and `status`. Each item passes `authorize()` with its own classification, approval state, publication, and module.
+`brandRetrieve(engine, ctx, { kind, module?, ids?, query?, filters? })` in `packages/brand-core/src/query.ts` serves `facts`, `tokens`, `mascot` (the artwork finder; `filters` holds emotion, stage, use_case and angle), `mascot_assets`, `mascot_stages`, `component`, `asset`, `social_template`, and `status`. Each item passes `authorize()` with its own classification, approval state, publication, and module.
 
 The 17 original MCP tools are wrappers over that path and keep their data shapes. MCP also registers `brand_retrieve`.
 

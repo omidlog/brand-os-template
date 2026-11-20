@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { migrateFactFiles } from './facts.js'
+import { migrateMascotCatalog, type MascotMigration } from './mascot-lifecycle.js'
 import { writeAtomic } from './fsutil.js'
 import { parse, stringify } from 'yaml'
 import { dataKey } from './private-store.js'
@@ -94,7 +95,11 @@ export function restoreBrand(root: string, backupDir: string): { restored: strin
   return { restored }
 }
 
-export function migrateBrand(root: string): { from: string; to: string; content_rewritten: false } {
+/**
+ * Upgrades engine metadata, fact files and the mascot catalog lifecycle. Fact values and module prose are never
+ * rewritten (`content_rewritten: false`). The mascot migration only changes legacy `status` values.
+ */
+export function migrateBrand(root: string): { from: string; to: string; content_rewritten: false; mascot: MascotMigration } {
   const lockFile = path.join(root, 'brand', 'engine.lock')
   const current = fs.existsSync(lockFile) ? (JSON.parse(fs.readFileSync(lockFile, 'utf8')) as { version?: string }) : {}
   const from = current.version ?? '0.0.0'
@@ -107,10 +112,12 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   if (from !== ENGINE_VERSION && !log.applied.some((entry) => entry.id === id)) {
     log.applied.push({ id, touched: ['brand/engine.lock', 'brand/migrations.yaml'] })
   }
+  const mascot = migrateMascotCatalog(root)
+  if (mascot.files.length > 0) log.applied.push({ id: `mascot-lifecycle@${ENGINE_VERSION}`, touched: mascot.files })
   writeAtomic(logFile, stringify(log, { lineWidth: 100 }))
   writeAtomic(
     lockFile,
-    `${JSON.stringify({ version: ENGINE_VERSION, note: 'Migration rewrites fact files to canonical schema 2 and does not change fact values, catalogs, or assets.' }, null, 2)}\n`,
+    `${JSON.stringify({ version: ENGINE_VERSION, note: 'Migration rewrites fact files to canonical schema 2 and legacy mascot statuses to the lifecycle enum. It does not change fact values, module prose, or assets.' }, null, 2)}\n`,
   )
   const configFile = path.join(root, 'brand', 'brand.config.yaml')
   const brandId = fs.existsSync(configFile) && fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ? fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ?? 'unknown' : 'unknown'
@@ -120,7 +127,7 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   const text = fs.existsSync(gitignore) ? fs.readFileSync(gitignore, 'utf8') : ''
   const missing = required.filter((line) => !text.includes(line))
   if (missing.length > 0) fs.appendFileSync(gitignore, `${text.endsWith('\n') || text.length === 0 ? '' : '\n'}${missing.join('\n')}\n`)
-  return { from, to: ENGINE_VERSION, content_rewritten: false }
+  return { from, to: ENGINE_VERSION, content_rewritten: false, mascot }
 }
 
 export function resetInterviewState(root: string, confirmation: string): { backup: string } {

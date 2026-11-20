@@ -143,7 +143,7 @@ test('retrieval reads approved YAML instead of hard-coded placeholders', () => {
   assert.equal(list[0]?.id, 'color.brand.primary')
   assert.match(String(list[0]?.value), /123A73/)
   const catalog = fs.readFileSync(path.join(root, 'brand/mascot/catalog.yaml'), 'utf8').replace('id: mascot.ui.success\n    category: ui\n    name: Success\n    intent:', 'id: mascot.ui.success\n    category: ui\n    name: Success\n    intent:')
-  fs.writeFileSync(path.join(root, 'brand/mascot/catalog.yaml'), catalog.replace("status: draft\n    do:", 'status: approved\n    do:').replace('status: draft', 'status: approved'))
+  fs.writeFileSync(path.join(root, 'brand/mascot/catalog.yaml'), catalog.replace("status: defined\n    do:", 'status: approved\n    do:').replace('status: defined', 'status: approved'))
   const assets = listMascotAssets(engine)
   assert.ok((assets.data as { rows: unknown[] }).rows.length > 0)
   assert.equal((assets.data as { rows: Array<{ source_assets?: string[] }> }).rows.every((row) => (row.source_assets ?? []).length === 0), true)

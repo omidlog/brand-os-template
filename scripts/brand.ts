@@ -305,6 +305,10 @@ if (command === 'init') {
       kind: { type: 'string' },
       module: { type: 'string' },
       ids: { type: 'string' },
+      emotion: { type: 'string' },
+      stage: { type: 'string' },
+      'use-case': { type: 'string' },
+      angle: { type: 'string' },
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
@@ -334,6 +338,7 @@ if (command === 'init') {
         module: values.module,
         ids: values.ids ? values.ids.split(',').map((id) => id.trim()).filter(Boolean) : undefined,
         query: q || undefined,
+        filters: { emotion: values.emotion, stage: values.stage, use_case: values['use-case'], angle: values.angle },
       })
     },
     search_brand_docs: () => core.searchBrandDocs(engine, q, ctx),
@@ -524,7 +529,9 @@ if (command === 'init') {
   console.log(`Restored ${restored.restored.length} files.`)
 } else if (command === 'migrate') {
   const migrated = migrateBrand(root)
-  console.log(`Migrated ${migrated.from} -> ${migrated.to}. Content files were not rewritten.`)
+  console.log(`Migrated ${migrated.from} -> ${migrated.to}. Fact values and module prose were not rewritten.`)
+  if (migrated.mascot.changed.length > 0) console.log(`Mascot lifecycle: ${migrated.mascot.changed.length} catalog states moved to the lifecycle enum (${migrated.mascot.files.join(', ')}).`)
+  if (migrated.mascot.downgraded.length > 0) console.log(`These states claimed approved without artwork and are now defined: ${migrated.mascot.downgraded.join(', ')}`)
 } else if (command === 'reset') {
   const { values } = parseArgs({ args: rest, options: { confirm: { type: 'string' } } })
   if (values.confirm !== RESET_CONFIRMATION) {

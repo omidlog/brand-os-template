@@ -95,7 +95,8 @@ export {
   searchBrandDocs,
   searchMascotAssets,
 } from './query.js'
-export type { RetrieveKind, RetrieveRequest, RetrievedItem, ToolResult } from './query.js'
+export type { MascotFilters, RetrieveKind, RetrieveRequest, RetrievedItem, ToolResult } from './query.js'
+export { MASCOT_FILTER_KEYS } from './query.js'
 export { asciiDigits, isStructuredType, normalizeStructured, parseStructured, STRUCTURED_FORMATS, STRUCTURED_TYPES, structuredFor } from './structured.js'
 export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, VoicePair } from './structured.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
@@ -144,3 +145,5 @@ export {
 } from './finance.js'
 export type { FinanceBasis, FinanceInputs, FinancePeriod, FinanceReport, FinanceResult, FinanceScenario, ScenarioResult } from './finance.js'
 export { FinanceInputPathError, resolveFinanceInputPath, RESTRICTED_FINANCE_DIR, runFinanceFile } from './finance-input.js'
+export { isMascotLifecycle, MASCOT_LIFECYCLE, migrateMascotCatalog, validateMascotLifecycle } from './mascot-lifecycle.js'
+export type { MascotArtwork, MascotLifecycle, MascotMigration } from './mascot-lifecycle.js'
