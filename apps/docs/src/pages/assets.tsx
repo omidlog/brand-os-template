@@ -30,7 +30,14 @@ function AssetCard({ asset }: { asset: (typeof assets.assets)[number] }): React.
       </p>
       <p>{asset.present ? 'File is in the repository.' : String('missing_reason' in asset ? asset.missing_reason : 'Missing.')}</p>
       <p>Visibility: {String(asset.visibility)}</p>
-      {asset.present ? <a href={href}>Download placeholder</a> : <p>No download. The file does not exist.</p>}
+      {'downloadable' in asset && asset.downloadable ? (
+        <>
+          <img src={href} alt="" width={160} height={80} />
+          <a href={href}>Download approved file</a>
+        </>
+      ) : (
+        <p>Not published. Only an approved public asset is copied into the site.</p>
+      )}
     </article>
   )
 }

@@ -26,10 +26,12 @@ export function fieldBlock(question: FieldQuestion, answer: AnswerRecord | null,
     'Value:',
     '',
   ]
-  if (!answer || answer.value === null || answer.value === undefined) {
+  if (question.sensitivity === 'restricted') {
+    lines.push(answer?.private_ref ? `Withheld. Opaque id ${answer.private_ref}. The value is not stored in Git.` : 'TBD')
+  } else if (!answer || answer.value === null || answer.value === undefined) {
     lines.push(status === 'unknown' ? 'Unknown — not provided. Nothing was invented.' : 'TBD')
   } else if (withhold) {
-    lines.push('Withheld (restricted). The value is stored only in the restricted collection and is not copied into this file.')
+    lines.push('Withheld (restricted). The value is not stored in Git.')
   } else {
     lines.push(String(answer.value))
   }

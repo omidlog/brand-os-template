@@ -1,5 +1,3 @@
-# Restricted canary
+# Restricted collection policy
 
-RESTRICTED_CANARY_DO_NOT_PUBLISH
-
-This marker exists so tests can prove public builds, search indexes, and default agent tools do not leak restricted files. It is not a real secret.
+Do not commit confidential answers. Restricted values belong in the gitignored encrypted store at `brand/.private`. This file intentionally contains no secret canary.

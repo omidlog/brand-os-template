@@ -155,8 +155,16 @@ function validateMascot(root: string, errors: string[]): void {
     if (!storedIds.has(state.id)) errors.push(`Catalog file is missing ${state.id}`)
   }
   if (stored.states.length !== 90) errors.push(`Catalog file has ${stored.states.length} states, expected 90`)
-  const stages = readYaml<{ stages: unknown[] }>(path.join(root, 'brand', 'mascot', 'stages.yaml'))
-  if (stages.stages.length !== 6) errors.push('Expected 6 example stages')
+  const stages = readYaml<{ stages: Array<{ id?: string; order?: number }> }>(path.join(root, 'brand', 'mascot', 'stages.yaml'))
+  const stageIds = stages.stages.map((stage) => stage.id).filter((id): id is string => Boolean(id))
+  if (stageIds.length !== stages.stages.length) errors.push('Every mascot stage needs an id')
+  if (new Set(stageIds).size !== stageIds.length) errors.push('Mascot stage ids must be unique')
+  const orders = stages.stages.map((stage) => stage.order).filter((order): order is number => typeof order === 'number')
+  const sorted = [...orders].sort((a, b) => a - b)
+  if (orders.length !== stages.stages.length || sorted.some((order, index) => order !== (sorted[0] ?? 1) + index)) {
+    errors.push('Mascot stages need a contiguous order starting at their first number')
+  }
+  if (stages.stages.length < 1) errors.push('At least one mascot stage is required when the file exists')
   const angles = readYaml<{ angles: unknown[] }>(path.join(root, 'brand', 'mascot', 'angles.yaml'))
   if (angles.angles.length !== 8) errors.push('Expected 8 angles')
   const motions = readYaml<{ motions: unknown[] }>(path.join(root, 'brand', 'mascot', 'motions.yaml'))

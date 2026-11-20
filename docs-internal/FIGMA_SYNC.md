@@ -6,11 +6,6 @@ Figma is a design workspace, not the source of truth. Approved tokens and compon
 
 Set `design.figma.file_url`, `file_key`, and `library_url` in `brand/brand.config.yaml` when you have them. Leave them null until then. Do not put a Figma token in Git. `FIGMA_ACCESS_TOKEN` belongs in the environment.
 
-## Reconcile
+## Drift
 
-1. Export variables from the Figma library.
-2. Compare names to `brand/tokens/figma-variables.snapshot.json`, which `npm run tokens:build` writes from the DTCG sources.
-3. If a Figma variable has no token path, either add a token or remove the variable. Do not keep two palettes.
-4. Component names in Figma should match `brand/content/12-product-ui-system/components.yaml`.
-
-This version does not call the Figma API. The snapshot check is local and only proves the token file and the snapshot list the same paths.
+`npm run tokens:build` rewrites `brand/tokens/figma-variables.snapshot.json` from the DTCG paths. The compiler reports an alias cycle. A live Figma API read is not implemented. Compare an exported variable list to that snapshot before changing tokens. Do not write back to Figma from this repo.

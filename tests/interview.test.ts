@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { applyInit, getBrandStatus, getBrandTokens, InterviewEngine, listMascotAssets, resolveAgentRequest, writeStarterWorkspace } from '@brand-os/brand-core'
+import { applyInit, ensureApprovalSecret, getBrandStatus, getBrandTokens, InterviewEngine, listMascotAssets, resolveAgentRequest, writeStarterWorkspace } from '@brand-os/brand-core'
 
 function workspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-'))
@@ -40,7 +40,9 @@ test('interview records answers, drafts, resume, approval, and impact', () => {
   assert.match(draft, /Unknown — not provided/)
   assert.doesNotMatch(draft, /Northwind/)
 
-  const approved = engine.approve('brand.personality.traits', 'owner')
+  const proof = ensureApprovalSecret(root)
+  assert.equal(engine.approve('brand.personality.traits', 'owner').kind, 'error')
+  const approved = engine.approve('brand.personality.traits', 'owner', proof)
   assert.equal(approved.status, 'approved')
   const blocked = engine.changeAnswer('brand.personality.traits', 'A different personality', false)
   assert.equal(blocked.kind, 'impact')
@@ -48,7 +50,7 @@ test('interview records answers, drafts, resume, approval, and impact', () => {
   const changed = engine.changeAnswer('brand.personality.traits', 'A different personality', true)
   assert.equal(changed.status, 'draft')
   assert.doesNotMatch(fs.readFileSync(path.join(root, 'brand/instance/approved-facts.yaml'), 'utf8'), /brand.personality.traits/)
-  assert.equal(engine.approve('brand.personality.traits', 'guest').kind, 'error')
+  assert.equal(engine.approve('brand.personality.traits', 'guest', proof).kind, 'error')
 
   assert.equal(engine.isEligible('business.product.learning_model'), true)
   assert.equal(engine.isEligible('brand.mascot.role'), true)
@@ -107,8 +109,13 @@ test('restricted finance answers stay out of review and public files', () => {
   assert.doesNotMatch(review, /secret-figure-99/)
   const generated = fs.readFileSync(path.join(root, 'brand/generated/drafts/business-finance.md'), 'utf8')
   assert.doesNotMatch(generated, /secret-figure-99/)
-  const restricted = fs.readFileSync(path.join(root, 'brand/restricted/facts.yaml'), 'utf8')
-  assert.match(restricted, /secret-figure-99/)
+  const ledger = fs.readFileSync(path.join(root, 'brand/interview/answer-ledger.yaml'), 'utf8')
+  assert.doesNotMatch(ledger, /secret-figure-99/)
+  const proof = ensureApprovalSecret(root)
+  const revealed = engine.revealRestricted('business.finance.revenue_figure', proof)
+  assert.equal(revealed.ok, true)
+  if (revealed.ok) assert.equal(revealed.value, 'secret-figure-99')
+  assert.equal(engine.revealRestricted('business.finance.revenue_figure').ok, false)
   const exported = JSON.stringify(engine.exportSnapshot('public'))
   assert.doesNotMatch(exported, /secret-figure-99/)
   assert.doesNotMatch(exported, /RESTRICTED_CANARY_DO_NOT_PUBLISH/)
@@ -117,10 +124,10 @@ test('restricted finance answers stay out of review and public files', () => {
 test('agent tools do not invent approvals', () => {
   const root = workspace()
   const engine = new InterviewEngine(root)
-  const tokens = getBrandTokens(false)
+  const tokens = getBrandTokens(engine, false)
   assert.equal(tokens.approved, false)
   assert.deepEqual((tokens.data as { tokens: unknown[] }).tokens, [])
-  const mascots = listMascotAssets(false)
+  const mascots = listMascotAssets(engine, false)
   assert.equal((mascots.data as { count: number }).count, 0)
   const status = getBrandStatus(engine)
   assert.equal(status.approved, false)

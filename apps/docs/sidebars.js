@@ -1,5 +1,6 @@
 const sidebars = {
   main: [
+    "published/claims",
   "start/introduction",
   {
     "type": "category",

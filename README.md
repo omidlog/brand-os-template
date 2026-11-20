@@ -25,7 +25,7 @@ npm run build
 | `npm run brand:resume` | Continue the saved session |
 | `npm run brand:status` | Coverage and approval, separately |
 | `npm run brand:review` | Recap. Restricted values are withheld |
-| `npm run brand:approve -- --question <id> --actor owner` | Promote one draft |
+| `npm run brand:approve -- --question <id> --actor owner --proof <secret>` | Promote one draft. The actor name alone is rejected. The secret is created in `brand/.private/approval-secret` and is not committed. |
 | `npm run brand:export` | Gitignored snapshot. `--public` redacts non-public answers |
 | `npm run brand:validate` | Schema, catalog, token, and asset checks |
 | `npm run example:education` | Education-app fixture in a temp directory |
@@ -59,7 +59,7 @@ Restricted finance and partner fields are stored under `brand/restricted/` and a
 
 ## Docs
 
-`npm run build` produces a public site. `build/fa` is right-to-left. Search is local and currently English-only. Internal preview is `npm run docs:start`. Restricted files are not in either build. See `docs-internal/DEPLOYMENT.md`.
+`npm run build` prepares a public site only when `publish_docs` is `public`. The EXAMPLE template is public because it holds no confidential facts. `brand:init` defaults to private, and a public build of a private brand stops. `build/fa` is right to left. Search is local and currently English-only. `npm run docs:start` is the local preview. Restricted values stay in `brand/.private` and are omitted from the site. See `docs-internal/DEPLOYMENT.md`.
 
 ## Tokens and assets
 

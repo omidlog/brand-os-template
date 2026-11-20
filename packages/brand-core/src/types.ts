@@ -129,6 +129,8 @@ export interface AnswerRecord {
   normalized: string | number | boolean | null
   superseded_by: string | null
   disposition_reason: string | null
+  /** Opaque id in the gitignored encrypted store. Never a restricted value. */
+  private_ref?: string | null
 }
 
 export interface SessionState {
@@ -139,6 +141,7 @@ export interface SessionState {
   deferred: string[]
   pending_suggestions: string[]
   cursor_question_id: string | null
+  pending_proposals: Array<{ question_id: string; value: string; quotation: string }>
   started_at: string | null
   updated_at: string | null
   last_answer_id: string | null
@@ -165,6 +168,7 @@ export interface BrandConfig {
     publish_docs: 'public' | 'private'
     status: string
     version: string
+    initialized?: boolean
   }
   capabilities: Record<string, boolean>
   modules: {

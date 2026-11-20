@@ -7,6 +7,7 @@ import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
 import { exists, readYaml, writeYaml } from './fsutil.js'
 import { t, normalizeCommand, type Locale } from './i18n.js'
 import { canApprove } from './permissions.js'
+import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
   AnswerRecord,
   Authority,
@@ -49,6 +50,7 @@ export interface InitInput {
   gamification: boolean
   publish: 'public' | 'private'
   profile?: string
+  reset?: boolean
 }
 
 const CONFIG_BINDINGS: Array<{ id: string; assign: (config: BrandConfig, value: string) => void }> = [
@@ -111,6 +113,10 @@ export class InterviewEngine {
 
   private file(...parts: string[]): string {
     return path.join(this.root, ...parts)
+  }
+
+  workspaceRoot(): string {
+    return this.root
   }
 
   questions(): FieldQuestion[] {
@@ -275,6 +281,9 @@ export class InterviewEngine {
         message: `${t(locale, 'suggestionsTitle')}\n${suggestions.map((item, index) => `${index + 1}. ${item}`).join('\n')}`,
       }
     }
+    if (lower.startsWith('note:')) return this.captureNote(raw.slice(5))
+    const proposal = lower.match(/^accept proposal\s+(\d+)$/)
+    if (proposal) return this.acceptProposal(Number(proposal[1]) - 1)
     const accept = lower.match(/^accept\s+(\d+)$/)
     if (accept) {
       const index = Number(accept[1]) - 1
@@ -443,15 +452,23 @@ export class InterviewEngine {
     }
   }
 
-  approve(questionId: string, actor: string): StepResult {
+  approve(questionId: string, actor: string, proof?: string): StepResult {
     const question = this.question(questionId)
     if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
     const locale = this.session().locale
+    if (!approvalProofMatches(this.root, proof)) {
+      return {
+        kind: 'error',
+        questionId,
+        message: 'Approval refused. An actor name is not authentication. Provide the human approval proof from brand/.private/approval-secret.',
+      }
+    }
     if (!canApprove(actor, question)) {
       return { kind: 'error', questionId, message: t(locale, 'denied', { actor }) }
     }
     const latest = this.context().answers.get(questionId)
-    if (!latest || latest.value === null || ['unknown', 'skipped', 'not_applicable', 'unanswered'].includes(latest.status)) {
+    const hasSubstance = Boolean(latest && (latest.value !== null || latest.private_ref))
+    if (!latest || !hasSubstance || ['unknown', 'skipped', 'not_applicable', 'unanswered'].includes(latest.status)) {
       return { kind: 'error', questionId, message: t(locale, 'cannotApprove') }
     }
     this.supersede(latest.answer_id)
@@ -464,6 +481,7 @@ export class InterviewEngine {
       sourceReference: latest.source_reference,
       raw: latest.raw_answer,
       reviewedBy: actor,
+      privateRef: latest.private_ref ?? null,
     })
     this.writeApprovedFact(question, answer)
     if (question.id === 'business.identity.trade_name' && typeof answer.value === 'string') {
@@ -519,15 +537,26 @@ export class InterviewEngine {
       sourceReference?: string | null
       raw?: string | null
       reviewedBy?: string | null
+      privateRef?: string | null
     },
   ): AnswerRecord {
     const ledger = this.ledger()
     const sessionId = this.ensureSession()
+    let storedValue = value
+    let storedRaw = meta.raw ?? (value === null ? null : String(value))
+    let privateRef = meta.privateRef ?? null
+    if (question.sensitivity === 'restricted') {
+      if (storedValue !== null && storedValue !== undefined) {
+        privateRef = new PrivateStore(this.root).put(question.id, { value: storedValue, raw: storedRaw })
+      }
+      storedValue = null
+      storedRaw = null
+    }
     const answer: AnswerRecord = {
       answer_id: `ans-${String(ledger.records.length + 1).padStart(4, '0')}`,
       question_id: question.id,
-      value,
-      raw_answer: meta.raw ?? (value === null ? null : String(value)),
+      value: storedValue,
+      raw_answer: storedRaw,
       source_type: meta.sourceType,
       source_reference: meta.sourceReference ?? null,
       authority: meta.authority,
@@ -538,9 +567,10 @@ export class InterviewEngine {
       visibility: question.sensitivity,
       uncertainty: meta.uncertainty,
       session_id: sessionId,
-      normalized: value,
+      normalized: storedValue,
       superseded_by: null,
       disposition_reason: meta.uncertainty,
+      private_ref: privateRef,
     }
     ledger.records.push(answer)
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
@@ -593,7 +623,8 @@ export class InterviewEngine {
       : { schema_version: 1, facts: {} }
     doc.facts[question.id] = {
       value: question.sensitivity === 'restricted' ? '[restricted]' : answer.value,
-      stored_in: question.sensitivity === 'restricted' ? 'brand/restricted' : 'brand/instance/draft-facts.yaml',
+      stored_in: question.sensitivity === 'restricted' ? 'brand/.private' : 'brand/instance/draft-facts.yaml',
+      private_ref: answer.private_ref ?? null,
       status: answer.status,
       visibility: question.sensitivity,
       authority: answer.authority,
@@ -601,20 +632,6 @@ export class InterviewEngine {
       uncertainty: answer.uncertainty,
       answer_id: answer.answer_id,
       updated: answer.last_updated,
-    }
-    if (question.sensitivity === 'restricted') {
-      const secretFile = this.file('brand', 'restricted', 'facts.yaml')
-      const secret = exists(secretFile)
-        ? readYaml<{ schema_version: number; facts: Record<string, unknown> }>(secretFile)
-        : { schema_version: 1, facts: {} }
-      secret.facts[question.id] = {
-        value: answer.value,
-        status: answer.status,
-        visibility: 'restricted',
-        answer_id: answer.answer_id,
-        updated: answer.last_updated,
-      }
-      writeYaml(secretFile, secret)
     }
     writeYaml(file, doc)
   }
@@ -730,8 +747,65 @@ export class InterviewEngine {
     return lines.join('\n')
   }
 
-  reviewText(revealRestricted = false): string {
-    const allow = revealRestricted && process.env.BRAND_OS_ALLOW_RESTRICTED === '1'
+  captureNote(text: string): StepResult {
+    const proposals = this.extractProposals(text)
+    if (proposals.length === 0) {
+      return {
+        kind: 'info',
+        message: 'I could not map that note onto a known field. Use one label per line, such as "Trade name: …". Nothing was saved.',
+      }
+    }
+    const session = this.session()
+    session.pending_proposals = proposals
+    this.saveSession(session)
+    const lines = proposals.map((item, index) => `${index + 1}. ${item.question_id} ← “${item.quotation}”`)
+    return {
+      kind: 'info',
+      message: `Proposed drafts, not approvals:\n${lines.join('\n')}\nReply "accept proposal 1" to save a draft. A human proof is still required to approve.`,
+    }
+  }
+
+  extractProposals(text: string): Array<{ question_id: string; value: string; quotation: string }> {
+    const proposals: Array<{ question_id: string; value: string; quotation: string }> = []
+    for (const line of text.split(/\r?\n/)) {
+      const match = line.match(/^\s*([^:]{2,80}):\s+(\S[\s\S]*)$/)
+      if (!match) continue
+      const label = (match[1] ?? '').trim().toLowerCase()
+      const value = (match[2] ?? '').trim()
+      const question = this.questions().find((item) => item.id.toLowerCase() === label || item.label.toLowerCase() === label)
+      if (!question || question.sensitivity === 'restricted') continue
+      proposals.push({ question_id: question.id, value, quotation: line.trim() })
+    }
+    return proposals
+  }
+
+  private acceptProposal(index: number): StepResult {
+    const session = this.session()
+    const proposal = session.pending_proposals?.[index]
+    if (!proposal) return { kind: 'error', message: 'No proposal with that number.' }
+    const question = this.question(proposal.question_id)
+    if (!question) return { kind: 'error', message: 'That proposal no longer matches a question.' }
+    const result = this.record(question, proposal.value, {
+      sourceType: 'owner',
+      authority: 'unverified',
+      status: 'draft',
+      uncertainty: `Extracted from the owner note: ${proposal.quotation}. Not approved.`,
+      raw: proposal.quotation,
+    })
+    return { ...result, message: `${result.message} Quotation kept. Status remains draft.` }
+  }
+
+  revealRestricted(questionId: string, proof?: string): { ok: true; value: unknown } | { ok: false; message: string } {
+    if (!approvalProofMatches(this.root, proof)) return { ok: false, message: 'Restricted values require the human approval proof.' }
+    const answer = this.context().answers.get(questionId)
+    if (!answer?.private_ref) return { ok: false, message: 'No restricted value is stored for that question.' }
+    const payload = new PrivateStore(this.root).get(answer.private_ref)
+    if (!payload) return { ok: false, message: 'The private store has no entry for that id.' }
+    return { ok: true, value: payload.value }
+  }
+
+  reviewText(_revealRestricted = false): string {
+    const allow = false
     const answers = this.context().answers
     const lines = ['# Review', '', 'Drafts are not canonical until approved. Restricted values are withheld unless a local override is set.', '']
     const modules = [...new Set(this.questions().map((question) => question.module))]
@@ -854,6 +928,10 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   assertSlug(input.slug)
   const engine = new InterviewEngine(root)
   const config = engine.config()
+  if (config.brand.initialized && !input.reset) {
+    throw new Error('This brand is already initialized. Refusing to wipe interview state. Pass --reset to backup the ledger and reset it.')
+  }
+  if (input.reset) backupBrandState(root)
   config.brand.name = input.name
   config.brand.name_status = 'working'
   config.brand.working_name = input.name
@@ -866,6 +944,7 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   config.brand.supported_locales = input.languages
   config.brand.profile = input.profile ?? 'universal'
   config.brand.publish_docs = input.publish
+  config.brand.initialized = true
   config.brand.stage = 'unknown'
   config.brand.new_or_existing = 'unknown'
   config.brand.legal_name = 'TBD'
@@ -879,9 +958,41 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   writeYaml(path.join(root, 'brand', 'interview', 'evidence-index.yaml'), { schema_version: 1, items: [] })
   writeYaml(path.join(root, 'brand', 'instance', 'draft-facts.yaml'), { schema_version: 1, facts: {} })
   writeYaml(path.join(root, 'brand', 'instance', 'approved-facts.yaml'), { schema_version: 1, facts: {} })
-  writeYaml(path.join(root, 'brand', 'restricted', 'facts.yaml'), { schema_version: 1, facts: {} })
+  syncManifest(root, config)
   new InterviewEngine(root).rebuildDrafts()
   return config
+}
+
+function backupBrandState(root: string): void {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const dest = path.join(root, 'brand', '.private', 'backups', stamp)
+  fs.mkdirSync(dest, { recursive: true })
+  for (const relative of ['brand/interview/answer-ledger.yaml', 'brand/instance/approved-facts.yaml', 'brand/instance/draft-facts.yaml', 'brand/brand.config.yaml']) {
+    const from = path.join(root, relative)
+    if (!fs.existsSync(from)) continue
+    const target = path.join(dest, path.basename(relative))
+    fs.copyFileSync(from, target)
+  }
+}
+
+export function syncManifest(root: string, config: BrandConfig): void {
+  const file = path.join(root, 'brand', 'brand-manifest.json')
+  const current = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>) : {}
+  current.name = config.brand.name
+  current.slug = config.brand.slug
+  current.publish_docs = config.brand.publish_docs
+  current.status = config.brand.status
+  fs.writeFileSync(file, `${JSON.stringify(current, null, 2)}\n`)
+}
+
+export function upgradeCore(root: string): { version: string; preserved: true } {
+  const gitignore = path.join(root, '.gitignore')
+  const required = ['brand/.private/', 'brand/restricted/facts.yaml', 'brand/restricted/drafts/', 'brand/generated/artifacts/']
+  const current = fs.existsSync(gitignore) ? fs.readFileSync(gitignore, 'utf8') : ''
+  const missing = required.filter((line) => !current.includes(line))
+  if (missing.length > 0) fs.appendFileSync(gitignore, `${current.endsWith('\n') || current.length === 0 ? '' : '\n'}${missing.join('\n')}\n`)
+  fs.writeFileSync(path.join(root, 'brand', 'engine.lock'), `${JSON.stringify({ version: '0.1.0', note: 'Engine upgrade does not rewrite brand content, catalogs, or assets.' }, null, 2)}\n`)
+  return { version: '0.1.0', preserved: true }
 }
 
 export function emptySession(locale: string): SessionState {
@@ -894,6 +1005,7 @@ export function emptySession(locale: string): SessionState {
     deferred: [],
     pending_suggestions: [],
     cursor_question_id: null,
+    pending_proposals: [],
     started_at: null,
     updated_at: null,
     last_answer_id: null,

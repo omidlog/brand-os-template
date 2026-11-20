@@ -25,6 +25,7 @@ if (command === 'init') {
       publish: { type: 'string', default: 'private' },
       profile: { type: 'string', default: 'universal' },
       yes: { type: 'boolean', default: false },
+      reset: { type: 'boolean', default: false },
     },
   })
   if (!values.name || !values.slug) {
@@ -47,6 +48,7 @@ if (command === 'init') {
     gamification: values.gamification === 'true',
     publish: values.publish === 'public' ? 'public' : 'private',
     profile: values.profile,
+    reset: values.reset === true,
   })
   console.log(`Initialized ${config.brand.name} (${config.brand.slug}). Mascot ${config.modules.mascot.enabled ? 'on' : 'off'}.`)
   console.log(engine.statusText())
@@ -106,13 +108,13 @@ if (command === 'init') {
 } else if (command === 'approve') {
   const { values } = parseArgs({
     args: rest,
-    options: { question: { type: 'string' }, actor: { type: 'string', default: 'owner' } },
+    options: { question: { type: 'string' }, actor: { type: 'string', default: 'owner' }, proof: { type: 'string' } },
   })
-  if (!values.question) {
-    console.error('Need --question <id> --actor <role>')
+  if (!values.question || !values.proof) {
+    console.error('Need --question <id> --proof <human-secret>. --actor alone cannot approve.')
     process.exit(1)
   }
-  const result = engine.approve(values.question, values.actor ?? 'owner')
+  const result = engine.approve(values.question, values.actor ?? 'owner', values.proof)
   console.log(result.message)
   if (result.kind === 'error') process.exit(1)
 } else if (command === 'query') {
@@ -124,17 +126,21 @@ if (command === 'init') {
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
-  const { getBrandStatus, getBrandTokens, listMascotAssets, searchBrandDocs } = await import('@brand-os/brand-core')
+  const { getBrandStatus, getBrandTokens, getDesignComponent, getSocialTemplate, listMascotAssets, searchBrandDocs } = await import('@brand-os/brand-core')
   const include = values['include-unapproved'] === true
   const tool = values.tool ?? 'get_brand_status'
   const result =
     tool === 'search_brand_docs'
       ? searchBrandDocs(engine, values.query ?? '', include)
       : tool === 'get_brand_tokens'
-        ? getBrandTokens(include)
+        ? getBrandTokens(engine, include)
         : tool === 'list_mascot_assets'
-          ? listMascotAssets(include)
-          : getBrandStatus(engine)
+          ? listMascotAssets(engine, include)
+          : tool === 'get_design_component'
+            ? getDesignComponent(engine, values.query ?? 'button')
+            : tool === 'get_social_template'
+              ? getSocialTemplate(engine, values.query ?? 'unspecified')
+              : getBrandStatus(engine)
   console.log(JSON.stringify(result, null, 2))
 } else {
   console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query`)

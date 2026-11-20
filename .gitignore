@@ -10,6 +10,10 @@ apps/docs/build/
 apps/docs/.docusaurus/
 apps/docs/docs/
 brand/exports/
+brand/.private/
+brand/restricted/facts.yaml
+brand/restricted/drafts/
+brand/generated/artifacts/
 .idea/
 .vscode/
 *.tsbuildinfo

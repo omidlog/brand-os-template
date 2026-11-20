@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import Ajv from 'ajv'
 import { parse } from 'yaml'
 
 export interface AssetRecord {
@@ -19,12 +20,23 @@ export interface AssetManifest {
   assets: AssetRecord[]
 }
 
+export function assetPathIsSafe(repoRoot: string, assetPath: string): boolean {
+  if (!assetPath || assetPath.includes('..') || path.isAbsolute(assetPath)) return false
+  const full = path.resolve(repoRoot, assetPath)
+  const root = path.resolve(repoRoot, 'brand', 'assets')
+  return full === root || full.startsWith(`${root}${path.sep}`)
+}
+
 export function validateAssets(repoRoot: string): string[] {
   const errors: string[] = []
   const file = path.join(repoRoot, 'brand', 'assets', 'asset-manifest.yaml')
   const manifest = parse(fs.readFileSync(file, 'utf8')) as AssetManifest
+  const schemaPath = path.join(repoRoot, 'schemas', 'asset.schema.json')
+  const validate = fs.existsSync(schemaPath) ? new Ajv({ allErrors: true, strict: false }).compile(JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as object) : null
   const ids = new Set<string>()
   for (const asset of manifest.assets) {
+    if (validate && !(validate(asset) as boolean)) errors.push(`${asset.id} failed the asset schema`)
+    if (!assetPathIsSafe(repoRoot, asset.path)) errors.push(`${asset.id} has an unsafe path`)
     if (ids.has(asset.id)) errors.push(`Duplicate asset id ${asset.id}`)
     ids.add(asset.id)
     const full = path.join(repoRoot, asset.path)

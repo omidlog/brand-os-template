@@ -20,7 +20,8 @@
         "logo",
         "example",
         "draft"
-      ]
+      ],
+      "downloadable": false
     },
     {
       "id": "asset.icon.example-mark",
@@ -42,7 +43,8 @@
         "icon",
         "example",
         "draft"
-      ]
+      ],
+      "downloadable": false
     },
     {
       "id": "asset.mascot.placeholder-frame",
@@ -64,7 +66,8 @@
         "mascot",
         "placeholder",
         "draft"
-      ]
+      ],
+      "downloadable": false
     }
   ]
 }

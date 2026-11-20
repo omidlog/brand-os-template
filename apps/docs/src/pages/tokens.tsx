@@ -1,6 +1,10 @@
 import Layout from '@theme/Layout'
 import tokens from '../data/tokens.json'
 
+function hex(id: string): string {
+  return tokens.colors.find((color) => color.id === id)?.hex ?? 'transparent'
+}
+
 export default function TokensPage(): React.ReactElement {
   return (
     <Layout title="Tokens" description="EXAMPLE design tokens and contrast checks.">
@@ -9,8 +13,8 @@ export default function TokensPage(): React.ReactElement {
         <h1>Token explorer</h1>
         <p>{tokens.label} Hex values are exported from the DTCG JSON. Do not copy them into a product until the palette is approved.</p>
         <div className="pair">
-          <Preview theme="Light" background="#F7F5F2" color="#1A1C1E" />
-          <Preview theme="Dark" background="#121418" color="#F4F1EA" />
+          <Preview theme="Light" background={hex('color.light.canvas')} color={hex('color.light.text')} />
+          <Preview theme="Dark" background={hex('color.dark.canvas')} color={hex('color.dark.text')} />
         </div>
         <h2>Colors</h2>
         {tokens.colors.map((color) => (
@@ -56,7 +60,7 @@ function Preview({ theme, background, color }: { theme: string; background: stri
   return (
     <div style={{ background, color }}>
       <strong>{theme} preview</strong>
-      <p>Body text on the EXAMPLE canvas. This sample is not an approved theme.</p>
+      <p>Body text uses the DTCG token hex values. This sample is not an approved theme until brand/tokens/approvals.yaml says so.</p>
     </div>
   )
 }

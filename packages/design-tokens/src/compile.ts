@@ -119,19 +119,30 @@ function colorHex(value: unknown, id: string, errors: string[]): string | undefi
 }
 
 function resolveAliases(flat: CompiledTokens['flat'], errors: string[]): void {
-  for (const [id, token] of Object.entries(flat)) {
-    if (typeof token.value !== 'string') continue
+  const resolving = new Set<string>()
+  const resolveOne = (id: string): void => {
+    const token = flat[id]
+    if (!token || typeof token.value !== 'string') return
     const match = token.value.match(/^\{(.+)\}$/)
-    if (!match) continue
-    const target = flat[match[1] ?? '']
+    if (!match) return
+    const targetId = match[1] ?? ''
+    if (resolving.has(id)) {
+      errors.push(`${id}: alias cycle`)
+      return
+    }
+    const target = flat[targetId]
     if (!target) {
       errors.push(`${id}: unresolved alias ${token.value}`)
-      continue
+      return
     }
+    resolving.add(id)
+    resolveOne(targetId)
+    resolving.delete(id)
     token.hex = target.hex
     token.value = target.value
     token.type = target.type
   }
+  for (const id of Object.keys(flat)) resolveOne(id)
 }
 
 function loadContrast(repoRoot: string, flat: CompiledTokens['flat'], errors: string[]): ContrastResult[] {

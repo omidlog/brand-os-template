@@ -1,57 +1,44 @@
 # Implementation status
 
-Honest checklist for template version 0.1.0. “Done” means the command or file exists and the tests or the docs build exercise it. “Partial” means a real subset ships and the rest is named here. “Not started” means there is no working feature, only a document.
+Updated after the external audit remediation. “Fixed” means a test or a build exercises the behavior. “Partial” means a real subset works and the gap is named.
 
-## Done
+## Audit findings
 
-- Repository skeleton, MIT license for the engine, `.gitignore`, `.env.example`, Git LFS attributes for large masters (no large masters are committed).
-- `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, and `npm run build` (Docusaurus for `en`, `fa`, and `tr`).
-- Public docs build and a second build with mascot and gamification off.
-- Persian locale sets `dir="rtl"`. Light and dark theme. Local search plugin (English index).
-- DTCG token sources, CSS and TypeScript export, contrast checks that pass for the EXAMPLE pairs.
-- Twenty brand modules and twelve Business OS modules with purpose, guidance, fields, an EXAMPLE, do/don't, and a checklist.
-- Optional mascot catalog: 90 states (20/20/15/15/10/10), 25 MVP flags, 6 example stages, 8 angles, 15 motion briefs. Explorer page filters them. Previews are empty.
-- Optional gamification module, hidden when disabled.
-- Asset manifest with three real placeholder SVGs and one missing turnaround.
-- Interview: one question at a time, ledger, draft documents, resume, unknown/skip/not applicable/later, suggestions from the question bank, approval by role, impact before changing an approved answer, restricted values kept out of public files.
-- `brand:init` resets one brand's ledger without reading another brand's directory.
-- Education and B2B example fixtures.
-- `AGENTS.md`, `CLAUDE.md`, five skills, `brand/brand-manifest.json`, `llms.txt`.
-- Local query tools and a stdin JSON-RPC tool adapter.
-- GitHub Actions validate workflow and a manual docs artifact workflow.
+| ID | Status | Note |
+| --- | --- | --- |
+| P0-1 | Fixed | Restricted values are encrypted under gitignored `brand/.private`. Ledger and docs store an opaque id only. |
+| P0-2 | Fixed | `materialize` creates missing files and does not overwrite existing catalogs, assets, or module pages. |
+| P0-3 | Fixed | Approved, audience-visible facts are written to `published/claims` during docs prepare, with approver and source id. |
+| P0-4 | Fixed | MCP uses `@modelcontextprotocol/sdk` stdio. A client test lists tools, calls them, and sends Persian text. |
+| P1-1 | Partial | Free-form `note:` lines become quoted draft proposals and are not approved. No hosted LLM is connected. A browser interview UI is not built. |
+| P1-2 | Fixed | Token, mascot, component, social, and search tools read the brand files and approved records. |
+| P1-3 | Fixed | `--actor owner` cannot approve. Approval requires the human proof in `brand/.private/approval-secret`. |
+| P1-4 | Partial | `upgradeCore` bumps `brand/engine.lock` and preserves content. The engine is not published to npm. |
+| P1-5 | Fixed | `brand:init` writes the brand name and slug into `brand-manifest.json`. |
+| P1-6 | Fixed | Stage validation checks unique ids and contiguous order. Six stages are only the example file. |
+| P1-7 | Fixed | A disabled mascot omits module docs and emits an empty catalog JSON, so state ids are not in the data bundle. |
+| P1-8 | Partial | Portal color, type, and radius read DTCG variables. Alias cycles are reported. Draft and approved tokens are separated in the tool, not by a second compiler pipeline. |
+| P1-9 | Partial | `renderBusinessArtifacts` fills plan, marketing, PRD, roadmap, sales, support, finance, and OKR pages from the ledger and leaves unknowns unknown. They are not full models. |
+| P1-10 | Fixed | Public builds copy only approved public assets inside `brand/assets`. The asset schema and path boundary are checked. |
+| P1-11 | Fixed | A public prepare throws when `publish_docs` is private. The EXAMPLE template is public because it has no confidential facts. `brand:init` defaults to private. |
+| P2-1 | Partial | Prompts are translated. Body copy is still English in the fa and tr builds. `docs-internal/LOCALIZATION.md` describes the approval path. |
+| P2-2 | Fixed | Five more skills: strategist, logo, mascot animator, marketing creative, brand QA. |
+| P2-3 | Partial | The docs site still has one token-backed button plus the component registry. There is no product component package or Figma node map. |
+| P2-4 | Partial | The gallery can preview a published SVG. Unapproved files are not given download links. |
+| P2-5 | Partial | Snapshot file is still local. There is no Figma API client. |
+| P2-6 | Not fixed | `import existing:` records a URL and does not fetch it, to avoid turning the tool into an open web client. |
+| P2-7 | Partial | Name, availability, and placeholder contradictions exist. There is no general schema rule language. |
+| P2-8 | Fixed | Audit tests cover canaries, materialize, publishing, approval proof, upgrade, retrieval, alias cycles, MCP, and hidden mascot data. |
+| P2-9 | Partial | Search reads approved facts and, when asked, draft markdown. There are no embeddings. |
+| P2-10 | Partial | Reset backs up the ledger under `brand/.private/backups`. There is no multi-user lock service or retention policy beyond gitignore. |
 
-## Partial
+## Commands that this remediation expects to pass
 
-- Question bank is a starter set (at least five questions per module, more on company, product, and strategy). It does not collect every phrase in the specification as its own field.
-- “Suggest options” returns authored examples. It does not call a language model.
-- `import existing: <url>` stores the citation and does not download or extract the page.
-- Figma support is a local variable-name snapshot, not the Figma API.
-- The MCP adapter is a local process. It has no OAuth and no hosted URL.
-- Docs body copy is English inside the Persian and Turkish locales. Direction and `htmlLang` are set. Search stemming is English.
-- Product UI is an index plus one EXAMPLE button, not a shippable component package.
-- Business numbers are not calculated. The finance module refuses to invent them.
-- Mascot and gamification visuals are data and pages, not illustration or animation files.
-- Template upgrade is documented. There is no automated migration that merges a newer engine into a filled brand repo.
+`npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.
 
-## Not started
+## Remaining security limits
 
-- Live Figma read or write.
-- Hosted, authenticated MCP for ChatGPT or another product.
-- Fetching PDFs, decks, or websites into the ledger.
-- A product application that consumes the tokens as a real UI kit.
-- Licensed font files.
-- Persian or Turkish full-text stemming.
-- Notion sync.
-
-## Verification run with this commit
-
-Commands that passed locally while preparing 0.1.0:
-
-- `npm run lint`
-- `npm run typecheck`
-- `npm run validate`
-- `npm run test` (8 tests)
-- `npm run build -w @brand-os/docs` for the default module set, including `en`, `fa` (`dir="rtl"`), and `tr`
-- `npm run build:docs:nomascot` (43 docs copied, 8 excluded)
-
-No restricted canary was found in the docs build output.
+- The local encryption key sits next to the ciphertext in `brand/.private`. Copying that directory copies the secrets. It is not a KMS.
+- The approval proof is a local shared secret, not SSO. Anyone who can read `approval-secret` can approve.
+- `brand:init --reset` rewrites the ledger after copying it into the private backup. It does not rewrite mascot catalogs or module prose.
+- A public build of a brand with `publish_docs: public` publishes approved public facts. Restricted values stay out. Internal facts stay out of the public audience.

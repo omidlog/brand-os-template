@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto'
+import fs from 'node:fs'
 import path from 'node:path'
 import { templateConfig } from './config.js'
 import { allModules, allQuestions } from './content/index.js'
 import { buildMascotCatalog, CANONICAL_ANGLES, catalogCounts, CORE_MOTIONS, EXAMPLE_STAGES } from './content/mascot-catalog.js'
 import { renderIntroduction, renderModulePage, renderRecord } from './content/render.js'
 import { emptySession, InterviewEngine } from './engine.js'
-import { exists, writeText, writeYaml } from './fsutil.js'
-import type { FieldQuestion } from './types.js'
+import { exists, readYaml, writeText, writeYaml } from './fsutil.js'
+import type { BrandConfig, FieldQuestion } from './types.js'
 
 const WORDMARK = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" role="img" aria-label="EXAMPLE wordmark placeholder">
@@ -36,6 +37,14 @@ const MASCOT_FRAME = `<?xml version="1.0" encoding="UTF-8"?>
 </svg>
 `
 
+function putText(file: string, text: string): void {
+  if (!exists(file)) writeText(file, text)
+}
+
+function putYaml(file: string, data: unknown): void {
+  if (!exists(file)) writeYaml(file, data)
+}
+
 function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex')
 }
@@ -54,7 +63,7 @@ function doc(title: string, body: string, extras: Record<string, string> = {}): 
 
 export function writeStarterWorkspace(root: string): void {
   if (!exists(path.join(root, 'brand', 'brand.config.yaml'))) {
-    writeYaml(path.join(root, 'brand', 'brand.config.yaml'), templateConfig())
+    putYaml(path.join(root, 'brand', 'brand.config.yaml'), templateConfig())
   }
   const questions = allQuestions()
   const banks = new Map<string, FieldQuestion[]>()
@@ -63,9 +72,9 @@ export function writeStarterWorkspace(root: string): void {
     banks.set(name, [...(banks.get(name) ?? []), question])
   }
   for (const [name, group] of banks) {
-    writeYaml(path.join(root, 'brand', 'interview', 'question-bank', name), { schema_version: 1, questions: group })
+    putYaml(path.join(root, 'brand', 'interview', 'question-bank', name), { schema_version: 1, questions: group })
   }
-  writeYaml(path.join(root, 'brand', 'interview', 'field-registry.yaml'), {
+  putYaml(path.join(root, 'brand', 'interview', 'field-registry.yaml'), {
     schema_version: 1,
     fields: questions.map((question) => ({
       id: question.field_path,
@@ -85,13 +94,13 @@ export function writeStarterWorkspace(root: string): void {
     ...question.depends_on.map((dependency) => ({ from: dependency, to: question.id, relation: 'prerequisite' })),
     ...question.related_ids.map((related) => ({ from: question.id, to: related, relation: 'related' })),
   ])
-  writeYaml(path.join(root, 'brand', 'interview', 'knowledge-graph.yaml'), { schema_version: 1, edges })
+  putYaml(path.join(root, 'brand', 'interview', 'knowledge-graph.yaml'), { schema_version: 1, edges })
 
   for (const module of allModules()) {
-    writeText(path.join(root, module.dir, 'overview.md'), renderModulePage(module, questions))
-    writeText(path.join(root, module.dir, 'record.yaml'), renderRecord(module))
+    putText(path.join(root, module.dir, 'overview.md'), renderModulePage(module, questions))
+    putText(path.join(root, module.dir, 'record.yaml'), renderRecord(module))
   }
-  writeText(path.join(root, 'brand/content/00-start/introduction.md'), renderIntroduction())
+  putText(path.join(root, 'brand/content/00-start/introduction.md'), renderIntroduction())
   writeUseCases(root)
   writeTemplates(root)
   writeMascot(root)
@@ -99,22 +108,24 @@ export function writeStarterWorkspace(root: string): void {
   writeComponents(root)
   ensureInstance(root)
   writeManifest(root)
-  writeText(
+  putText(
     path.join(root, 'brand/restricted/CANARY.md'),
-    '# Restricted canary\n\nRESTRICTED_CANARY_DO_NOT_PUBLISH\n\nThis marker exists so tests can prove public builds, search indexes, and default agent tools do not leak restricted files. It is not a real secret.\n',
+    '# Restricted collection policy\n\nDo not commit confidential answers. Restricted values belong in the gitignored encrypted store at brand/.private. This file intentionally contains no canary secret.\n',
   )
-  writeText(
+  putText(
     path.join(root, 'brand/restricted/README.md'),
     '# Restricted collection\n\nInterview answers marked restricted are written here. Do not copy this directory into a public documentation build, a search index, or an AI connector response.\n\nReal financial records, identifiers, and board materials do not belong in Git at all. Link the system of record instead.\n',
   )
-  new InterviewEngine(root).rebuildDrafts()
+  const draftDir = path.join(root, 'brand/generated/drafts')
+  const hasDrafts = exists(draftDir) && fs.readdirSync(draftDir).some((name) => name.endsWith('.md'))
+  if (!hasDrafts) new InterviewEngine(root).rebuildDrafts()
 }
 
 function ensureInstance(root: string): void {
   const ledger = path.join(root, 'brand/interview/answer-ledger.yaml')
-  if (!exists(ledger)) writeYaml(ledger, { schema_version: 1, records: [] })
+  if (!exists(ledger)) putYaml(ledger, { schema_version: 1, records: [] })
   const session = path.join(root, 'brand/interview/session-state.yaml')
-  if (!exists(session)) writeYaml(session, emptySession('en'))
+  if (!exists(session)) putYaml(session, emptySession('en'))
   for (const [file, body] of [
     ['brand/interview/contradictions.yaml', { schema_version: 1, derived: true, items: [] }],
     ['brand/interview/evidence-index.yaml', { schema_version: 1, items: [] }],
@@ -122,14 +133,14 @@ function ensureInstance(root: string): void {
     ['brand/instance/approved-facts.yaml', { schema_version: 1, facts: {} }],
     ['brand/restricted/facts.yaml', { schema_version: 1, facts: {} }],
   ] as const) {
-    if (!exists(path.join(root, file))) writeYaml(path.join(root, file), body)
+    if (!exists(path.join(root, file))) putYaml(path.join(root, file), body)
   }
 }
 
 function writeMascot(root: string): void {
   const catalog = buildMascotCatalog()
   const counts = catalogCounts(catalog)
-  writeYaml(path.join(root, 'brand/mascot/mascot.config.yaml'), {
+  putYaml(path.join(root, 'brand/mascot/mascot.config.yaml'), {
     schema_version: 1,
     status: 'draft',
     artwork: 'none',
@@ -138,21 +149,21 @@ function writeMascot(root: string): void {
     total: catalog.length,
     mvp: catalog.filter((state) => state.mvp).map((state) => state.id),
   })
-  writeYaml(path.join(root, 'brand/mascot/catalog.yaml'), { schema_version: 1, states: catalog })
+  putYaml(path.join(root, 'brand/mascot/catalog.yaml'), { schema_version: 1, states: catalog })
   const byCategory = (category: string) => catalog.filter((state) => state.category === category)
-  writeYaml(path.join(root, 'brand/mascot/expressions.yaml'), { schema_version: 1, states: byCategory('emotion') })
-  writeYaml(path.join(root, 'brand/mascot/poses.yaml'), { schema_version: 1, states: byCategory('action') })
-  writeYaml(path.join(root, 'brand/mascot/ui-states.yaml'), { schema_version: 1, states: byCategory('ui') })
-  writeYaml(path.join(root, 'brand/mascot/learning-contexts.yaml'), { schema_version: 1, states: byCategory('learning') })
-  writeYaml(path.join(root, 'brand/mascot/prop-interactions.yaml'), { schema_version: 1, states: byCategory('prop') })
-  writeYaml(path.join(root, 'brand/mascot/campaigns.yaml'), { schema_version: 1, states: byCategory('seasonal') })
-  writeYaml(path.join(root, 'brand/mascot/stages.yaml'), {
+  putYaml(path.join(root, 'brand/mascot/expressions.yaml'), { schema_version: 1, states: byCategory('emotion') })
+  putYaml(path.join(root, 'brand/mascot/poses.yaml'), { schema_version: 1, states: byCategory('action') })
+  putYaml(path.join(root, 'brand/mascot/ui-states.yaml'), { schema_version: 1, states: byCategory('ui') })
+  putYaml(path.join(root, 'brand/mascot/learning-contexts.yaml'), { schema_version: 1, states: byCategory('learning') })
+  putYaml(path.join(root, 'brand/mascot/prop-interactions.yaml'), { schema_version: 1, states: byCategory('prop') })
+  putYaml(path.join(root, 'brand/mascot/campaigns.yaml'), { schema_version: 1, states: byCategory('seasonal') })
+  putYaml(path.join(root, 'brand/mascot/stages.yaml'), {
     schema_version: 1,
     label: 'EXAMPLE CONFIGURATION — not a universal brand rule',
     stages: EXAMPLE_STAGES,
   })
-  writeYaml(path.join(root, 'brand/mascot/angles.yaml'), { schema_version: 1, angles: CANONICAL_ANGLES })
-  writeYaml(path.join(root, 'brand/mascot/motions.yaml'), { schema_version: 1, motions: CORE_MOTIONS })
+  putYaml(path.join(root, 'brand/mascot/angles.yaml'), { schema_version: 1, angles: CANONICAL_ANGLES })
+  putYaml(path.join(root, 'brand/mascot/motions.yaml'), { schema_version: 1, motions: CORE_MOTIONS })
 }
 
 function writeAssets(root: string): void {
@@ -161,11 +172,11 @@ function writeAssets(root: string): void {
     { relative: 'brand/assets/icons/example-mark.svg', body: ICON },
     { relative: 'brand/assets/mascot/placeholder-frame.svg', body: MASCOT_FRAME },
   ]
-  for (const file of files) writeText(path.join(root, file.relative), file.body)
+  for (const file of files) putText(path.join(root, file.relative), file.body)
   for (const dir of ['brand/assets/illustrations', 'brand/assets/motion', 'brand/assets/audio', 'brand/assets/photography', 'brand/assets/mascot/turnaround']) {
-    writeText(path.join(root, dir, 'README.md'), 'This folder is intentionally empty. Add approved masters here or store them outside Git and record a checksummed URL in the manifest.\n')
+    putText(path.join(root, dir, 'README.md'), 'This folder is intentionally empty. Add approved masters here or store them outside Git and record a checksummed URL in the manifest.\n')
   }
-  writeText(
+  putText(
     path.join(root, 'brand/assets/README.md'),
     '# Assets\n\nSource files and exports are different. Large video, 3D, and print masters should use Git LFS or `assets.bucket_url`, with a checksum in `asset-manifest.yaml`.\n\nThe SVG files in this template are EXAMPLE placeholders so links and checksums are real. They are not a logo or a character.\n\nApproved assets must set `present: true` and match `checksum_sha256`. Missing assets stay `present: false`.\n',
   )
@@ -174,7 +185,7 @@ function writeAssets(root: string): void {
     path: file.relative,
     checksum: sha256(file.body),
   }))
-  writeYaml(path.join(root, 'brand/assets/asset-manifest.yaml'), {
+  putYaml(path.join(root, 'brand/assets/asset-manifest.yaml'), {
     schema_version: 1,
     assets: [
       {
@@ -256,7 +267,7 @@ function writeAssets(root: string): void {
 }
 
 function writeComponents(root: string): void {
-  writeYaml(path.join(root, 'brand/content/12-product-ui-system/components.yaml'), {
+  putYaml(path.join(root, 'brand/content/12-product-ui-system/components.yaml'), {
     schema_version: 1,
     status: 'draft',
     note: 'Starter index. Not an approved production component library.',
@@ -273,7 +284,7 @@ function writeComponents(root: string): void {
 
 function writeUseCases(root: string): void {
   const dir = path.join(root, 'brand/content/use-cases')
-  writeText(
+  putText(
     path.join(dir, 'instagram-carousel.md'),
     doc(
       'Use case: Instagram carousel',
@@ -298,7 +309,7 @@ Say what is missing, name the question ids \`brand.type.license\` and \`brand.so
       { sidebar_position: '2', tags: '\n  - use-case' },
     ),
   )
-  writeText(
+  putText(
     path.join(dir, 'onboarding-mascot.md'),
     doc(
       'Use case: onboarding mascot',
@@ -320,7 +331,7 @@ Do not generate a character to fill the request.`,
       { sidebar_position: '3', optional_module: 'mascot' },
     ),
   )
-  writeText(
+  putText(
     path.join(dir, 'website-screen.md'),
     doc(
       'Use case: website screen',
@@ -341,7 +352,7 @@ The documentation theme uses the EXAMPLE palette so the portal has a real theme.
       { sidebar_position: '4' },
     ),
   )
-  writeText(
+  putText(
     path.join(dir, 'motion-clip.md'),
     doc(
       'Use case: motion clip',
@@ -361,7 +372,7 @@ Durations are EXAMPLE drafts. There is no approved logo sting and no character r
       { sidebar_position: '5' },
     ),
   )
-  writeText(
+  putText(
     path.join(dir, 'campaign-handoff.md'),
     doc(
       'Use case: campaign handoff',
@@ -401,7 +412,7 @@ function writeTemplates(root: string): void {
   for (const brief of briefs) {
     const extras: Record<string, string> = {}
     if (brief.optional) extras.optional_module = brief.optional
-    writeText(
+    putText(
       path.join(root, 'brand/templates', brief.file),
       doc(
         brief.title,
@@ -434,8 +445,9 @@ Name the person who may approve. If this changes an approved logo, character, pr
 }
 
 function writeManifest(root: string): void {
-  const config = templateConfig()
-  writeText(path.join(root, 'brand/brand-manifest.json'), JSON.stringify({
+  const configPath = path.join(root, 'brand', 'brand.config.yaml')
+  const config = exists(configPath) ? readYaml<BrandConfig>(configPath) : templateConfig()
+  putText(path.join(root, 'brand/brand-manifest.json'), JSON.stringify({
     schema_version: 1,
     name: config.brand.name,
     slug: config.brand.slug,

@@ -19,9 +19,10 @@ export function templateConfig(): BrandConfig {
       default_locale: 'en',
       supported_locales: ['en', 'fa', 'tr'],
       profile: 'universal',
-      publish_docs: 'private',
+      publish_docs: 'public',
       status: 'draft',
       version: '0.1.0',
+      initialized: false,
     },
     capabilities: {
       consumer_app: false,

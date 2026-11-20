@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
 import { allModules, InterviewEngine } from '@brand-os/brand-core'
 import type { BrandConfig } from '@brand-os/brand-core'
+import { assetPathIsSafe } from '@brand-os/asset-catalog'
 
 export interface PrepareOptions {
   audience?: 'public' | 'internal'
@@ -34,9 +35,13 @@ interface PrepareContext {
 export function prepareDocs(root: string, options: PrepareOptions = {}): { copied: number; excluded: string[] } {
   const engine = new InterviewEngine(root)
   const config = engine.config()
+  const requested = options.audience ?? (config.brand.publish_docs === 'public' ? 'public' : 'internal')
+  if (requested === 'public' && config.brand.publish_docs !== 'public' && process.env.BRAND_OS_ALLOW_PUBLIC_BUILD !== '1') {
+    throw new Error('Refusing a public docs build because brand.publish_docs is private. Set publish_docs to public only when the brand has agreed to publish, or build with --audience internal.')
+  }
   const ctx: PrepareContext = {
     root,
-    audience: options.audience ?? 'public',
+    audience: requested,
     mascot: options.mascot ?? config.modules.mascot.enabled,
     gamification: options.gamification ?? config.modules.gamification.enabled,
     writeRootIndex: options.rootIndex ?? true,
@@ -70,6 +75,7 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
   const included = docs.filter((doc) => !excluded.has(doc.url))
   writeSidebars(ctx, included)
   writeData(ctx)
+  writePublished(ctx)
   writeIndexes(ctx, included)
   copyAssets(ctx)
   return { copied: included.length, excluded: [...excluded] }
@@ -180,7 +186,7 @@ function writeData(ctx: PrepareContext): void {
   const catalogDoc = parse(fs.readFileSync(path.join(ctx.root, 'brand', 'mascot', 'catalog.yaml'), 'utf8')) as {
     states: Array<Record<string, unknown>>
   }
-  const catalog = catalogDoc.states.map((state) => ({
+  const catalog = (ctx.mascot ? catalogDoc.states : []).map((state) => ({
     id: state.id,
     name: state.name,
     category: state.category,
@@ -200,7 +206,10 @@ function writeData(ctx: PrepareContext): void {
     if (visibility === 'restricted') return false
     if (visibility === 'internal' && ctx.audience === 'public') return false
     return true
-  })
+  }).map((asset) => ({
+    ...asset,
+    downloadable: asset.present === true && asset.status === 'approved' && asset.visibility === 'public' && assetPathIsSafe(ctx.root, String(asset.path)),
+  }))
   const dataDir = path.join(ctx.root, 'apps', 'docs', 'src', 'data')
   fs.mkdirSync(dataDir, { recursive: true })
   fs.writeFileSync(path.join(dataDir, 'status.json'), `${JSON.stringify(status, null, 2)}\n`)
@@ -232,14 +241,40 @@ function writeIndexes(ctx: PrepareContext, included: DocFile[]): void {
   }
 }
 
+function writePublished(ctx: PrepareContext): void {
+  const file = path.join(ctx.root, 'brand', 'instance', 'approved-facts.yaml')
+  const facts = fs.existsSync(file) ? ((parse(fs.readFileSync(file, 'utf8')) as { facts?: Record<string, Record<string, unknown>> }).facts ?? {}) : {}
+  const lines = ['---', 'title: "Published claims"', 'visibility: public', 'sidebar_position: 0', '---', '', '# Published claims', '', 'Only approved facts for this audience are listed. Restricted values are never published. Unapproved interview answers stay in the ledger.', '']
+  const visible = Object.entries(facts).filter(([, fact]) => {
+    if (fact.visibility === 'restricted') return false
+    if (ctx.audience === 'public' && fact.visibility !== 'public') return false
+    return true
+  })
+  if (visible.length === 0) lines.push('No approved claims for this audience yet.')
+  for (const [id, fact] of visible) {
+    lines.push(`## ${id}`, '', String(fact.value ?? 'TBD'), '', `- Status: approved`, `- Approved by: ${String(fact.approved_by ?? 'unknown')}`, `- Updated: ${String(fact.updated ?? 'unknown')}`, `- Answer: \`${String(fact.answer_id ?? '')}\``, `- Source: \`brand/instance/approved-facts.yaml\``, '')
+  }
+  const target = path.join(ctx.root, 'apps', 'docs', 'docs', 'published', 'claims.md')
+  fs.mkdirSync(path.dirname(target), { recursive: true })
+  fs.writeFileSync(target, `${lines.join('\n')}\n`)
+  const sidebarFile = path.join(ctx.root, 'apps', 'docs', 'sidebars.js')
+  if (fs.existsSync(sidebarFile)) {
+    const text = fs.readFileSync(sidebarFile, 'utf8')
+    if (!text.includes('published/claims')) {
+      fs.writeFileSync(sidebarFile, text.replace('main: [', 'main: [\n    "published/claims",'))
+    }
+  }
+}
+
 function copyAssets(ctx: PrepareContext): void {
   const manifest = parse(fs.readFileSync(path.join(ctx.root, 'brand', 'assets', 'asset-manifest.yaml'), 'utf8')) as {
-    assets: Array<{ path: string; present: boolean; visibility: string }>
+    assets: Array<{ path: string; present: boolean; visibility: string; status?: string }>
   }
   const targetRoot = path.join(ctx.root, 'apps', 'docs', 'static', 'brand-assets')
   fs.rmSync(targetRoot, { recursive: true, force: true })
   for (const asset of manifest.assets) {
-    if (!asset.present || asset.visibility !== 'public') continue
+    if (!asset.present || asset.visibility !== 'public' || asset.status !== 'approved') continue
+    if (!assetPathIsSafe(ctx.root, asset.path)) continue
     const from = path.join(ctx.root, asset.path)
     if (!fs.existsSync(from)) continue
     const relative = asset.path.replace(/^brand\/assets\//, '')

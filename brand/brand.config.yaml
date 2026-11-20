@@ -18,9 +18,10 @@ brand:
     - fa
     - tr
   profile: universal
-  publish_docs: private
+  publish_docs: public
   status: draft
   version: 0.1.0
+  initialized: false
 capabilities:
   consumer_app: false
   b2b_saas: false
