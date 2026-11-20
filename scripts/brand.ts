@@ -126,6 +126,9 @@ if (command === 'init') {
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
+  if (values['include-unapproved']) {
+    console.error('--include-unapproved is ignored. It grants nothing: drafts, EXAMPLE tokens, and internal facts are never returned by this flag.')
+  }
   const { getBrandStatus, getBrandTokens, getDesignComponent, getSocialTemplate, listMascotAssets, searchBrandDocs } = await import('@brand-os/brand-core')
   const tool = values.tool ?? 'get_brand_status'
   const result =
@@ -141,6 +144,20 @@ if (command === 'init') {
               ? getSocialTemplate(engine, values.query ?? 'unspecified')
               : getBrandStatus(engine)
   console.log(JSON.stringify(result, null, 2))
+} else if (command === 'doctor') {
+  const { values } = parseArgs({
+    args: rest,
+    options: { json: { type: 'boolean', default: false }, 'create-approval-secret': { type: 'boolean', default: false } },
+  })
+  const { ensureApprovalSecret, formatDoctor, runDoctor } = await import('@brand-os/brand-core')
+  if (values['create-approval-secret']) {
+    // Creates the file only when absent. The value is never printed; read it locally when you approve.
+    ensureApprovalSecret(root)
+    if (!values.json) console.log('Approval secret is at brand/.private/approval-secret (mode 0600). Its value is not printed.')
+  }
+  const report = runDoctor(root)
+  console.log(values.json ? JSON.stringify(report, null, 2) : formatDoctor(report))
+  if (!report.ok) process.exit(1)
 } else if (command === 'backup') {
   const saved = backupBrand(root)
   console.log(`Backed up ${saved.files.length} files to ${path.relative(root, saved.directory)}`)
@@ -164,7 +181,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query, doctor, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 

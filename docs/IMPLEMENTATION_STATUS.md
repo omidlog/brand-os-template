@@ -32,6 +32,20 @@ Updated after the external audit remediation. “Fixed” means a test or a buil
 | P2-9 | Partial | Search reads approved facts and, when asked, draft markdown. There are no embeddings. |
 | P2-10 | Partial | Reset backs up the ledger under `brand/.private/backups`. There is no multi-user lock service or retention policy beyond gitignore. |
 
+## v0.2 Phase 1 (independent audit)
+
+Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AUDIT.md`.
+
+| ID | Status | Note |
+| --- | --- | --- |
+| G1 | Fixed | Writes go through `fsutil.writeAtomic` (temp file, fsync, rename). Test: `tests/onboarding.test.ts`. |
+| G2 | Fixed | Re-approval is refused. Versions are monotonic. Test: `tests/onboarding.test.ts`. |
+| G7 | Fixed | Restore validates all paths before writing. Test: `tests/onboarding.test.ts`. |
+| G8 | Fixed | `brand:doctor --create-approval-secret`. Test: `tests/doctor.test.ts`. |
+| Persian routing | Fixed | Only `note:` starts capture. Test: `tests/onboarding.test.ts`. |
+| G3, G5, G6, G11 | Not fixed | Planned: proof from env or prompt, `brand:publish`, explicit `approval_grant`, agent tokens. |
+| G4, G9 | Documented limit | Single shared proof, readable by any process running as the owner. |
+
 ## Commands that this remediation expects to pass
 
 `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.

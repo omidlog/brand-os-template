@@ -25,7 +25,8 @@ npm run build
 | `npm run brand:resume` | Continue the saved session |
 | `npm run brand:status` | Coverage and approval, separately |
 | `npm run brand:review` | Recap. Restricted values are withheld |
-| `npm run brand:approve -- --question <id> --actor owner --proof <secret>` | Promote one draft. The actor name alone is rejected. The secret is created in `brand/.private/approval-secret` and is not committed. |
+| `npm run brand:approve -- --question <id> --actor owner --proof <secret>` | Promote one draft. The actor name alone is rejected. Create the secret once with `npm run brand:doctor -- --create-approval-secret`. It lives in `brand/.private/approval-secret` and is not committed. |
+| `npm run brand:doctor` | Check Node, `BRAND_OS_DATA_KEY`, the approval secret, the config and publication policy, and that `.env` is ignored. Never prints secret values. `--json` for machines. Exits non-zero on a hard failure. |
 | `npm run brand:export` | Gitignored snapshot. `--public` redacts non-public answers |
 | `npm run brand:validate` | Schema, catalog, token, and asset checks |
 | `npm run example:education` | Education-app fixture in a temp directory |
@@ -43,9 +44,13 @@ Use **Use this template**, not a fork. Create a new private repository, clone it
 
 ```bash
 npm install
+export BRAND_OS_DATA_KEY="$(node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))")"  # store it in your secret manager; losing it loses restricted answers
 npm run brand:init -- --name "Your brand" --slug your-brand --industry "TBD" --language en --languages en,fa,tr --mascot false --gamification false --publish private --yes
+npm run brand:doctor -- --create-approval-secret
 npm run brand:interview
 ```
+
+Scripts do not load `.env` automatically. Keep `BRAND_OS_DATA_KEY` in your shell or secret manager.
 
 `--mascot false` hides the mascot docs and skips those questions. The catalog stays in the repo. See `docs-internal/NEW_BRAND.md`.
 
