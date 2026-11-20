@@ -118,6 +118,9 @@ test('an approved token hash does not survive a changed value', () => {
   const hex = compiled.color.brand.primary.$value.hex
   const digest = crypto.createHash('sha256').update(hex).digest('hex')
   fs.writeFileSync(path.join(root, 'brand/tokens/approvals.yaml'), `approved:\n  color.brand.primary:\n    approved_by: human\n    value_sha256: ${digest}\n`)
+  // Approval alone does not authorize publication of a draft token.
+  assert.deepEqual((getBrandTokens(engine).data as { tokens: unknown[] }).tokens, [])
+  fs.writeFileSync(path.join(root, 'brand/publication-policy.yaml'), `schema_version: 1\nbrand_id: example-brand\napproved_fact_ids: []\napproved_page_ids: []\napproved_asset_ids: []\napproved_token_ids: [color.brand.primary]\n`)
   const matched = getBrandTokens(engine)
   assert.equal((matched.data as { tokens: Array<{ id: string }> }).tokens[0]?.id, 'color.brand.primary')
   compiled.color.brand.primary.$value.hex = '#000000'

@@ -2,7 +2,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, compileModulePages, InterviewEngine, readFacts } from '@brand-os/brand-core'
+import { allModules, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
+import { compileTokens } from '@brand-os/design-tokens'
+import crypto from 'node:crypto'
 import type { BrandConfig } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
 
@@ -68,6 +70,12 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
   for (const page of compileModulePages(engine, requested)) {
     docs.push({ source: 'canonical', dest: page.dest, url: page.url, text: page.text, visibility: page.visibility })
   }
+  if (requested === 'public') {
+    docs.push({
+      source: 'canonical', dest: 'start/introduction.md', url: '/docs/start/introduction', visibility: 'public',
+      text: '---\ntitle: Brand OS\nvisibility: public\n---\n\n# Brand OS\n\nPublished brand facts are listed in the approved module pages. Any unapproved field remains missing.\n',
+    })
+  }
   collect(ctx, path.join(root, 'brand', 'content'), docs)
   collect(ctx, path.join(root, 'brand', 'business-os'), docs)
   collect(ctx, path.join(root, 'brand', 'templates'), docs)
@@ -77,6 +85,7 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
     if (doc.optional === 'gamification' && !ctx.gamification) excluded.add(doc.url)
     if (doc.visibility === 'restricted') excluded.add(doc.url)
     if (ctx.audience === 'public' && doc.visibility === 'internal') excluded.add(doc.url)
+    if (ctx.audience === 'public' && doc.source !== 'canonical' && !pageIsPublic(ctx.root, doc.source) && !pageIsPublic(ctx.root, doc.dest)) excluded.add(doc.url)
   }
   for (const doc of docs) {
     if (excluded.has(doc.url)) continue
@@ -90,6 +99,7 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
   }
   const included = docs.filter((doc) => !excluded.has(doc.url))
   writeSidebars(ctx, included)
+  if (ctx.audience === 'public') writePublicTokens(ctx)
   writeData(ctx)
   writePublished(ctx)
   writeIndexes(ctx, included)
@@ -111,6 +121,8 @@ function collect(ctx: PrepareContext, dir: string, into: DocFile[]): void {
       const relative = path.relative(ctx.root, full).split(path.sep).join('/')
       const dest = destination(relative)
       if (!dest) continue
+      // Public introduction is generated from safe canonical text above, never copied from a draft source.
+      if (ctx.audience === 'public' && relative === 'brand/content/00-start/introduction.md') continue
       const text = fs.readFileSync(full, 'utf8')
       const meta = frontmatter(text)
       into.push({
@@ -150,7 +162,7 @@ function frontmatter(text: string): Record<string, string> {
 function writeSidebars(ctx: PrepareContext, included: DocFile[]): void {
   const items = (prefix: string) =>
     included
-      .filter((doc) => doc.dest.startsWith(prefix) && doc.dest.endsWith('/overview.md'))
+      .filter((doc) => doc.dest.startsWith(prefix) && (doc.dest.endsWith('/overview.md') || doc.dest.endsWith('.md')))
       .map((doc) => doc.dest.replace(/\.md$/, ''))
       .sort()
   const useCases = included.filter((doc) => doc.dest.startsWith('use-cases/')).map((doc) => doc.dest.replace(/\.md$/, '')).sort()
@@ -159,6 +171,8 @@ function writeSidebars(ctx: PrepareContext, included: DocFile[]): void {
     'start/introduction',
     category('Brand Identity', items('brand/')),
     category('Business OS', items('business/')),
+    category('Approved Brand Book', items('brand-book/')),
+    category('Approved Business Book', items('business-book/')),
     ctx.gamification ? category('Gamification', items('gamification/')) : null,
     category('Use cases', useCases),
     category('Templates', templates),
@@ -171,6 +185,44 @@ function writeSidebars(ctx: PrepareContext, included: DocFile[]): void {
 
 function category(label: string, items: string[]) {
   return { type: 'category', label, items }
+}
+
+/** Rebuild public token artifacts from an explicit publication allowlist.
+ * Merely running tokens:build does not make draft palette values public. */
+function writePublicTokens(ctx: PrepareContext): void {
+  const compiled = compileTokens(ctx.root)
+  if (compiled.errors.length) throw new Error(`Invalid tokens: ${compiled.errors.join('; ')}`)
+  const approvalsPath = path.join(ctx.root, 'brand', 'tokens', 'approvals.yaml')
+  const approvalsDoc = fs.existsSync(approvalsPath)
+    ? (parse(fs.readFileSync(approvalsPath, 'utf8')) as { approved?: Record<string, { value_sha256?: string }> })
+    : { approved: {} }
+  const approvals = approvalsDoc?.approved ?? {}
+  const allowed = new Set(readPublicationPolicy(ctx.root).approved_token_ids)
+  const colors = Object.entries(compiled.flat).filter(([id, token]) => {
+    if (!allowed.has(id) || token.type !== 'color' || !token.hex) return false
+    const hash = approvals[id]?.value_sha256
+    return typeof hash === 'string' && hash === crypto.createHash('sha256').update(token.hex).digest('hex')
+  }).map(([id, token]) => ({ id, hex: token.hex!, description: token.description ?? '', theme: token.theme ?? 'both' }))
+  const ids = new Set(colors.map((color) => color.id))
+  const contrast = compiled.contrast.filter((pair) => ids.has(pair.fg) && ids.has(pair.bg))
+  const css = `:root {\n${colors.map((color) => `  --${color.id.replace(/\./g, '-')}: ${color.hex};`).join('\n')}\n}\n`
+  const cssFile = path.join(ctx.root, 'apps', 'docs', 'src', 'css', 'tokens.css')
+  const jsonFile = path.join(ctx.root, 'apps', 'docs', 'src', 'data', 'tokens.json')
+  fs.mkdirSync(path.dirname(cssFile), { recursive: true })
+  fs.mkdirSync(path.dirname(jsonFile), { recursive: true })
+  fs.writeFileSync(cssFile, css)
+  fs.writeFileSync(jsonFile, `${JSON.stringify({
+    status: colors.length ? 'published' : 'unpublished',
+    label: colors.length ? 'Approved and published design tokens' : 'No published tokens yet',
+    colors,
+    contrast,
+  }, null, 2)}\n`)
+}
+
+function manifestAssetsForPreview(root: string, assetPath: string): Array<Record<string, unknown>> {
+  const file = path.join(root, 'brand', 'assets', 'asset-manifest.yaml')
+  const manifest = parse(fs.readFileSync(file, 'utf8')) as { assets?: Array<Record<string, unknown>> }
+  return (manifest.assets ?? []).filter((asset) => asset.path === assetPath)
 }
 
 function writeData(ctx: PrepareContext): void {
@@ -197,7 +249,7 @@ function writeData(ctx: PrepareContext): void {
           title: module.title,
           code: module.code,
           group: module.group,
-          href: `/docs/${module.docPath}`,
+          href: projection ? `/docs/${module.group === 'business' ? 'business-book' : 'brand-book'}/${module.id}` : `/docs/${module.docPath}`,
           coverage: projection ? 0 : score?.coverage ?? 0,
           approval: projection ? 0 : score?.approval ?? 0,
           requiredUnanswered: projection ? 0 : score?.requiredUnanswered ?? 0,
@@ -210,10 +262,15 @@ function writeData(ctx: PrepareContext): void {
     states: Array<Record<string, unknown>>
   }
   const catalog = (ctx.mascot ? catalogDoc.states : [])
-    .filter((state) => ctx.audience !== 'public' || state.status === 'approved')
+    .filter((state) => ctx.audience !== 'public' || (state.status === 'approved' && pageIsPublic(ctx.root, String(state.id))))
     .map((state) => {
       const sources = Array.isArray(state.source_assets) ? state.source_assets.filter((item): item is string => typeof item === 'string') : []
-      const preview = sources.find((assetPath) => inspectAssetForPublication(ctx.root, assetPath).ok) ?? null
+      const preview = sources.find((assetPath) => {
+        const related = manifestAssetsForPreview(ctx.root, assetPath)
+        return ctx.audience !== 'public'
+          ? inspectAssetForPublication(ctx.root, assetPath).ok
+          : related.some((asset) => assetIsPublic(ctx.root, asset) && typeof asset.checksum_sha256 === 'string' && inspectAssetForPublication(ctx.root, assetPath, asset.checksum_sha256).ok)
+      }) ?? null
       return {
         id: state.id,
         name: state.name,
@@ -234,12 +291,12 @@ function writeData(ctx: PrepareContext): void {
     const visibility = String(asset.visibility ?? 'internal')
     if (visibility === 'restricted') return false
     if (visibility === 'internal' && ctx.audience === 'public') return false
-    if (ctx.audience === 'public' && asset.status !== 'approved') return false
-    if (ctx.audience === 'public' && !inspectAssetForPublication(ctx.root, String(asset.path), typeof asset.checksum_sha256 === 'string' ? asset.checksum_sha256 : null).ok) return false
+    if (ctx.audience === 'public' && !assetIsPublic(ctx.root, asset)) return false
+    if (ctx.audience === 'public' && (typeof asset.checksum_sha256 !== 'string' || !inspectAssetForPublication(ctx.root, String(asset.path), asset.checksum_sha256).ok)) return false
     return true
   }).map((asset) => ({
-    ...asset,
-    downloadable: asset.present === true && asset.status === 'approved' && asset.visibility === 'public' && assetPathIsSafe(ctx.root, String(asset.path)),
+    ...(ctx.audience === 'public' ? { id: asset.id, name: asset.name, path: asset.path, checksum_sha256: asset.checksum_sha256, status: asset.status, visibility: asset.visibility } : asset),
+    downloadable: asset.present === true && assetIsPublic(ctx.root, asset) && assetPathIsSafe(ctx.root, String(asset.path)),
   }))
   const dataDir = path.join(ctx.root, 'apps', 'docs', 'src', 'data')
   fs.mkdirSync(dataDir, { recursive: true })
@@ -287,8 +344,9 @@ function writePublished(ctx: PrepareContext): void {
   }
   const visible = Object.entries(facts).filter(([id, fact]) => {
     const classification = String(fact.classification ?? fact.visibility ?? 'internal')
-    if (classification === 'restricted') return false
-    if (ctx.audience === 'public' && (classification !== 'public' || fact.publication !== 'published' || !allowed.has(id))) return false
+    if (fact.status !== 'approved' || classification === 'restricted') return false
+    if (ctx.audience === 'public' && !allowed.has(id)) return false
+    if (ctx.audience === 'public' && (classification !== 'public' || fact.publication !== 'published')) return false
     return true
   })
   if (visible.length === 0) lines.push('No approved claims for this audience yet.')
@@ -314,8 +372,9 @@ function copyAssets(ctx: PrepareContext): void {
   const targetRoot = path.join(ctx.root, 'apps', 'docs', 'static', 'brand-assets')
   fs.rmSync(targetRoot, { recursive: true, force: true })
   for (const asset of manifest.assets) {
-    if (!asset.present || asset.visibility !== 'public' || asset.status !== 'approved') continue
-    const inspected = inspectAssetForPublication(ctx.root, asset.path, (asset as { checksum_sha256?: string }).checksum_sha256)
+    const checksum = (asset as { checksum_sha256?: unknown }).checksum_sha256
+    if (!asset.present || !assetIsPublic(ctx.root, asset) || typeof checksum !== 'string') continue
+    const inspected = inspectAssetForPublication(ctx.root, asset.path, checksum)
     if (!inspected.ok) continue
     const relative = asset.path.replace(/^brand\/assets\//, '')
     const target = path.join(targetRoot, relative)

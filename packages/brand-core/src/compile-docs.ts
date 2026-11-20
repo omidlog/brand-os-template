@@ -1,6 +1,7 @@
 import { allModules } from './content/index.js'
 import type { InterviewEngine } from './engine.js'
 import { readFacts } from './facts.js'
+import { factIsPublic } from './publication.js'
 
 export interface CompiledPage {
   dest: string
@@ -38,7 +39,7 @@ export function compileModulePages(engine: InterviewEngine, audience: 'public' |
           fact &&
           fact.status === 'approved' &&
           fact.classification !== 'restricted' &&
-          (audience === 'internal' || (fact.classification === 'public' && fact.publication === 'published'))
+          (audience === 'internal' || factIsPublic(engine.workspaceRoot(), field.id, fact, brandId))
         lines.push(`## ${field.label}`, '')
         if (!visible || fact.value === null || fact.value === undefined) {
           lines.push('Missing — not invented.', '')

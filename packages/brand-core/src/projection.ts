@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import type { InterviewEngine } from './engine.js'
 import { readFacts } from './facts.js'
+import { factIsPublic } from './publication.js'
 
 export interface PublicFact {
   id: string
@@ -36,12 +37,11 @@ export function exportPublic(engine: InterviewEngine): PublicBrandProjection {
 }
 
 export function publishedFacts(engine: InterviewEngine): PublicFact[] {
+  if (engine.config().brand.publish_docs !== 'public') return []
   const fileFacts = readFacts(engine.workspaceRoot(), 'approved', engine.config().brand.slug)
   const facts: PublicFact[] = []
   for (const [id, fact] of Object.entries(fileFacts)) {
-    if (fact.classification !== 'public') continue
-    if (fact.publication !== 'published') continue
-    if (fact.value === null || fact.value === undefined) continue
+    if (!factIsPublic(engine.workspaceRoot(), id, fact, engine.config().brand.slug)) continue
     const value = String(fact.value)
     facts.push({
       id,

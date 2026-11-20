@@ -12,10 +12,12 @@ export default function TokensPage(): React.ReactElement {
         <p className="badge">{tokens.status}</p>
         <h1>Token explorer</h1>
         <p>{tokens.label} Hex values are exported from the DTCG JSON. Do not copy them into a product until the palette is approved.</p>
-        <div className="pair">
-          <Preview theme="Light" background={hex('color.light.canvas')} color={hex('color.light.text')} />
-          <Preview theme="Dark" background={hex('color.dark.canvas')} color={hex('color.dark.text')} />
-        </div>
+        {tokens.colors.length > 0 ? (
+          <div className="pair">
+            <Preview theme="Light" background={hex('color.light.canvas')} color={hex('color.light.text')} />
+            <Preview theme="Dark" background={hex('color.dark.canvas')} color={hex('color.dark.text')} />
+          </div>
+        ) : <p>No tokens have been approved for public release.</p>}
         <h2>Colors</h2>
         {tokens.colors.map((color) => (
           <div className="swatch" key={color.id}>

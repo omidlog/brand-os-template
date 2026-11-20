@@ -43,8 +43,17 @@ export function inspectAssetForPublication(
   if (realPath !== assetsRoot && !realPath.startsWith(`${assetsRoot}${path.sep}`)) return { ok: false, reason: 'escape' }
   const bytes = fs.readFileSync(realPath)
   if (expectedHash && createHash('sha256').update(bytes).digest('hex') !== expectedHash) return { ok: false, reason: 'checksum' }
-  if (realPath.toLowerCase().endsWith('.svg') && /<script|javascript:|onload=|onerror=/i.test(bytes.toString('utf8'))) {
-    return { ok: false, reason: 'active-svg' }
+  if (realPath.toLowerCase().endsWith('.svg')) {
+    // Fail closed on active SVG/HTML/XML features. Production deployments should
+    // additionally sanitize SVGs with a maintained XML-aware sanitizer at ingest.
+    const svg = bytes.toString('utf8')
+    if (!/^\s*(?:<\?xml\s+[^>]*>\s*)?<svg[\s>]/i.test(svg) || !/<\/svg>\s*$/i.test(svg) ||
+        /<!|<\?|<\s*\/?\s*(?:script|foreignobject|iframe|object|embed|image|use|a|animate|set|style|audio|video|feimage)\b/i.test(svg) ||
+        /\b(?:on[a-z]+|href|xlink:href|src|style)\s*=/i.test(svg) ||
+        /(?:javascript|data|vbscript)\s*:/i.test(svg) ||
+        /url\s*\(|@import|expression\s*\(/i.test(svg)) {
+      return { ok: false, reason: 'active-svg' }
+    }
   }
   return { ok: true, realPath }
 }

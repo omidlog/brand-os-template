@@ -132,7 +132,10 @@ test('agent tools do not invent approvals', () => {
   const mascots = listMascotAssets(engine)
   assert.equal((mascots.data as { count: number }).count, 0)
   const status = getBrandStatus(engine)
-  assert.equal(status.approved, false)
+  const statusData = status.data as { brand: string; publishedFactCount: number }
+  assert.equal(statusData.brand, 'Unpublished')
+  assert.equal(statusData.publishedFactCount, 0)
+  assert.equal(JSON.stringify(status).includes('coverage'), false)
   const resolution = resolveAgentRequest(engine, 'onboarding-mascot')
   assert.match(resolution.gap, /missing/i)
   const carousel = resolveAgentRequest(engine, 'instagram-carousel')

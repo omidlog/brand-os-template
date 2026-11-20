@@ -11,6 +11,7 @@ process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 function brand(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-journey-'))
   starter(dir)
+  fs.cpSync(path.join(path.resolve(import.meta.dirname, '..'), 'brand/tokens'), path.join(dir, 'brand/tokens'), { recursive: true })
   return dir
 }
 
@@ -44,7 +45,7 @@ test('journey A keeps a published name when a tagline change is only proposed', 
   const changed = engine.changeAnswer('business.identity.trade_name', 'A forged public slogan', true, 'owner')
   assert.equal(changed.kind, 'impact')
   assert.equal(fs.readFileSync(path.join(root, 'brand/instance/approved-facts.yaml'), 'utf8'), before)
-  assert.equal(engine.exportPublic().facts.some((fact) => fact.value === 'Sample Language'), true)
+  assert.equal(engine.exportPublic().facts.length, 0) // private brands never emit a public projection
   assert.equal(engine.exportPublic().facts.some((fact) => String(fact.value).includes('forged')), false)
   const allocation = budget(100, { content: 1, paid: 1, community: 2 })
   assert.equal(allocation.status, 'computed')
@@ -52,7 +53,9 @@ test('journey A keeps a published name when a tagline change is only proposed', 
   assert.equal(allocation.lines.reduce((sum, line) => sum + (line.amount ?? 0), 0), 100)
   assert.equal(budget(null, { content: 1 }).status, 'missing')
   assert.equal(financeScenario({ revenue: null, cost: 10, cash: 30 }).status, 'blocked_missing_inputs')
-  assert.equal(financeScenario({ revenue: 100, cost: 40, cash: 80 }).runway_months, 2)
+  assert.equal(financeScenario({ revenue: 100, cost: 40, cash: 80 }).runway_months, null)
+  assert.equal(financeScenario({ revenue: 100, cost: 40, cash: 80, net_burn: 40 }).runway_months, 2)
+  assert.equal(financeScenario({ revenue: 100, cost: 40, cash: 80 }).gross_margin_pct, 60)
   const saved = backupBrand(root)
   migrateBrand(root)
   fs.appendFileSync(path.join(root, 'brand/content/01-brand-strategy/overview.md'), '\nJOURNEY-A-EDIT\n')

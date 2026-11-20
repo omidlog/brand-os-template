@@ -14,7 +14,7 @@
       "title": "Brand Strategy",
       "code": "01",
       "group": "brand",
-      "href": "/docs/brand/01-brand-strategy/overview",
+      "href": "/docs/brand-book/brand-strategy",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -24,7 +24,7 @@
       "title": "Verbal Identity",
       "code": "02",
       "group": "brand",
-      "href": "/docs/brand/02-verbal-identity/overview",
+      "href": "/docs/brand-book/verbal-identity",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -34,7 +34,7 @@
       "title": "Logo System",
       "code": "03",
       "group": "brand",
-      "href": "/docs/brand/03-logo-system/overview",
+      "href": "/docs/brand-book/logo-system",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -44,7 +44,7 @@
       "title": "Color System",
       "code": "04",
       "group": "brand",
-      "href": "/docs/brand/04-color-system/overview",
+      "href": "/docs/brand-book/color-system",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -54,7 +54,7 @@
       "title": "Typography",
       "code": "05",
       "group": "brand",
-      "href": "/docs/brand/05-typography/overview",
+      "href": "/docs/brand-book/typography",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -64,7 +64,7 @@
       "title": "Mascot Identity",
       "code": "06",
       "group": "brand",
-      "href": "/docs/brand/06-mascot-identity/overview",
+      "href": "/docs/brand-book/mascot-identity",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -74,7 +74,7 @@
       "title": "Mascot Expression & Pose Library",
       "code": "07",
       "group": "brand",
-      "href": "/docs/brand/07-mascot-expression-pose-library/overview",
+      "href": "/docs/brand-book/mascot-expression",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -84,7 +84,7 @@
       "title": "Mascot Evolution",
       "code": "08",
       "group": "brand",
-      "href": "/docs/brand/08-mascot-evolution/overview",
+      "href": "/docs/brand-book/mascot-evolution",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -94,7 +94,7 @@
       "title": "Illustration System",
       "code": "09",
       "group": "brand",
-      "href": "/docs/brand/09-illustration-system/overview",
+      "href": "/docs/brand-book/illustration",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -104,7 +104,7 @@
       "title": "Iconography & Graphic Elements",
       "code": "10",
       "group": "brand",
-      "href": "/docs/brand/10-iconography-graphic-elements/overview",
+      "href": "/docs/brand-book/iconography",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -114,7 +114,7 @@
       "title": "Layout & Composition",
       "code": "11",
       "group": "brand",
-      "href": "/docs/brand/11-layout-composition/overview",
+      "href": "/docs/brand-book/layout",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -124,7 +124,7 @@
       "title": "Product UI Design System",
       "code": "12",
       "group": "brand",
-      "href": "/docs/brand/12-product-ui-system/overview",
+      "href": "/docs/brand-book/product-ui",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -134,7 +134,7 @@
       "title": "Motion Identity",
       "code": "13",
       "group": "brand",
-      "href": "/docs/brand/13-motion-identity/overview",
+      "href": "/docs/brand-book/motion",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -144,7 +144,7 @@
       "title": "Sonic Branding",
       "code": "14",
       "group": "brand",
-      "href": "/docs/brand/14-sonic-branding/overview",
+      "href": "/docs/brand-book/sonic",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -154,7 +154,7 @@
       "title": "Photography & Video",
       "code": "15",
       "group": "brand",
-      "href": "/docs/brand/15-photo-video-style/overview",
+      "href": "/docs/brand-book/photo-video",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -164,7 +164,7 @@
       "title": "Social Media",
       "code": "16",
       "group": "brand",
-      "href": "/docs/brand/16-social-media/overview",
+      "href": "/docs/brand-book/social",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -174,7 +174,7 @@
       "title": "Marketing & Campaigns",
       "code": "17",
       "group": "brand",
-      "href": "/docs/brand/17-marketing-campaigns/overview",
+      "href": "/docs/brand-book/campaigns",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -184,7 +184,7 @@
       "title": "Print, Merchandise & Environment",
       "code": "18",
       "group": "brand",
-      "href": "/docs/brand/18-print-merchandise/overview",
+      "href": "/docs/brand-book/print",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -194,7 +194,7 @@
       "title": "Brand Applications",
       "code": "19",
       "group": "brand",
-      "href": "/docs/brand/19-brand-applications/overview",
+      "href": "/docs/brand-book/applications",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -204,7 +204,7 @@
       "title": "Governance & Asset Library",
       "code": "20",
       "group": "brand",
-      "href": "/docs/brand/20-governance-assets/overview",
+      "href": "/docs/brand-book/governance",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -214,7 +214,7 @@
       "title": "Gamification",
       "code": "G",
       "group": "system",
-      "href": "/docs/gamification/overview",
+      "href": "/docs/brand-book/gamification",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -224,7 +224,7 @@
       "title": "Company & Business Plan",
       "code": "BO-01",
       "group": "business",
-      "href": "/docs/business/01-company-business-plan/overview",
+      "href": "/docs/business-book/business-company",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -234,7 +234,7 @@
       "title": "Marketing Strategy & Planning",
       "code": "BO-02",
       "group": "business",
-      "href": "/docs/business/02-marketing/overview",
+      "href": "/docs/business-book/business-marketing",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -244,7 +244,7 @@
       "title": "Product & Service Strategy",
       "code": "BO-03",
       "group": "business",
-      "href": "/docs/business/03-product-services/overview",
+      "href": "/docs/business-book/business-product",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -254,7 +254,7 @@
       "title": "Sales & Revenue",
       "code": "BO-04",
       "group": "business",
-      "href": "/docs/business/04-sales-revenue/overview",
+      "href": "/docs/business-book/business-sales",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -264,7 +264,7 @@
       "title": "Customer Experience, Success & Support",
       "code": "BO-05",
       "group": "business",
-      "href": "/docs/business/05-customer-experience/overview",
+      "href": "/docs/business-book/business-customer",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -274,7 +274,7 @@
       "title": "Operations & Team SOPs",
       "code": "BO-06",
       "group": "business",
-      "href": "/docs/business/06-operations-sops/overview",
+      "href": "/docs/business-book/business-operations",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -284,7 +284,7 @@
       "title": "Finance & Unit Economics",
       "code": "BO-07",
       "group": "business",
-      "href": "/docs/business/07-finance-unit-economics/overview",
+      "href": "/docs/business-book/business-finance",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -294,7 +294,7 @@
       "title": "Engineering, Data & Security",
       "code": "BO-08",
       "group": "business",
-      "href": "/docs/business/08-engineering-security/overview",
+      "href": "/docs/business-book/business-engineering",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -304,7 +304,7 @@
       "title": "Legal, IP & Compliance",
       "code": "BO-09",
       "group": "business",
-      "href": "/docs/business/09-legal-compliance/overview",
+      "href": "/docs/business-book/business-legal",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -314,7 +314,7 @@
       "title": "Growth & Experimentation",
       "code": "BO-10",
       "group": "business",
-      "href": "/docs/business/10-growth-experiments/overview",
+      "href": "/docs/business-book/business-growth",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -324,7 +324,7 @@
       "title": "Goals, KPIs, Analytics & Reviews",
       "code": "BO-11",
       "group": "business",
-      "href": "/docs/business/11-goals-kpis-reports/overview",
+      "href": "/docs/business-book/business-goals",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
@@ -334,7 +334,7 @@
       "title": "Partnerships, Distribution, Risk & Investor Readiness",
       "code": "BO-12",
       "group": "business",
-      "href": "/docs/business/12-partnerships-risk-investors/overview",
+      "href": "/docs/business-book/business-partnerships",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0

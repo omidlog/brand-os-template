@@ -132,7 +132,11 @@ test('upgrade and one-stage mascot configuration keep custom data', () => {
 test('retrieval reads approved YAML instead of hard-coded placeholders', () => {
   const root = fresh()
   const engine = new InterviewEngine(root)
-  fs.writeFileSync(path.join(root, 'brand/tokens/approvals.yaml'), 'approved:\n  color.brand.primary:\n    approved_by: human\n')
+  const hex = compileTokens(root).flat['color.brand.primary']?.hex
+  assert.ok(hex)
+  const sha = crypto.createHash('sha256').update(hex).digest('hex')
+  fs.writeFileSync(path.join(root, 'brand/tokens/approvals.yaml'), `approved:\n  color.brand.primary:\n    approved_by: human\n    value_sha256: ${sha}\n`)
+  fs.writeFileSync(path.join(root, 'brand/publication-policy.yaml'), 'schema_version: 1\nbrand_id: example-brand\napproved_fact_ids: []\napproved_page_ids: [mascot.emotion.joyful]\napproved_asset_ids: []\napproved_token_ids: [color.brand.primary]\n')
   const tokens = getBrandTokens(engine)
   const list = (tokens.data as { tokens: Array<{ id: string; value: string }> }).tokens
   assert.equal(list.length, 1)
@@ -142,6 +146,7 @@ test('retrieval reads approved YAML instead of hard-coded placeholders', () => {
   fs.writeFileSync(path.join(root, 'brand/mascot/catalog.yaml'), catalog.replace("status: draft\n    do:", 'status: approved\n    do:').replace('status: draft', 'status: approved'))
   const assets = listMascotAssets(engine)
   assert.ok((assets.data as { rows: unknown[] }).rows.length > 0)
+  assert.equal((assets.data as { rows: Array<{ source_assets?: string[] }> }).rows.every((row) => (row.source_assets ?? []).length === 0), true)
   const plan = renderBusinessArtifacts(engine)['business-plan.md']
   assert.match(plan ?? '', /Unknown — not invented/)
   assert.equal((plan ?? '').includes('CANARY'), false)
@@ -180,7 +185,9 @@ test('an MCP client can list tools and call them with Unicode', async () => {
     assert.deepEqual(names, ['get_asset_metadata', 'get_brand_guidelines', 'get_brand_overview', 'get_brand_status', 'get_brand_tokens', 'get_business_plan', 'get_design_component', 'get_logo_rules', 'get_marketing_plan', 'get_mascot_guidelines', 'get_mascot_profile', 'get_motion_guidelines', 'get_social_template', 'list_mascot_assets', 'list_mascot_stages', 'search_brand_docs', 'search_mascot_assets'])
     for (const tool of tools.tools) assert.ok(tool.inputSchema)
     const status = await client.callTool({ name: 'get_brand_status', arguments: {} })
-    assert.match(JSON.stringify(status), /EXAMPLE Brand|coverage/)
+    assert.match(JSON.stringify(status), /Unpublished/)
+    assert.equal(JSON.stringify(status).includes('coverage'), false)
+    assert.equal(JSON.stringify(status).includes('EXAMPLE Brand'), false)
     const search = await client.callTool({ name: 'search_brand_docs', arguments: { query: 'برند', include_unapproved: true } })
     assert.equal(typeof search, 'object')
     const invalid = await client.callTool({ name: 'get_design_component', arguments: {} })

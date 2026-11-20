@@ -10,11 +10,24 @@ function valueOf(engine: InterviewEngine, id: string): string {
   return `${String(found.value)} _(status: ${found.status})_`
 }
 
-export function financeScenario(input: { revenue: number | null; cost: number | null; cash: number | null }): { status: 'computed' | 'blocked_missing_inputs'; gross_margin: number | null; runway_months: number | null } {
-  if (input.revenue === null || input.cost === null) return { status: 'blocked_missing_inputs', gross_margin: null, runway_months: null }
-  const gross = Math.round((input.revenue - input.cost) * 100) / 100
-  const runway = input.cash !== null && input.cost > 0 ? Math.round((input.cash / input.cost) * 100) / 100 : null
-  return { status: 'computed', gross_margin: gross, runway_months: runway }
+/** Period-aligned revenue and direct COGS only. Runway needs separately supplied net burn. */
+export function financeScenario(input: { revenue: number | null; cost: number | null; cash: number | null; net_burn?: number | null }): {
+  status: 'computed' | 'blocked_missing_inputs'
+  gross_profit: number | null
+  gross_margin_pct: number | null
+  runway_months: number | null
+} {
+  if (input.revenue === null || input.cost === null || !Number.isFinite(input.revenue) || !Number.isFinite(input.cost) || input.revenue < 0 || input.cost < 0) {
+    return { status: 'blocked_missing_inputs', gross_profit: null, gross_margin_pct: null, runway_months: null }
+  }
+  const round = (value: number) => Math.round(value * 100) / 100
+  const grossProfit = round(input.revenue - input.cost)
+  const margin = input.revenue > 0 ? round((grossProfit / input.revenue) * 100) : null
+  const burn = input.net_burn
+  const runway = input.cash !== null && input.cash >= 0 && burn !== undefined && burn !== null && Number.isFinite(burn) && burn > 0
+    ? round(input.cash / burn)
+    : null
+  return { status: 'computed', gross_profit: grossProfit, gross_margin_pct: margin, runway_months: runway }
 }
 
 export function allocateBudget(

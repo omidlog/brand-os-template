@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { migrateFactFiles } from './facts.js'
+import { parse, stringify } from 'yaml'
 import { dataKey } from './private-store.js'
 
 const RELATIVE = [
@@ -55,7 +56,10 @@ export function backupBrand(root: string, destination?: string): { directory: st
   }
   fs.mkdirSync(directory, { recursive: true })
   const key = dataKey()
-  const files = RELATIVE.flatMap((relative) => listFiles(root, relative)).filter((relative) => !relative.endsWith('/key') && !relative.endsWith('key')).sort()
+  const files = RELATIVE.flatMap((relative) => listFiles(root, relative))
+    .filter((relative) => !relative.startsWith('brand/.private/backups/'))
+    .filter((relative) => !relative.endsWith('/key') && !relative.endsWith('key'))
+    .sort()
   const payload = {
     files: files.map((relative) => ({ path: relative, data: fs.readFileSync(path.join(root, relative)).toString('base64') })),
   }
@@ -81,7 +85,9 @@ export function restoreBrand(root: string, backupDir: string): { restored: strin
   const payload = JSON.parse(Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8')) as { files: Array<{ path: string; data: string }> }
   const restored: string[] = []
   for (const file of payload.files) {
-    if (!file.path || file.path.includes('..') || path.isAbsolute(file.path)) throw new Error(`Unsafe backup path ${file.path}`)
+    if (!file.path || file.path.includes('..') || path.isAbsolute(file.path) || !RELATIVE.some((prefix) => file.path === prefix || file.path.startsWith(`${prefix}/`)) || file.path.startsWith('brand/.private/backups/')) {
+      throw new Error(`Unsafe backup path ${file.path}`)
+    }
     writeAtomic(path.join(root, file.path), Buffer.from(file.data, 'base64'))
     restored.push(file.path)
   }
@@ -93,10 +99,15 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   const current = fs.existsSync(lockFile) ? (JSON.parse(fs.readFileSync(lockFile, 'utf8')) as { version?: string }) : {}
   const from = current.version ?? '0.0.0'
   const logFile = path.join(root, 'brand', 'migrations.yaml')
-  const log = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : 'schema_version: 1\napplied: []\n'
+  const log = fs.existsSync(logFile)
+    ? (parse(fs.readFileSync(logFile, 'utf8')) as { schema_version?: number; applied?: Array<{ id: string; touched: string[] }> })
+    : { schema_version: 1, applied: [] as Array<{ id: string; touched: string[] }> }
+  if (!log || !Array.isArray(log.applied)) throw new Error('Invalid migration history; refusing to overwrite it.')
   const id = `${from}->${ENGINE_VERSION}`
-  const next = log.includes(id) ? log : `${log.trimEnd()}\n  - id: "${id}"\n    touched: [brand/engine.lock, brand/migrations.yaml]\n`
-  writeAtomic(logFile, next.endsWith('\n') ? next : `${next}\n`)
+  if (from !== ENGINE_VERSION && !log.applied.some((entry) => entry.id === id)) {
+    log.applied.push({ id, touched: ['brand/engine.lock', 'brand/migrations.yaml'] })
+  }
+  writeAtomic(logFile, stringify(log, { lineWidth: 100 }))
   writeAtomic(
     lockFile,
     `${JSON.stringify({ version: ENGINE_VERSION, note: 'Migration rewrites fact files to canonical schema 2 and does not change fact values, catalogs, or assets.' }, null, 2)}\n`,

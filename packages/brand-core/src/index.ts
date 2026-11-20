@@ -5,6 +5,7 @@ export { InterviewEngine, applyInit, emptySession, assertSlug, upgradeCore, sync
 export { backupBrand, migrateBrand, resetInterviewState, restoreBrand, writeAtomic, RESET_CONFIRMATION } from './backup.js'
 export { authorize, agentContext, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
 export { compileModulePages } from './compile-docs.js'
+export { readPublicationPolicy, factIsPublic, assetIsPublic, pageIsPublic } from './publication.js'
 export { readFacts, writeFacts, migrateFactFiles } from './facts.js'
 export { importFigmaVariables } from './figma.js'
 export { allocateBudget, financeScenario } from './artifacts.js'

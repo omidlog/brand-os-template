@@ -6,6 +6,7 @@ audiences:
 approved_page_ids: []
 approved_fact_ids: []
 approved_asset_ids: []
+approved_token_ids: []
 locales: []
 release_id: null
 approval_proof_reference: brand/.private/approval-secret

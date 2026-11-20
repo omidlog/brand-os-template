@@ -489,12 +489,18 @@ export class InterviewEngine {
     const proposals = readProposals(this.root)
     const proposal = proposals.find((item) => item.id === changeId)
     if (!proposal || proposal.status !== 'pending') return { kind: 'error', message: 'Proposal not found.' }
-    if (proposal.expected_version !== expectedVersion) {
-      return { kind: 'error', message: 'Stale revision. The approved fact was not changed.' }
+    const currentFact = readFacts(this.root, 'approved', this.config().brand.slug)[proposal.question_id]
+    if (!currentFact || currentFact.status !== 'approved' || currentFact.version !== expectedVersion || proposal.expected_version !== expectedVersion) {
+      return { kind: 'error', message: 'Stale revision. Current approved fact does not match this proposal. No change was made.' }
     }
     const question = this.question(proposal.question_id)
     if (!question) return { kind: 'error', message: 'Proposal question is missing.' }
-    const value = proposal.private_ref ? null : proposal.proposed_value
+    const stored = proposal.private_ref ? new PrivateStore(this.root).get(proposal.private_ref) : null
+    if (proposal.private_ref && (!stored || stored.questionId !== question.id)) return { kind: 'error', message: 'Restricted proposal payload is missing or mismatched.' }
+    const raw = proposal.private_ref ? String(stored?.raw ?? '') : String(proposal.proposed_value ?? '')
+    const normalized = normalizeAnswer(question, raw)
+    if (!normalized.ok) return { kind: 'error', questionId: question.id, message: normalized.message }
+    const value = proposal.private_ref ? null : normalized.value
     const latest = this.context().answers.get(question.id)
     if (latest) this.supersede(latest.answer_id)
     const answer = this.appendAnswer(question, value, {
@@ -502,7 +508,7 @@ export class InterviewEngine {
       authority: 'confirmed_by_owner',
       status: 'approved',
       uncertainty: null,
-      raw: proposal.private_ref ? null : proposal.proposed_value,
+      raw: proposal.private_ref ? null : raw,
       reviewedBy: 'authenticated-reviewer',
       privateRef: proposal.private_ref,
     })
@@ -1092,6 +1098,11 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   writeYaml(path.join(root, 'brand', 'interview', 'evidence-index.yaml'), { schema_version: 1, items: [] })
   writeYaml(path.join(root, 'brand', 'instance', 'draft-facts.yaml'), { schema_version: 1, facts: {} })
   writeYaml(path.join(root, 'brand', 'instance', 'approved-facts.yaml'), { schema_version: 1, facts: {} })
+  // Never inherit publication grants when initializing a new brand instance.
+  writeYaml(path.join(root, 'brand', 'publication-policy.yaml'), {
+    schema_version: 1, brand_id: input.slug, status: 'draft', audiences: { public: false },
+    approved_fact_ids: [], approved_page_ids: [], approved_asset_ids: [], approved_token_ids: [],
+  })
   syncManifest(root, config)
   new InterviewEngine(root).rebuildDrafts()
   return config
