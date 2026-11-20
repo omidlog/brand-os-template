@@ -1,0 +1,1535 @@
+{
+  "states": [
+    {
+      "id": "mascot.emotion.joyful",
+      "name": "Joyful",
+      "category": "emotion",
+      "intent": "Uncomplicated happiness after a real success.",
+      "emotion_intensity": "high",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "joyful",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.delighted",
+      "name": "Delighted",
+      "category": "emotion",
+      "intent": "A warmer, smaller surprise than full celebration.",
+      "emotion_intensity": "high",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "delighted",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.sad",
+      "name": "Sad",
+      "category": "emotion",
+      "intent": "Quiet disappointment without guilt.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "sad",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.angry",
+      "name": "Angry",
+      "category": "emotion",
+      "intent": "Firm boundary. Not cruelty and not a tantrum aimed at the user.",
+      "emotion_intensity": "high",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "angry",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.crying",
+      "name": "Crying",
+      "category": "emotion",
+      "intent": "Visible upset reserved for story moments, not ordinary errors.",
+      "emotion_intensity": "high",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "crying",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.surprised",
+      "name": "Surprised",
+      "category": "emotion",
+      "intent": "Short reaction to something new.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "surprised",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.excited",
+      "name": "Excited",
+      "category": "emotion",
+      "intent": "Forward energy before an action starts.",
+      "emotion_intensity": "high",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "excited",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.confused",
+      "name": "Confused",
+      "category": "emotion",
+      "intent": "The character does not understand yet and is not blaming the user.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "confused",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.proud",
+      "name": "Proud",
+      "category": "emotion",
+      "intent": "Satisfaction in effort, not superiority.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "proud",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.embarrassed",
+      "name": "Embarrassed",
+      "category": "emotion",
+      "intent": "A small mistake, recovered quickly.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "embarrassed",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.determined",
+      "name": "Determined",
+      "category": "emotion",
+      "intent": "Continuing after friction.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "determined",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.curious",
+      "name": "Curious",
+      "category": "emotion",
+      "intent": "Attention toward something worth inspecting.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "curious",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.sleepy",
+      "name": "Sleepy",
+      "category": "emotion",
+      "intent": "Rest, end of session, or a gentle pause.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "sleepy",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.worried",
+      "name": "Worried",
+      "category": "emotion",
+      "intent": "Concern that invites a next step, not panic.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "worried",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.relieved",
+      "name": "Relieved",
+      "category": "emotion",
+      "intent": "A problem just became solvable.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "relieved",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.frustrated",
+      "name": "Frustrated",
+      "category": "emotion",
+      "intent": "Stuck, but still respectful.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "frustrated",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.thankful",
+      "name": "Thankful",
+      "category": "emotion",
+      "intent": "Acknowledgement of help or patience.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "thankful",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.playful",
+      "name": "Playful",
+      "category": "emotion",
+      "intent": "Lightness that must not undercut a serious error.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "playful",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.focused",
+      "name": "Focused",
+      "category": "emotion",
+      "intent": "Working attention with little theatrical emotion.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "emotion",
+        "focused",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.emotion.celebrating",
+      "name": "Celebrating",
+      "category": "emotion",
+      "intent": "A rare peak. Do not use it for routine clicks.",
+      "emotion_intensity": "high",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "emotion",
+        "celebrating",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.standing",
+      "name": "Standing",
+      "category": "action",
+      "intent": "Neutral resting stance used as the fallback still.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "action",
+        "standing",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.waving",
+      "name": "Waving",
+      "category": "action",
+      "intent": "Hello or goodbye without blocking the primary control.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "action",
+        "waving",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.greeting",
+      "name": "Greeting",
+      "category": "action",
+      "intent": "Arrival posture when a session starts.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "greeting",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.pointing",
+      "name": "Pointing",
+      "category": "action",
+      "intent": "Direct attention to a control or a piece of content.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "action",
+        "pointing",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.running",
+      "name": "Running",
+      "category": "action",
+      "intent": "Movement between places. Not a loading spinner by default.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "running",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.jumping",
+      "name": "Jumping",
+      "category": "action",
+      "intent": "A short upward action for delight, not for errors.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "jumping",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.flying",
+      "name": "Flying",
+      "category": "action",
+      "intent": "Optional travel metaphor. Skip if the character cannot leave the ground.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "flying",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.landing",
+      "name": "Landing",
+      "category": "action",
+      "intent": "End of a move, returning to a stable pose.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "landing",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.dancing",
+      "name": "Dancing",
+      "category": "action",
+      "intent": "Optional celebration variant. Rare.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "dancing",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.thinking",
+      "name": "Thinking",
+      "category": "action",
+      "intent": "Considering a choice. Pairs with confused or focused faces.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "action",
+        "thinking",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.reading",
+      "name": "Reading",
+      "category": "action",
+      "intent": "Attention on a text object. Do not imply a specific curriculum.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "reading",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.cheering",
+      "name": "Cheering",
+      "category": "action",
+      "intent": "Encouragement directed at the user’s effort.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "action",
+        "cheering",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.sitting",
+      "name": "Sitting",
+      "category": "action",
+      "intent": "Calm presence beside long-form content.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "sitting",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.stretching",
+      "name": "Stretching",
+      "category": "action",
+      "intent": "Reset or break. Not a medical claim.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "stretching",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.hiding",
+      "name": "Hiding",
+      "category": "action",
+      "intent": "Peeking from an edge. Do not use it to obscure required information.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "hiding",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.looking-around",
+      "name": "Looking around",
+      "category": "action",
+      "intent": "Searching the scene before offering help.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "looking-around",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.listening",
+      "name": "Listening",
+      "category": "action",
+      "intent": "Attending to the user or to audio. Silent fallback required.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "listening",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.presenting",
+      "name": "Presenting",
+      "category": "action",
+      "intent": "Introducing a feature that product status allows.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "presenting",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.thumbs-up-equivalent",
+      "name": "Affirming gesture",
+      "category": "action",
+      "intent": "A culturally careful “yes” gesture. Do not assume a thumbs-up is universal.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "thumbs-up-equivalent",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.action.resting",
+      "name": "Resting",
+      "category": "action",
+      "intent": "Done for now. Supports end-of-session and reduced-motion stillness.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "action",
+        "resting",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.welcome",
+      "name": "Welcome",
+      "category": "ui",
+      "intent": "First hello on a surface the product actually has.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "ui",
+        "welcome",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.onboarding",
+      "name": "Onboarding",
+      "category": "ui",
+      "intent": "Guides a first-run step that is in scope.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "ui",
+        "onboarding",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.empty-state",
+      "name": "Empty state",
+      "category": "ui",
+      "intent": "Nothing here yet, with a single next step.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "ui",
+        "empty-state",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.loading",
+      "name": "Loading",
+      "category": "ui",
+      "intent": "Waiting. Must have a non-animated fallback.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "ui",
+        "loading",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.offline",
+      "name": "Offline",
+      "category": "ui",
+      "intent": "Connectivity problem, including maintenance if you later split it.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "offline",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.success",
+      "name": "Success",
+      "category": "ui",
+      "intent": "A completed action. Distinct from rare celebration.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "ui",
+        "success",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.failure",
+      "name": "Failure",
+      "category": "ui",
+      "intent": "Something failed. Tone stays respectful.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "ui",
+        "failure",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.retry",
+      "name": "Retry",
+      "category": "ui",
+      "intent": "Offers another attempt without blame.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "retry",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.hint",
+      "name": "Hint",
+      "category": "ui",
+      "intent": "Points at help the user did not fail to deserve.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "ui",
+        "hint",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.reminder",
+      "name": "Reminder",
+      "category": "ui",
+      "intent": "A nudge that can be dismissed.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "reminder",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.notification",
+      "name": "Notification",
+      "category": "ui",
+      "intent": "A small alert. Not a full-screen takeover by default.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "notification",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.level-complete",
+      "name": "Level complete",
+      "category": "ui",
+      "intent": "Only if progression exists. Otherwise leave unused.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "level-complete",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.streak",
+      "name": "Streak",
+      "category": "ui",
+      "intent": "Only if a streak rule exists. No invented day count.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "streak",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.unlock",
+      "name": "Unlock",
+      "category": "ui",
+      "intent": "A newly available capability that is really shipped.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "unlock",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.ui.permission-request",
+      "name": "Permission request",
+      "category": "ui",
+      "intent": "Asks for a device or data permission honestly.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "ui",
+        "permission-request",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.flashcard-practice",
+      "name": "Flashcard practice",
+      "category": "learning",
+      "intent": "Short recall drill. Education-specific.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "flashcard-practice",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.recall",
+      "name": "Recall",
+      "category": "learning",
+      "intent": "Remembering without showing the answer first.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "recall",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.new-word",
+      "name": "New word",
+      "category": "learning",
+      "intent": "Introducing one new item.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "new-word",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.sentence-practice",
+      "name": "Sentence practice",
+      "category": "learning",
+      "intent": "Using an item in a sentence.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "sentence-practice",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.quiz",
+      "name": "Quiz",
+      "category": "learning",
+      "intent": "A check, not a trick.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "quiz",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.pronunciation",
+      "name": "Pronunciation",
+      "category": "learning",
+      "intent": "Speaking or listening to a form. Needs a silent alternative.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "pronunciation",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.listening",
+      "name": "Listening",
+      "category": "learning",
+      "intent": "Audio-led task with captions or a transcript path.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "listening",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.speaking",
+      "name": "Speaking",
+      "category": "learning",
+      "intent": "User production. No fake fluency score.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "speaking",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.writing",
+      "name": "Writing",
+      "category": "learning",
+      "intent": "Text production.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "writing",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.review",
+      "name": "Review",
+      "category": "learning",
+      "intent": "Returning to older material.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "review",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.spaced-repetition",
+      "name": "Spaced repetition",
+      "category": "learning",
+      "intent": "Only if that method is actually chosen.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "spaced-repetition",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.hard-word",
+      "name": "Hard item",
+      "category": "learning",
+      "intent": "An item the learner is struggling with. No shame.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "learning",
+        "hard-word",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.lesson-completed",
+      "name": "Lesson completed",
+      "category": "learning",
+      "intent": "The end of a unit that exists in the product.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "learning",
+        "lesson-completed",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.encouragement",
+      "name": "Encouragement",
+      "category": "learning",
+      "intent": "Support mid-task.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "learning",
+        "encouragement",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.learning.progress",
+      "name": "Progress",
+      "category": "learning",
+      "intent": "Showing movement through a real syllabus.",
+      "emotion_intensity": "low",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "learning",
+        "progress",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.book",
+      "name": "Book",
+      "category": "prop",
+      "intent": "A generic book prop. Do not show a real title.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "book",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.pencil",
+      "name": "Pencil",
+      "category": "prop",
+      "intent": "A writing tool.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "pencil",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.headphones",
+      "name": "Headphones",
+      "category": "prop",
+      "intent": "Audio equipment for listening states.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "headphones",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.speech-bubble",
+      "name": "Speech bubble",
+      "category": "prop",
+      "intent": "Holds approved copy only. No placeholder jokes in production.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "prop",
+        "speech-bubble",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.trophy",
+      "name": "Trophy",
+      "category": "prop",
+      "intent": "Optional reward object. No invented prize.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "trophy",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.badge",
+      "name": "Badge",
+      "category": "prop",
+      "intent": "Pairs with the badge rules in iconography.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "badge",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.map",
+      "name": "Map",
+      "category": "prop",
+      "intent": "A generic map, not a claim about a market.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "map",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.phone",
+      "name": "Phone",
+      "category": "prop",
+      "intent": "A device frame only when the product is on a phone.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "phone",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.star",
+      "name": "Star",
+      "category": "prop",
+      "intent": "A small emphasis mark, not a rating of the user.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "star",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.prop.ticket",
+      "name": "Ticket",
+      "category": "prop",
+      "intent": "An access or event prop. Seasonal campaigns may reuse it.",
+      "emotion_intensity": "none",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "prop",
+        "ticket",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.birthday",
+      "name": "Birthday",
+      "category": "seasonal",
+      "intent": "Only when a real birthday moment is in scope and appropriate.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "birthday",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.new-year",
+      "name": "New year",
+      "category": "seasonal",
+      "intent": "A new-year variant. Do not assume a calendar for the user.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "new-year",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.winter",
+      "name": "Winter",
+      "category": "seasonal",
+      "intent": "Seasonal dressing. Not a claim that every market has this season now.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "winter",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.spring",
+      "name": "Spring",
+      "category": "seasonal",
+      "intent": "Seasonal dressing.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "spring",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.summer",
+      "name": "Summer",
+      "category": "seasonal",
+      "intent": "Seasonal dressing.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "summer",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.autumn",
+      "name": "Autumn",
+      "category": "seasonal",
+      "intent": "Seasonal dressing.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "autumn",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.launch",
+      "name": "Launch",
+      "category": "seasonal",
+      "intent": "A release moment that product status allows.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": true,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "launch",
+        "mvp"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.anniversary",
+      "name": "Anniversary",
+      "category": "seasonal",
+      "intent": "Only after a real date exists.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "anniversary",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.special-event",
+      "name": "Special event",
+      "category": "seasonal",
+      "intent": "A named event the owner supplied.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "special-event",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    },
+    {
+      "id": "mascot.seasonal.community-milestone",
+      "name": "Community milestone",
+      "category": "seasonal",
+      "intent": "A group achievement with evidence, not a fake user count.",
+      "emotion_intensity": "medium",
+      "status": "draft",
+      "mvp": false,
+      "tags": [
+        "mascot",
+        "seasonal",
+        "community-milestone",
+        "backlog"
+      ],
+      "preview": null,
+      "source_assets": []
+    }
+  ],
+  "enabled": true
+}

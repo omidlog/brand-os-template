@@ -1,0 +1,17 @@
+{
+  "$id": "https://brand-os.local/schemas/asset.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Asset record",
+  "type": "object",
+  "required": ["id", "name", "status", "path", "present", "visibility"],
+  "additionalProperties": true,
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "status": { "type": "string" },
+    "path": { "type": "string" },
+    "present": { "type": "boolean" },
+    "visibility": { "enum": ["public", "internal", "restricted"] },
+    "checksum_sha256": { "type": ["string", "null"] }
+  }
+}

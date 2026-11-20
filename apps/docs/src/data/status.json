@@ -1,0 +1,370 @@
+{
+  "audience": "public",
+  "brandName": "EXAMPLE Brand",
+  "nameStatus": "placeholder",
+  "placeholderName": "EXAMPLE Brand",
+  "coverage": 0,
+  "approval": 0,
+  "required": 157,
+  "requiredUnanswered": 157,
+  "contradictions": 0,
+  "modules": [
+    {
+      "id": "brand-strategy",
+      "title": "Brand Strategy",
+      "code": "01",
+      "group": "brand",
+      "href": "/docs/brand/01-brand-strategy/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 7
+    },
+    {
+      "id": "verbal-identity",
+      "title": "Verbal Identity",
+      "code": "02",
+      "group": "brand",
+      "href": "/docs/brand/02-verbal-identity/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 6
+    },
+    {
+      "id": "logo-system",
+      "title": "Logo System",
+      "code": "03",
+      "group": "brand",
+      "href": "/docs/brand/03-logo-system/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "color-system",
+      "title": "Color System",
+      "code": "04",
+      "group": "brand",
+      "href": "/docs/brand/04-color-system/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "typography",
+      "title": "Typography",
+      "code": "05",
+      "group": "brand",
+      "href": "/docs/brand/05-typography/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "mascot-identity",
+      "title": "Mascot Identity",
+      "code": "06",
+      "group": "brand",
+      "href": "/docs/brand/06-mascot-identity/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "mascot-expression",
+      "title": "Mascot Expression & Pose Library",
+      "code": "07",
+      "group": "brand",
+      "href": "/docs/brand/07-mascot-expression-pose-library/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "mascot-evolution",
+      "title": "Mascot Evolution",
+      "code": "08",
+      "group": "brand",
+      "href": "/docs/brand/08-mascot-evolution/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "illustration",
+      "title": "Illustration System",
+      "code": "09",
+      "group": "brand",
+      "href": "/docs/brand/09-illustration-system/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "iconography",
+      "title": "Iconography & Graphic Elements",
+      "code": "10",
+      "group": "brand",
+      "href": "/docs/brand/10-iconography-graphic-elements/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "layout",
+      "title": "Layout & Composition",
+      "code": "11",
+      "group": "brand",
+      "href": "/docs/brand/11-layout-composition/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "product-ui",
+      "title": "Product UI Design System",
+      "code": "12",
+      "group": "brand",
+      "href": "/docs/brand/12-product-ui-system/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 6
+    },
+    {
+      "id": "motion",
+      "title": "Motion Identity",
+      "code": "13",
+      "group": "brand",
+      "href": "/docs/brand/13-motion-identity/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "sonic",
+      "title": "Sonic Branding",
+      "code": "14",
+      "group": "brand",
+      "href": "/docs/brand/14-sonic-branding/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "photo-video",
+      "title": "Photography & Video",
+      "code": "15",
+      "group": "brand",
+      "href": "/docs/brand/15-photo-video-style/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "social",
+      "title": "Social Media",
+      "code": "16",
+      "group": "brand",
+      "href": "/docs/brand/16-social-media/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "campaigns",
+      "title": "Marketing & Campaigns",
+      "code": "17",
+      "group": "brand",
+      "href": "/docs/brand/17-marketing-campaigns/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 3
+    },
+    {
+      "id": "print",
+      "title": "Print, Merchandise & Environment",
+      "code": "18",
+      "group": "brand",
+      "href": "/docs/brand/18-print-merchandise/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 1
+    },
+    {
+      "id": "applications",
+      "title": "Brand Applications",
+      "code": "19",
+      "group": "brand",
+      "href": "/docs/brand/19-brand-applications/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "governance",
+      "title": "Governance & Asset Library",
+      "code": "20",
+      "group": "brand",
+      "href": "/docs/brand/20-governance-assets/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 6
+    },
+    {
+      "id": "gamification",
+      "title": "Gamification",
+      "code": "G",
+      "group": "system",
+      "href": "/docs/gamification/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "business-company",
+      "title": "Company & Business Plan",
+      "code": "BO-01",
+      "group": "business",
+      "href": "/docs/business/01-company-business-plan/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 11
+    },
+    {
+      "id": "business-marketing",
+      "title": "Marketing Strategy & Planning",
+      "code": "BO-02",
+      "group": "business",
+      "href": "/docs/business/02-marketing/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 6
+    },
+    {
+      "id": "business-product",
+      "title": "Product & Service Strategy",
+      "code": "BO-03",
+      "group": "business",
+      "href": "/docs/business/03-product-services/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 7
+    },
+    {
+      "id": "business-sales",
+      "title": "Sales & Revenue",
+      "code": "BO-04",
+      "group": "business",
+      "href": "/docs/business/04-sales-revenue/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "business-customer",
+      "title": "Customer Experience, Success & Support",
+      "code": "BO-05",
+      "group": "business",
+      "href": "/docs/business/05-customer-experience/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "business-operations",
+      "title": "Operations & Team SOPs",
+      "code": "BO-06",
+      "group": "business",
+      "href": "/docs/business/06-operations-sops/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 3
+    },
+    {
+      "id": "business-finance",
+      "title": "Finance & Unit Economics",
+      "code": "BO-07",
+      "group": "business",
+      "href": "/docs/business/07-finance-unit-economics/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 5
+    },
+    {
+      "id": "business-engineering",
+      "title": "Engineering, Data & Security",
+      "code": "BO-08",
+      "group": "business",
+      "href": "/docs/business/08-engineering-security/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "business-legal",
+      "title": "Legal, IP & Compliance",
+      "code": "BO-09",
+      "group": "business",
+      "href": "/docs/business/09-legal-compliance/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 6
+    },
+    {
+      "id": "business-growth",
+      "title": "Growth & Experimentation",
+      "code": "BO-10",
+      "group": "business",
+      "href": "/docs/business/10-growth-experiments/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "business-goals",
+      "title": "Goals, KPIs, Analytics & Reviews",
+      "code": "BO-11",
+      "group": "business",
+      "href": "/docs/business/11-goals-kpis-reports/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 4
+    },
+    {
+      "id": "business-partnerships",
+      "title": "Partnerships, Distribution, Risk & Investor Readiness",
+      "code": "BO-12",
+      "group": "business",
+      "href": "/docs/business/12-partnerships-risk-investors/overview",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 3
+    }
+  ],
+  "next": [
+    {
+      "id": "business.identity.new_or_existing",
+      "priority": "critical",
+      "prompt": "Is this a new venture or an existing business?"
+    },
+    {
+      "id": "business.identity.trade_name",
+      "priority": "critical",
+      "prompt": "What public trade name should the brand use?"
+    },
+    {
+      "id": "business.identity.sector",
+      "priority": "critical",
+      "prompt": "Which sector best describes the business?"
+    },
+    {
+      "id": "business.offer.summary",
+      "priority": "critical",
+      "prompt": "What product or service do you sell, in one concrete description?"
+    },
+    {
+      "id": "business.stage.current",
+      "priority": "critical",
+      "prompt": "What operating stage is the business in?"
+    }
+  ]
+}
