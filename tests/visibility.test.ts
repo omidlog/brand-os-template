@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { writeStarterWorkspace } from '@brand-os/brand-core'
-import { prepareDocs } from '../scripts/prepare-docs.ts'
+import { prepareDocs } from '../scripts/prepare-docs.js'
 
 test('public prepare hides the mascot module and the restricted canary', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-docs-'))
