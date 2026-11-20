@@ -24,3 +24,7 @@ jobs:
       - run: npx tsx scripts/scan-public.ts apps/docs/build
       - run: npm run build:docs:nomascot
       - run: npx tsx scripts/scan-public.ts apps/docs/build
+      # The internal audience (drafts, internal Brand Book, review dashboard) must compile too.
+      # It is never deployed and is not scanned as public.
+      - name: internal docs build compiles
+        run: npx tsx scripts/prepare-docs.ts --audience internal && npm run build -w @brand-os/docs
