@@ -123,27 +123,111 @@ if (command === 'init') {
     options: {
       tool: { type: 'string' },
       query: { type: 'string', default: '' },
+      kind: { type: 'string' },
+      module: { type: 'string' },
+      ids: { type: 'string' },
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
   if (values['include-unapproved']) {
     console.error('--include-unapproved is ignored. It grants nothing: drafts, EXAMPLE tokens, and internal facts are never returned by this flag.')
   }
-  const { getBrandStatus, getBrandTokens, getDesignComponent, getSocialTemplate, listMascotAssets, searchBrandDocs } = await import('@brand-os/brand-core')
+  const core = await import('@brand-os/brand-core')
+  // Same resolution as the MCP server: the token comes from the environment, never from argv.
+  let ctx
+  try {
+    ctx = core.resolveAgentContext(root, engine.config().brand.slug, process.env[core.AGENT_TOKEN_ENV])
+  } catch (error) {
+    console.error(error instanceof core.AgentTokenError ? error.message : 'Agent token resolution failed.')
+    process.exit(1)
+  }
   const tool = values.tool ?? 'get_brand_status'
-  const result =
-    tool === 'search_brand_docs'
-      ? searchBrandDocs(engine, values.query ?? '')
-      : tool === 'get_brand_tokens'
-        ? getBrandTokens(engine)
-        : tool === 'list_mascot_assets'
-          ? listMascotAssets(engine)
-          : tool === 'get_design_component'
-            ? getDesignComponent(engine, values.query ?? 'button')
-            : tool === 'get_social_template'
-              ? getSocialTemplate(engine, values.query ?? 'unspecified')
-              : getBrandStatus(engine)
-  console.log(JSON.stringify(result, null, 2))
+  const q = values.query ?? ''
+  const handlers: Record<string, () => unknown> = {
+    brand_retrieve: () => {
+      const kind = values.kind ?? 'facts'
+      if (!(core.RETRIEVE_KINDS as readonly string[]).includes(kind)) {
+        console.error(`--kind must be one of: ${core.RETRIEVE_KINDS.join(', ')}`)
+        process.exit(1)
+      }
+      return core.brandRetrieve(engine, ctx, {
+        kind: kind as (typeof core.RETRIEVE_KINDS)[number],
+        module: values.module,
+        ids: values.ids ? values.ids.split(',').map((id) => id.trim()).filter(Boolean) : undefined,
+        query: q || undefined,
+      })
+    },
+    search_brand_docs: () => core.searchBrandDocs(engine, q, ctx),
+    get_brand_tokens: () => core.getBrandTokens(engine, ctx),
+    list_mascot_assets: () => core.listMascotAssets(engine, ctx),
+    list_mascot_stages: () => core.listMascotStages(engine, ctx),
+    search_mascot_assets: () => core.searchMascotAssets(engine, q, ctx),
+    get_design_component: () => core.getDesignComponent(engine, q || 'button', ctx),
+    get_social_template: () => core.getSocialTemplate(engine, q || 'unspecified', ctx),
+    get_asset_metadata: () => core.getAssetMetadata(engine, q, ctx),
+    get_brand_overview: () => core.getBrandOverview(engine, ctx),
+    get_brand_guidelines: () => core.getBrandGuidelines(engine, ctx),
+    get_logo_rules: () => core.getLogoRules(engine, ctx),
+    get_mascot_guidelines: () => core.getMascotGuidelines(engine, ctx),
+    get_mascot_profile: () => core.getMascotProfile(engine, ctx),
+    get_motion_guidelines: () => core.getMotionGuidelines(engine, ctx),
+    get_marketing_plan: () => core.getMarketingPlan(engine, ctx),
+    get_business_plan: () => core.getBusinessPlan(engine, ctx),
+    get_brand_status: () => core.getBrandStatus(engine, ctx),
+  }
+  const handler = handlers[tool]
+  if (!handler) {
+    console.error(`Unknown tool ${tool}. Tools: ${Object.keys(handlers).sort().join(', ')}`)
+    process.exit(1)
+  }
+  console.log(JSON.stringify(handler(), null, 2))
+} else if (command === 'agent-token') {
+  const [action, ...tokenArgs] = rest
+  const { values } = parseArgs({
+    args: tokenArgs,
+    options: { profile: { type: 'string' }, label: { type: 'string' }, id: { type: 'string' }, json: { type: 'boolean', default: false } },
+  })
+  const core = await import('@brand-os/brand-core')
+  if (!['issue', 'list', 'revoke'].includes(action ?? '')) {
+    console.error('Usage: brand:agent-token issue --profile <internal-read|design|marketing|finance> --label <name> | list | revoke --id <agt_…>')
+    console.error('The approval proof is read from BRAND_OS_APPROVAL_PROOF or a hidden prompt. It is never accepted on the command line.')
+    process.exit(1)
+  }
+  const proof = await readApprovalProof()
+  if (!core.approvalProofMatches(root, proof)) {
+    console.error('Approval proof rejected. Agent tokens are managed by the owner only. Nothing was changed.')
+    process.exit(1)
+  }
+  if (action === 'issue') {
+    if (!core.isAgentProfile(values.profile)) {
+      console.error(`--profile must be one of: ${Object.keys(core.AGENT_PROFILES).join(', ')}`)
+      process.exit(1)
+    }
+    const issued = core.issueAgentToken(root, { brandId: engine.config().brand.slug, profile: values.profile, label: values.label ?? '' })
+    if (values.json) {
+      console.log(JSON.stringify({ ...issued.record, token: issued.token }, null, 2))
+    } else {
+      console.log(`Issued ${issued.record.id} (${issued.record.profile}) for ${issued.record.brand_id}.`)
+      console.log('Token (shown once, store it in your agent host as BRAND_OS_AGENT_TOKEN; only its hash is kept):')
+      console.log(issued.token)
+    }
+  } else if (action === 'list') {
+    const tokens = core.listAgentTokens(root)
+    if (values.json) console.log(JSON.stringify(tokens, null, 2))
+    else if (tokens.length === 0) console.log('No agent tokens issued.')
+    else for (const item of tokens) console.log(`${item.id}  ${item.profile.padEnd(13)} ${item.revoked ? 'revoked ' : 'active  '} ${item.created_at}  ${item.label}`)
+  } else {
+    if (!values.id) {
+      console.error('Need --id <agt_…>.')
+      process.exit(1)
+    }
+    const revoked = core.revokeAgentToken(root, values.id)
+    if (!revoked) {
+      console.error(`No token ${values.id}.`)
+      process.exit(1)
+    }
+    console.log(`Revoked ${revoked.id}. Restart any MCP server that was started with it.`)
+  }
 } else if (command === 'doctor') {
   const { values } = parseArgs({
     args: rest,
@@ -181,7 +265,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query, doctor, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, query, agent-token, doctor, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 
@@ -207,6 +291,35 @@ async function interactive(): Promise<void> {
       console.log(result.message)
       if (result.kind === 'exit') break
     }
+  } finally {
+    rl.close()
+  }
+}
+
+/** Owner proof from the environment, a hidden TTY prompt, or the first line of piped stdin. Never argv. */
+async function readApprovalProof(): Promise<string | undefined> {
+  const fromEnv = process.env.BRAND_OS_APPROVAL_PROOF
+  if (fromEnv) return fromEnv.trim()
+  if (!input.isTTY) {
+    const chunks: Buffer[] = []
+    for await (const chunk of input) chunks.push(Buffer.from(chunk as Buffer))
+    return Buffer.concat(chunks).toString('utf8').split(/\r?\n/)[0]?.trim() || undefined
+  }
+  const { Writable } = await import('node:stream')
+  let muted = false
+  const sink = new Writable({
+    write(chunk, encoding, callback) {
+      if (!muted) output.write(chunk, encoding)
+      callback()
+    },
+  })
+  const rl = readline.createInterface({ input, output: sink, terminal: true })
+  try {
+    const pending = rl.question('Approval proof (input hidden): ')
+    muted = true
+    const answer = await pending
+    output.write('\n')
+    return answer.trim() || undefined
   } finally {
     rl.close()
   }
