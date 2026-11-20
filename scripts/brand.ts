@@ -19,7 +19,7 @@ if (command === 'init') {
       industry: { type: 'string', default: 'TBD' },
       sector: { type: 'string' },
       language: { type: 'string', default: 'en' },
-      languages: { type: 'string', default: 'en,fa,tr' },
+      languages: { type: 'string', default: 'en' },
       website: { type: 'string' },
       mascot: { type: 'string', default: 'false' },
       gamification: { type: 'string', default: 'false' },

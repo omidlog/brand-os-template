@@ -54,7 +54,7 @@ Taglines are optional. A missing tagline stays missing.
 
 Tone adapts by channel only after the base voice exists.
 
-Keep Persian, English, and Turkish UI chrome separate from approved brand sentences.
+Keep UI chrome in each configured locale (for example en, fa, tr) separate from approved brand sentences.
 
 ## Fill-in record
 

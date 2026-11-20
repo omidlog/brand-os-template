@@ -6,7 +6,7 @@ export const UI: Record<Locale, Record<string, string>> = {
     why: 'Why this matters',
     example: 'Example (not your brand)',
     commands:
-      'Commands: skip · unknown · not relevant · decide later · estimate: … · show examples · suggest options · accept 1 · go back · change <id>: <value> · review · approve <id> · status · import existing: <url> · lang fa|tr|en · help · exit',
+      'Commands: skip · unknown · not relevant · decide later · estimate: … · show examples · suggest options · accept 1 · go back · change <id>: <value> · review · approve <id> · status · import existing: <url> · lang en|fa|tr · help · exit',
     noMore: 'No further eligible questions. Run brand:status for coverage, or brand:review for a recap.',
     recorded: 'Recorded as {status}. This is not an approved rule.',
     unknown: 'Recorded as unknown. No fact was invented.',
