@@ -43,6 +43,7 @@
     "brand:query": "tsx scripts/brand.ts query",
     "brand:agent-token": "tsx scripts/brand.ts agent-token",
     "brand:doctor": "tsx scripts/brand.ts doctor",
+    "brand:finance": "tsx scripts/brand.ts finance",
     "brand:backup": "tsx scripts/brand.ts backup",
     "brand:restore": "tsx scripts/brand.ts restore",
     "brand:migrate": "tsx scripts/brand.ts migrate",

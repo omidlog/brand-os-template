@@ -116,7 +116,7 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   const brandId = fs.existsSync(configFile) && fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ? fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ?? 'unknown' : 'unknown'
   migrateFactFiles(root, brandId.replace(/['"]/g, ''))
   const gitignore = path.join(root, '.gitignore')
-  const required = ['brand/.private/', 'brand/restricted/facts.yaml', 'brand/restricted/drafts/', 'brand/generated/artifacts/']
+  const required = ['brand/.private/', 'brand/restricted/facts.yaml', 'brand/restricted/drafts/', 'brand/restricted/finance/', 'brand/generated/artifacts/']
   const text = fs.existsSync(gitignore) ? fs.readFileSync(gitignore, 'utf8') : ''
   const missing = required.filter((line) => !text.includes(line))
   if (missing.length > 0) fs.appendFileSync(gitignore, `${text.endsWith('\n') || text.length === 0 ? '' : '\n'}${missing.join('\n')}\n`)

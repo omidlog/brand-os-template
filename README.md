@@ -36,6 +36,7 @@ npm run build
 | `npm run brand:tokens:approve -- --ids <token.id,…>` | Record the value hash of generated tokens in `brand/tokens/approvals.yaml`. EXAMPLE base tokens are refused. Same proof rules as approve. |
 | `npm run brand:tokens:publish -- --ids <token.id,…> [--unpublish]` | Add hash-approved tokens to `approved_token_ids`. Same proof rules as approve. |
 | `npm run brand:doctor` | Check Node, `BRAND_OS_DATA_KEY`, the approval secret, the config and publication policy, and that `.env` is ignored. Never prints secret values. `--json` for machines. Exits non-zero on a hard failure. |
+| `npm run brand:finance -- --input <file outside the repo \| restricted:<name>> [--json]` | Compute CAC, margin-adjusted LTV, churn and retention, MRR/ARR, gross profit and margin, net burn, runway, break-even and scenario projections. Every result carries unit, period, basis (actual, forecast, hypothetical) and formula; missing inputs give `MISSING`, never a guess. Input files inside the checkout are refused unless gitignored and untracked (`brand/restricted/finance/`). Format: `examples/finance/inputs.example.yaml`. Output is printed only. |
 | `npm run brand:export` | Gitignored snapshot. `--public` redacts non-public answers |
 | `npm run brand:validate` | Schema, catalog, token, and asset checks |
 | `npm run example:education` | Education-app fixture in a temp directory |

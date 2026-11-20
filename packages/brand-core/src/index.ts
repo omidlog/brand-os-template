@@ -119,3 +119,28 @@ export { evaluateCondition } from './conditions.js'
 export { validateRepo } from './validate-repo.js'
 export { PROPOSAL_STATES } from './types.js'
 export type { BrandConfig, FieldQuestion, ModuleDef, AnswerRecord, ProposalState } from './types.js'
+export {
+  arr,
+  breakEven,
+  cac,
+  churnRate,
+  computeFinance,
+  FINANCE_BASES,
+  FINANCE_INPUTS,
+  FINANCE_METRICS,
+  FINANCE_PERIODS,
+  FinanceInputError,
+  formatFinanceReport,
+  grossMarginPct,
+  grossProfit,
+  ltv,
+  ltvToCac,
+  mrr,
+  netBurn,
+  parseFinanceInputs,
+  projectScenario,
+  retentionRate,
+  runway,
+} from './finance.js'
+export type { FinanceBasis, FinanceInputs, FinancePeriod, FinanceReport, FinanceResult, FinanceScenario, ScenarioResult } from './finance.js'
+export { FinanceInputPathError, resolveFinanceInputPath, RESTRICTED_FINANCE_DIR, runFinanceFile } from './finance-input.js'

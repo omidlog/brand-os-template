@@ -491,6 +491,26 @@ if (command === 'init') {
     for (const item of result.results) console.log(`${item.outcome.padEnd(11)} ${item.id}  ${item.reason}`)
   }
   if (!result.ok) process.exit(1)
+} else if (command === 'finance') {
+  const { values } = parseArgs({ args: rest, options: { input: { type: 'string' }, json: { type: 'boolean', default: false } } })
+  if (!values.input) {
+    console.error('Usage: brand:finance --input <file outside the repository | restricted:<name>> [--json]')
+    console.error('Inputs inside the checkout must be gitignored and untracked, for example brand/restricted/finance/<name>.yaml.')
+    process.exit(2)
+  }
+  const { FinanceInputError, FinanceInputPathError, formatFinanceReport, runFinanceFile } = await import('@brand-os/brand-core')
+  try {
+    // Results are printed locally only. Nothing is written to the repository or sent to a model provider.
+    const report = runFinanceFile(root, values.input)
+    console.log(values.json ? JSON.stringify(report, null, 2) : formatFinanceReport(report))
+  } catch (error) {
+    if (error instanceof FinanceInputError) {
+      console.error('Finance input is invalid:')
+      for (const message of error.errors) console.error(`  - ${message}`)
+    } else if (error instanceof FinanceInputPathError) console.error(error.message)
+    else throw error
+    process.exit(1)
+  }
 } else if (command === 'backup') {
   const saved = backupBrand(root)
   console.log(`Backed up ${saved.files.length} files to ${path.relative(root, saved.directory)}`)
@@ -514,7 +534,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, document, tokens:generate, tokens:approve, tokens:publish, query, agent-token, doctor, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, document, tokens:generate, tokens:approve, tokens:publish, query, agent-token, doctor, finance, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 
