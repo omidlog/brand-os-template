@@ -37,7 +37,7 @@ If a file disagrees with an approved fact, the approved fact wins until a person
 
 `npm run brand:interview` asks one question. `unknown`, `skip`, `not relevant`, and `decide later` are real answers and must not be filled in. `npm run brand:resume` continues from `brand/interview/session-state.yaml`.
 
-Approval is `npm run brand:approve -- --question <id> --proof <secret>`. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof.
+Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.
 
 ## Commands
 

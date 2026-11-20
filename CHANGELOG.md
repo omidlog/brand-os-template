@@ -15,6 +15,12 @@
 - New MCP tool `brand_retrieve`. The 17 existing tools now share its retrieval path. Results carry brand id, classification, approval state, revision, source path, and missing ids.
 - Restricted values are never returned to agents. Agents only ever receive approved items.
 - `brand/.private/access-log.jsonl` records who read which ids, never the values. The public scan rejects token files and raw tokens.
+- Review queue: `brand:review --module <id> | --ids <…> [--json]` diffs each draft or pending change against the approved revision and lists impacted documents and questions. `--full` keeps the older recap.
+- Batch approval: `brand:approve --module <id> | --ids <id,chg-…>` approves with one proof and reports every item. A wrong proof writes nothing. Stale and competing change proposals are refused, not guessed.
+- `brand:publish --ids | --module [--unpublish]` publishes approved public facts only. Approval and publication stay separate. An approved replacement for a published fact is unpublished until published again.
+- Breaking: `brand:approve --proof <secret>` is refused. The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt.
+- Questions may declare `approval_grant`. Validation fails if a restricted question uses anything but `financial`.
+- Approval and publication logic moved from `engine.ts` to `approval.ts`.
 
 ## 0.1.0
 

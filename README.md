@@ -24,8 +24,9 @@ npm run build
 | `npm run brand:interview` | Ask one question at a time |
 | `npm run brand:resume` | Continue the saved session |
 | `npm run brand:status` | Coverage and approval, separately |
-| `npm run brand:review` | Recap. Restricted values are withheld |
-| `npm run brand:approve -- --question <id> --actor owner --proof <secret>` | Promote one draft. The actor name alone is rejected. Create the secret once with `npm run brand:doctor -- --create-approval-secret`. It lives in `brand/.private/approval-secret` and is not committed. |
+| `npm run brand:review -- [--module <id> \| --ids <id,…>] [--json]` | Review queue: each draft or pending change against the approved revision, with impacted documents and questions. Restricted values are withheld. `--full` prints the older ledger recap. |
+| `npm run brand:approve -- --module <id>` or `-- --ids <id,chg-…>` | Approve a whole module or a list of question ids and change ids with one proof. Every item is reported (`approved`, `skipped`, `refused`, `stale`, `unknown`); nothing is dropped silently. A wrong proof changes nothing. `--dry-run` shows the queue without a proof. The proof is read from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused. Create the secret once with `npm run brand:doctor -- --create-approval-secret`. It lives in `brand/.private/approval-secret` and is not committed. |
+| `npm run brand:publish -- --ids <id,…>` or `-- --module <id>` | Add approved, public-classified facts to the publication allowlist. Approval never publishes. Internal and restricted facts are refused. `--unpublish` withdraws them. Same proof rules as approve. |
 | `npm run brand:doctor` | Check Node, `BRAND_OS_DATA_KEY`, the approval secret, the config and publication policy, and that `.env` is ignored. Never prints secret values. `--json` for machines. Exits non-zero on a hard failure. |
 | `npm run brand:export` | Gitignored snapshot. `--public` redacts non-public answers |
 | `npm run brand:validate` | Schema, catalog, token, and asset checks |

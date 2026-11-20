@@ -28,7 +28,7 @@ Which roles exist and what contrast bar they must meet.
 
 1. Run `npm run brand:interview`. The agent asks one eligible question at a time.
 2. Read the draft it writes under `brand/generated/drafts/` or, for restricted answers, `brand/restricted/drafts/`.
-3. Approve a field only after you mean it: `npm run brand:approve -- --question <id> --proof <secret>`.
+3. Review with `npm run brand:review -- --module <id>`, then approve only what you mean: `npm run brand:approve -- --module <id>` or `-- --ids <id,…>`. The proof is read from `BRAND_OS_APPROVAL_PROOF` or a hidden prompt, never from the command line. Approval does not publish; `npm run brand:publish -- --ids <id>` is a separate step.
 4. Add real files to the asset manifest when you have them. Missing files stay missing.
 
 ## Canonical fields
@@ -104,10 +104,10 @@ Review when a theme or a semantic role changes.
 
 > status: draft machine-translation. Not an approved brand fact.
 
-این صفحه راهنمای قالب است، نه تصمیم تأییدشدهٔ برند. مصاحبه را با `npm run brand:interview` شروع کنید. پاسخ‌ها پیش‌نویس می‌مانند تا یک انسان با `--proof` آن‌ها را تأیید کند. فیلدهای نامشخص را خالی بگذارید و حدس نزنید.
+این صفحه راهنمای قالب است، نه تصمیم تأییدشدهٔ برند. مصاحبه را با `npm run brand:interview` شروع کنید. پاسخ‌ها پیش‌نویس می‌مانند تا یک انسان با رمز تأیید (`BRAND_OS_APPROVAL_PROOF`) آن‌ها را تأیید کند. فیلدهای نامشخص را خالی بگذارید و حدس نزنید.
 
 ## Machine translation draft (tr)
 
 > status: draft machine-translation. Not an approved brand fact.
 
-Bu sayfa şablon rehberidir, onaylanmış bir marka kararı değildir. Görüşmeyi `npm run brand:interview` ile başlatın. Yanıtlar, bir insan `--proof` ile onaylayana kadar taslak kalır. Bilinmeyen alanları boş bırakın; tahmin etmeyin.
+Bu sayfa şablon rehberidir, onaylanmış bir marka kararı değildir. Görüşmeyi `npm run brand:interview` ile başlatın. Yanıtlar, bir insan onay kanıtıyla (`BRAND_OS_APPROVAL_PROOF`) onaylayana kadar taslak kalır. Bilinmeyen alanları boş bırakın; tahmin etmeyin.
