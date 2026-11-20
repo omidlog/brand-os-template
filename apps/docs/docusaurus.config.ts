@@ -85,6 +85,8 @@ const config: Config = {
         { to: '/assets', label: 'Assets', position: 'left' },
         { to: '/components', label: 'Components', position: 'left' },
         { to: '/interview', label: 'Interview', position: 'left' },
+        // The review dashboard has data only in the internal build (see scripts/prepare-docs.ts).
+        ...(features.audience === 'internal' ? [{ to: '/dashboard', label: 'Dashboard', position: 'left' as const }] : []),
         { type: 'localeDropdown', position: 'right' },
       ],
     },

@@ -101,3 +101,59 @@ export interface BrandBook {
 export function asBrandBook(value: unknown): BrandBook {
   return value as BrandBook
 }
+
+export interface DashboardModule {
+  id: string
+  title: string
+  group: string
+  required: number
+  required_unanswered: number
+  required_draft: number
+  required_approved: number
+  coverage: number
+  approval: number
+  pending_review: number
+}
+
+export interface DashboardReviewItem {
+  question_id: string
+  module: string
+  label: string
+  state: string
+  action: string
+  classification: string
+  required_grant: string
+  withheld: boolean
+  draft_value: unknown
+  proposal_state: string | null
+  approved_value: unknown
+  approved_version: number | null
+  changes: Array<{ id: string; proposed_value: string | null; expected_version: number; stale: boolean }>
+  reason: string
+}
+
+export interface DashboardContradiction {
+  id: string
+  kind: 'rule' | 'intake_conflict'
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  fields: string[]
+}
+
+export type DashboardData =
+  | {
+      audience: 'internal'
+      available: true
+      brand_id: string
+      coverage: { coverage: number; approval: number; required: number; required_unanswered: number }
+      modules: DashboardModule[]
+      review_queue: { pending: number; items: DashboardReviewItem[] }
+      contradictions: DashboardContradiction[]
+      next: Array<{ id: string; priority: string; prompt: string }>
+    }
+  | { audience: 'public'; available: false; note: string }
+
+/** Written by scripts/prepare-docs.ts. A public build only ever receives the `available: false` stub. */
+export function asDashboard(value: unknown): DashboardData {
+  return value as DashboardData
+}

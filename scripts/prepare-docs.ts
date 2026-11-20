@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, buildBrandBook, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
+import { allModules, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import type { BrandConfig } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -57,6 +57,7 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
     'apps/docs/src/data/catalog.json',
     'apps/docs/src/data/assets.json',
     'apps/docs/src/data/brand-book.json',
+    'apps/docs/src/data/dashboard.json',
     'apps/docs/static/llms.txt',
     'apps/docs/static/llms-full.txt',
     'llms.txt',
@@ -305,6 +306,9 @@ function writeData(ctx: PrepareContext): void {
   fs.writeFileSync(path.join(dataDir, 'assets.json'), `${JSON.stringify({ assets }, null, 2)}\n`)
   // Audience projection: a public build only ever receives approved+published items and missing placeholders.
   fs.writeFileSync(path.join(dataDir, 'brand-book.json'), `${JSON.stringify(buildBrandBook(ctx.engine, ctx.audience), null, 2)}\n`)
+  // The review dashboard is internal-only. ctx.audience can only be 'internal' after the
+  // publish_docs check in prepareDocs; a public build writes a stub with no brand data.
+  fs.writeFileSync(path.join(dataDir, 'dashboard.json'), `${JSON.stringify(buildDashboard(ctx.engine, ctx.audience), null, 2)}\n`)
   fs.mkdirSync(path.join(ctx.root, 'apps', 'docs', 'generated'), { recursive: true })
   fs.writeFileSync(
     path.join(ctx.root, 'apps', 'docs', 'generated', 'features.json'),

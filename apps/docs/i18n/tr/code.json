@@ -106,5 +106,77 @@
   "brandBook.sources": {
     "message": "Kaynaklar",
     "description": "Brand Book page. English: Sources"
+  },
+  "dashboard.title": {
+    "message": "İnceleme panosu",
+    "description": "Dashboard page. English: Review dashboard"
+  },
+  "dashboard.description": {
+    "message": "İç sürüm için kapsam, inceleme kuyruğu ve çelişkiler.",
+    "description": "Dashboard page. English: Coverage, review queue and contradictions for the internal build."
+  },
+  "dashboard.internalOnly": {
+    "message": "İnceleme panosu yalnızca iç sürümde vardır. Depoda npm run docs:start komutunu çalıştırın.",
+    "description": "Dashboard page. English: The review dashboard exists only in the internal build. Run npm run docs:start in the repository."
+  },
+  "dashboard.coverage": {
+    "message": "Kapsam",
+    "description": "Dashboard page. English: Coverage"
+  },
+  "dashboard.approval": {
+    "message": "Onay",
+    "description": "Dashboard page. English: Approval"
+  },
+  "dashboard.requiredUnanswered": {
+    "message": "Yanıtsız zorunlu alanlar",
+    "description": "Dashboard page. English: Required unanswered"
+  },
+  "dashboard.modules": {
+    "message": "Modüller",
+    "description": "Dashboard page. English: Modules"
+  },
+  "dashboard.module": {
+    "message": "Modül",
+    "description": "Dashboard page. English: Module"
+  },
+  "dashboard.pending": {
+    "message": "İnceleme bekliyor",
+    "description": "Dashboard page. English: Pending review"
+  },
+  "dashboard.queue": {
+    "message": "İnceleme kuyruğu",
+    "description": "Dashboard page. English: Review queue"
+  },
+  "dashboard.queueEmpty": {
+    "message": "İnceleme bekleyen bir şey yok.",
+    "description": "Dashboard page. English: Nothing is waiting for review."
+  },
+  "dashboard.queueHint": {
+    "message": "npm run brand:approve -- --module <id> veya --ids <id,…> ile onaylayın. Onay kanıtı BRAND_OS_APPROVAL_PROOF değişkeninden veya bir istemden okunur, asla argümanlardan okunmaz.",
+    "description": "Dashboard page. English: Approve with npm run brand:approve -- --module <id> or --ids <id,…>. The proof is read from BRAND_OS_APPROVAL_PROOF or a prompt, never from argv."
+  },
+  "dashboard.withheld": {
+    "message": "Kısıtlı değer gizlendi",
+    "description": "Dashboard page. English: Restricted value withheld"
+  },
+  "dashboard.draft": {
+    "message": "Taslak",
+    "description": "Dashboard page. English: Draft"
+  },
+  "dashboard.approved": {
+    "message": "Onaylı",
+    "description": "Dashboard page. English: Approved"
+  },
+  "dashboard.contradictions": {
+    "message": "Çelişkiler",
+    "description": "Dashboard page. English: Contradictions"
+  },
+  "dashboard.contradictionsEmpty": {
+    "message": "Açık çelişki yok.",
+    "description": "Dashboard page. English: No open contradictions."
+  },
+  "dashboard.next": {
+    "message": "Sonraki sorular",
+    "description": "Dashboard page. English: Next questions"
   }
 }

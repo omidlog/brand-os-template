@@ -106,5 +106,77 @@
   "brandBook.sources": {
     "message": "منابع",
     "description": "Brand Book page. English: Sources"
+  },
+  "dashboard.title": {
+    "message": "داشبورد بازبینی",
+    "description": "Dashboard page. English: Review dashboard"
+  },
+  "dashboard.description": {
+    "message": "پوشش، صف بازبینی و تناقض‌ها برای نسخهٔ داخلی.",
+    "description": "Dashboard page. English: Coverage, review queue and contradictions for the internal build."
+  },
+  "dashboard.internalOnly": {
+    "message": "داشبورد بازبینی فقط در نسخهٔ داخلی وجود دارد. در مخزن npm run docs:start را اجرا کنید.",
+    "description": "Dashboard page. English: The review dashboard exists only in the internal build. Run npm run docs:start in the repository."
+  },
+  "dashboard.coverage": {
+    "message": "پوشش",
+    "description": "Dashboard page. English: Coverage"
+  },
+  "dashboard.approval": {
+    "message": "تأیید",
+    "description": "Dashboard page. English: Approval"
+  },
+  "dashboard.requiredUnanswered": {
+    "message": "موارد الزامی بی‌پاسخ",
+    "description": "Dashboard page. English: Required unanswered"
+  },
+  "dashboard.modules": {
+    "message": "ماژول‌ها",
+    "description": "Dashboard page. English: Modules"
+  },
+  "dashboard.module": {
+    "message": "ماژول",
+    "description": "Dashboard page. English: Module"
+  },
+  "dashboard.pending": {
+    "message": "در انتظار بازبینی",
+    "description": "Dashboard page. English: Pending review"
+  },
+  "dashboard.queue": {
+    "message": "صف بازبینی",
+    "description": "Dashboard page. English: Review queue"
+  },
+  "dashboard.queueEmpty": {
+    "message": "چیزی در انتظار بازبینی نیست.",
+    "description": "Dashboard page. English: Nothing is waiting for review."
+  },
+  "dashboard.queueHint": {
+    "message": "با npm run brand:approve -- --module <id> یا --ids <id,…> تأیید کنید. گواهی تأیید از BRAND_OS_APPROVAL_PROOF یا یک پرسش خوانده می‌شود، هرگز از آرگومان‌ها.",
+    "description": "Dashboard page. English: Approve with npm run brand:approve -- --module <id> or --ids <id,…>. The proof is read from BRAND_OS_APPROVAL_PROOF or a prompt, never from argv."
+  },
+  "dashboard.withheld": {
+    "message": "مقدار محرمانه نمایش داده نمی‌شود",
+    "description": "Dashboard page. English: Restricted value withheld"
+  },
+  "dashboard.draft": {
+    "message": "پیش‌نویس",
+    "description": "Dashboard page. English: Draft"
+  },
+  "dashboard.approved": {
+    "message": "تأییدشده",
+    "description": "Dashboard page. English: Approved"
+  },
+  "dashboard.contradictions": {
+    "message": "تناقض‌ها",
+    "description": "Dashboard page. English: Contradictions"
+  },
+  "dashboard.contradictionsEmpty": {
+    "message": "تناقض بازی وجود ندارد.",
+    "description": "Dashboard page. English: No open contradictions."
+  },
+  "dashboard.next": {
+    "message": "پرسش‌های بعدی",
+    "description": "Dashboard page. English: Next questions"
   }
 }

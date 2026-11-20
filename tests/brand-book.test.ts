@@ -159,13 +159,19 @@ test('the public brand book build contains no internal brand-book items', () => 
   assert.ok(!fs.readFileSync(path.join(root, 'apps/docs/src/data/brand-book.json'), 'utf8').includes('#0B2A55'))
 })
 
-test('brand book UI strings are English by default with matching fa and tr locale data', () => {
+test('brand book and dashboard UI strings are English by default with matching fa and tr locale data', () => {
   const page = fs.readFileSync(path.join(repo, 'apps/docs/src/pages/brand-book.tsx'), 'utf8')
   const ids = [...page.matchAll(/id: '(brandBook\.[^']+)'/g)].map((match) => match[1]).sort()
   assert.ok(ids.length > 20)
+  // The internal dashboard page uses the same locale tables.
+  const dashboard = fs.readFileSync(path.join(repo, 'apps/docs/src/pages/dashboard.tsx'), 'utf8')
+  const dashboardIds = [...dashboard.matchAll(/id: '(dashboard\.[^']+)'/g)].map((match) => match[1])
+  assert.ok(dashboardIds.length > 10)
+  assert.match(dashboard, /<bdi>/, 'dashboard values are isolated for RTL')
+  const all = [...ids, ...dashboardIds].sort()
   for (const locale of ['fa', 'tr']) {
     const table = JSON.parse(fs.readFileSync(path.join(repo, `apps/docs/i18n/${locale}/code.json`), 'utf8')) as Record<string, { message: string }>
-    assert.deepEqual(Object.keys(table).sort(), ids, `${locale} translates every brand book string`)
+    assert.deepEqual(Object.keys(table).sort(), all, `${locale} translates every brand book and dashboard string`)
     assert.ok(Object.values(table).every((entry) => entry.message.trim().length > 0))
   }
   // RTL safety: the page and its styles use logical directions and isolate user text.
