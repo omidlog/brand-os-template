@@ -1,5 +1,6 @@
 import Layout from '@theme/Layout'
 import status from '../data/status.json'
+import { asNext } from '../data/records'
 
 export default function InterviewPage(): React.ReactElement {
   return (
@@ -13,7 +14,7 @@ export default function InterviewPage(): React.ReactElement {
           Coverage {Math.round(status.coverage * 100)}% · Approval {Math.round(status.approval * 100)}% · Unanswered required fields {status.requiredUnanswered}
         </p>
         <ol>
-          {status.next.map((question) => (
+          {asNext(status).map((question) => (
             <li key={question.id}>
               <code>{question.id}</code> ({question.priority}) — {question.prompt}
             </li>

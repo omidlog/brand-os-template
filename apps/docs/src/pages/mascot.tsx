@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import Layout from '@theme/Layout'
 import catalog from '../data/catalog.json'
+import { asStates } from '../data/records'
 
 const categories = ['all', 'emotion', 'action', 'ui', 'learning', 'prop', 'seasonal'] as const
 
@@ -10,7 +11,7 @@ export default function MascotPage(): React.ReactElement {
   const [mvpOnly, setMvpOnly] = useState(false)
   const rows = useMemo(
     () =>
-      catalog.states.filter((state) => {
+      asStates(catalog).filter((state) => {
         if (category !== 'all' && state.category !== category) return false
         if (mvpOnly && !state.mvp) return false
         const haystack = `${state.id} ${state.name} ${state.intent}`.toLowerCase()
@@ -48,7 +49,7 @@ export default function MascotPage(): React.ReactElement {
           </label>
         </div>
         <p>
-          Showing {rows.length} of {catalog.states.length}. Approved angles: none. Source files: none.
+          Showing {rows.length} of {asStates(catalog).length}. A preview is shown only when an approved file is attached.
         </p>
         <table>
           <caption>Mascot states filtered by the controls above.</caption>

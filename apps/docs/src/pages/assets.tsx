@@ -1,6 +1,7 @@
 import useBaseUrl from '@docusaurus/useBaseUrl'
 import Layout from '@theme/Layout'
 import assets from '../data/assets.json'
+import { asAssets, type AssetRecord } from '../data/records'
 
 export default function AssetsPage(): React.ReactElement {
   return (
@@ -9,8 +10,8 @@ export default function AssetsPage(): React.ReactElement {
         <h1>Asset gallery</h1>
         <p>Present files can be downloaded. Missing files stay missing. Nothing here is an approved brand mark.</p>
         <div className="grid">
-          {assets.assets.map((asset) => (
-            <AssetCard key={String(asset.id)} asset={asset} />
+          {asAssets(assets).map((asset) => (
+            <AssetCard key={asset.id} asset={asset} />
           ))}
         </div>
       </main>
@@ -18,7 +19,7 @@ export default function AssetsPage(): React.ReactElement {
   )
 }
 
-function AssetCard({ asset }: { asset: (typeof assets.assets)[number] }): React.ReactElement {
+function AssetCard({ asset }: { asset: AssetRecord }): React.ReactElement {
   const relative = String(asset.path).replace(/^brand\/assets\//, '')
   const href = useBaseUrl(`/brand-assets/${relative}`)
   return (

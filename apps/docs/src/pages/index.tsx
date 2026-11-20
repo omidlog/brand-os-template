@@ -1,6 +1,7 @@
 import Link from '@docusaurus/Link'
 import Layout from '@theme/Layout'
 import status from '../data/status.json'
+import { asNext } from '../data/records'
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`
@@ -33,7 +34,7 @@ export default function Home(): React.ReactElement {
       <main className="container" style={{ paddingBottom: '3rem' }}>
         <h2>Next interview questions</h2>
         <ul>
-          {status.next.map((question) => (
+          {asNext(status).map((question) => (
             <li key={question.id}>
               <code>{question.id}</code> · {question.priority} — {question.prompt}
             </li>
