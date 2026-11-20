@@ -1,6 +1,6 @@
 {
   "name": "brand-os-template",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Universal Brand OS with an integrated Business OS, documentation portal, design tokens, and a local interview agent.",
   "type": "module",

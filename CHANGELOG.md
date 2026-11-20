@@ -1,6 +1,27 @@
 # Changelog
 
-## Unreleased (0.2.0 in progress)
+## 0.2.0 — 2026-11-20
+
+Theme: approved brand truth that agents can actually use. Scoped agent access, an agent-driven interview, batch approval and publication, cited documents and tokens from structured answers, finance and mascot retrieval, end-to-end journeys, and an internal review dashboard.
+
+### Breaking changes
+
+- `brand:approve --proof <secret>` (and any proof on argv) is refused. The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt.
+- Mascot catalog statuses `not_started` / `draft` / `in_review` fail validation until `npm run brand:migrate` converts them to the lifecycle enum.
+- `brand:init --languages` defaults to `en`. Pass `--languages en,fa,tr` to enable the optional Persian and Turkish locales (previously all three were enabled by default).
+- `mcp:serve` and `brand:query` exit on an unknown, revoked, or other-brand `BRAND_OS_AGENT_TOKEN` instead of running as guest.
+
+### Final phase
+
+- End-to-end journeys rebuilt in `tests/journeys.test.ts`: A (education app with mascot: English-first CLI init, a labelled localized Persian interview turn, a Turkish locale case, review, batch approval, mascot art, Brand Book and plans, tokens, publication, agent retrieval, guest isolation, change and regeneration), B (B2B without mascot: branching, documents, finance, retrieval, privacy, template upgrade) and C (unauthorized reads and approval, cross-brand tokens, draft and restricted leakage, token drift, invalid assets, stale proposals, interrupted migration, backup corruption, failed model output, prompt injection, missing credentials, invalid extraction). All use temporary brand copies and the mock provider.
+- Internal review dashboard: `buildDashboard` in brand-core and a `/dashboard` docs page with coverage per module, the review queue and open contradictions (including intake conflicts). Only internal builds get data; the public build gets a stub, and the navbar links the page only in internal builds.
+- Fix: backups now include `brand/migrations.yaml` and `brand/engine.lock`, so restoring a backup also undoes a half-written migration.
+- Fix: documents show an approved restricted fact as approved and withheld, not as missing.
+- English-first sweep: help text lists `en|fa|tr`, module guidance no longer names Persian first, and the spec's language requirement and sample question are English-first with fa/tr as labelled locale data.
+- `docs-internal/CLAUDE_FINAL_REVIEW.md`: what changed, what was not done and why, tests run, unverified areas, required credentials, remaining risks, and scores.
+- README: English-first quickstart, change and approval workflow, agent access, languages and locales.
+
+### Earlier phases
 
 - `brand:doctor` checks Node, `BRAND_OS_DATA_KEY` (presence and length only), the approval secret file and its mode, config parsing, the publication policy brand id, and that `.env` is ignored. `--create-approval-secret` creates the secret without printing it.
 - `.env.example` documents `BRAND_OS_DATA_KEY`.

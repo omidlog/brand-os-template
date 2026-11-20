@@ -1,6 +1,6 @@
 # Implementation status
 
-Updated after the external audit remediation. “Fixed” means a test or a build exercises the behavior. “Partial” means a real subset works and the gap is named.
+Updated for 0.2.0 (2026-11-20). “Fixed” or “Done” means a test or a build exercises the behavior. “Partial” means a real subset works and the gap is named. The final review with scores is `docs-internal/CLAUDE_FINAL_REVIEW.md`.
 
 ## Audit findings
 
@@ -13,7 +13,7 @@ Updated after the external audit remediation. “Fixed” means a test or a buil
 | P1-1 | Partial | Free-form answers become quoted draft proposals (`note:`, `brand:propose`, `brand:interview --assist`) and are never approved. An Anthropic adapter exists but is off unless configured with a key, and its live behavior is not tested (tests use a mock and a stubbed fetch). A browser interview UI is not built. |
 | P1-2 | Fixed | Token, mascot, component, social, and search tools read the brand files and approved records. |
 | P1-3 | Fixed | `--actor owner` cannot approve. Approval requires the human proof in `brand/.private/approval-secret`. |
-| P1-4 | Partial | `upgradeCore` bumps `brand/engine.lock` and preserves content. The engine is not published to npm. |
+| P1-4 | Partial | `upgradeCore` / `brand:migrate` bump `brand/engine.lock`, migrate fact files and mascot statuses, and leave answers, approved facts, config and module prose byte-identical (Journey B). Pulling new template files into an existing brand repository is manual; the engine is not published to npm. |
 | P1-5 | Fixed | `brand:init` writes the brand name and slug into `brand-manifest.json`. |
 | P1-6 | Fixed | Stage validation checks unique ids and contiguous order. Six stages are only the example file. |
 | P1-7 | Fixed | A disabled mascot omits module docs and emits an empty catalog JSON, so state ids are not in the data bundle. |
@@ -21,7 +21,7 @@ Updated after the external audit remediation. “Fixed” means a test or a buil
 | P1-9 | Partial | `renderBusinessArtifacts` fills plan, marketing, PRD, roadmap, sales, support, finance, and OKR pages from the ledger and leaves unknowns unknown. They are not full models. |
 | P1-10 | Fixed | Public builds copy only approved public assets inside `brand/assets`. The asset schema and path boundary are checked. |
 | P1-11 | Fixed | A public prepare throws when `publish_docs` is private. The EXAMPLE template is public because it has no confidential facts. `brand:init` defaults to private. |
-| P2-1 | Partial | Prompts are translated. Body copy is still English in the fa and tr builds. `docs-internal/LOCALIZATION.md` describes the approval path. |
+| P2-1 | Partial | English is the base language; fa (RTL) and tr are optional locales. Interview prompts, the Brand Book page and the dashboard page are translated. Module body copy is still English in the fa and tr builds. `docs-internal/LOCALIZATION.md` describes the approval path. |
 | P2-2 | Fixed | Five more skills: strategist, logo, mascot animator, marketing creative, brand QA. |
 | P2-3 | Partial | The docs site still has one token-backed button plus the component registry. There is no product component package or Figma node map. |
 | P2-4 | Partial | The gallery can preview a published SVG. Unapproved files are not given download links. |
@@ -32,7 +32,7 @@ Updated after the external audit remediation. “Fixed” means a test or a buil
 | P2-9 | Partial | Search reads approved facts and, when asked, draft markdown. There are no embeddings. |
 | P2-10 | Partial | Reset backs up the ledger under `brand/.private/backups`. There is no multi-user lock service or retention policy beyond gitignore. |
 
-## v0.2 Phase 1 (independent audit)
+## v0.2 (phases 1–7)
 
 Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AUDIT.md`.
 
@@ -57,6 +57,11 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 | Brand Book and plans | Done (3 documents) | Typed sections with approved / assumption / recommendation / missing tags and source ids for the Brand Book, business plan summary and marketing plan; `brand:document`; `/brand-book` docs page with swatches, specimens and voice pairs, English UI with fa/tr locale data. Public build carries no internal items. The other ~30 modules keep the generic compiled page. Test: `tests/brand-book.test.ts`. |
 | Finance library | Done | `packages/brand-core/src/finance.ts`: gross profit, gross margin %, CAC, churn, retention, margin-adjusted LTV, LTV:CAC, MRR, ARR, net burn, runway, break-even and month-by-month scenario projection. Results are `ok` (unit, period, basis, formula, inputs used), `missing` (named inputs), `invalid` (validation or mixed periods) or `undefined` (zero churn, zero revenue, no burn). Basis is the weakest of the inputs. `brand:finance --input` reads files outside the repo or gitignored `restricted:<name>` files only and writes nothing. No live billing/CRM adapters yet. Test: `tests/finance.test.ts`. |
 | Mascot lifecycle and finder | Done | `status` on catalog rows and artwork variants is `defined → pending → created → reviewed → approved → published` (+ `deprecated`). Optional stage, angle, intensity, outfit, accessories, use cases, animation refs, version and license fields. `brand:validate` enforces artwork, manifest asset, stage, angle and license rules; `brand:migrate` converts legacy statuses (no artwork → `defined`) keeping comments. `brandRetrieve` `kind: 'mascot'` filters by emotion, stage, use case and angle, returns only approved/published art with a readable asset, and explains what is missing; disabled module is `not_applicable`. The template ships 90 `defined` slots and no art. Gallery UI polish is deferred. Test: `tests/mascot.test.ts`. |
+| Journeys A/B/C | Done | `tests/journeys.test.ts`, 7 tests in temporary brand copies with the mock provider. A: education app with mascot (English-first CLI init, labelled localized fa interview turn, tr locale case, review, batch approval, mascot art, documents, tokens, publication, agent retrieval, guest isolation, change and regeneration). B: B2B without mascot (branching, documents, finance, retrieval, privacy, upgrade). C: security and failure scenarios. |
+| Internal dashboard | Done | `buildDashboard` (`packages/brand-core/src/dashboard.ts`) and `/dashboard` page: coverage per module, review queue, open contradictions and intake conflicts, restricted values withheld. Public builds get a stub with no brand data; the publish_docs check still refuses public builds of private brands. Test: `tests/dashboard.test.ts`. |
+| Backup scope | Fixed | Backups include `brand/migrations.yaml` and `brand/engine.lock`. Test: `tests/remediation-regression.test.ts`. |
+| Restricted facts in documents | Fixed | An approved restricted fact is tagged approved and withheld, not missing. Test: `tests/remediation-regression.test.ts`. |
+| Language rule | Done | English base for CLI, docs, question text, examples and defaults; `brand:init --languages` defaults to `en`; fa and tr are locale data. Persian/RTL and Turkish input, extraction, storage and retrieval are tested (`tests/interview-ai.test.ts`, `tests/structured-answers.test.ts`, `tests/journeys.test.ts`). |
 | G4, G9 | Documented limit | Single shared proof, readable by any process running as the owner. |
 
 ## Commands that this remediation expects to pass
@@ -65,11 +70,11 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 
 ## Second remediation contract
 
-`docs-internal/REMEDIATION_TRACEABILITY.md` is the ticket record. Public export is a new allowlist. Approved facts stay approved when someone passes `confirm=true`. `include_unapproved` does not grant access. A private brand cannot be built as public. Asset publication rejects symlinks, traversal, active SVG, and checksum mismatches. Backup, restore, migrate, and reset are separate commands. Journeys A, B, and C have automated tests.
+`docs-internal/REMEDIATION_TRACEABILITY.md` is the ticket record. Public export is a new allowlist. Approved facts stay approved when someone passes `confirm=true`. `include_unapproved` does not grant access. A private brand cannot be built as public. Asset publication rejects symlinks, traversal, active SVG, and checksum mismatches. Backup, restore, migrate, and reset are separate commands. Journeys A, B, and C have automated end-to-end tests (see above).
 
 `authorize()` gates submit, approval, publication, reveal, export, and the MCP tools. `include_unapproved` is not an MCP parameter. Backups and restricted values use `BRAND_OS_DATA_KEY` and fail closed when it is absent. Fact files migrate to canonical schema 2. Each module compiles a cited page that leaves missing sections missing. Figma import returns `not_configured` without credentials and does not overwrite tokens.
 
-Still external: SSO and hosted or remote MCP authentication (the `resolveAgentContext` seam is documented in ADR 0003), a hosted LLM, live Figma, and npm publishing. The approval proof remains a local file. Only the Brand Book, business plan and marketing plan have designed renderers; other modules are compiled field pages. fa/tr text other than the marked draft guidance paragraphs stays English. A CI matrix is not configured.
+Still external: SSO and hosted or remote MCP authentication (the `resolveAgentContext` seam is documented in ADR 0003), a hosted LLM, live Figma, and npm publishing. The approval proof remains a local file. Only the Brand Book, business plan and marketing plan have designed renderers; other modules are compiled field pages. fa/tr text other than prompts, page UI strings and the marked draft guidance paragraphs stays English. A CI matrix (Node 22/24, macOS), CSP headers, key rotation tooling and a link checker are not configured.
 
 ## Remaining security limits
 

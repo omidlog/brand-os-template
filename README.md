@@ -1,6 +1,29 @@
 # Brand OS template
 
-A private-first GitHub template for one brand and the business system inside it. The docs, tokens, and interview engine are reusable. The answers are not. Nothing in this repository is an approved brand.
+Approved brand truth for every AI tool. *(Working positioning. The final hero line is an owner decision.)*
+
+A private-first GitHub template for one brand and the business system inside it. An owner interviews (alone or with a coding agent), approves facts in batches, generates cited documents and design tokens from those facts, and lets scoped agents read only what was approved. The docs, tokens, and interview engine are reusable. The answers are not. Nothing in this repository is an approved brand.
+
+Brand OS is English-first. Persian (fa, right to left) and Turkish (tr) are equal, optional locales. See [Languages and locales](#languages-and-locales).
+
+## Quickstart (new brand)
+
+Use **Use this template** to create a new private repository, clone it, then:
+
+```bash
+npm install
+# Restricted answers and backups are encrypted with this key. Store it in your secret manager.
+export BRAND_OS_DATA_KEY="$(node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))")"
+npm run brand:init -- --name "Your brand" --slug your-brand --industry "TBD" --mascot false --gamification false --publish private --yes
+npm run brand:doctor -- --create-approval-secret   # creates brand/.private/approval-secret, never printed
+npm run brand:interview                            # one question at a time, in English
+npm run brand:review                               # drafts and pending changes against approved facts
+npm run brand:approve -- --module brand-strategy   # one proof for the batch, from env or a hidden prompt
+npm run brand:document -- --type brand-book        # cited Brand Book from approved facts
+npm run docs:start                                 # internal preview with the review dashboard
+```
+
+`brand:init` defaults to `--language en --languages en` and `--publish private`. Add locales with `--languages en,fa,tr` (see below). Scripts do not load `.env`; keep `BRAND_OS_DATA_KEY` in your shell or secret manager. Run `npm run brand:doctor` whenever something looks wrong; it never prints secret values.
 
 ## Commands
 
@@ -17,8 +40,8 @@ npm run build
 
 | Command | What it does |
 | --- | --- |
-| `npm run docs:start` | Local preview, internal audience, port 3000 |
-| `npm run docs:build` | Public docs build (English, Persian RTL, Turkish) |
+| `npm run docs:start` | Local preview, internal audience, port 3000. Includes the `/dashboard` review page (coverage, review queue, contradictions). |
+| `npm run docs:build` | Public docs build (English by default, plus the `fa` (RTL) and `tr` locale builds) |
 | `npm run build:docs:nomascot` | Public build with mascot and gamification hidden |
 | `npm run brand:init -- --name "Name" --slug name --yes` | Set identity and reset the interview |
 | `npm run brand:interview` | Ask one question at a time |
@@ -37,6 +60,10 @@ npm run build
 | `npm run brand:tokens:publish -- --ids <token.id,…> [--unpublish]` | Add hash-approved tokens to `approved_token_ids`. Same proof rules as approve. |
 | `npm run brand:doctor` | Check Node, `BRAND_OS_DATA_KEY`, the approval secret, the config and publication policy, and that `.env` is ignored. Never prints secret values. `--json` for machines. Exits non-zero on a hard failure. |
 | `npm run brand:finance -- --input <file outside the repo \| restricted:<name>> [--json]` | Compute CAC, margin-adjusted LTV, churn and retention, MRR/ARR, gross profit and margin, net burn, runway, break-even and scenario projections. Every result carries unit, period, basis (actual, forecast, hypothetical) and formula; missing inputs give `MISSING`, never a guess. Input files inside the checkout are refused unless gitignored and untracked (`brand/restricted/finance/`). Format: `examples/finance/inputs.example.yaml`. Output is printed only. |
+| `npm run brand:agent-token -- issue --profile <internal-read\|design\|marketing\|finance> --label <name>` | Issue a read-only agent token (printed once, stored hashed). `list` and `revoke --id <agt_…>` manage them. Same proof rules as approve. |
+| `npm run brand:query -- --kind facts [--module <id>]` | Local retrieval with the identity from `BRAND_OS_AGENT_TOKEN` (guest without it). |
+| `npm run mcp:serve` | Local MCP stdio server with the same retrieval path (`brand_retrieve` plus 17 thin tools). |
+| `npm run brand:backup`, `brand:restore`, `brand:migrate` | Encrypted backup of brand state (including migration history), validated restore, and idempotent migration. |
 | `npm run brand:export` | Gitignored snapshot. `--public` redacts non-public answers |
 | `npm run brand:validate` | Schema, catalog, token, and asset checks |
 | `npm run example:education` | Education-app fixture in a temp directory |
@@ -50,40 +77,60 @@ GitHub → **Settings** → **General** → check **Template repository**. This 
 
 ## Create a brand repository
 
-Use **Use this template**, not a fork. Create a new private repository, clone it, then:
-
-```bash
-npm install
-export BRAND_OS_DATA_KEY="$(node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))")"  # store it in your secret manager; losing it loses restricted answers
-npm run brand:init -- --name "Your brand" --slug your-brand --industry "TBD" --language en --languages en,fa,tr --mascot false --gamification false --publish private --yes
-npm run brand:doctor -- --create-approval-secret
-npm run brand:interview
-```
-
-Scripts do not load `.env` automatically. Keep `BRAND_OS_DATA_KEY` in your shell or secret manager.
-
-`--mascot false` hides the mascot docs and skips those questions. The catalog stays in the repo. See `docs-internal/NEW_BRAND.md`.
+Use **Use this template**, not a fork. Forks are for contributing to the template. Follow the [Quickstart](#quickstart-new-brand). `--mascot false` hides the mascot docs and skips those questions; the catalog stays in the repo. See `docs-internal/NEW_BRAND.md`.
 
 ## Interview
 
-The agent asks one question, explains why it matters, and shows an example labeled as an example. Answers are stored in `brand/interview/answer-ledger.yaml` with source, authority, and visibility. Drafts are written between field markers. `unknown` and `skip` stay unresolved. `npm run brand:resume` uses the session file, not the model's memory.
+The interview asks one question, explains why it matters, and shows an example labeled as an example. Answers are stored in `brand/interview/answer-ledger.yaml` with source, authority, and visibility. `unknown` and `skip` stay unresolved; nothing is invented. `npm run brand:resume` uses the session file, not the model's memory.
 
-Changing an approved answer prints the impacted documents and questions and does nothing until you confirm. Confirmation withdraws the approval and saves a new draft.
+A coding agent can drive the interview instead: `brand:next --json` picks the next questions, `brand:interview --question <id> --answer … --json` answers any question, and `brand:propose --file` stores schema-validated proposals with verbatim quotations as drafts. `brand:interview --assist` reads a free-form answer with the configured model (`llm.provider`: `none` by default, `mock`, or `anthropic` with `ANTHROPIC_API_KEY`) or deterministic rules. Restricted data is never sent to a model provider. See `agent-skills/brand-interviewer/SKILL.md`.
 
-Restricted finance and partner fields are stored under `brand/restricted/` and are omitted from the public site, the public export, and the default review.
+Restricted finance and partner fields are encrypted under `brand/.private/` and are omitted from the public site, the public export, documents, the dashboard and every agent response.
+
+## Change and approval workflow
+
+Nothing an interview, an agent or a model writes is approved. Approval and publication are separate, deliberate steps by the owner.
+
+1. **Draft.** Answers and proposals are drafts (`proposed`, `tentative` or `unresolved`).
+2. **Review.** `npm run brand:review -- --module <id>` (or `--ids …`, `--json`) shows each draft or pending change next to the approved revision, with the documents and questions it affects. The internal docs build shows the same queue at `/dashboard`.
+3. **Approve.** `npm run brand:approve -- --module <id>` or `-- --ids <id,chg-…>` approves a batch with one proof. The proof is read from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused. A wrong proof writes nothing. Every item is reported as `approved`, `skipped`, `refused`, `stale` or `unknown`. `--dry-run` shows the queue without a proof. Approve and publish refuse to run while `BRAND_OS_AGENT_TOKEN` is set.
+4. **Publish.** `npm run brand:publish -- --ids <id,…>` adds approved, public-classified facts to the publication allowlist. Internal and restricted facts are refused. `--unpublish` withdraws them.
+5. **Change an approved fact.** `change <id>: <new value>` in the interview (or `brand:propose` with a correction) creates a pending change proposal against the current version. The approved revision stays canonical, and agents keep reading it, until the change is approved by its `chg-` id. A proposal made against an older version is refused as `stale`. An approved replacement of a published fact is unpublished until published again.
+6. **Regenerate.** `brand:document`, `brand:tokens:generate` and the docs build read approved facts, so they pick up the new revision. Tokens generated from approved answers are drafts until `brand:tokens:approve` (value hash) and `brand:tokens:publish`; an approved token id is never overwritten.
+
+## Agent access
+
+Agents read the brand through `npm run mcp:serve` or `npm run brand:query`. Identity is decided once at startup from `BRAND_OS_AGENT_TOKEN`:
+
+- No token: guest. Published public facts only; a private brand denies every call.
+- A valid token: the owner-chosen profile (`internal-read`, `design`, `marketing`, `finance`). Approved items in that profile's modules, published or not. Drafts are never returned.
+- An unknown, revoked or other-brand token: the server exits. It never falls back to guest.
+
+Issue a token with `npm run brand:agent-token -- issue --profile internal-read --label "laptop agent"`. It is printed once and stored hashed in `brand/.private/agent-tokens.json` (gitignored). Every profile is read-only, and restricted values come back as `withheld` for every profile, including `finance`. Reads are logged to `brand/.private/access-log.jsonl` without values. See `docs-internal/AI_CONNECTORS.md` and `docs-internal/adr/0003-agent-access.md`.
+
+## Languages and locales
+
+English is the base language for the product, CLI, docs, interview question text, examples and defaults. Persian (`fa`, right to left) and Turkish (`tr`) are equal, optional locales supplied as locale data:
+
+- Interview prompts: each question has an English prompt plus `fa` and `tr` translations in the question bank. Switch with `lang fa`, `lang tr` or `lang en` during the interview. A missing translation falls back to English.
+- Answers: free text in any of the three languages, or mixed, is recorded as written. Persian and Arabic-Indic digits and Arabic-script separators are accepted in structured answers. The deterministic extractor reads all three through locale keyword data (`packages/brand-core/src/llm/lexicon.ts`).
+- Docs portal: `defaultLocale` is `en`; the `fa` (RTL) and `tr` builds use `apps/docs/i18n/<locale>/`. Brand Book and dashboard styles use logical properties and isolate user text for RTL.
+- Enabling locales for a brand: `npm run brand:init -- … --languages en,fa,tr`. A new locale needs its locale data (question-bank prompts, `i18n.ts` tables, lexicon entries, `apps/docs/i18n/<locale>/`) and an entry in the `Locale` type; no interview or approval logic is language-specific.
+
+Official brand sentences are never auto-translated. See `docs-internal/LOCALIZATION.md`.
 
 ## Docs
 
-`npm run build` prepares a public site only when `publish_docs` is `public`. The EXAMPLE template is public because it holds no confidential facts. `brand:init` defaults to private, and a public build of a private brand stops. `build/fa` is right to left. Search is local and currently English-only. `npm run docs:start` is the local preview. Restricted values stay in `brand/.private` and are omitted from the site. See `docs-internal/DEPLOYMENT.md`.
+`npm run build` prepares a public site only when `publish_docs` is `public`. The EXAMPLE template is public because it holds no confidential facts. `brand:init` defaults to private, and a public build of a private brand stops. The public site carries approved and published facts only; the `/dashboard` page there is a stub with no brand data. `npm run docs:start` is the internal preview with drafts, the internal Brand Book and the review dashboard; do not deploy it. `build/fa` is right to left. Search is local and currently English-only. Restricted values stay in `brand/.private` and are omitted from every build. `npx tsx scripts/scan-public.ts apps/docs/build` checks a built site for canaries, private files and raw tokens. See `docs-internal/DEPLOYMENT.md`.
 
 ## Tokens and assets
 
 Answer the structured color, type-scale and logo-size questions, approve them, then run `npm run brand:tokens:generate`. Generated drafts in `brand/tokens/generated/` override the EXAMPLE base values with the same id and stay drafts until `brand:tokens:approve` and `brand:tokens:publish`. You can still edit `brand/tokens/*.json` by hand, then `npm run tokens:build`. Outputs are CSS variables and TypeScript. The palette is EXAMPLE and the contrast pairs in the template pass WCAG AA for the listed combinations. The SVG files under `brand/assets` are placeholders. The mascot turnaround is missing on purpose.
 
-## Agents
+## Agent instructions
 
-`AGENTS.md`, `CLAUDE.md`, and `agent-skills/` describe how to read this repo without inventing facts. `npm run brand:query` and `npm run mcp:serve` are local. They are not a hosted connection. See `docs-internal/AI_CONNECTORS.md`.
+`AGENTS.md`, `CLAUDE.md`, and `agent-skills/` describe how to read this repo without inventing facts. `npm run brand:query` and `npm run mcp:serve` are local. They are not a hosted connection.
 
 ## Status
 
-`docs/IMPLEMENTATION_STATUS.md` lists what is implemented, partial, and not started.
+`docs/IMPLEMENTATION_STATUS.md` lists what is implemented, partial, and not started. `CHANGELOG.md` lists the 0.2.0 changes, including breaking ones.
