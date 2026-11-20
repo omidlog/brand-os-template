@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { writeAtomic } from './fsutil.js'
 
 interface StoreFile {
   version: 1
@@ -59,7 +60,7 @@ export class PrivateStore {
 
   private write(doc: StoreFile): void {
     fs.mkdirSync(this.dir(), { recursive: true, mode: 0o700 })
-    fs.writeFileSync(path.join(this.dir(), 'store.json'), `${JSON.stringify(doc)}\n`, { mode: 0o600 })
+    writeAtomic(path.join(this.dir(), 'store.json'), `${JSON.stringify(doc)}\n`, { mode: 0o600 })
   }
 }
 

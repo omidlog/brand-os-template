@@ -5,12 +5,12 @@ import { disabledModule, shouldSkip, type ConditionContext } from './conditions.
 import { completeness, latestAnswers } from './completeness.js'
 import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
-import { exists, readYaml, writeYaml } from './fsutil.js'
+import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
 import { t, normalizeCommand, type Locale } from './i18n.js'
 import { canApprove } from './permissions.js'
 import { exportPublic as projectPublic } from './projection.js'
 import { authorize, guestContext, operatorContext, verifiedHumanContext, type Audience } from './auth.js'
-import { backupBrand, migrateBrand, writeAtomic } from './backup.js'
+import { backupBrand, migrateBrand } from './backup.js'
 import { readFacts, writeFacts, type CanonicalFact } from './facts.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
@@ -288,9 +288,9 @@ export class InterviewEngine {
         message: `${t(locale, 'suggestionsTitle')}\n${suggestions.map((item, index) => `${index + 1}. ${item}`).join('\n')}`,
       }
     }
-    if (lower.startsWith('note:') || (/[\u0600-\u06FF]/.test(raw) && raw.length > 12 && !questionCommand(lower))) {
-      return this.captureNaturalLanguage(lower.startsWith('note:') ? raw.slice(5) : raw)
-    }
+    // Only an explicit `note:` prefix routes to free-form capture. Any other text, in any script
+    // (Persian included), is an answer to the current question and is recorded as one.
+    if (lower.startsWith('note:')) return this.captureNaturalLanguage(raw.slice(5))
     const proposal = lower.match(/^accept proposal\s+(\d+)$/)
     if (proposal) return this.acceptProposal(Number(proposal[1]) - 1)
     const accept = lower.match(/^accept\s+(\d+)$/)
@@ -539,6 +539,16 @@ export class InterviewEngine {
       return { kind: 'error', questionId, message: t(locale, 'denied', { actor }) }
     }
     const latest = this.context().answers.get(questionId)
+    const previousVersion = readApprovedMap(this.root)[questionId]?.version
+    if (latest?.status === 'approved') {
+      // Re-approving would rewrite the fact and must never reset its version, because
+      // approveChange's stale-revision check depends on it. Changes go through a proposal.
+      return {
+        kind: 'error',
+        questionId,
+        message: `${questionId} is already approved (version ${typeof previousVersion === 'number' ? previousVersion : 'unknown'}). Nothing was changed. To replace it, propose a change ("change ${questionId}: …") and approve that proposal.`,
+      }
+    }
     const hasSubstance = Boolean(latest && (latest.value !== null || latest.private_ref))
     if (!latest || !hasSubstance || ['unknown', 'skipped', 'not_applicable', 'unanswered'].includes(latest.status)) {
       return { kind: 'error', questionId, message: t(locale, 'cannotApprove') }
@@ -555,7 +565,8 @@ export class InterviewEngine {
       reviewedBy: actor,
       privateRef: latest.private_ref ?? null,
     })
-    this.writeApprovedFact(question, answer, 1)
+    // Monotonic: a field that held an approved revision before gets the next version, never 1 again.
+    this.writeApprovedFact(question, answer, typeof previousVersion === 'number' ? previousVersion + 1 : 1)
     if (question.id === 'business.identity.trade_name' && typeof answer.value === 'string') {
       const config = this.config()
       config.brand.name = answer.value
@@ -992,14 +1003,9 @@ export class InterviewEngine {
         id: question.id,
         inner: fieldBlock(question, answers.get(question.id) ?? null, file),
       }))
-      fs.mkdirSync(path.dirname(file), { recursive: true })
-      fs.writeFileSync(file, renderDraftFile(file, blocks))
+      writeAtomic(file, renderDraftFile(file, blocks))
     }
   }
-}
-
-function questionCommand(lower: string): boolean {
-  return ['skip', 'unknown', 'not relevant', 'decide later', 'later', 'help', 'exit', 'review', 'status'].includes(lower)
 }
 
 function extractPersianCandidates(text: string): Array<{ question_id: string; value: string; quotation: string }> {
@@ -1128,7 +1134,7 @@ function readProposals(root: string): Proposal[] {
 }
 
 function writeProposals(root: string, proposals: Proposal[]): void {
-  writeAtomic(proposalFile(root), `${JSON.stringify({ proposals })}\n`)
+  writeAtomic(proposalFile(root), `${JSON.stringify({ proposals })}\n`, { mode: 0o600 })
 }
 
 function readApprovedMap(root: string): Record<string, { version?: number; value?: unknown }> {
@@ -1144,7 +1150,7 @@ export function syncManifest(root: string, config: BrandConfig): void {
   current.slug = config.brand.slug
   current.publish_docs = config.brand.publish_docs
   current.status = config.brand.status
-  fs.writeFileSync(file, `${JSON.stringify(current, null, 2)}\n`)
+  writeAtomic(file, `${JSON.stringify(current, null, 2)}\n`)
 }
 
 export function upgradeCore(root: string): { version: string; preserved: true } {

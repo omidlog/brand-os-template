@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { AnswerRecord, FieldQuestion } from './types.js'
+import { writeText } from './fsutil.js'
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -51,11 +52,10 @@ export function upsertFieldBlock(file: string, questionId: string, inner: string
   const start = `<!-- field:${questionId} start -->`
   const end = `<!-- field:${questionId} end -->`
   const wrapped = `${start}\n${inner}\n${end}`
-  fs.mkdirSync(path.dirname(file), { recursive: true })
   const current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : draftHeader(file)
   const pattern = new RegExp(`${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}`)
   const next = pattern.test(current) ? current.replace(pattern, wrapped) : `${current.trimEnd()}\n\n${wrapped}\n`
-  fs.writeFileSync(file, next.endsWith('\n') ? next : `${next}\n`)
+  writeText(file, next)
 }
 
 export function draftHeader(file: string): string {

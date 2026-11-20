@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { migrateFactFiles } from './facts.js'
+import { writeAtomic } from './fsutil.js'
 import { parse, stringify } from 'yaml'
 import { dataKey } from './private-store.js'
 
@@ -23,16 +24,6 @@ const RELATIVE = [
 
 export const ENGINE_VERSION = '0.3.0'
 export const RESET_CONFIRMATION = 'I understand this deletes interview state'
-
-export function writeAtomic(file: string, contents: string | Buffer): void {
-  fs.mkdirSync(path.dirname(file), { recursive: true })
-  const tmp = `${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`
-  fs.writeFileSync(tmp, contents)
-  const fd = fs.openSync(tmp, 'r+')
-  fs.fsyncSync(fd)
-  fs.closeSync(fd)
-  fs.renameSync(tmp, file)
-}
 
 function listFiles(root: string, relative: string): string[] {
   const full = path.join(root, relative)
@@ -68,9 +59,17 @@ export function backupBrand(root: string, destination?: string): { directory: st
   const body = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
   const checksum = crypto.createHash('sha256').update(body).digest('hex')
-  fs.writeFileSync(path.join(directory, 'backup.enc'), body)
-  fs.writeFileSync(path.join(directory, 'backup-manifest.json'), `${JSON.stringify({ files: files.length, checksum, iv: iv.toString('base64'), tag: tag.toString('base64'), encrypted: true }, null, 2)}\n`)
+  writeAtomic(path.join(directory, 'backup.enc'), body, { mode: 0o600 })
+  writeAtomic(path.join(directory, 'backup-manifest.json'), `${JSON.stringify({ files: files.length, checksum, iv: iv.toString('base64'), tag: tag.toString('base64'), encrypted: true }, null, 2)}\n`, { mode: 0o600 })
   return { directory, files, checksum }
+}
+
+function isRestorablePath(candidate: unknown): candidate is string {
+  if (typeof candidate !== 'string' || !candidate) return false
+  if (candidate.includes('\\') || path.posix.isAbsolute(candidate) || path.isAbsolute(candidate)) return false
+  if (candidate.split('/').some((segment) => segment === '..' || segment === '.' || segment === '')) return false
+  if (candidate.startsWith('brand/.private/backups/')) return false
+  return RELATIVE.some((prefix) => candidate === prefix || candidate.startsWith(`${prefix}/`))
 }
 
 export function restoreBrand(root: string, backupDir: string): { restored: string[] } {
@@ -83,11 +82,12 @@ export function restoreBrand(root: string, backupDir: string): { restored: strin
   const decipher = crypto.createDecipheriv('aes-256-gcm', dataKey(), Buffer.from(manifest.iv, 'base64'))
   decipher.setAuthTag(Buffer.from(manifest.tag, 'base64'))
   const payload = JSON.parse(Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8')) as { files: Array<{ path: string; data: string }> }
+  // Validate every path before writing anything, so an unsafe entry cannot leave a half-restored tree.
+  for (const file of payload.files) {
+    if (!isRestorablePath(file.path)) throw new Error(`Unsafe backup path ${String(file.path)}. Restore refused; nothing was written.`)
+  }
   const restored: string[] = []
   for (const file of payload.files) {
-    if (!file.path || file.path.includes('..') || path.isAbsolute(file.path) || !RELATIVE.some((prefix) => file.path === prefix || file.path.startsWith(`${prefix}/`)) || file.path.startsWith('brand/.private/backups/')) {
-      throw new Error(`Unsafe backup path ${file.path}`)
-    }
     writeAtomic(path.join(root, file.path), Buffer.from(file.data, 'base64'))
     restored.push(file.path)
   }
