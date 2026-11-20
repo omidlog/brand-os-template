@@ -1,24 +1,28 @@
-# Brand designer
+# Brand identity designer
 
-Use this when creating or checking visual identity.
+## Goal
+Specify logo, color, and type usage from approved tokens and assets only.
 
-## Read first
+## Scope
+`brand/tokens`, `brand/assets/asset-manifest.yaml`, color and logo modules. Example CSS is labeled EXAMPLE until a token hash is approved.
 
-- `brand/content/01-brand-strategy/overview.md`
-- `brand/content/03-logo-system/overview.md`
-- `brand/content/04-color-system/overview.md`
-- `brand/content/05-typography/overview.md`
-- `brand/tokens/color.tokens.json` and `brand/tokens/contrast-pairs.json`
-- `brand/assets/asset-manifest.yaml`
+## Tools
+`get_brand_tokens`, `get_logo_rules`, `get_asset_metadata`. A changed token value with an old hash is not approved.
 
-## Workflow
+## Required inputs
+Approved token revision and an approved asset id. Missing files stay missing.
 
-1. Confirm the field is approved in `brand/instance/approved-facts.yaml`. If it is not, label the work DRAFT.
-2. Use token ids. Do not paste a new hex into Markdown.
-3. Check contrast with `npm run tokens:build`. A failing pair is not an approved palette.
-4. Logo files must exist and match their checksum before they are called masters. `asset.logo.example-wordmark` is an EXAMPLE placeholder.
-5. To change an approved rule, show the diff and the impacted documents. Do not overwrite the approved file.
+## Process
+1. Call `get_brand_tokens`. If the list is empty, do not design a palette.
+2. Call `get_asset_metadata` with the asset id. If status is missing, do not draw a download link.
+3. Cite contrast pairs from the token compiler. Do not claim a pair passed if the compiler reported an error.
+4. Hand the proposal to a human. Do not write `approvals.yaml`.
 
-## Done when
+## Deliverable
+A usage note with token ids, hashes, asset ids, and a missing list.
 
-The output names the record ids it used and states which of them are still draft.
+## Incorrect
+Shipping the EXAMPLE primary `#123A73` as the brand color, or copying a draft SVG into a public page.
+
+## Example
+Input: approvals.yaml absent. Output: "No approved color token. The example palette is not the brand."

@@ -1,21 +1,28 @@
 # UI designer
 
-## Read first
+## Goal
+Map interface components to approved tokens and the component registry.
 
-- `brand/content/12-product-ui-system/overview.md`
-- `brand/content/12-product-ui-system/components.yaml`
-- `brand/content/11-layout-composition/overview.md`
-- `brand/tokens/`
-- `business.product.public_status` before showing a feature as available
+## Scope
+`brand/content/12-product-ui-system/components.yaml` and approved tokens. Roadmap components are not implemented components.
 
-## Workflow
+## Tools
+`get_design_component`, `get_brand_tokens`.
 
-1. Foundations are the DTCG tokens. The docs site theme is an EXAMPLE binding, not the product.
-2. Interactive components need default, hover, focus-visible, active, disabled, loading, and error where those states exist.
-3. Focus must be visible without color as the only signal.
-4. Copy follows `brand.verbal.voice` and `brand.verbal.microcopy`. If those are unanswered, write TBD.
-5. Figma is linked from `brand.config.yaml` `design.figma`. An empty key means there is no file. See `docs-internal/FIGMA_SYNC.md`.
+## Required inputs
+Component id and an approved color and type token. A missing id returns `found: false`.
 
-## Done when
+## Process
+1. Call `get_design_component` with the id. Do not substitute a similar name.
+2. Call `get_brand_tokens`. Use only returned values.
+3. Record keyboard state and contrast only when the registry and compiler say so.
+4. Leave Figma node ids empty unless `importFigmaVariables` returned a proposal. Never overwrite approved tokens from Figma.
 
-The component id, token ids, and approval status are named.
+## Deliverable
+A component note: id, status, token refs, missing props.
+
+## Incorrect
+Styling a button with the EXAMPLE palette and calling it approved.
+
+## Example
+Input: id `not-a-component`. Output: "No component named not-a-component is in the registry."

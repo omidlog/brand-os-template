@@ -125,3 +125,15 @@ Strategy yearly; plan monthly; results only from the analytics system.
 - Planned channel
 - Claim violations found in review
 
+
+## Machine translation draft (fa)
+
+> status: draft machine-translation. Not an approved brand fact.
+
+این صفحه راهنمای قالب است، نه تصمیم تأییدشدهٔ برند. مصاحبه را با `npm run brand:interview` شروع کنید. پاسخ‌ها پیش‌نویس می‌مانند تا یک انسان با `--proof` آن‌ها را تأیید کند. فیلدهای نامشخص را خالی بگذارید و حدس نزنید.
+
+## Machine translation draft (tr)
+
+> status: draft machine-translation. Not an approved brand fact.
+
+Bu sayfa şablon rehberidir, onaylanmış bir marka kararı değildir. Görüşmeyi `npm run brand:interview` ile başlatın. Yanıtlar, bir insan `--proof` ile onaylayana kadar taslak kalır. Bilinmeyen alanları boş bırakın; tahmin etmeyin.

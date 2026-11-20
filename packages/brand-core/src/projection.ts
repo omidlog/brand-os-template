@@ -1,8 +1,6 @@
 import crypto from 'node:crypto'
-import fs from 'node:fs'
-import path from 'node:path'
-import { parse } from 'yaml'
 import type { InterviewEngine } from './engine.js'
+import { readFacts } from './facts.js'
 
 export interface PublicFact {
   id: string
@@ -23,17 +21,6 @@ export interface PublicBrandProjection {
   facts: PublicFact[]
 }
 
-interface ApprovedFact {
-  value?: unknown
-  visibility?: string
-  publication?: string
-  status?: string
-  approved_by?: string
-  updated?: string
-  answer_id?: string
-  version?: number
-}
-
 export function exportPublic(engine: InterviewEngine): PublicBrandProjection {
   const facts = publishedFacts(engine)
   const brandId = engine.config().brand.slug
@@ -49,10 +36,10 @@ export function exportPublic(engine: InterviewEngine): PublicBrandProjection {
 }
 
 export function publishedFacts(engine: InterviewEngine): PublicFact[] {
-  const fileFacts = readApproved(engine)
+  const fileFacts = readFacts(engine.workspaceRoot(), 'approved', engine.config().brand.slug)
   const facts: PublicFact[] = []
   for (const [id, fact] of Object.entries(fileFacts)) {
-    if (fact.visibility !== 'public') continue
+    if (fact.classification !== 'public') continue
     if (fact.publication !== 'published') continue
     if (fact.value === null || fact.value === undefined) continue
     const value = String(fact.value)
@@ -64,15 +51,9 @@ export function publishedFacts(engine: InterviewEngine): PublicFact[] {
       publication: 'published',
       version: fact.version ?? 1,
       revision_hash: crypto.createHash('sha256').update(`${id}:${value}`).digest('hex'),
-      source_id: fact.answer_id ?? id,
+      source_id: fact.source.answer_ids[0] ?? id,
     })
   }
   return facts.sort((a, b) => a.id.localeCompare(b.id))
 }
 
-function readApproved(engine: InterviewEngine): Record<string, ApprovedFact> {
-  const file = path.join(engine.workspaceRoot(), 'brand', 'instance', 'approved-facts.yaml')
-  if (!fs.existsSync(file)) return {}
-  const doc = parse(fs.readFileSync(file, 'utf8')) as { facts?: Record<string, ApprovedFact> }
-  return doc.facts ?? {}
-}

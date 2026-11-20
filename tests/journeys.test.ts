@@ -4,8 +4,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { allocateBudget as budget, applyInit as init, backupBrand, ensureApprovalSecret as proofOf, InterviewEngine as Engine, migrateBrand, restoreBrand, searchBrandDocs as search, writeStarterWorkspace as starter } from '@brand-os/brand-core'
+import { allocateBudget as budget, applyInit as init, backupBrand, ensureApprovalSecret as proofOf, financeScenario, InterviewEngine as Engine, migrateBrand, restoreBrand, searchBrandDocs as search, writeStarterWorkspace as starter } from '@brand-os/brand-core'
 import { prepareDocs } from '../scripts/prepare-docs.js'
+process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 
 function brand(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-journey-'))
@@ -50,6 +51,8 @@ test('journey A keeps a published name when a tagline change is only proposed', 
   assert.equal(allocation.sum, 100)
   assert.equal(allocation.lines.reduce((sum, line) => sum + (line.amount ?? 0), 0), 100)
   assert.equal(budget(null, { content: 1 }).status, 'missing')
+  assert.equal(financeScenario({ revenue: null, cost: 10, cash: 30 }).status, 'blocked_missing_inputs')
+  assert.equal(financeScenario({ revenue: 100, cost: 40, cash: 80 }).runway_months, 2)
   const saved = backupBrand(root)
   migrateBrand(root)
   fs.appendFileSync(path.join(root, 'brand/content/01-brand-strategy/overview.md'), '\nJOURNEY-A-EDIT\n')
@@ -82,11 +85,11 @@ test('journey B private brand does not leak into search and cannot build public 
     path.join(root, 'brand/instance/approved-facts.yaml'),
     'schema_version: 1\nfacts:\n  business.finance.revenue_figure:\n    value: CANARY-B-RESTRICTED\n    visibility: restricted\n    publication: unpublished\n    status: approved\n',
   )
-  assert.deepEqual((search(engine, 'CANARY-B-RESTRICTED', true).data as { hits: unknown[] }).hits, [])
+  assert.deepEqual((search(engine, 'CANARY-B-RESTRICTED').data as { hits: unknown[] }).hits, [])
   assert.throws(() => prepareDocs(root, { audience: 'public', rootIndex: false }), /private/)
   const other = brand()
   const foreign = new Engine(other)
-  assert.deepEqual((search(foreign, 'CANARY-B-RESTRICTED', true).data as { hits: unknown[] }).hits, [])
+  assert.deepEqual((search(foreign, 'CANARY-B-RESTRICTED').data as { hits: unknown[] }).hits, [])
 })
 
 test('journey C public build drops injected canaries and active svg', () => {

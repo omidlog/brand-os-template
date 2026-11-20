@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, InterviewEngine } from '@brand-os/brand-core'
+import { allModules, compileModulePages, InterviewEngine, readFacts } from '@brand-os/brand-core'
 import type { BrandConfig } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
 
@@ -65,6 +65,9 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
   const docsRoot = path.join(root, 'apps', 'docs', 'docs')
   fs.mkdirSync(docsRoot, { recursive: true })
   const docs: DocFile[] = []
+  for (const page of compileModulePages(engine, requested)) {
+    docs.push({ source: 'canonical', dest: page.dest, url: page.url, text: page.text, visibility: page.visibility })
+  }
   collect(ctx, path.join(root, 'brand', 'content'), docs)
   collect(ctx, path.join(root, 'brand', 'business-os'), docs)
   collect(ctx, path.join(root, 'brand', 'templates'), docs)
@@ -274,8 +277,7 @@ function escapePublished(value: string): string {
 }
 
 function writePublished(ctx: PrepareContext): void {
-  const file = path.join(ctx.root, 'brand', 'instance', 'approved-facts.yaml')
-  const facts = fs.existsSync(file) ? ((parse(fs.readFileSync(file, 'utf8')) as { facts?: Record<string, Record<string, unknown>> }).facts ?? {}) : {}
+  const facts = readFacts(ctx.root, 'approved', ctx.config.brand.slug) as unknown as Record<string, Record<string, unknown>>
   const lines = ['---', 'title: "Published claims"', 'visibility: public', 'sidebar_position: 0', '---', '', '# Published claims', '', 'Only approved facts for this audience are listed. Restricted values are never published. Unapproved interview answers stay in the ledger.', '']
   const policyFile = path.join(ctx.root, 'brand', 'publication-policy.yaml')
   const allowed = new Set<string>()
@@ -284,8 +286,9 @@ function writePublished(ctx: PrepareContext): void {
     for (const id of policy.approved_fact_ids ?? []) allowed.add(id)
   }
   const visible = Object.entries(facts).filter(([id, fact]) => {
-    if (fact.visibility === 'restricted') return false
-    if (ctx.audience === 'public' && (fact.visibility !== 'public' || fact.publication !== 'published' || !allowed.has(id))) return false
+    const classification = String(fact.classification ?? fact.visibility ?? 'internal')
+    if (classification === 'restricted') return false
+    if (ctx.audience === 'public' && (classification !== 'public' || fact.publication !== 'published' || !allowed.has(id))) return false
     return true
   })
   if (visible.length === 0) lines.push('No approved claims for this audience yet.')

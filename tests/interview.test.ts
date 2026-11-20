@@ -1,9 +1,11 @@
+import crypto from 'node:crypto'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { applyInit, ensureApprovalSecret, getBrandStatus, getBrandTokens, InterviewEngine, listMascotAssets, resolveAgentRequest, writeStarterWorkspace } from '@brand-os/brand-core'
+process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 
 function workspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-'))
@@ -124,10 +126,10 @@ test('restricted finance answers stay out of review and public files', () => {
 test('agent tools do not invent approvals', () => {
   const root = workspace()
   const engine = new InterviewEngine(root)
-  const tokens = getBrandTokens(engine, false)
+  const tokens = getBrandTokens(engine)
   assert.equal(tokens.approved, false)
   assert.deepEqual((tokens.data as { tokens: unknown[] }).tokens, [])
-  const mascots = listMascotAssets(engine, false)
+  const mascots = listMascotAssets(engine)
   assert.equal((mascots.data as { count: number }).count, 0)
   const status = getBrandStatus(engine)
   assert.equal(status.approved, false)

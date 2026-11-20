@@ -8,10 +8,17 @@ interface StoreFile {
 }
 
 /**
- * Restricted answers live only in this gitignored directory, encrypted with a local key.
- * The key and ciphertext are both ignored. Git history never sees the plaintext.
- * This is a local boundary, not a hosted KMS. Anyone who copies `brand/.private` can decrypt.
+ * Restricted answers are encrypted with BRAND_OS_DATA_KEY (32 raw bytes, base64).
+ * The key is not written into the working tree. Copying `brand/.private` does not include it.
+ * Operations fail closed when the env key is absent or the wrong length.
  */
+export function dataKey(): Buffer {
+  const env = process.env.BRAND_OS_DATA_KEY
+  if (!env) throw new Error('BRAND_OS_DATA_KEY is required. Refusing to encrypt or decrypt without an env key.')
+  const raw = Buffer.from(env, 'base64')
+  if (raw.length !== 32) throw new Error('BRAND_OS_DATA_KEY must decode to 32 bytes.')
+  return raw
+}
 export class PrivateStore {
   constructor(private readonly root: string) {}
 
@@ -41,11 +48,7 @@ export class PrivateStore {
   }
 
   private key(): Buffer {
-    fs.mkdirSync(this.dir(), { recursive: true, mode: 0o700 })
-    const keyPath = path.join(this.dir(), 'key')
-    if (!fs.existsSync(keyPath)) fs.writeFileSync(keyPath, crypto.randomBytes(32), { mode: 0o600 })
-    const raw = fs.readFileSync(keyPath)
-    return raw.length === 32 ? raw : crypto.createHash('sha256').update(raw).digest()
+    return dataKey()
   }
 
   private read(): StoreFile {

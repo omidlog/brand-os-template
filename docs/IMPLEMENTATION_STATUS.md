@@ -40,7 +40,9 @@ Updated after the external audit remediation. “Fixed” means a test or a buil
 
 `docs-internal/REMEDIATION_TRACEABILITY.md` is the ticket record. Public export is a new allowlist. Approved facts stay approved when someone passes `confirm=true`. `include_unapproved` does not grant access. A private brand cannot be built as public. Asset publication rejects symlinks, traversal, active SVG, and checksum mismatches. Backup, restore, migrate, and reset are separate commands. Journeys A, B, and C have automated tests.
 
-Still open: a full compiled Brand Book for every module, a hosted interview model, SSO, an npm-published core, Figma API sync, and a CI matrix. The local key and approval secret remain in `brand/.private`.
+`authorize()` gates submit, approval, publication, reveal, export, and the MCP tools. `include_unapproved` is not an MCP parameter. Backups and restricted values use `BRAND_OS_DATA_KEY` and fail closed when it is absent. Fact files migrate to canonical schema 2. Each module compiles a cited page that leaves missing sections missing. Figma import returns `not_configured` without credentials and does not overwrite tokens.
+
+Still external: SSO, a hosted LLM, live Figma, and npm publishing. The approval proof remains a local file. Compiled pages are not a designed brand book, and fa/tr text other than the marked draft guidance paragraphs stays English. A CI matrix is not configured.
 
 ## Remaining security limits
 

@@ -1,12 +1,20 @@
+import { operatorContext } from './auth.js'
 import type { InterviewEngine } from './engine.js'
 
 function valueOf(engine: InterviewEngine, id: string): string {
-  const fact = engine.exportSnapshot('full').answers as Array<{ question_id: string; value: unknown; status: string; visibility: string }>
+  const fact = engine.exportSnapshot('internal', operatorContext(engine.config().brand.slug)).answers as Array<{ question_id: string; value: unknown; status: string; visibility: string }>
   const found = fact.find((item) => item.question_id === id)
   if (!found || found.value === null || found.value === undefined || found.visibility === 'restricted') {
     return 'Unknown — not invented.'
   }
   return `${String(found.value)} _(status: ${found.status})_`
+}
+
+export function financeScenario(input: { revenue: number | null; cost: number | null; cash: number | null }): { status: 'computed' | 'blocked_missing_inputs'; gross_margin: number | null; runway_months: number | null } {
+  if (input.revenue === null || input.cost === null) return { status: 'blocked_missing_inputs', gross_margin: null, runway_months: null }
+  const gross = Math.round((input.revenue - input.cost) * 100) / 100
+  const runway = input.cash !== null && input.cost > 0 ? Math.round((input.cash / input.cost) * 100) / 100 : null
+  return { status: 'computed', gross_margin: gross, runway_months: runway }
 }
 
 export function allocateBudget(

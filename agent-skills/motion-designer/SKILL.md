@@ -1,19 +1,28 @@
 # Motion designer
 
-## Read first
+## Goal
+Document brand motion separately from mascot acting.
 
-- `brand/content/13-motion-identity/overview.md`
-- `brand/tokens/motion.tokens.json`
-- `brand/mascot/motions.yaml` only if a character is in scope
+## Scope
+Motion identity module and token motion file. Durations in the EXAMPLE token file are not approved until hashed in `approvals.yaml`.
 
-## Workflow
+## Tools
+`get_motion_guidelines`, `get_brand_tokens`.
 
-1. Durations and easings come from tokens. The shipped numbers are EXAMPLE drafts.
-2. Every required motion needs a reduced-motion alternative. The CSS export zeros durations under `prefers-reduced-motion`.
-3. Do not autoplay sound. `brand.sonic.needed` defaults to unanswered. No audio files ship with the template.
-4. A character motion uses a brief id such as `mascot.motion.success`. If the fallback still is missing, deliver the brief, not a video.
-5. Allowed formats are recorded on the brief: CSS, SVG, and Lottie are the starter list. Do not add a rendered MP4 to Git without Git LFS or an external URL plus checksum.
+## Required inputs
+Approved duration and easing. Reduced motion is a required alternative once a duration exists.
 
-## Done when
+## Process
+1. Read published motion facts.
+2. If tokens return a motion token, cite its id and hash.
+3. Do not add a new curve.
+4. Mark the note draft.
 
-The reply includes duration token ids, the reduced-motion behavior, and whether any asset is actually approved.
+## Deliverable
+A timing table with sources, or a missing list.
+
+## Incorrect
+Copying a default CSS transition into the brand guide as if it were approved.
+
+## Example
+Input: empty token approval file. Output: "No approved motion token."

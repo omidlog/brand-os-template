@@ -21,4 +21,6 @@ jobs:
       - run: npm run validate
       - run: npm run test
       - run: npm run build -w @brand-os/docs
+      - run: npx tsx scripts/scan-public.ts apps/docs/build
       - run: npm run build:docs:nomascot
+      - run: npx tsx scripts/scan-public.ts apps/docs/build

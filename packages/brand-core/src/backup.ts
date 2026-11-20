@@ -1,6 +1,8 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { migrateFactFiles } from './facts.js'
+import { dataKey } from './private-store.js'
 
 const RELATIVE = [
   'brand/interview',
@@ -18,7 +20,7 @@ const RELATIVE = [
   'brand/.private',
 ]
 
-export const ENGINE_VERSION = '0.2.0'
+export const ENGINE_VERSION = '0.3.0'
 export const RESET_CONFIRMATION = 'I understand this deletes interview state'
 
 export function writeAtomic(file: string, contents: string | Buffer): void {
@@ -52,38 +54,36 @@ export function backupBrand(root: string, destination?: string): { directory: st
     throw new Error(`Refusing to overwrite backup destination ${directory}`)
   }
   fs.mkdirSync(directory, { recursive: true })
-  const files = RELATIVE.flatMap((relative) => listFiles(root, relative)).sort()
-  const hash = crypto.createHash('sha256')
-  for (const relative of files) {
-    const target = path.join(directory, relative)
-    fs.mkdirSync(path.dirname(target), { recursive: true })
-    const bytes = fs.readFileSync(path.join(root, relative))
-    fs.writeFileSync(target, bytes)
-    hash.update(relative)
-    hash.update(bytes)
+  const key = dataKey()
+  const files = RELATIVE.flatMap((relative) => listFiles(root, relative)).filter((relative) => !relative.endsWith('/key') && !relative.endsWith('key')).sort()
+  const payload = {
+    files: files.map((relative) => ({ path: relative, data: fs.readFileSync(path.join(root, relative)).toString('base64') })),
   }
-  const checksum = hash.digest('hex')
-  fs.writeFileSync(path.join(directory, 'backup-manifest.json'), `${JSON.stringify({ files, checksum }, null, 2)}\n`)
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+  const body = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()])
+  const tag = cipher.getAuthTag()
+  const checksum = crypto.createHash('sha256').update(body).digest('hex')
+  fs.writeFileSync(path.join(directory, 'backup.enc'), body)
+  fs.writeFileSync(path.join(directory, 'backup-manifest.json'), `${JSON.stringify({ files: files.length, checksum, iv: iv.toString('base64'), tag: tag.toString('base64'), encrypted: true }, null, 2)}\n`)
   return { directory, files, checksum }
 }
 
 export function restoreBrand(root: string, backupDir: string): { restored: string[] } {
   const manifestPath = path.join(backupDir, 'backup-manifest.json')
-  if (!fs.existsSync(manifestPath)) throw new Error('Backup manifest is missing. Restore refused.')
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as { files: string[]; checksum: string }
-  const hash = crypto.createHash('sha256')
-  for (const relative of manifest.files) {
-    if (relative.includes('..') || path.isAbsolute(relative)) throw new Error(`Unsafe backup path ${relative}`)
-    const bytes = fs.readFileSync(path.join(backupDir, relative))
-    hash.update(relative)
-    hash.update(bytes)
-  }
-  if (hash.digest('hex') !== manifest.checksum) throw new Error('Backup checksum mismatch. Restore refused.')
+  const encPath = path.join(backupDir, 'backup.enc')
+  if (!fs.existsSync(manifestPath) || !fs.existsSync(encPath)) throw new Error('Encrypted backup is missing. Restore refused.')
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as { checksum: string; iv: string; tag: string }
+  const body = fs.readFileSync(encPath)
+  if (crypto.createHash('sha256').update(body).digest('hex') !== manifest.checksum) throw new Error('Backup checksum mismatch. Restore refused.')
+  const decipher = crypto.createDecipheriv('aes-256-gcm', dataKey(), Buffer.from(manifest.iv, 'base64'))
+  decipher.setAuthTag(Buffer.from(manifest.tag, 'base64'))
+  const payload = JSON.parse(Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8')) as { files: Array<{ path: string; data: string }> }
   const restored: string[] = []
-  for (const relative of manifest.files) {
-    const target = path.join(root, relative)
-    writeAtomic(target, fs.readFileSync(path.join(backupDir, relative)))
-    restored.push(relative)
+  for (const file of payload.files) {
+    if (!file.path || file.path.includes('..') || path.isAbsolute(file.path)) throw new Error(`Unsafe backup path ${file.path}`)
+    writeAtomic(path.join(root, file.path), Buffer.from(file.data, 'base64'))
+    restored.push(file.path)
   }
   return { restored }
 }
@@ -99,8 +99,11 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   writeAtomic(logFile, next.endsWith('\n') ? next : `${next}\n`)
   writeAtomic(
     lockFile,
-    `${JSON.stringify({ version: ENGINE_VERSION, note: 'Migration records the engine version. It does not rewrite brand facts, catalogs, or assets.' }, null, 2)}\n`,
+    `${JSON.stringify({ version: ENGINE_VERSION, note: 'Migration rewrites fact files to canonical schema 2 and does not change fact values, catalogs, or assets.' }, null, 2)}\n`,
   )
+  const configFile = path.join(root, 'brand', 'brand.config.yaml')
+  const brandId = fs.existsSync(configFile) && fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ? fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ?? 'unknown' : 'unknown'
+  migrateFactFiles(root, brandId.replace(/['"]/g, ''))
   const gitignore = path.join(root, '.gitignore')
   const required = ['brand/.private/', 'brand/restricted/facts.yaml', 'brand/restricted/drafts/', 'brand/generated/artifacts/']
   const text = fs.existsSync(gitignore) ? fs.readFileSync(gitignore, 'utf8') : ''

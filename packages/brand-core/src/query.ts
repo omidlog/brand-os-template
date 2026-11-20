@@ -2,9 +2,11 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { parse } from 'yaml'
-import type { AnswerRecord, FieldQuestion } from './types.js'
+import type { FieldQuestion } from './types.js'
 import type { InterviewEngine } from './engine.js'
 import { compileTokens } from '@brand-os/design-tokens'
+import { authorize, guestContext, type AuthContext } from './auth.js'
+import { readFacts } from './facts.js'
 
 export interface ToolResult {
   tool: string
@@ -22,36 +24,34 @@ function envelope(tool: string, source: string, status: string, approved: boolea
   return { tool, version: VERSION, status, source, approved, note, data }
 }
 
-function approvedFacts(engine: InterviewEngine): Record<string, { value?: unknown; visibility?: string; publication?: string; approved_by?: string; updated?: string; answer_id?: string }> {
-  const file = path.join(engine.workspaceRoot(), 'brand', 'instance', 'approved-facts.yaml')
-  if (!fs.existsSync(file)) return {}
-  const doc = parse(fs.readFileSync(file, 'utf8')) as { facts?: Record<string, { value?: unknown; visibility?: string; approved_by?: string; updated?: string; answer_id?: string }> }
-  return doc.facts ?? {}
+function guard(engine: InterviewEngine, ctx: AuthContext | undefined, classification: 'public' | 'internal' | 'restricted'): { allow: boolean; reason: string } {
+  const auth = ctx ?? guestContext(engine.config().brand.slug)
+  return authorize(auth, { brand_id: engine.config().brand.slug, classification, status: 'approved', publication: classification === 'public' ? 'published' : 'unpublished' }, 'read')
 }
 
-export function searchBrandDocs(engine: InterviewEngine, query: string, includeUnapproved = false): ToolResult {
-  const root = engine.workspaceRoot()
+export function searchBrandDocs(engine: InterviewEngine, query: string, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('search_brand_docs', 'brand/instance/approved-facts.yaml', 'denied', false, decision.reason, { query, hits: [] })
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
   const hits: Array<Record<string, unknown>> = []
-  const facts = approvedFacts(engine)
+  const facts = readFacts(engine.workspaceRoot(), 'approved', engine.config().brand.slug)
   for (const [id, fact] of Object.entries(facts)) {
-    if (fact.visibility !== 'public' || fact.publication !== 'published') continue
+    if (fact.classification !== 'public' || fact.publication !== 'published') continue
     const haystack = `${id} ${String(fact.value ?? '')}`.toLowerCase()
     if (terms.every((term) => haystack.includes(term))) {
-      hits.push({ id, status: 'approved', source: 'brand/instance/approved-facts.yaml', value: fact.value, approved_by: fact.approved_by, visibility: fact.visibility })
+      hits.push({ id, status: 'approved', source: 'brand/instance/approved-facts.yaml', value: fact.value, revision: fact.revision_hash, audience: 'public' })
     }
   }
-  void includeUnapproved
-  void root
-  return envelope('search_brand_docs', 'brand/instance/approved-facts.yaml', 'approved', hits.length > 0, 'Only published public facts. include_unapproved does not raise privilege.', { query, hits: hits.slice(0, 20) })
+  return envelope('search_brand_docs', 'brand/instance/approved-facts.yaml', 'approved', hits.length > 0, 'Only published public facts.', { query, hits: hits.slice(0, 20) })
 }
 
-export function getBrandTokens(engine: InterviewEngine, includeUnapproved = false): ToolResult {
+export function getBrandTokens(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('get_brand_tokens', 'brand/tokens', 'denied', false, decision.reason, { tokens: [] })
   const root = engine.workspaceRoot()
   const compiled = compileTokens(root)
   const approvalFile = path.join(root, 'brand', 'tokens', 'approvals.yaml')
   const approved = fs.existsSync(approvalFile) ? ((parse(fs.readFileSync(approvalFile, 'utf8')) as { approved?: Record<string, { approved_by?: string }> }).approved ?? {}) : {}
-  void includeUnapproved
   const tokens = Object.entries(compiled.flat)
     .filter(([id, token]) => {
       const entry = approved[id] as { value_sha256?: string } | undefined
@@ -61,21 +61,23 @@ export function getBrandTokens(engine: InterviewEngine, includeUnapproved = fals
       return entry.value_sha256 === crypto.createHash('sha256').update(basis).digest('hex')
     })
     .map(([id, token]) => ({ id, type: token.type, value: token.hex ?? token.value, approved: true, approved_by: approved[id]?.approved_by ?? null, source: 'brand/tokens' }))
-  return envelope('get_brand_tokens', 'brand/tokens', tokens.length > 0 ? 'approved' : 'draft', tokens.length > 0, 'Only tokens whose approval record matches the compiled value are returned. include_unapproved does not raise privilege.', { tokens, errors: compiled.errors })
+  return envelope('get_brand_tokens', 'brand/tokens', tokens.length > 0 ? 'approved' : 'draft', tokens.length > 0, 'Only tokens whose approval record matches the compiled value are returned.', { tokens, errors: compiled.errors })
 }
 
-export function getMascotGuidelines(engine: InterviewEngine, includeUnapproved = false): ToolResult {
-  void includeUnapproved
+export function getMascotGuidelines(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('get_mascot_guidelines', 'brand/mascot/mascot.config.yaml', 'denied', false, decision.reason, { rules: [] })
   const enabled = engine.config().modules.mascot.enabled
-  const facts = approvedFacts(engine)
+  const facts = readFacts(engine.workspaceRoot(), 'approved', engine.config().brand.slug)
   const rules = Object.entries(facts)
-    .filter(([id, fact]) => id.startsWith('brand.mascot.') && fact.visibility === 'public' && fact.publication === 'published' && fact.value !== undefined)
-    .map(([id, fact]) => ({ id, value: fact.value, approved_by: fact.approved_by, source: 'brand/instance/approved-facts.yaml' }))
+    .filter(([id, fact]) => id.startsWith('brand.mascot.') && fact.classification === 'public' && fact.publication === 'published' && fact.value !== undefined)
+    .map(([id, fact]) => ({ id, value: fact.value, reviewer_id: fact.reviewer_id, source: 'brand/instance/approved-facts.yaml' }))
   return envelope('get_mascot_guidelines', 'brand/mascot/mascot.config.yaml', enabled ? 'draft' : 'not_applicable', rules.length > 0, enabled ? 'Approved mascot rules come from approved facts. Catalog art is not implied.' : 'Mascot module is disabled.', { enabled, rules })
 }
 
-export function listMascotAssets(engine: InterviewEngine, includeUnapproved = false): ToolResult {
-  void includeUnapproved
+export function listMascotAssets(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('list_mascot_assets', 'brand/mascot/catalog.yaml', 'denied', false, decision.reason, { count: 0, rows: [] })
   if (!engine.config().modules.mascot.enabled) {
     return envelope('list_mascot_assets', 'brand/mascot/catalog.yaml', 'not_applicable', false, 'Mascot module is disabled. Draft catalog rows are not returned.', { count: 0, rows: [] })
   }
@@ -104,7 +106,9 @@ export function listMascotAssets(engine: InterviewEngine, includeUnapproved = fa
   return envelope('list_mascot_assets', 'brand/mascot/catalog.yaml', rows.length > 0 ? 'approved' : 'draft', rows.length > 0, 'Approved rows only. include_unapproved does not raise privilege.', { count: rows.length, rows })
 }
 
-export function getDesignComponent(engine: InterviewEngine, id: string): ToolResult {
+export function getDesignComponent(engine: InterviewEngine, id: string, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('get_design_component', 'brand/content/12-product-ui-system/components.yaml', 'denied', false, decision.reason, { id, found: false })
   const root = engine.workspaceRoot()
   const file = path.join(root, 'brand', 'content', '12-product-ui-system', 'components.yaml')
   const doc = parse(fs.readFileSync(file, 'utf8')) as { components?: Array<Record<string, unknown>> }
@@ -112,7 +116,9 @@ export function getDesignComponent(engine: InterviewEngine, id: string): ToolRes
   return envelope('get_design_component', 'brand/content/12-product-ui-system/components.yaml', found ? String(found.status ?? 'draft') : 'missing', false, found ? 'Component record from components.yaml. Not an approved production kit unless its status says approved.' : `No component named ${id} is in the registry.`, found ?? { id, found: false })
 }
 
-export function getSocialTemplate(engine: InterviewEngine, channel: string): ToolResult {
+export function getSocialTemplate(engine: InterviewEngine, channel: string, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('get_social_template', 'brand/templates/social-post.md', 'denied', false, decision.reason, { channel, templates: [] })
   const root = engine.workspaceRoot()
   const file = path.join(root, 'brand', 'templates', 'social-post.md')
   const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
@@ -120,10 +126,78 @@ export function getSocialTemplate(engine: InterviewEngine, channel: string): Too
   return envelope('get_social_template', 'brand/templates/social-post.md', approved ? 'approved' : 'draft', approved, approved ? 'Approved social template body.' : `No approved ${channel} template. The starter brief exists and is still a draft.`, { channel, templates: approved ? [{ source: 'brand/templates/social-post.md', body: text }] : [] })
 }
 
-export function getBrandStatus(engine: InterviewEngine): ToolResult {
+function publishedValue(engine: InterviewEngine, id: string): { value: string; revision: string | null; version: number } | null {
+  const fact = readFacts(engine.workspaceRoot(), 'approved', engine.config().brand.slug)[id]
+  if (!fact || fact.classification !== 'public' || fact.publication !== 'published' || fact.value === null || fact.value === undefined) return null
+  return { value: String(fact.value), revision: fact.revision_hash, version: fact.version }
+}
+
+function factTool(engine: InterviewEngine, tool: string, ids: string[], ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope(tool, 'brand/instance/approved-facts.yaml', 'denied', false, decision.reason, { facts: [] })
+  const facts = ids.map((id) => ({ id, ...(publishedValue(engine, id) ?? { value: null, missing: true }) }))
+  return envelope(tool, 'brand/instance/approved-facts.yaml', facts.some((fact) => fact.value) ? 'approved' : 'missing', facts.some((fact) => fact.value), 'Missing fields stay missing.', { facts })
+}
+
+export function getBrandOverview(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  return factTool(engine, 'get_brand_overview', ['business.identity.trade_name', 'brand.strategy.purpose', 'business.offer.value_proposition'], ctx)
+}
+
+export function getBrandGuidelines(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  return factTool(engine, 'get_brand_guidelines', ['brand.personality.traits', 'brand.verbal.tagline', 'brand.verbal.voice'], ctx)
+}
+
+export function getLogoRules(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  return factTool(engine, 'get_logo_rules', ['brand.logo.primary', 'brand.logo.clearspace'], ctx)
+}
+
+export function getMascotProfile(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  if (!engine.config().modules.mascot.enabled) return envelope('get_mascot_profile', 'brand/mascot/mascot.config.yaml', 'not_applicable', false, 'Mascot module is disabled.', { facts: [] })
+  return factTool(engine, 'get_mascot_profile', ['brand.mascot.role', 'brand.mascot.personality'], ctx)
+}
+
+export function listMascotStages(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('list_mascot_stages', 'brand/mascot/stages.yaml', 'denied', false, decision.reason, { stages: [] })
+  if (!engine.config().modules.mascot.enabled) return envelope('list_mascot_stages', 'brand/mascot/stages.yaml', 'not_applicable', false, 'Mascot module is disabled.', { stages: [] })
+  const file = path.join(engine.workspaceRoot(), 'brand', 'mascot', 'stages.yaml')
+  const doc = parse(fs.readFileSync(file, 'utf8')) as { stages?: Array<Record<string, unknown>> }
+  const stages = (doc.stages ?? []).filter((stage) => stage.status === 'approved')
+  return envelope('list_mascot_stages', 'brand/mascot/stages.yaml', stages.length ? 'approved' : 'missing', stages.length > 0, 'Unapproved stages are omitted.', { stages })
+}
+
+export function searchMascotAssets(engine: InterviewEngine, query: string, ctx?: AuthContext): ToolResult {
+  const listed = listMascotAssets(engine, ctx)
+  const rows = ((listed.data as { rows?: Array<Record<string, unknown>> }).rows ?? []).filter((row) => JSON.stringify(row).toLowerCase().includes(query.toLowerCase()))
+  return envelope('search_mascot_assets', 'brand/mascot/catalog.yaml', rows.length ? 'approved' : 'missing', rows.length > 0, rows.length ? 'Approved rows only.' : 'No approved mascot asset matched.', { rows })
+}
+
+export function getAssetMetadata(engine: InterviewEngine, id: string, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('get_asset_metadata', 'brand/assets/asset-manifest.yaml', 'denied', false, decision.reason, { asset: null })
+  const manifest = parse(fs.readFileSync(path.join(engine.workspaceRoot(), 'brand', 'assets', 'asset-manifest.yaml'), 'utf8')) as { assets: Array<Record<string, unknown>> }
+  const asset = manifest.assets.find((item) => item.id === id && item.status === 'approved' && item.visibility === 'public')
+  return envelope('get_asset_metadata', 'brand/assets/asset-manifest.yaml', asset ? 'approved' : 'missing', Boolean(asset), asset ? 'Approved public asset.' : `No approved public asset ${id}.`, { asset: asset ?? null })
+}
+
+export function getMotionGuidelines(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  return factTool(engine, 'get_motion_guidelines', ['brand.motion.easing', 'brand.motion.duration'], ctx)
+}
+
+export function getMarketingPlan(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  return factTool(engine, 'get_marketing_plan', ['business.marketing.objective', 'business.marketing.channels', 'business.marketing.budget'], ctx)
+}
+
+export function getBusinessPlan(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  return factTool(engine, 'get_business_plan', ['business.identity.trade_name', 'business.offer.summary', 'business.customer.primary_segment'], ctx)
+}
+
+export function getBrandStatus(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
+  const decision = guard(engine, ctx, 'public')
+  if (!decision.allow) return envelope('get_brand_status', 'brand/interview/answer-ledger.yaml', 'denied', false, decision.reason, {})
   const report = engine.statusReport()
   return envelope('get_brand_status', 'brand/interview/answer-ledger.yaml', 'draft', false, 'Coverage and approval are separate. Restricted values are not included.', {
-    brand: engine.config().brand.name,
+    brand: engine.exportPublic().display_name ?? 'Unpublished',
     slug: engine.config().brand.slug,
     nameStatus: engine.config().brand.name_status,
     publish_docs: engine.config().brand.publish_docs,
@@ -137,16 +211,16 @@ export function getBrandStatus(engine: InterviewEngine): ToolResult {
   })
 }
 
-export function describeQuestion(engine: InterviewEngine, question: FieldQuestion, includeUnapproved: boolean) {
-  void includeUnapproved
-  const answer = (engine.exportSnapshot('internal').answers as AnswerRecord[]).find((item) => item.question_id === question.id)
-  const show = answer && answer.visibility === 'public' && answer.status === 'approved'
-  return { id: question.id, status: answer?.status ?? 'unanswered', value: show ? answer?.value : null, withheld: answer?.visibility === 'restricted' || !show }
+export function describeQuestion(engine: InterviewEngine, question: FieldQuestion, _ctx?: AuthContext) {
+  const facts = readFacts(engine.workspaceRoot(), 'approved', engine.config().brand.slug)
+  const fact = facts[question.id]
+  const show = fact && fact.classification === 'public' && fact.publication === 'published'
+  return { id: question.id, status: fact?.status ?? 'unanswered', value: show ? fact?.value : null, withheld: !show }
 }
 
 export function resolveAgentRequest(engine: InterviewEngine, requestId: 'instagram-carousel' | 'onboarding-mascot') {
   if (requestId === 'instagram-carousel') {
-    const tokens = getBrandTokens(engine, false)
+    const tokens = getBrandTokens(engine)
     return {
       request: 'Create an Instagram carousel using approved brand typography',
       steps: ['Read AGENTS.md', 'Open brand/content/16-social-media/overview.md', 'Call get_brand_tokens without include_unapproved', 'Stop if no approved type exists'],
@@ -154,7 +228,7 @@ export function resolveAgentRequest(engine: InterviewEngine, requestId: 'instagr
       gap: (tokens.data as { tokens: unknown[] }).tokens.length === 0 ? 'No approved typography.' : 'Approved tokens are listed in the result.',
     }
   }
-  const assets = listMascotAssets(engine, false)
+  const assets = listMascotAssets(engine)
   const rows = (assets.data as { rows: Array<{ id?: unknown }> }).rows.filter((row) => ['mascot.ui.success', 'mascot.emotion.joyful', 'mascot.emotion.delighted'].includes(String(row.id)))
   return {
     request: 'Find the approved happy mascot pose for an onboarding success screen',

@@ -16,11 +16,16 @@ export default function Home(): React.ReactElement {
   return (
     <Layout title="Dashboard" description="Brand OS template dashboard. Example values are not approved.">
       <header className="hero container">
-        <p className="badge">{status.nameStatus}</p>
+        <p className="badge">{status.audience === 'internal' ? 'Brand manager' : 'Public portal'}</p>
         <h1>{status.brandName}</h1>
         <p>
-          This is the template dashboard. Coverage means a required field has an honest disposition. Approval means a person accepted it. They are not the same number.
+          Guides explain how to fill the template. The compiled brand book and business book list approved facts and mark everything else missing. Draft interview answers stay out of the public portal.
         </p>
+        {status.audience === 'internal' ? (
+          <p>Internal build: working status is {status.nameStatus}. Coverage and approval are separate. Pending questions below are for the brand manager, not for publication.</p>
+        ) : (
+          <p>Public build: the working name, unanswered counts, and next questions are omitted. Run prepare with the internal audience for the brand manager view.</p>
+        )}
         <div className="grid">
           <Meter label="Coverage" value={status.coverage} detail={`${status.requiredUnanswered} required fields still unanswered`} />
           <Meter label="Approval" value={status.approval} detail="Approved required fields only" />

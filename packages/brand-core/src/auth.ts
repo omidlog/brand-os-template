@@ -27,6 +27,27 @@ export function agentContext(brandId: string): AuthContext {
   return { principal_id: 'local-agent', role: 'agent', brand_id: brandId, audience: 'public', scopes: ['read'] }
 }
 
+/** Local process operator. Not selectable by MCP or by a client-supplied actor string. */
+export function operatorContext(brandId: string): AuthContext {
+  return { principal_id: 'local-process', role: 'owner', brand_id: brandId, audience: 'restricted', scopes: ['read', 'write', 'approve', 'restricted'] }
+}
+
+const HUMAN_ROLES: Role[] = ['owner', 'finance', 'editor', 'design', 'marketing']
+
+export function verifiedHumanContext(brandId: string, actor: string): AuthContext | null {
+  if (!HUMAN_ROLES.includes(actor as Role)) return null
+  const role = actor as Role
+  const scopes = ['read', 'write', 'approve']
+  if (role === 'owner' || role === 'finance') scopes.push('restricted')
+  return {
+    principal_id: `verified:${role}`,
+    role,
+    brand_id: brandId,
+    audience: role === 'owner' || role === 'finance' ? 'restricted' : 'internal',
+    scopes,
+  }
+}
+
 export function authorize(ctx: AuthContext, resource: ResourceRef, operation: Operation): { allow: boolean; reason: string } {
   if (ctx.brand_id !== resource.brand_id) return { allow: false, reason: 'cross-brand' }
   if (operation === 'approve') {

@@ -1,25 +1,28 @@
 # Mascot creator
 
-Use this when the mascot module is enabled. If `brand.config.yaml` has `modules.mascot.enabled: false`, stop. Do not invent a character.
+## Goal
+Specify the character from approved mascot facts and the catalog. Do not generate artwork.
 
-## Read first
+## Scope
+`brand.mascot.*`, `brand/mascot/catalog.yaml`, stages. If the module is disabled, stop. Completion is not penalized.
 
-- `brand/content/06-mascot-identity/overview.md`
-- `brand/content/07-mascot-expression-pose-library/overview.md`
-- `brand/content/08-mascot-evolution/overview.md`
-- `brand/mascot/catalog.yaml`
-- `brand/mascot/stages.yaml`
-- `brand/mascot/angles.yaml`
-- `brand/mascot/motions.yaml`
+## Tools
+`get_mascot_profile`, `list_mascot_stages`, `search_mascot_assets`, `list_mascot_assets`.
 
-## Workflow
+## Required inputs
+Role, personality, and any approved stage. 90 slots may stay missing.
 
-1. The six stages in `stages.yaml` are an EXAMPLE CONFIGURATION. The brand's stage count is `brand.mascot.stage_count` once answered.
-2. Pick a catalog id. Do not rename it. Do not draw a state that is not in the catalog unless the owner adds a row.
-3. `approved_angles` is empty and `preview` is null until a file is in the manifest.
-4. `asset.mascot.turnaround` is missing on purpose. `asset.mascot.placeholder-frame` is an empty frame, not the character.
-5. Anatomy and forbidden distortions come from the interview, not from a generated image.
+## Process
+1. If `get_mascot_profile` is `not_applicable`, report that and exit.
+2. List only approved stages. Draft stages are not public.
+3. A preview exists only when `source_assets` passes publication inspection.
+4. Ask the human for missing anatomy instead of filling it.
 
-## Done when
+## Deliverable
+A character sheet of approved fields plus a missing checklist. No image bytes.
 
-The reply lists the state id, its status, and the missing files. It does not attach new character art as if it were approved.
+## Incorrect
+Inventing a species, marking 90 states approved, or returning draft rows to a guest MCP client.
+
+## Example
+Input: mascot enabled, no approved state. Output: "Approved artwork is missing."

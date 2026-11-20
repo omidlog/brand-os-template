@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -20,6 +21,7 @@ import {
 } from '@brand-os/brand-core'
 import { compileTokens } from '@brand-os/design-tokens'
 import { prepareDocs } from '../scripts/prepare-docs.js'
+process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 
 const repo = path.resolve(import.meta.dirname, '..')
 
@@ -119,7 +121,7 @@ test('upgrade and one-stage mascot configuration keep custom data', () => {
   const before = fs.readFileSync(overview)
   upgradeCore(root)
   assert.deepEqual(fs.readFileSync(overview), before)
-  assert.match(fs.readFileSync(path.join(root, 'brand/engine.lock'), 'utf8'), /0\.2\.0/)
+  assert.match(fs.readFileSync(path.join(root, 'brand/engine.lock'), 'utf8'), /0\.3\.0/)
   const stages = path.join(root, 'brand/mascot/stages.yaml')
   fs.writeFileSync(stages, 'schema_version: 1\nstages:\n  - id: only.stage\n    order: 1\n    name: Single\n    status: draft\n')
   const report = validateRepo(root)
@@ -131,19 +133,19 @@ test('retrieval reads approved YAML instead of hard-coded placeholders', () => {
   const root = fresh()
   const engine = new InterviewEngine(root)
   fs.writeFileSync(path.join(root, 'brand/tokens/approvals.yaml'), 'approved:\n  color.brand.primary:\n    approved_by: human\n')
-  const tokens = getBrandTokens(engine, false)
+  const tokens = getBrandTokens(engine)
   const list = (tokens.data as { tokens: Array<{ id: string; value: string }> }).tokens
   assert.equal(list.length, 1)
   assert.equal(list[0]?.id, 'color.brand.primary')
   assert.match(String(list[0]?.value), /123A73/)
   const catalog = fs.readFileSync(path.join(root, 'brand/mascot/catalog.yaml'), 'utf8').replace('id: mascot.ui.success\n    category: ui\n    name: Success\n    intent:', 'id: mascot.ui.success\n    category: ui\n    name: Success\n    intent:')
   fs.writeFileSync(path.join(root, 'brand/mascot/catalog.yaml'), catalog.replace("status: draft\n    do:", 'status: approved\n    do:').replace('status: draft', 'status: approved'))
-  const assets = listMascotAssets(engine, false)
+  const assets = listMascotAssets(engine)
   assert.ok((assets.data as { rows: unknown[] }).rows.length > 0)
   const plan = renderBusinessArtifacts(engine)['business-plan.md']
   assert.match(plan ?? '', /Unknown — not invented/)
   assert.equal((plan ?? '').includes('CANARY'), false)
-  const found = searchBrandDocs(engine, 'color.brand.primary', false)
+  const found = searchBrandDocs(engine, 'color.brand.primary')
   assert.equal(JSON.stringify(found).includes('CANARY-RESTRICTED'), false)
 })
 
@@ -175,7 +177,7 @@ test('an MCP client can list tools and call them with Unicode', async () => {
   try {
     const tools = await client.listTools()
     const names = tools.tools.map((tool) => tool.name).sort()
-    assert.deepEqual(names, ['get_brand_status', 'get_brand_tokens', 'get_design_component', 'get_mascot_guidelines', 'get_social_template', 'list_mascot_assets', 'search_brand_docs'])
+    assert.deepEqual(names, ['get_asset_metadata', 'get_brand_guidelines', 'get_brand_overview', 'get_brand_status', 'get_brand_tokens', 'get_business_plan', 'get_design_component', 'get_logo_rules', 'get_marketing_plan', 'get_mascot_guidelines', 'get_mascot_profile', 'get_motion_guidelines', 'get_social_template', 'list_mascot_assets', 'list_mascot_stages', 'search_brand_docs', 'search_mascot_assets'])
     for (const tool of tools.tools) assert.ok(tool.inputSchema)
     const status = await client.callTool({ name: 'get_brand_status', arguments: {} })
     assert.match(JSON.stringify(status), /EXAMPLE Brand|coverage/)

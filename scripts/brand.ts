@@ -127,15 +127,14 @@ if (command === 'init') {
     },
   })
   const { getBrandStatus, getBrandTokens, getDesignComponent, getSocialTemplate, listMascotAssets, searchBrandDocs } = await import('@brand-os/brand-core')
-  const include = values['include-unapproved'] === true
   const tool = values.tool ?? 'get_brand_status'
   const result =
     tool === 'search_brand_docs'
-      ? searchBrandDocs(engine, values.query ?? '', include)
+      ? searchBrandDocs(engine, values.query ?? '')
       : tool === 'get_brand_tokens'
-        ? getBrandTokens(engine, include)
+        ? getBrandTokens(engine)
         : tool === 'list_mascot_assets'
-          ? listMascotAssets(engine, include)
+          ? listMascotAssets(engine)
           : tool === 'get_design_component'
             ? getDesignComponent(engine, values.query ?? 'button')
             : tool === 'get_social_template'

@@ -9,7 +9,9 @@ import { exists, readYaml, writeYaml } from './fsutil.js'
 import { t, normalizeCommand, type Locale } from './i18n.js'
 import { canApprove } from './permissions.js'
 import { exportPublic as projectPublic } from './projection.js'
+import { authorize, guestContext, operatorContext, verifiedHumanContext, type Audience } from './auth.js'
 import { backupBrand, migrateBrand, writeAtomic } from './backup.js'
+import { readFacts, writeFacts, type CanonicalFact } from './facts.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
   AnswerRecord,
@@ -236,6 +238,8 @@ export class InterviewEngine {
   }
 
   submit(rawInput: string, actor = 'owner'): StepResult {
+    const decision = authorize(operatorContext(this.config().brand.slug), { brand_id: this.config().brand.slug, classification: 'internal', status: 'draft', publication: 'unpublished' }, 'write')
+    if (!decision.allow) return { kind: 'error', message: decision.reason }
     const raw = normalizeCommand(rawInput).trim()
     const lower = raw.toLowerCase()
     const session = this.session()
@@ -429,6 +433,8 @@ export class InterviewEngine {
   }
 
   changeAnswer(questionId: string, rawValue: string, _confirm = false, _actor = 'owner'): StepResult {
+    const write = authorize(operatorContext(this.config().brand.slug), { brand_id: this.config().brand.slug, classification: 'internal', status: 'draft', publication: 'unpublished' }, 'write')
+    if (!write.allow) return { kind: 'error', message: write.reason }
     const question = this.question(questionId)
     if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
     const latest = this.context().answers.get(questionId)
@@ -518,6 +524,11 @@ export class InterviewEngine {
         message: 'Approval refused. An actor name is not authentication. Provide the human approval proof from brand/.private/approval-secret.',
       }
     }
+    const reviewer = verifiedHumanContext(this.config().brand.slug, actor)
+    const decision = reviewer
+      ? authorize(reviewer, { brand_id: this.config().brand.slug, classification: question.sensitivity as Audience, status: 'draft', publication: 'unpublished' }, 'approve')
+      : { allow: false, reason: 'actor is not a verified human role' }
+    if (!decision.allow) return { kind: 'error', questionId, message: `Approval refused. ${decision.reason}.` }
     if (!canApprove(actor, question)) {
       return { kind: 'error', questionId, message: t(locale, 'denied', { actor }) }
     }
@@ -692,36 +703,48 @@ export class InterviewEngine {
   }
 
   private writeApprovedFact(question: FieldQuestion, answer: AnswerRecord, version = 1): void {
-    const file = this.file('brand', 'instance', 'approved-facts.yaml')
-    const doc = exists(file)
-      ? readYaml<{ schema_version: number; facts: Record<string, Record<string, unknown>> }>(file)
-      : { schema_version: 1, facts: {} }
-    doc.facts[question.id] = {
-      value: question.sensitivity === 'restricted' ? null : answer.value,
+    const brandId = this.config().brand.slug
+    const facts = readFacts(this.root, 'approved', brandId)
+    const value = question.sensitivity === 'restricted' ? null : answer.value
+    const fact: CanonicalFact = {
+      id: question.id,
+      brand_id: brandId,
+      module: question.module,
+      value,
+      value_type: question.question_type,
       status: 'approved',
-      visibility: question.sensitivity,
+      classification: question.sensitivity as Audience,
       publication: 'unpublished',
-      authority: answer.authority,
-      source_type: answer.source_type,
-      approved_by: answer.reviewed_by,
-      answer_id: answer.answer_id,
-      updated: answer.last_updated,
+      source: { kind: 'interview', answer_ids: [answer.answer_id], reference_ids: [], citation_paths: ['brand/instance/approved-facts.yaml'], observed_at: answer.last_updated },
+      confidence: answer.confidence ?? null,
+      assumptions: [],
+      owner: null,
+      reviewer_id: answer.reviewed_by,
+      approved_at: answer.last_updated,
       version,
+      revision_hash: null,
+      review_due: null,
+      related_ids: question.related_ids,
       private_ref: answer.private_ref ?? null,
     }
-    writeYaml(file, doc)
+    fact.revision_hash = `${question.id}:${version}`
+    facts[question.id] = fact
+    writeFacts(this.root, 'approved', facts)
   }
 
   publishFact(questionId: string, proof?: string): StepResult {
     if (!approvalProofMatches(this.root, proof)) return { kind: 'error', message: 'Publication requires the human proof. Visibility public is not publication.' }
-    const file = this.file('brand', 'instance', 'approved-facts.yaml')
-    const doc = readYaml<{ schema_version: number; facts: Record<string, Record<string, unknown>> }>(file)
-    const fact = doc.facts[questionId]
-    if (!fact || fact.status !== 'approved' || fact.visibility !== 'public') {
+    const reviewer = verifiedHumanContext(this.config().brand.slug, 'owner')
+    if (!reviewer || !authorize(reviewer, { brand_id: this.config().brand.slug, classification: 'public', status: 'approved', publication: 'unpublished' }, 'approve').allow) {
+      return { kind: 'error', message: 'Publication refused.' }
+    }
+    const facts = readFacts(this.root, 'approved', this.config().brand.slug)
+    const fact = facts[questionId]
+    if (!fact || fact.status !== 'approved' || fact.classification !== 'public') {
       return { kind: 'error', message: 'Only an approved public fact can be published.' }
     }
     fact.publication = 'published'
-    writeYaml(file, doc)
+    writeFacts(this.root, 'approved', facts)
     const policyFile = this.file('brand', 'publication-policy.yaml')
     const policy = exists(policyFile)
       ? readYaml<{ schema_version: number; approved_fact_ids?: string[] }>(policyFile)
@@ -879,6 +902,10 @@ export class InterviewEngine {
 
   revealRestricted(questionId: string, proof?: string): { ok: true; value: unknown } | { ok: false; message: string } {
     if (!approvalProofMatches(this.root, proof)) return { ok: false, message: 'Restricted values require the human approval proof.' }
+    const reviewer = verifiedHumanContext(this.config().brand.slug, 'owner')
+    if (!reviewer || !authorize(reviewer, { brand_id: this.config().brand.slug, classification: 'restricted', status: 'approved', publication: 'unpublished' }, 'read').allow) {
+      return { ok: false, message: 'Restricted read refused.' }
+    }
     const answer = this.context().answers.get(questionId)
     if (!answer?.private_ref) return { ok: false, message: 'No restricted value is stored for that question.' }
     const payload = new PrivateStore(this.root).get(answer.private_ref)
@@ -920,8 +947,14 @@ export class InterviewEngine {
     return projectPublic(this)
   }
 
-  exportSnapshot(mode: 'full' | 'public' | 'internal' = 'internal'): Record<string, unknown> {
-    if (mode === 'public') return this.exportPublic() as unknown as Record<string, unknown>
+  exportSnapshot(mode: 'full' | 'public' | 'internal' = 'public', ctx = guestContext(this.config().brand.slug)): Record<string, unknown> {
+    const brandId = this.config().brand.slug
+    if (mode === 'public') {
+      authorize(ctx, { brand_id: brandId, classification: 'public', status: 'approved', publication: 'published' }, 'export')
+      return this.exportPublic() as unknown as Record<string, unknown>
+    }
+    const decision = authorize(ctx, { brand_id: brandId, classification: 'internal', status: 'approved', publication: 'unpublished' }, 'export')
+    if (!decision.allow) return { ...this.exportPublic(), export_denied: true }
     const answers = [...this.context().answers.values()].map((answer) => {
       if (answer.visibility === 'restricted') {
         return { ...answer, value: null, raw_answer: null, normalized: null, redacted: true }

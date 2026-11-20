@@ -1,6 +1,8 @@
 # Backup, restore, migrate, reset
 
-Local filesystem threat model: the encryption key and the approval secret live in `brand/.private` next to the ciphertext. Copying that directory copies the secrets. This is not SSO and not a hosted vault.
+Set `BRAND_OS_DATA_KEY` to 32 bytes of base64 before encrypting restricted answers or backups. The key is not written into the working tree. Backup and restricted storage fail closed when it is missing. The approval proof remains a local file in `brand/.private/approval-secret`. This is not SSO.
+
+`brand:migrate` rewrites fact files to canonical schema 2. Values are preserved. Catalogs and assets are not rewritten.
 
 - `npm run brand:backup` copies brand-owned trees into `brand/.private/backups/<stamp>/`, keeping relative paths. A non-empty destination is refused.
 - `npm run brand:restore -- --from <backup-dir>` checks the manifest checksum, then writes each file through a temp file and rename.

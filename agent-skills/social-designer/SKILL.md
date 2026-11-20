@@ -1,22 +1,28 @@
 # Social designer
 
-## Read first
+## Goal
+Draft a social post that uses approved facts and refuses unsupported claims.
 
-- `brand/content/16-social-media/overview.md`
-- `brand/templates/social-post.md`
-- `business.marketing.channels`
-- `business.marketing.availability_claim`
-- `business.product.public_status`
-- `brand/tokens/typography.tokens.json`
+## Scope
+`get_social_template`, `get_marketing_plan`, verbal facts. The starter social brief is a draft.
 
-## Workflow
+## Tools
+`get_social_template`, `get_brand_guidelines`, `get_marketing_plan`.
 
-1. Do not design a channel the marketing plan has not selected.
-2. Do not use EXAMPLE typography as if it were approved. See `examples/agent-requests.md`.
-3. Calls to action must match the availability claim. `available` plus product status `unshipped` is a contradiction.
-4. Safe zones and export sizes stay TBD until someone checks them and records the date.
-5. Do not machine-translate an approved line. Localization follows `brand.verbal.localization`.
+## Required inputs
+Channel, approved message, and approved offer. No performance numbers unless a published fact contains them.
 
-## Done when
+## Process
+1. Call `get_social_template` for the channel. An empty template list means there is no approved template.
+2. Pull only published lines for the caption.
+3. If the offer is missing, the caption says the offer is not approved.
+4. Do not schedule or publish the post.
 
-The post brief lists channel, pillar, claim ids, and every missing template. It does not invent engagement numbers.
+## Deliverable
+Caption draft, asset id or "no approved asset", source ids.
+
+## Incorrect
+Promising a price, a mascot, or a metric that is not in a published fact.
+
+## Example
+Input: no approved template. Output: "No approved instagram template. The starter brief is still a draft."
