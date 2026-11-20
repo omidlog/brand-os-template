@@ -61,9 +61,39 @@ if (command === 'init') {
       question: { type: 'string' },
       answer: { type: 'string' },
       json: { type: 'boolean', default: false },
+      assist: { type: 'boolean', default: false },
+      text: { type: 'string' },
+      file: { type: 'string' },
+      'dry-run': { type: 'boolean', default: false },
     },
   })
-  if (values.batch) {
+  if (values.assist) {
+    // Free-text turn: a configured model (or deterministic rules) proposes drafts. Nothing is approved.
+    const { assistTurn, resolveProvider } = await import('@brand-os/brand-core')
+    let text: string
+    if (values.text !== undefined) text = values.text
+    else if (values.file) text = values.file === '-' ? await readAllStdin() : fs.readFileSync(path.resolve(values.file), 'utf8')
+    else if (input.isTTY) {
+      const rl = readline.createInterface({ input, output })
+      text = await rl.question('Tell me about the business in your own words (one paragraph):\n> ')
+      rl.close()
+    } else text = await readAllStdin()
+    const resolved = resolveProvider(engine)
+    const result = await assistTurn(engine, text, {
+      provider: resolved.provider,
+      reason: resolved.reason,
+      limits: resolved.limits,
+      dryRun: values['dry-run'],
+      source: { kind: values.file && values.file !== '-' ? 'imported_text' : 'interview_turn', ref: values.file && values.file !== '-' ? path.basename(values.file) : 'assist' },
+    })
+    if (values.json) {
+      console.log(JSON.stringify({ ok: result.mode !== 'refused', mode: result.mode, provider: result.provider, reason: result.reason, provider_error: result.provider_error, report: result.report }, null, 2))
+    } else {
+      console.log(`${result.mode === 'model' ? 'Model' : result.mode === 'fallback' ? 'Deterministic rules' : 'Refused'}: ${result.reason}`)
+      if (result.report) console.log(formatIntake(result.report))
+    }
+    if (result.mode === 'refused') process.exit(1)
+  } else if (values.batch) {
     const answers = JSON.parse(fs.readFileSync(path.resolve(values.batch), 'utf8')) as Record<string, string>
     let steps = 0
     while (steps < 500) {

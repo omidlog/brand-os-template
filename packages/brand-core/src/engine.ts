@@ -11,6 +11,7 @@ import { exportPublic as projectPublic } from './projection.js'
 import { authorize, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
 import { backupBrand, migrateBrand } from './backup.js'
 import { loadProfile, type InterviewProfile } from './profiles.js'
+import { extractByRules } from './llm/rules.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
   AnswerRecord,
@@ -20,6 +21,7 @@ import type {
   FieldQuestion,
   ProposalState,
   LedgerFile,
+  PendingProposal,
   SessionState,
   SourceType,
   Status,
@@ -796,10 +798,13 @@ export class InterviewEngine {
   }
 
   captureNaturalLanguage(text: string): StepResult {
-    const proposals = this.extractProposals(text)
-    const persian = extractPersianCandidates(text)
-    for (const item of persian) {
-      if (!proposals.some((proposal) => proposal.question_id === item.question_id)) proposals.push(item)
+    const proposals: PendingProposal[] = this.extractProposals(text)
+    // Free text in any configured language: the same deterministic rules as `--assist` without a model.
+    // Restricted questions and questions that do not apply are never targets.
+    const allowed = new Set(this.questions().filter((question) => question.sensitivity !== 'restricted' && this.applicability(question) === null).map((question) => question.id))
+    for (const item of extractByRules(text, { allowed }).proposals) {
+      if (proposals.some((proposal) => proposal.question_id === item.question_id)) continue
+      proposals.push({ question_id: item.question_id, value: item.value ?? '', quotation: item.quotation, state: item.state, confidence: item.confidence })
     }
     if (proposals.length === 0) {
       return {
@@ -810,15 +815,15 @@ export class InterviewEngine {
     const session = this.session()
     session.pending_proposals = proposals
     this.saveSession(session)
-    const lines = proposals.map((item, index) => `${index + 1}. ${item.question_id} ← “${item.quotation}”`)
+    const lines = proposals.map((item, index) => `${index + 1}. ${item.question_id}${item.state && item.state !== 'proposed' ? ` [${item.state}]` : ''} ← “${item.quotation}”`)
     return {
       kind: 'info',
       message: `Proposed drafts, not approvals:\n${lines.join('\n')}\nReply "accept proposal 1" to save a draft. A human proof is still required to approve.`,
     }
   }
 
-  extractProposals(text: string): Array<{ question_id: string; value: string; quotation: string }> {
-    const proposals: Array<{ question_id: string; value: string; quotation: string }> = []
+  extractProposals(text: string): PendingProposal[] {
+    const proposals: PendingProposal[] = []
     for (const line of text.split(/\r?\n/)) {
       const match = line.match(/^\s*([^:]{2,80}):\s+(\S[\s\S]*)$/)
       if (!match) continue
@@ -837,6 +842,26 @@ export class InterviewEngine {
     if (!proposal) return { kind: 'error', message: 'No proposal with that number.' }
     const question = this.question(proposal.question_id)
     if (!question) return { kind: 'error', message: 'That proposal no longer matches a question.' }
+    if (proposal.state) {
+      if (question.sensitivity === 'restricted') return { kind: 'error', message: 'Restricted questions are answered directly, not from a note.' }
+      if (this.context().answers.get(question.id)?.status === 'approved') {
+        return { kind: 'error', questionId: question.id, message: `${question.id} is approved. Use change ${question.id}: <value> to propose a replacement.` }
+      }
+      const unresolved = proposal.state === 'unresolved'
+      const answer = this.recordProposal(question, unresolved ? null : proposal.value, {
+        state: proposal.state,
+        confidence: proposal.confidence ?? 0.5,
+        quotation: proposal.quotation,
+        sourceReference: 'note',
+        uncertainty:
+          proposal.state === 'tentative'
+            ? `Tentative: the owner described this as possible, not decided: “${proposal.quotation}”. Not a decision.`
+            : unresolved
+              ? `Unresolved: the owner said this is not decided yet: “${proposal.quotation}”. No value was invented.`
+              : `Extracted from the owner note: ${proposal.quotation}. Not approved.`,
+      })
+      return { kind: 'recorded', questionId: question.id, status: answer.status, message: `Saved as a ${proposal.state} ${unresolved ? 'marker' : 'draft'}. Quotation kept. Not approved.` }
+    }
     const result = this.record(question, proposal.value, {
       sourceType: 'owner',
       authority: 'unverified',
@@ -951,20 +976,6 @@ export function dispositionFor(raw: string): { status: Status; uncertainty: stri
   return match ? { status: match.status, uncertainty: match.uncertainty } : null
 }
 
-function extractPersianCandidates(text: string): Array<{ question_id: string; value: string; quotation: string }> {
-  const found: Array<{ question_id: string; value: string; quotation: string }> = []
-  if (text.includes('دانشجو')) {
-    found.push({ question_id: 'business.customer.primary_segment', value: 'students', quotation: text })
-  }
-  if (/B2B|بی‌تو‌بی|بیزنس/i.test(text)) {
-    found.push({ question_id: 'business.sales.b2b_packaging', value: 'tentative B2B expansion — not approved', quotation: text })
-  }
-  if (text.includes('قیمت') && text.includes('نیست')) {
-    found.push({ question_id: 'business.sales.pricing', value: 'unknown', quotation: text })
-  }
-  return found
-}
-
 function toStep(step: ApprovalStep): StepResult {
   return { kind: step.kind, message: step.message, questionId: step.questionId, status: step.status }
 }
@@ -1003,6 +1014,8 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   config.brand.website = input.website ?? null
   config.brand.default_locale = input.language
   config.brand.supported_locales = input.languages
+  // A profile without a file in brand/interview/profiles/ is a label only and keeps the full question
+  // bank; brand:validate warns about it so a typo does not go unnoticed.
   config.brand.profile = input.profile ?? 'universal'
   config.brand.publish_docs = input.publish
   config.brand.initialized = true

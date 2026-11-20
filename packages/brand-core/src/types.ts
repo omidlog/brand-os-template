@@ -1,3 +1,4 @@
+import type { LlmConfig } from './llm/provider.js'
 export const STATUSES = [
   'not_started',
   'unanswered',
@@ -146,6 +147,15 @@ export interface AnswerRecord {
 export const PROPOSAL_STATES = ['proposed', 'tentative', 'unresolved'] as const
 export type ProposalState = (typeof PROPOSAL_STATES)[number]
 
+/** A `note:` proposal waiting for `accept proposal N`. `state` is set when it came from free-text rules. */
+export interface PendingProposal {
+  question_id: string
+  value: string
+  quotation: string
+  state?: ProposalState
+  confidence?: number
+}
+
 export interface SessionState {
   session_id: string | null
   status: 'idle' | 'active' | 'paused' | 'complete'
@@ -154,7 +164,7 @@ export interface SessionState {
   deferred: string[]
   pending_suggestions: string[]
   cursor_question_id: string | null
-  pending_proposals: Array<{ question_id: string; value: string; quotation: string }>
+  pending_proposals: PendingProposal[]
   started_at: string | null
   updated_at: string | null
   last_answer_id: string | null
@@ -194,6 +204,8 @@ export interface BrandConfig {
   }
   assets: { storage: string; lfs: boolean; bucket_url: string | null }
   links: Record<string, string | null>
+  /** Optional model provider for `brand:interview --assist`. Absent or provider none means no model. */
+  llm?: LlmConfig
 }
 
 export interface LedgerFile {

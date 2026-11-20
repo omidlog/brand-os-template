@@ -9,8 +9,9 @@ import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
 import { approvalGrantErrors } from './permissions.js'
-import { profileErrors } from './profiles.js'
-import type { FieldQuestion } from './types.js'
+import { profileErrors, profileExists } from './profiles.js'
+import { llmConfigErrors } from './llm/provider.js'
+import type { BrandConfig, FieldQuestion } from './types.js'
 
 export interface ValidationReport {
   ok: boolean
@@ -42,6 +43,14 @@ export function validateRepo(root: string): ValidationReport {
   validateRegistry(root, questions, errors)
   validateConditions(questions, errors)
   errors.push(...profileErrors(root, questions))
+  const configFile = path.join(root, 'brand', 'brand.config.yaml')
+  if (fs.existsSync(configFile)) {
+    const config = readYaml<BrandConfig>(configFile)
+    if (!profileExists(root, config.brand?.profile)) {
+      warnings.push(`brand.config.yaml brand.profile ${config.brand?.profile} has no file in brand/interview/profiles/, so the full question bank is used`)
+    }
+    errors.push(...llmConfigErrors(config))
+  }
   validateMascot(root, errors)
   errors.push(...validateAssets(root))
   const compiled = compileTokens(root)

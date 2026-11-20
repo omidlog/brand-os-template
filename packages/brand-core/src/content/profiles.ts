@@ -1,0 +1,57 @@
+import type { InterviewProfile } from '../profiles.js'
+
+/**
+ * Starter interview profiles written into new workspaces (brand/interview/profiles/). The YAML file is
+ * the editable copy: an owner may change the list there, and brand:validate checks it.
+ */
+export const FOUNDER_CORE: InterviewProfile & { schema_version: 1 } = {
+  schema_version: 1,
+  id: 'founder-core',
+  title: 'Founder core',
+  description:
+    'About 40 questions a founder can answer in one sitting: identity, offer, customer, business model, verbal identity, and the visual basics that later generate draft tokens. Set brand.profile to founder-core in brand.config.yaml to use it; set it back to universal for the full question bank. Restricted finance questions are left out on purpose: an interviewing agent must not collect them, and the owner answers them in the interactive interview.',
+  question_ids: [
+    'business.identity.new_or_existing',
+    'business.identity.trade_name',
+    'business.identity.sector',
+    'business.stage.current',
+    'business.market.geography',
+    'business.offer.summary',
+    'business.customer.primary_segment',
+    'business.offer.value_proposition',
+    'business.problem.pains',
+    'business.product.mvp',
+    'business.product.public_status',
+    'business.model.revenue',
+    'business.sales.motion',
+    'business.sales.buyer',
+    'business.sales.pricing',
+    'business.sales.b2b_packaging',
+    'business.marketing.objective',
+    'business.marketing.channels',
+    'business.plan.milestone',
+    'business.finance.currency',
+    'brand.personality.traits',
+    'brand.strategy.purpose',
+    'brand.strategy.values',
+    'brand.strategy.differentiation',
+    'brand.strategy.promise',
+    'brand.verbal.name_use',
+    'brand.identity.public_name_override',
+    'brand.verbal.tagline',
+    'brand.verbal.voice',
+    'brand.verbal.forbidden',
+    'brand.verbal.localization',
+    'brand.logo.variants',
+    'brand.logo.clear_space',
+    'brand.logo.min_size',
+    'brand.color.roles',
+    'brand.color.themes',
+    'brand.type.intent',
+    'brand.type.fallback',
+    'brand.mascot.enabled',
+    'brand.gamification.enabled',
+  ],
+}
+
+export const STARTER_PROFILES = [FOUNDER_CORE]
