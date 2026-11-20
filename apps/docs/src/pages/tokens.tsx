@@ -1,8 +1,9 @@
 import Layout from '@theme/Layout'
 import tokens from '../data/tokens.json'
+import { asColors, asContrast } from '../data/records'
 
 function hex(id: string): string {
-  return tokens.colors.find((color) => color.id === id)?.hex ?? 'transparent'
+  return asColors(tokens).find((color) => color.id === id)?.hex ?? 'transparent'
 }
 
 export default function TokensPage(): React.ReactElement {
@@ -12,14 +13,14 @@ export default function TokensPage(): React.ReactElement {
         <p className="badge">{tokens.status}</p>
         <h1>Token explorer</h1>
         <p>{tokens.label} Hex values are exported from the DTCG JSON. Do not copy them into a product until the palette is approved.</p>
-        {tokens.colors.length > 0 ? (
+        {asColors(tokens).length > 0 ? (
           <div className="pair">
             <Preview theme="Light" background={hex('color.light.canvas')} color={hex('color.light.text')} />
             <Preview theme="Dark" background={hex('color.dark.canvas')} color={hex('color.dark.text')} />
           </div>
         ) : <p>No tokens have been approved for public release.</p>}
         <h2>Colors</h2>
-        {tokens.colors.map((color) => (
+        {asColors(tokens).map((color) => (
           <div className="swatch" key={color.id}>
             <i style={{ background: color.hex }} aria-hidden="true" />
             <div>
@@ -43,7 +44,7 @@ export default function TokensPage(): React.ReactElement {
             </tr>
           </thead>
           <tbody>
-            {tokens.contrast.map((pair) => (
+            {asContrast(tokens).map((pair) => (
               <tr key={pair.id}>
                 <td>{pair.id}</td>
                 <td>{pair.ratio.toFixed(2)}</td>

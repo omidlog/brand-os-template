@@ -19,6 +19,28 @@ export interface CatalogState {
   preview?: string | null
 }
 
+export interface PublishedColor {
+  id: string
+  hex: string
+  description: string
+  theme: string
+}
+
+export interface ContrastPair {
+  id: string
+  ratio: number
+  min: number
+  pass: boolean
+}
+
+export function asColors(value: { colors: unknown }): PublishedColor[] {
+  return value.colors as PublishedColor[]
+}
+
+export function asContrast(value: { contrast: unknown }): ContrastPair[] {
+  return value.contrast as ContrastPair[]
+}
+
 export interface NextQuestion {
   id: string
   priority: string
