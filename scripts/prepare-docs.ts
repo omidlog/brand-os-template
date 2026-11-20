@@ -3,8 +3,7 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
 import { allModules, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
-import { compileTokens } from '@brand-os/design-tokens'
-import crypto from 'node:crypto'
+import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import type { BrandConfig } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
 
@@ -201,7 +200,7 @@ function writePublicTokens(ctx: PrepareContext): void {
   const colors = Object.entries(compiled.flat).filter(([id, token]) => {
     if (!allowed.has(id) || token.type !== 'color' || !token.hex) return false
     const hash = approvals[id]?.value_sha256
-    return typeof hash === 'string' && hash === crypto.createHash('sha256').update(token.hex).digest('hex')
+    return typeof hash === 'string' && hash === tokenDigest(token)
   }).map(([id, token]) => ({ id, hex: token.hex!, description: token.description ?? '', theme: token.theme ?? 'both' }))
   const ids = new Set(colors.map((color) => color.id))
   const contrast = compiled.contrast.filter((pair) => ids.has(pair.fg) && ids.has(pair.bg))

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { parse } from 'yaml'
 import type { FieldQuestion } from './types.js'
 import type { InterviewEngine } from './engine.js'
-import { compileTokens } from '@brand-os/design-tokens'
+import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import { appendAccessLog, queryFingerprint } from './access-log.js'
 import { authorize, guestContext, type AgentProfile, type Audience, type AuthContext, type Role } from './auth.js'
@@ -191,8 +191,7 @@ function retrieveTokens(engine: InterviewEngine, ctx: AuthContext, req: Retrieve
   const items: RetrievedItem[] = []
   for (const [id, token] of Object.entries(compiled.flat)) {
     if (req.ids && !req.ids.includes(id)) continue
-    const basis = String(token.hex ?? JSON.stringify(token.value))
-    const digest = crypto.createHash('sha256').update(basis).digest('hex')
+    const digest = tokenDigest(token)
     const hashApproved = typeof approved[id]?.value_sha256 === 'string' && approved[id]?.value_sha256 === digest
     const published = policy.approved_token_ids.includes(id)
     const classification: Audience = published ? 'public' : 'internal'
@@ -210,7 +209,7 @@ function retrieveTokens(engine: InterviewEngine, ctx: AuthContext, req: Retrieve
       value: token.hex ?? token.value,
       withheld: false,
       reason: null,
-      meta: { type: token.type },
+      meta: { type: token.type, source: token.source, ...(token.sourceFact ? { source_fact: token.sourceFact } : {}) },
     })
   }
   const missing = (req.ids ?? []).filter((id) => !items.some((item) => item.id === id))

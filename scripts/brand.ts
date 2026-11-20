@@ -421,6 +421,54 @@ if (command === 'init') {
   const report = runDoctor(root)
   console.log(values.json ? JSON.stringify(report, null, 2) : formatDoctor(report))
   if (!report.ok) process.exit(1)
+} else if (command === 'tokens:generate') {
+  const { values } = parseArgs({ args: rest, options: { json: { type: 'boolean', default: false }, 'dry-run': { type: 'boolean', default: false } } })
+  const { generateTokens } = await import('@brand-os/brand-core')
+  const report = generateTokens(root, engine.config().brand.slug, { dryRun: values['dry-run'] })
+  if (values.json) console.log(JSON.stringify(report, null, 2))
+  else {
+    for (const source of report.sources) console.log(`${source.state.padEnd(12)} ${source.question_id}`)
+    for (const token of report.tokens) console.log(`${token.outcome.padEnd(16)} ${token.id}  ${token.reason}`)
+    console.log(report.files.length ? `Wrote ${report.files.join(', ')}` : report.dry_run ? 'Dry run. Nothing was written.' : 'No token files changed.')
+    console.log(report.note)
+  }
+  if (!report.ok) process.exit(1)
+} else if (command === 'tokens:approve' || command === 'tokens:publish') {
+  const { values } = parseArgs({
+    args: rest,
+    options: {
+      ids: { type: 'string' },
+      actor: { type: 'string', default: 'owner' },
+      unpublish: { type: 'boolean', default: false },
+      json: { type: 'boolean', default: false },
+      // Declared only so it can be refused without echoing its value.
+      proof: { type: 'string' },
+    },
+  })
+  if (values.proof !== undefined) {
+    console.error('--proof is not accepted: a secret on the command line leaks into shell history and the process list. Nothing was changed.')
+    process.exit(2)
+  }
+  if (process.env.BRAND_OS_AGENT_TOKEN) {
+    console.error(`brand:${command} refuses to run while BRAND_OS_AGENT_TOKEN is set. Token approval and publication are human actions.`)
+    process.exit(2)
+  }
+  const ids = (values.ids ?? '').split(',').map((id) => id.trim()).filter(Boolean)
+  if (ids.length === 0) {
+    console.error(`Usage: brand:${command} --ids <token.id,…>${command === 'tokens:publish' ? ' [--unpublish]' : ' [--actor owner]'} [--json]`)
+    console.error('The approval proof is read from BRAND_OS_APPROVAL_PROOF, piped stdin, or a hidden prompt. Never from argv.')
+    process.exit(2)
+  }
+  const { approveTokens, publishTokens } = await import('@brand-os/brand-core')
+  const proof = await readApprovalProof()
+  const result = command === 'tokens:approve' ? approveTokens(root, ids, proof, values.actor ?? 'owner') : publishTokens(root, ids, proof, { unpublish: values.unpublish })
+  if (values.json) console.log(JSON.stringify(result, null, 2))
+  else {
+    if (result.proof === 'rejected') console.log('Proof rejected. Nothing was changed.')
+    for (const error of result.errors) console.error(error)
+    for (const item of result.results) console.log(`${item.outcome.padEnd(11)} ${item.id}  ${item.reason}`)
+  }
+  if (!result.ok) process.exit(1)
 } else if (command === 'backup') {
   const saved = backupBrand(root)
   console.log(`Backed up ${saved.files.length} files to ${path.relative(root, saved.directory)}`)
@@ -444,7 +492,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, query, agent-token, doctor, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, tokens:generate, tokens:approve, tokens:publish, query, agent-token, doctor, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 
