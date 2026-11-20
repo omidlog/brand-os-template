@@ -1,0 +1,29 @@
+{
+  "$id": "https://brand-os.local/schemas/mascot-state.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mascot state",
+  "type": "object",
+  "required": ["id", "category", "name", "intent", "emotion_intensity", "pose", "face", "stage_compatibility", "approved_angles", "applicable_surfaces", "animation_possible", "source_assets", "preview", "status", "do", "dont", "tags", "version", "owner"],
+  "additionalProperties": true,
+  "properties": {
+    "id": { "type": "string" },
+    "category": { "enum": ["emotion", "action", "ui", "learning", "prop", "seasonal"] },
+    "name": { "type": "string" },
+    "intent": { "type": "string" },
+    "emotion_intensity": { "enum": ["none", "low", "medium", "high"] },
+    "pose": { "type": "string" },
+    "face": { "type": "string" },
+    "stage_compatibility": { "type": "array", "items": { "type": "string" } },
+    "approved_angles": { "type": "array", "items": { "type": "string" } },
+    "applicable_surfaces": { "type": "array", "items": { "type": "string" } },
+    "animation_possible": { "type": "boolean" },
+    "source_assets": { "type": "array" },
+    "preview": { "type": ["string", "null"] },
+    "status": { "enum": ["not_started", "draft", "in_review", "approved", "deprecated"] },
+    "do": { "type": "array", "items": { "type": "string" } },
+    "dont": { "type": "array", "items": { "type": "string" } },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "version": { "type": "string" },
+    "owner": { "type": "string" }
+  }
+}
