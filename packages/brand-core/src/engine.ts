@@ -1,17 +1,17 @@
-import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { disabledModule, shouldSkip, type ConditionContext } from './conditions.js'
 import { completeness, latestAnswers } from './completeness.js'
 import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
-import { exists, readYaml, writeYaml } from './fsutil.js'
+import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
 import { t, normalizeCommand, type Locale } from './i18n.js'
-import { canApprove } from './permissions.js'
+import { ApprovalService, normalizeAnswer, type AnswerMeta, type ApprovalStep } from './approval.js'
 import { exportPublic as projectPublic } from './projection.js'
-import { authorize, guestContext, operatorContext, verifiedHumanContext, type Audience } from './auth.js'
-import { backupBrand, migrateBrand, writeAtomic } from './backup.js'
-import { readFacts, writeFacts, type CanonicalFact } from './facts.js'
+import { authorize, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
+import { backupBrand, migrateBrand } from './backup.js'
+import { loadProfile, type InterviewProfile } from './profiles.js'
+import { extractByRules } from './llm/rules.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
   AnswerRecord,
@@ -19,7 +19,9 @@ import type {
   BrandConfig,
   Contradiction,
   FieldQuestion,
+  ProposalState,
   LedgerFile,
+  PendingProposal,
   SessionState,
   SourceType,
   Status,
@@ -176,12 +178,24 @@ export class InterviewEngine {
     })
   }
 
-  eligible(): FieldQuestion[] {
+  /** The active interview profile from brand.profile, or null when every question is in scope. */
+  profile(): InterviewProfile | null {
+    return loadProfile(this.root, this.config().brand.profile)
+  }
+
+  /**
+   * Open questions in asking order. The active profile narrows the set unless `profile` is given:
+   * pass `universal` to see the whole bank, or another profile id to preview it.
+   */
+  eligible(opts: { profile?: string } = {}): FieldQuestion[] {
     const ctx = this.context()
     const sectorAnswer = ctx.answers.get('business.identity.sector')
     const sector = sectorAnswer?.value === null || sectorAnswer?.value === undefined ? null : String(sectorAnswer.value)
+    const profile = opts.profile === undefined ? this.profile() : loadProfile(this.root, opts.profile)
+    const inProfile = profile ? new Set(profile.question_ids) : null
     return this.questions()
       .filter((question) => {
+        if (inProfile && !inProfile.has(question.id)) return false
         if (disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) return false
         const answer = ctx.answers.get(question.id)
         if (answer && answer.status !== 'unanswered') return false
@@ -209,10 +223,10 @@ export class InterviewEngine {
     return open.find((question) => !deferred.has(question.id)) ?? open.find((question) => deferred.has(question.id)) ?? null
   }
 
-  queue(limit = 10): FieldQuestion[] {
+  queue(limit = 10, opts: { profile?: string } = {}): FieldQuestion[] {
     const session = this.session()
     const deferred = new Set(session.deferred)
-    const open = this.eligible()
+    const open = this.eligible(opts)
     const ordered = [...open.filter((question) => !deferred.has(question.id)), ...open.filter((question) => deferred.has(question.id))]
     return ordered.slice(0, limit)
   }
@@ -288,9 +302,9 @@ export class InterviewEngine {
         message: `${t(locale, 'suggestionsTitle')}\n${suggestions.map((item, index) => `${index + 1}. ${item}`).join('\n')}`,
       }
     }
-    if (lower.startsWith('note:') || (/[\u0600-\u06FF]/.test(raw) && raw.length > 12 && !questionCommand(lower))) {
-      return this.captureNaturalLanguage(lower.startsWith('note:') ? raw.slice(5) : raw)
-    }
+    // Only an explicit `note:` prefix routes to free-form capture. Any other text, in any script
+    // (Persian included), is an answer to the current question and is recorded as one.
+    if (lower.startsWith('note:')) return this.captureNaturalLanguage(raw.slice(5))
     const proposal = lower.match(/^accept proposal\s+(\d+)$/)
     if (proposal) return this.acceptProposal(Number(proposal[1]) - 1)
     const accept = lower.match(/^accept\s+(\d+)$/)
@@ -306,32 +320,9 @@ export class InterviewEngine {
       })
     }
 
-    if (['unknown', "i don't know", 'idk'].includes(lower)) {
-      return this.record(current, null, {
-        sourceType: 'owner',
-        authority: 'unverified',
-        status: 'unknown',
-        uncertainty: 'Owner does not know. No value was invented.',
-        raw,
-      })
-    }
-    if (lower === 'skip') {
-      return this.record(current, null, {
-        sourceType: 'owner',
-        authority: 'unverified',
-        status: 'skipped',
-        uncertainty: 'Owner skipped. Field stays unresolved.',
-        raw,
-      })
-    }
-    if (['not relevant', 'n/a', 'na'].includes(lower)) {
-      return this.record(current, null, {
-        sourceType: 'owner',
-        authority: 'unverified',
-        status: 'not_applicable',
-        uncertainty: 'Owner marked this question not applicable.',
-        raw,
-      })
+    const disposition = dispositionFor(raw)
+    if (disposition) {
+      return this.record(current, null, { sourceType: 'owner', authority: 'unverified', status: disposition.status, uncertainty: disposition.uncertainty, raw })
     }
     if (['decide later', 'later'].includes(lower)) {
       if (!session.deferred.includes(current.id)) session.deferred.push(current.id)
@@ -439,6 +430,13 @@ export class InterviewEngine {
     if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
     const latest = this.context().answers.get(questionId)
     const impact = this.impact(questionId, question.sensitivity === 'restricted' ? '[restricted]' : rawValue)
+    if (latest?.status === 'approved' && dispositionFor(rawValue)) {
+      return {
+        kind: 'error',
+        questionId,
+        message: `${questionId} is approved. A change proposal needs a replacement value, not "${rawValue.trim()}". The approved fact was not changed.`,
+      }
+    }
     if (latest?.status === 'approved') {
       const proposal = this.requestChange(questionId, rawValue)
       return {
@@ -447,6 +445,21 @@ export class InterviewEngine {
         impact: { ...impact, approvalsPreserved: true, requiresConfirmation: true },
         message: `Approved fact was not changed. Proposal ${proposal.id} is pending. A human must approve that proposal. confirm=true is not authority.`,
       }
+    }
+    // `unknown`, `skip` and `n/a` are dispositions, not values. Storing the literal word would turn
+    // "I don't know" into a draft answer that reads like a fact.
+    const disposition = dispositionFor(rawValue)
+    if (disposition) {
+      if (latest) this.supersede(latest.answer_id)
+      const answer = this.appendAnswer(question, null, {
+        sourceType: 'owner',
+        authority: 'unverified',
+        status: disposition.status,
+        uncertainty: disposition.uncertainty,
+        raw: rawValue.trim(),
+      })
+      this.afterWrite(question, answer)
+      return { kind: 'recorded', questionId, status: disposition.status, impact, message: `Marked ${disposition.status}. No value was stored.` }
     }
     const normalized = normalizeAnswer(question, rawValue)
     if (!normalized.ok) return { kind: 'error', questionId, message: normalized.message }
@@ -462,110 +475,113 @@ export class InterviewEngine {
     return { kind: 'recorded', questionId, status: 'draft', impact, message: 'Draft updated. Not approved.' }
   }
 
-  requestChange(questionId: string, rawValue: string): { id: string; expected_version: number } {
+  /**
+   * Answer any question by id, in any order. This is the entry point an interviewing agent uses.
+   * The same commands as the interactive interview apply (unknown, skip, n/a, estimate:). Questions
+   * that the current configuration or answers make not applicable are refused rather than recorded.
+   */
+  answerQuestion(questionId: string, rawInput: string): StepResult {
+    const write = authorize(operatorContext(this.config().brand.slug), { brand_id: this.config().brand.slug, classification: 'internal', status: 'draft', publication: 'unpublished' }, 'write')
+    if (!write.allow) return { kind: 'error', message: write.reason }
     const question = this.question(questionId)
-    if (!question) throw new Error(`Unknown question ${questionId}`)
-    const approved = readApprovedMap(this.root)[questionId]
-    const version = typeof approved?.version === 'number' ? approved.version : 1
-    const id = `chg-${crypto.randomBytes(6).toString('hex')}`
-    const proposals = readProposals(this.root)
-    const restricted = question.sensitivity === 'restricted'
-    proposals.push({
-      id,
-      question_id: questionId,
-      expected_version: version,
-      status: 'pending',
-      proposed_value: restricted ? null : rawValue,
-      private_ref: restricted ? new PrivateStore(this.root).put(questionId, { value: rawValue, raw: rawValue }) : null,
-    })
-    writeProposals(this.root, proposals)
-    return { id, expected_version: version }
+    if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
+    const applicability = this.applicability(question)
+    if (applicability) return { kind: 'error', questionId, message: applicability }
+    const raw = normalizeCommand(rawInput).trim()
+    const disposition = dispositionFor(raw)
+    if (disposition) {
+      return this.record(question, null, { sourceType: 'owner', authority: 'unverified', status: disposition.status, uncertainty: disposition.uncertainty, raw })
+    }
+    const estimate = raw.match(/^estimate\s*:\s*([\s\S]+)$/i)
+    if (estimate) {
+      return this.recordNormalized(question, estimate[1] ?? '', {
+        sourceType: 'owner',
+        authority: 'estimated',
+        status: 'draft',
+        uncertainty: 'Owner described this as an estimate.',
+        confidence: 0.4,
+        raw,
+      })
+    }
+    return this.recordNormalized(question, raw, { sourceType: 'owner', authority: 'confirmed_by_owner', status: 'draft', uncertainty: null, raw })
   }
 
-  approveChange(changeId: string, proof: string | undefined, expectedVersion: number): StepResult {
-    if (!approvalProofMatches(this.root, proof)) {
-      return { kind: 'error', message: 'Stale, missing, or forged approval proof was rejected. The approved fact was not changed.' }
-    }
-    const proposals = readProposals(this.root)
-    const proposal = proposals.find((item) => item.id === changeId)
-    if (!proposal || proposal.status !== 'pending') return { kind: 'error', message: 'Proposal not found.' }
-    const currentFact = readFacts(this.root, 'approved', this.config().brand.slug)[proposal.question_id]
-    if (!currentFact || currentFact.status !== 'approved' || currentFact.version !== expectedVersion || proposal.expected_version !== expectedVersion) {
-      return { kind: 'error', message: 'Stale revision. Current approved fact does not match this proposal. No change was made.' }
-    }
-    const question = this.question(proposal.question_id)
-    if (!question) return { kind: 'error', message: 'Proposal question is missing.' }
-    const stored = proposal.private_ref ? new PrivateStore(this.root).get(proposal.private_ref) : null
-    if (proposal.private_ref && (!stored || stored.questionId !== question.id)) return { kind: 'error', message: 'Restricted proposal payload is missing or mismatched.' }
-    const raw = proposal.private_ref ? String(stored?.raw ?? '') : String(proposal.proposed_value ?? '')
-    const normalized = normalizeAnswer(question, raw)
-    if (!normalized.ok) return { kind: 'error', questionId: question.id, message: normalized.message }
-    const value = proposal.private_ref ? null : normalized.value
+  /** Null when the question applies; otherwise the reason it does not under the current config and answers. */
+  applicability(question: FieldQuestion): string | null {
+    const ctx = this.context()
+    if (disabledModule(question.id, ctx)) return `${question.id} belongs to a module that is turned off in brand.config.yaml.`
+    if (shouldSkip(question.skip_when, ctx)) return `${question.id} does not apply to the current answers (${question.skip_when}).`
+    return null
+  }
+
+  /**
+   * Write one validated interview proposal as a draft or an unresolved marker. Callers (the proposal
+   * intake) have already refused restricted ids and approved targets; this re-checks both so the
+   * engine never lets a proposal become, or replace, an approved fact.
+   */
+  recordProposal(
+    question: FieldQuestion,
+    value: AnswerRecord['value'],
+    meta: { state: ProposalState; confidence: number; quotation: string; sourceReference: string; uncertainty: string },
+  ): AnswerRecord {
+    if (question.sensitivity === 'restricted') throw new Error(`Refusing to record a proposal for restricted ${question.id}.`)
     const latest = this.context().answers.get(question.id)
+    if (latest?.status === 'approved') throw new Error(`Refusing to overwrite approved ${question.id} with a proposal.`)
     if (latest) this.supersede(latest.answer_id)
-    const answer = this.appendAnswer(question, value, {
-      sourceType: 'owner',
-      authority: 'confirmed_by_owner',
-      status: 'approved',
-      uncertainty: null,
-      raw: proposal.private_ref ? null : raw,
-      reviewedBy: 'authenticated-reviewer',
-      privateRef: proposal.private_ref,
+    const answer = this.appendAnswer(question, meta.state === 'unresolved' ? null : value, {
+      sourceType: 'agent_suggestion',
+      authority: 'unverified',
+      status: meta.state === 'unresolved' ? 'unknown' : 'draft',
+      uncertainty: meta.uncertainty,
+      confidence: meta.confidence,
+      sourceReference: meta.sourceReference,
+      raw: meta.quotation,
+      proposalState: meta.state,
     })
-    this.writeApprovedFact(question, answer, (readApprovedMap(this.root)[question.id]?.version ?? 1) + 1)
-    proposal.status = 'approved'
-    writeProposals(this.root, proposals)
     this.afterWrite(question, answer)
-    return { kind: 'recorded', questionId: question.id, status: 'approved', message: 'Replacement approved. Previous revision remains in the ledger.' }
+    return answer
+  }
+
+  /** Approval and publication live in approval.ts. The engine lends it narrow access to its ledger. */
+  approvals(): ApprovalService {
+    return new ApprovalService({
+      root: this.root,
+      brandId: () => this.config().brand.slug,
+      locale: () => this.session().locale,
+      questions: () => this.questions(),
+      question: (id) => this.question(id),
+      latestAnswers: () => this.context().answers,
+      supersede: (answerId) => this.supersede(answerId),
+      appendAnswer: (question, value, meta) => this.appendAnswer(question, value, meta),
+      afterWrite: (question, answer) => this.afterWrite(question, answer),
+      onApproved: (question, answer) => this.applyApprovedName(question, answer),
+    })
+  }
+
+  requestChange(questionId: string, rawValue: string): { id: string; expected_version: number } {
+    return this.approvals().requestChange(questionId, rawValue)
+  }
+
+  approveChange(changeId: string, proof: string | undefined, expectedVersion: number, actor = 'owner'): StepResult {
+    return toStep(this.approvals().approveChange(changeId, proof, expectedVersion, actor))
   }
 
   approve(questionId: string, actor: string, proof?: string): StepResult {
-    const question = this.question(questionId)
-    if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
-    const locale = this.session().locale
-    if (!approvalProofMatches(this.root, proof)) {
-      return {
-        kind: 'error',
-        questionId,
-        message: 'Approval refused. An actor name is not authentication. Provide the human approval proof from brand/.private/approval-secret.',
-      }
-    }
-    const reviewer = verifiedHumanContext(this.config().brand.slug, actor)
-    const decision = reviewer
-      ? authorize(reviewer, { brand_id: this.config().brand.slug, classification: question.sensitivity as Audience, status: 'draft', publication: 'unpublished' }, 'approve')
-      : { allow: false, reason: 'actor is not a verified human role' }
-    if (!decision.allow) return { kind: 'error', questionId, message: `Approval refused. ${decision.reason}.` }
-    if (!canApprove(actor, question)) {
-      return { kind: 'error', questionId, message: t(locale, 'denied', { actor }) }
-    }
-    const latest = this.context().answers.get(questionId)
-    const hasSubstance = Boolean(latest && (latest.value !== null || latest.private_ref))
-    if (!latest || !hasSubstance || ['unknown', 'skipped', 'not_applicable', 'unanswered'].includes(latest.status)) {
-      return { kind: 'error', questionId, message: t(locale, 'cannotApprove') }
-    }
-    this.supersede(latest.answer_id)
-    const answer = this.appendAnswer(question, latest.value, {
-      sourceType: latest.source_type ?? 'owner',
-      authority: latest.authority === 'estimated' ? 'estimated' : 'confirmed_by_owner',
-      status: 'approved',
-      uncertainty: latest.uncertainty,
-      confidence: latest.confidence,
-      sourceReference: latest.source_reference,
-      raw: latest.raw_answer,
-      reviewedBy: actor,
-      privateRef: latest.private_ref ?? null,
-    })
-    this.writeApprovedFact(question, answer, 1)
-    if (question.id === 'business.identity.trade_name' && typeof answer.value === 'string') {
-      const config = this.config()
-      config.brand.name = answer.value
-      config.brand.name_status = 'approved'
-      config.brand.working_name = answer.value
-      config.brand.working_name_status = 'approved'
-      this.saveConfig(config)
-    }
-    this.afterWrite(question, answer)
-    return { kind: 'recorded', questionId, status: 'approved', message: t(locale, 'approved', { actor }) }
+    return toStep(this.approvals().approve(questionId, actor, proof))
+  }
+
+  publishFact(questionId: string, proof?: string): StepResult {
+    return toStep(this.approvals().publishFact(questionId, proof))
+  }
+
+  private applyApprovedName(question: FieldQuestion, answer: AnswerRecord): void {
+    if (question.id !== 'business.identity.trade_name' || typeof answer.value !== 'string') return
+    const config = this.config()
+    config.brand.name = answer.value
+    config.brand.name_status = 'approved'
+    config.brand.working_name = answer.value
+    config.brand.working_name_status = 'approved'
+    this.saveConfig(config)
   }
 
   private impact(questionId: string, proposed: string): ImpactReport {
@@ -597,21 +613,7 @@ export class InterviewEngine {
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
   }
 
-  private appendAnswer(
-    question: FieldQuestion,
-    value: string | number | boolean | null,
-    meta: {
-      sourceType: SourceType | null
-      authority: Authority
-      status: Status
-      uncertainty: string | null
-      confidence?: number | null
-      sourceReference?: string | null
-      raw?: string | null
-      reviewedBy?: string | null
-      privateRef?: string | null
-    },
-  ): AnswerRecord {
+  private appendAnswer(question: FieldQuestion, value: AnswerRecord['value'], meta: AnswerMeta): AnswerRecord {
     const ledger = this.ledger()
     const sessionId = this.ensureSession()
     let storedValue = value
@@ -643,6 +645,7 @@ export class InterviewEngine {
       superseded_by: null,
       disposition_reason: meta.uncertainty,
       private_ref: privateRef,
+      ...(meta.proposalState ? { proposal_state: meta.proposalState } : {}),
     }
     ledger.records.push(answer)
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
@@ -704,68 +707,8 @@ export class InterviewEngine {
       uncertainty: answer.uncertainty,
       answer_id: answer.answer_id,
       updated: answer.last_updated,
+      ...(answer.proposal_state ? { proposal_state: answer.proposal_state } : {}),
     }
-    writeYaml(file, doc)
-  }
-
-  private writeApprovedFact(question: FieldQuestion, answer: AnswerRecord, version = 1): void {
-    const brandId = this.config().brand.slug
-    const facts = readFacts(this.root, 'approved', brandId)
-    const value = question.sensitivity === 'restricted' ? null : answer.value
-    const fact: CanonicalFact = {
-      id: question.id,
-      brand_id: brandId,
-      module: question.module,
-      value,
-      value_type: question.question_type,
-      status: 'approved',
-      classification: question.sensitivity as Audience,
-      publication: 'unpublished',
-      source: { kind: 'interview', answer_ids: [answer.answer_id], reference_ids: [], citation_paths: ['brand/instance/approved-facts.yaml'], observed_at: answer.last_updated },
-      confidence: answer.confidence ?? null,
-      assumptions: [],
-      owner: null,
-      reviewer_id: answer.reviewed_by,
-      approved_at: answer.last_updated,
-      version,
-      revision_hash: null,
-      review_due: null,
-      related_ids: question.related_ids,
-      private_ref: answer.private_ref ?? null,
-    }
-    fact.revision_hash = `${question.id}:${version}`
-    facts[question.id] = fact
-    writeFacts(this.root, 'approved', facts)
-  }
-
-  publishFact(questionId: string, proof?: string): StepResult {
-    if (!approvalProofMatches(this.root, proof)) return { kind: 'error', message: 'Publication requires the human proof. Visibility public is not publication.' }
-    const reviewer = verifiedHumanContext(this.config().brand.slug, 'owner')
-    if (!reviewer || !authorize(reviewer, { brand_id: this.config().brand.slug, classification: 'public', status: 'approved', publication: 'unpublished' }, 'approve').allow) {
-      return { kind: 'error', message: 'Publication refused.' }
-    }
-    const facts = readFacts(this.root, 'approved', this.config().brand.slug)
-    const fact = facts[questionId]
-    if (!fact || fact.status !== 'approved' || fact.classification !== 'public') {
-      return { kind: 'error', message: 'Only an approved public fact can be published.' }
-    }
-    fact.publication = 'published'
-    writeFacts(this.root, 'approved', facts)
-    const policyFile = this.file('brand', 'publication-policy.yaml')
-    const policy = exists(policyFile)
-      ? readYaml<{ schema_version: number; approved_fact_ids?: string[] }>(policyFile)
-      : { schema_version: 1, approved_fact_ids: [] as string[] }
-    policy.approved_fact_ids = policy.approved_fact_ids ?? []
-    if (!policy.approved_fact_ids.includes(questionId)) policy.approved_fact_ids.push(questionId)
-    writeYaml(policyFile, policy)
-    return { kind: 'recorded', questionId, status: 'approved', message: 'Fact published to the public projection.' }
-  }
-
-  private withdrawApproval(questionId: string): void {
-    const file = this.file('brand', 'instance', 'approved-facts.yaml')
-    if (!exists(file)) return
-    const doc = readYaml<{ schema_version: number; facts: Record<string, unknown> }>(file)
-    delete doc.facts[questionId]
     writeYaml(file, doc)
   }
 
@@ -855,10 +798,13 @@ export class InterviewEngine {
   }
 
   captureNaturalLanguage(text: string): StepResult {
-    const proposals = this.extractProposals(text)
-    const persian = extractPersianCandidates(text)
-    for (const item of persian) {
-      if (!proposals.some((proposal) => proposal.question_id === item.question_id)) proposals.push(item)
+    const proposals: PendingProposal[] = this.extractProposals(text)
+    // Free text in any configured language: the same deterministic rules as `--assist` without a model.
+    // Restricted questions and questions that do not apply are never targets.
+    const allowed = new Set(this.questions().filter((question) => question.sensitivity !== 'restricted' && this.applicability(question) === null).map((question) => question.id))
+    for (const item of extractByRules(text, { allowed }).proposals) {
+      if (proposals.some((proposal) => proposal.question_id === item.question_id)) continue
+      proposals.push({ question_id: item.question_id, value: item.value ?? '', quotation: item.quotation, state: item.state, confidence: item.confidence })
     }
     if (proposals.length === 0) {
       return {
@@ -869,15 +815,15 @@ export class InterviewEngine {
     const session = this.session()
     session.pending_proposals = proposals
     this.saveSession(session)
-    const lines = proposals.map((item, index) => `${index + 1}. ${item.question_id} ← “${item.quotation}”`)
+    const lines = proposals.map((item, index) => `${index + 1}. ${item.question_id}${item.state && item.state !== 'proposed' ? ` [${item.state}]` : ''} ← “${item.quotation}”`)
     return {
       kind: 'info',
       message: `Proposed drafts, not approvals:\n${lines.join('\n')}\nReply "accept proposal 1" to save a draft. A human proof is still required to approve.`,
     }
   }
 
-  extractProposals(text: string): Array<{ question_id: string; value: string; quotation: string }> {
-    const proposals: Array<{ question_id: string; value: string; quotation: string }> = []
+  extractProposals(text: string): PendingProposal[] {
+    const proposals: PendingProposal[] = []
     for (const line of text.split(/\r?\n/)) {
       const match = line.match(/^\s*([^:]{2,80}):\s+(\S[\s\S]*)$/)
       if (!match) continue
@@ -896,6 +842,26 @@ export class InterviewEngine {
     if (!proposal) return { kind: 'error', message: 'No proposal with that number.' }
     const question = this.question(proposal.question_id)
     if (!question) return { kind: 'error', message: 'That proposal no longer matches a question.' }
+    if (proposal.state) {
+      if (question.sensitivity === 'restricted') return { kind: 'error', message: 'Restricted questions are answered directly, not from a note.' }
+      if (this.context().answers.get(question.id)?.status === 'approved') {
+        return { kind: 'error', questionId: question.id, message: `${question.id} is approved. Use change ${question.id}: <value> to propose a replacement.` }
+      }
+      const unresolved = proposal.state === 'unresolved'
+      const answer = this.recordProposal(question, unresolved ? null : proposal.value, {
+        state: proposal.state,
+        confidence: proposal.confidence ?? 0.5,
+        quotation: proposal.quotation,
+        sourceReference: 'note',
+        uncertainty:
+          proposal.state === 'tentative'
+            ? `Tentative: the owner described this as possible, not decided: “${proposal.quotation}”. Not a decision.`
+            : unresolved
+              ? `Unresolved: the owner said this is not decided yet: “${proposal.quotation}”. No value was invented.`
+              : `Extracted from the owner note: ${proposal.quotation}. Not approved.`,
+      })
+      return { kind: 'recorded', questionId: question.id, status: answer.status, message: `Saved as a ${proposal.state} ${unresolved ? 'marker' : 'draft'}. Quotation kept. Not approved.` }
+    }
     const result = this.record(question, proposal.value, {
       sourceType: 'owner',
       authority: 'unverified',
@@ -992,28 +958,26 @@ export class InterviewEngine {
         id: question.id,
         inner: fieldBlock(question, answers.get(question.id) ?? null, file),
       }))
-      fs.mkdirSync(path.dirname(file), { recursive: true })
-      fs.writeFileSync(file, renderDraftFile(file, blocks))
+      writeAtomic(file, renderDraftFile(file, blocks))
     }
   }
 }
 
-function questionCommand(lower: string): boolean {
-  return ['skip', 'unknown', 'not relevant', 'decide later', 'later', 'help', 'exit', 'review', 'status'].includes(lower)
+const DISPOSITIONS: Array<{ words: string[]; status: Status; uncertainty: string }> = [
+  { words: ['unknown', "i don't know", 'idk'], status: 'unknown', uncertainty: 'Owner does not know. No value was invented.' },
+  { words: ['skip'], status: 'skipped', uncertainty: 'Owner skipped. Field stays unresolved.' },
+  { words: ['not relevant', 'n/a', 'na'], status: 'not_applicable', uncertainty: 'Owner marked this question not applicable.' },
+]
+
+/** `unknown`, `skip` and `n/a` (and their fa/tr aliases) mark a disposition. They are never stored as values. */
+export function dispositionFor(raw: string): { status: Status; uncertainty: string } | null {
+  const lower = normalizeCommand(raw).trim().toLowerCase()
+  const match = DISPOSITIONS.find((item) => item.words.includes(lower))
+  return match ? { status: match.status, uncertainty: match.uncertainty } : null
 }
 
-function extractPersianCandidates(text: string): Array<{ question_id: string; value: string; quotation: string }> {
-  const found: Array<{ question_id: string; value: string; quotation: string }> = []
-  if (text.includes('دانشجو')) {
-    found.push({ question_id: 'business.customer.primary_segment', value: 'students', quotation: text })
-  }
-  if (/B2B|بی‌تو‌بی|بیزنس/i.test(text)) {
-    found.push({ question_id: 'business.sales.b2b_packaging', value: 'tentative B2B expansion — not approved', quotation: text })
-  }
-  if (text.includes('قیمت') && text.includes('نیست')) {
-    found.push({ question_id: 'business.sales.pricing', value: 'unknown', quotation: text })
-  }
-  return found
+function toStep(step: ApprovalStep): StepResult {
+  return { kind: step.kind, message: step.message, questionId: step.questionId, status: step.status }
 }
 
 function formatImpact(impact: ImpactReport): string {
@@ -1024,38 +988,6 @@ function formatImpact(impact: ImpactReport): string {
     `Linked questions: ${impact.impactedQuestions.join(', ') || 'none'}`,
     impact.requiresConfirmation ? 'Confirmation required before the approved value changes.' : 'No approval is held on this field.',
   ].join('\n')
-}
-
-function normalizeAnswer(
-  question: FieldQuestion,
-  rawValue: string,
-): { ok: true; value: string | number | boolean } | { ok: false; message: string } {
-  const value = rawValue.trim()
-  if (!value) return { ok: false, message: 'Empty answer. Use unknown, skip, or decide later.' }
-  if (question.question_type === 'boolean') {
-    const token = value.toLowerCase()
-    if (['yes', 'y', 'true', 'بله', 'evet'].includes(token)) return { ok: true, value: 'yes' }
-    if (['no', 'n', 'false', 'خیر', 'hayır', 'hayir'].includes(token)) return { ok: true, value: 'no' }
-    return { ok: false, message: 'Answer yes or no. Or say unknown.' }
-  }
-  if (question.question_type === 'single_choice') {
-    const match = question.options?.find((option) => option.toLowerCase() === value.toLowerCase())
-    if (!match) return { ok: false, message: `Choose one of: ${(question.options ?? []).join(', ')}` }
-    return { ok: true, value: match }
-  }
-  if (question.question_type === 'number') {
-    const parsed = Number(value)
-    if (!Number.isFinite(parsed)) return { ok: false, message: 'Enter a number, or say unknown.' }
-    return { ok: true, value: parsed }
-  }
-  if (question.question_type === 'url') {
-    if (!/^https?:\/\//.test(value)) return { ok: false, message: 'Enter an http(s) URL, or say none is not available for this field — use unknown.' }
-    return { ok: true, value }
-  }
-  if (question.validation?.min_length && value.length < question.validation.min_length) {
-    return { ok: false, message: `Answer must be at least ${question.validation.min_length} characters.` }
-  }
-  return { ok: true, value }
 }
 
 export function assertSlug(slug: string): void {
@@ -1082,6 +1014,8 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   config.brand.website = input.website ?? null
   config.brand.default_locale = input.language
   config.brand.supported_locales = input.languages
+  // A profile without a file in brand/interview/profiles/ is a label only and keeps the full question
+  // bank; brand:validate warns about it so a typo does not go unnoticed.
   config.brand.profile = input.profile ?? 'universal'
   config.brand.publish_docs = input.publish
   config.brand.initialized = true
@@ -1096,6 +1030,7 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   writeYaml(path.join(root, 'brand', 'interview', 'answer-ledger.yaml'), { schema_version: 1, records: [] })
   writeYaml(path.join(root, 'brand', 'interview', 'contradictions.yaml'), { schema_version: 1, derived: true, items: [] })
   writeYaml(path.join(root, 'brand', 'interview', 'evidence-index.yaml'), { schema_version: 1, items: [] })
+  writeYaml(path.join(root, 'brand', 'interview', 'intake-log.yaml'), { schema_version: 1, batches: [] })
   writeYaml(path.join(root, 'brand', 'instance', 'draft-facts.yaml'), { schema_version: 1, facts: {} })
   writeYaml(path.join(root, 'brand', 'instance', 'approved-facts.yaml'), { schema_version: 1, facts: {} })
   // Never inherit publication grants when initializing a new brand instance.
@@ -1108,35 +1043,6 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   return config
 }
 
-interface Proposal {
-  id: string
-  question_id: string
-  expected_version: number
-  status: 'pending' | 'approved'
-  proposed_value: string | null
-  private_ref: string | null
-}
-
-function proposalFile(root: string): string {
-  return path.join(root, 'brand', '.private', 'proposals.json')
-}
-
-function readProposals(root: string): Proposal[] {
-  const file = proposalFile(root)
-  if (!fs.existsSync(file)) return []
-  return (JSON.parse(fs.readFileSync(file, 'utf8')) as { proposals: Proposal[] }).proposals
-}
-
-function writeProposals(root: string, proposals: Proposal[]): void {
-  writeAtomic(proposalFile(root), `${JSON.stringify({ proposals })}\n`)
-}
-
-function readApprovedMap(root: string): Record<string, { version?: number; value?: unknown }> {
-  const file = path.join(root, 'brand', 'instance', 'approved-facts.yaml')
-  if (!fs.existsSync(file)) return {}
-  return readYaml<{ facts: Record<string, { version?: number; value?: unknown }> }>(file).facts ?? {}
-}
-
 export function syncManifest(root: string, config: BrandConfig): void {
   const file = path.join(root, 'brand', 'brand-manifest.json')
   const current = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>) : {}
@@ -1144,7 +1050,7 @@ export function syncManifest(root: string, config: BrandConfig): void {
   current.slug = config.brand.slug
   current.publish_docs = config.brand.publish_docs
   current.status = config.brand.status
-  fs.writeFileSync(file, `${JSON.stringify(current, null, 2)}\n`)
+  writeAtomic(file, `${JSON.stringify(current, null, 2)}\n`)
 }
 
 export function upgradeCore(root: string): { version: string; preserved: true } {

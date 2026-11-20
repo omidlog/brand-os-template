@@ -22,7 +22,7 @@ export default function MascotPage(): React.ReactElement {
   return (
     <Layout title="Mascot catalog" description="Draft mascot state catalog. No approved artwork.">
       <main className="container" style={{ padding: '2rem 0 3rem' }}>
-        <p className="badge">draft</p>
+        <p className="badge">lifecycle: defined → pending → created → reviewed → approved → published</p>
         <h1>Mascot library</h1>
         {catalog.enabled ? (
           <p>90 proposed states. Previews are empty on purpose. The frame in the asset gallery is not a character.</p>
@@ -70,7 +70,7 @@ export default function MascotPage(): React.ReactElement {
                 </td>
                 <td>{state.name}</td>
                 <td>{state.category}</td>
-                <td>{state.mvp ? 'draft · MVP' : 'draft · backlog'}</td>
+                <td>{`${String(state.status ?? 'defined')} · ${state.mvp ? 'MVP' : 'backlog'}`}</td>
                 <td>No approved artwork</td>
               </tr>
             ))}

@@ -17,7 +17,7 @@ Primary audience, offer, and the value the owner will defend. If any is missing,
 2. Quote the fact id, version, and revision hash for every claim.
 3. Separate hypothesis from approved fact.
 4. List impacts on verbal identity and marketing before proposing a change.
-5. Stop. A human runs `npm run brand:approve -- --question <id> --proof <secret>`.
+5. Stop. Hand the ids to a human, who reviews with `npm run brand:review -- --ids <id>` and approves with `npm run brand:approve -- --ids <id>` (the proof comes from a hidden prompt, never from you).
 
 ## Deliverable
 A short memo: approved facts, missing facts, one proposed sentence marked draft, sources.

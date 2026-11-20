@@ -567,7 +567,7 @@ Do not rely on manually editing dozens of hardcoded brand names. Enable a brand 
 3. Ask the highest-value unanswered question next, based on dependencies, uncertainty, priority, effect on other documents, and user's current objective (e.g., build a launch campaign).
 4. Explain briefly **why** a difficult question matters and provide an industry-appropriate example, clearly labeled `example`.
 5. Support `I don't know`, `not relevant`, `decide later`, `estimate`, `skip`, `show examples`, `suggest options`, `import existing`, `go back`, and `change earlier answer`.
-6. Keep conversational answers in the user's chosen language; preserve canonical terminology and language tags. Support Persian (fa-IR RTL), English (en), Turkish (tr-TR) at minimum in the interface where practical, without auto-translating official brand statements unless approved.
+6. Keep conversational answers in the user's chosen language; preserve canonical terminology and language tags. Support English (en) as the default interface language, with Persian (fa-IR, RTL) and Turkish (tr-TR) as equal optional locales supplied as locale data, where practical, without auto-translating official brand statements unless approved.
 7. Use adaptive follow-ups: for an education app, ask learning model, languages, progression and mascot use; for SaaS, ask product tiers, adoption and retention; for agencies, ask service packages and pipeline. Do not assume Pilito/Fiko details belong to every brand.
 8. If the answer is vague, ask only the minimum clarification needed; otherwise save as draft with explicit uncertainty, not as an assumed truth.
 9. Allow importing web pages, PDFs, existing company decks, Figma links or docs only when supported/authorized; extract with source citations, capture date, confidentiality and review status. External web facts require citation and freshness; never hallucinate evidence.
@@ -598,7 +598,9 @@ module: business-os/01-company-business-plan
 field_path: customer.primary_segment
 prompt:
   en: "Who is the primary customer for this business?"
+  # Localized prompts (fa, tr) are optional locale data next to the English base text.
   fa: "مشتری اصلی این کسب‌وکار چه کسی است؟"
+  tr: "Bu işletmenin birincil müşterisi kimdir?"
 why_it_matters: "Positioning, product requirements, marketing and brand messaging depend on this."
 question_type: long_text
 required_when: "business.stage != 'unknown'"

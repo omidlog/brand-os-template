@@ -13,6 +13,7 @@ brand/exports/
 brand/.private/
 brand/restricted/facts.yaml
 brand/restricted/drafts/
+brand/restricted/finance/
 brand/generated/artifacts/
 .idea/
 .vscode/

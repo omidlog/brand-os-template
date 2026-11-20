@@ -56,3 +56,6 @@ links:
   analytics: null
   finance_system: null
   support: null
+llm:
+  provider: none
+  model: null

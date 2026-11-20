@@ -61,5 +61,9 @@ export function templateConfig(): BrandConfig {
       finance_system: null,
       support: null,
     },
+    llm: {
+      provider: 'none',
+      model: null,
+    },
   }
 }

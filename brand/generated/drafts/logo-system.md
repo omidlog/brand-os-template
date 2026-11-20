@@ -47,7 +47,7 @@ TBD
 <!-- field:brand.logo.clear_space end -->
 
 <!-- field:brand.logo.min_size start -->
-### Minimum size
+### Minimum size and clear space
 
 - Question: `brand.logo.min_size`
 - Field: `brand.logo.min_size`

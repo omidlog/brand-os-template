@@ -79,11 +79,14 @@ const config: Config = {
       title: features.brandName,
       items: [
         { to: '/docs/start/introduction', label: 'Docs', position: 'left' },
+        { to: '/brand-book', label: 'Brand Book', position: 'left' },
         { to: '/tokens', label: 'Tokens', position: 'left' },
         ...(features.mascot ? [{ to: '/mascot', label: 'Mascot', position: 'left' as const }] : []),
         { to: '/assets', label: 'Assets', position: 'left' },
         { to: '/components', label: 'Components', position: 'left' },
         { to: '/interview', label: 'Interview', position: 'left' },
+        // The review dashboard has data only in the internal build (see scripts/prepare-docs.ts).
+        ...(features.audience === 'internal' ? [{ to: '/dashboard', label: 'Dashboard', position: 'left' as const }] : []),
         { type: 'localeDropdown', position: 'right' },
       ],
     },

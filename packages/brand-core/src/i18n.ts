@@ -6,7 +6,7 @@ export const UI: Record<Locale, Record<string, string>> = {
     why: 'Why this matters',
     example: 'Example (not your brand)',
     commands:
-      'Commands: skip · unknown · not relevant · decide later · estimate: … · show examples · suggest options · accept 1 · go back · change <id>: <value> · review · approve <id> · status · import existing: <url> · lang fa|tr|en · help · exit',
+      'Commands: skip · unknown · not relevant · decide later · estimate: … · show examples · suggest options · accept 1 · go back · change <id>: <value> · review · approve <id> · status · import existing: <url> · lang en|fa|tr · help · exit',
     noMore: 'No further eligible questions. Run brand:status for coverage, or brand:review for a recap.',
     recorded: 'Recorded as {status}. This is not an approved rule.',
     unknown: 'Recorded as unknown. No fact was invented.',
@@ -95,4 +95,21 @@ export function normalizeCommand(raw: string): string {
   const trimmed = raw.trim()
   const lower = trimmed.toLowerCase()
   return COMMAND_ALIASES[trimmed] ?? COMMAND_ALIASES[lower] ?? trimmed
+}
+
+/** Yes/no words per locale. English is the base; fa and tr are locale data with equal standing. */
+export const BOOLEAN_WORDS: Record<Locale, { yes: string[]; no: string[] }> = {
+  en: { yes: ['yes', 'y', 'true'], no: ['no', 'n', 'false'] },
+  fa: { yes: ['بله', 'آره'], no: ['خیر', 'نه'] },
+  tr: { yes: ['evet'], no: ['hayır', 'hayir'] },
+}
+
+/** 'yes' | 'no' for a yes/no word in any supported locale, otherwise null. */
+export function booleanWord(raw: string): 'yes' | 'no' | null {
+  const token = raw.trim().toLowerCase()
+  for (const words of Object.values(BOOLEAN_WORDS)) {
+    if (words.yes.includes(token)) return 'yes'
+    if (words.no.includes(token)) return 'no'
+  }
+  return null
 }

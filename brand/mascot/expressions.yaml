@@ -17,7 +17,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: &a1
       - Wait for an approved master tied to this id before using it in product or marketing.
       - Keep the pose readable at the smallest surface listed.
@@ -55,7 +55,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -88,7 +88,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -120,7 +120,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -153,7 +153,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -186,7 +186,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -218,7 +218,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -250,7 +250,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -283,7 +283,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -316,7 +316,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -348,7 +348,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -380,7 +380,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -413,7 +413,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -446,7 +446,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -479,7 +479,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -511,7 +511,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -543,7 +543,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -575,7 +575,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -608,7 +608,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:
@@ -641,7 +641,7 @@ states:
     animation_possible: true
     source_assets: []
     preview: null
-    status: draft
+    status: defined
     do: *a1
     dont: *a2
     tags:

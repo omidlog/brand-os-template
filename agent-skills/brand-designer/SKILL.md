@@ -16,7 +16,7 @@ Approved token revision and an approved asset id. Missing files stay missing.
 1. Call `get_brand_tokens`. If the list is empty, do not design a palette.
 2. Call `get_asset_metadata` with the asset id. If status is missing, do not draw a download link.
 3. Cite contrast pairs from the token compiler. Do not claim a pair passed if the compiler reported an error.
-4. Hand the proposal to a human. Do not write `approvals.yaml`.
+4. Hand the proposal to a human. Do not write `approvals.yaml` and do not run `brand:tokens:approve` or `brand:tokens:publish`; those are human steps. You may run `npm run brand:tokens:generate -- --dry-run --json` to show which approved answers would become draft tokens.
 
 ## Deliverable
 A usage note with token ids, hashes, asset ids, and a missing list.

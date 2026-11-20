@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -25,18 +26,45 @@ export interface ContrastResult extends ContrastPair {
 export interface CompiledTokens {
   css: string
   typescript: string
-  flat: Record<string, { type: string; value: unknown; hex?: string; description?: string; theme?: string }>
+  flat: Record<string, FlatToken>
   contrast: ContrastResult[]
   errors: string[]
 }
 
-interface TokenNode {
+export interface FlatToken {
+  type: string
+  value: unknown
+  hex?: string
+  description?: string
+  theme?: string
+  /** `base` for the template files in brand/tokens, `generated` for brand/tokens/generated. */
+  source: 'base' | 'generated'
+  file: string
+  /** Approved fact the generated token came from. */
+  sourceFact?: string
+  sourceVersion?: number
+}
+
+export interface BrandOsExtension {
+  example?: boolean
+  status?: string
+  theme?: string
+  reducedMotion?: string
+  generated?: boolean
+  source_fact?: string
+  source_version?: number
+}
+
+export interface TokenNode {
   $value?: unknown
   $type?: string
   $description?: string
-  $extensions?: { 'brand.os'?: { example?: boolean; status?: string; theme?: string; reducedMotion?: string } }
+  $extensions?: { 'brand.os'?: BrandOsExtension }
   [key: string]: unknown
 }
+
+/** Directory for draft tokens generated from approved structured answers. Loaded after the base files. */
+export const GENERATED_TOKEN_DIR = path.join('brand', 'tokens', 'generated')
 
 const TOKEN_FILES = [
   'color.tokens.json',
@@ -57,7 +85,15 @@ export function compileTokens(repoRoot: string): CompiledTokens {
       continue
     }
     const doc = JSON.parse(fs.readFileSync(full, 'utf8')) as TokenNode
-    walk(doc, [], undefined, flat, errors, file)
+    walk(doc, [], undefined, flat, errors, file, 'base')
+  }
+  // Generated drafts override a base EXAMPLE token with the same id. Their approval is still checked by hash.
+  const generatedDir = path.join(repoRoot, GENERATED_TOKEN_DIR)
+  if (fs.existsSync(generatedDir)) {
+    for (const file of fs.readdirSync(generatedDir).filter((name) => name.endsWith('.tokens.json')).sort()) {
+      const doc = JSON.parse(fs.readFileSync(path.join(generatedDir, file), 'utf8')) as TokenNode
+      walk(doc, [], undefined, flat, errors, `generated/${file}`, 'generated')
+    }
   }
   resolveAliases(flat, errors)
   const contrast = loadContrast(repoRoot, flat, errors)
@@ -77,24 +113,30 @@ function walk(
   flat: CompiledTokens['flat'],
   errors: string[],
   file: string,
+  source: FlatToken['source'],
 ): void {
   const type = node.$type ?? inheritedType
   if (node.$value !== undefined) {
     if (!type) errors.push(`${file}: ${prefix.join('.')} has $value without $type`)
     const id = prefix.join('.')
     const hex = type === 'color' ? colorHex(node.$value, id, errors) : undefined
+    const ext = node.$extensions?.['brand.os']
     flat[id] = {
       type: type ?? 'unknown',
       value: node.$value,
       hex,
       description: node.$description,
-      theme: node.$extensions?.['brand.os']?.theme,
+      theme: ext?.theme,
+      source,
+      file,
+      ...(ext?.source_fact ? { sourceFact: ext.source_fact } : {}),
+      ...(typeof ext?.source_version === 'number' ? { sourceVersion: ext.source_version } : {}),
     }
     return
   }
   for (const [key, value] of Object.entries(node)) {
     if (key.startsWith('$')) continue
-    if (value && typeof value === 'object') walk(value as TokenNode, [...prefix, key], type, flat, errors, file)
+    if (value && typeof value === 'object') walk(value as TokenNode, [...prefix, key], type, flat, errors, file, source)
   }
 }
 
@@ -160,6 +202,16 @@ function loadContrast(repoRoot: string, flat: CompiledTokens['flat'], errors: st
     if (ratio < pair.min) errors.push(`Contrast pair ${pair.id} is ${ratio.toFixed(2)} and minimum is ${pair.min}`)
     return { ...pair, ratio, pass: ratio >= pair.min, fgHex: fg, bgHex: bg }
   })
+}
+
+/** The string an approval hash is taken over: the hex for colors, the JSON value otherwise. */
+export function tokenDigestBasis(token: Pick<FlatToken, 'hex' | 'value'>): string {
+  return String(token.hex ?? JSON.stringify(token.value))
+}
+
+/** sha256 of the token's digest basis. `brand/tokens/approvals.yaml` stores this as value_sha256. */
+export function tokenDigest(token: Pick<FlatToken, 'hex' | 'value'>): string {
+  return crypto.createHash('sha256').update(tokenDigestBasis(token)).digest('hex')
 }
 
 export function contrastRatio(foreground: string, background: string): number {

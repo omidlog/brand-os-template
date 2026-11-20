@@ -47,7 +47,9 @@ export function fq(input: FqInput): FieldQuestion {
           ? 'number'
           : type === 'url'
             ? 'url'
-            : 'non_empty')
+            : type === 'color' || type === 'font' || type === 'logo_spec' || type === 'voice_pairs'
+              ? 'structured'
+              : 'non_empty')
   return {
     id: input.id,
     module: input.module,

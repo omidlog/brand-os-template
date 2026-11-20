@@ -90,9 +90,13 @@ Missing — not invented.
 
 Missing — not invented.
 
+## Voice do and don’t
+
+Missing — not invented.
+
 ## Coverage
 
-0 cited fields. 7 missing.
+0 cited fields. 8 missing.
 
 
 
@@ -115,7 +119,7 @@ Missing — not invented.
 
 Missing — not invented.
 
-## Minimum size
+## Minimum size and clear space
 
 Missing — not invented.
 
@@ -189,7 +193,7 @@ Missing — not invented.
 
 Missing — not invented.
 
-## Scale
+## Type roles and scale
 
 Missing — not invented.
 

@@ -5,10 +5,14 @@ import { validateAssets } from '@brand-os/asset-catalog'
 import { compileTokens } from '@brand-os/design-tokens'
 import { allQuestions } from './content/index.js'
 import { buildMascotCatalog, catalogCounts } from './content/mascot-catalog.js'
+import { validateMascotLifecycle } from './mascot-lifecycle.js'
 import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
-import type { FieldQuestion } from './types.js'
+import { approvalGrantErrors } from './permissions.js'
+import { profileErrors, profileExists } from './profiles.js'
+import { llmConfigErrors } from './llm/provider.js'
+import type { BrandConfig, FieldQuestion } from './types.js'
 
 export interface ValidationReport {
   ok: boolean
@@ -39,6 +43,15 @@ export function validateRepo(root: string): ValidationReport {
   validateQuestionFiles(questions, errors)
   validateRegistry(root, questions, errors)
   validateConditions(questions, errors)
+  errors.push(...profileErrors(root, questions))
+  const configFile = path.join(root, 'brand', 'brand.config.yaml')
+  if (fs.existsSync(configFile)) {
+    const config = readYaml<BrandConfig>(configFile)
+    if (!profileExists(root, config.brand?.profile)) {
+      warnings.push(`brand.config.yaml brand.profile ${config.brand?.profile} has no file in brand/interview/profiles/, so the full question bank is used`)
+    }
+    errors.push(...llmConfigErrors(config))
+  }
   validateMascot(root, errors)
   errors.push(...validateAssets(root))
   const compiled = compileTokens(root)
@@ -93,6 +106,7 @@ function validateQuestionFiles(questions: FieldQuestion[], errors: string[]): vo
         errors.push(`${question.id} has an unsafe output path ${output}`)
       }
     }
+    errors.push(...approvalGrantErrors(question))
     for (const dependency of question.depends_on) {
       if (!questions.some((item) => item.id === dependency)) errors.push(`${question.id} depends on missing ${dependency}`)
     }
@@ -155,6 +169,7 @@ function validateMascot(root: string, errors: string[]): void {
     if (!storedIds.has(state.id)) errors.push(`Catalog file is missing ${state.id}`)
   }
   if (stored.states.length !== 90) errors.push(`Catalog file has ${stored.states.length} states, expected 90`)
+  errors.push(...validateMascotLifecycle(root, stored.states as unknown as Array<Record<string, unknown>>))
   const stages = readYaml<{ stages: Array<{ id?: string; order?: number }> }>(path.join(root, 'brand', 'mascot', 'stages.yaml'))
   const stageIds = stages.stages.map((stage) => stage.id).filter((id): id is string => Boolean(id))
   if (stageIds.length !== stages.stages.length) errors.push('Every mascot stage needs an id')

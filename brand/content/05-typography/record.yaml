@@ -28,7 +28,7 @@ fields:
     sensitivity: internal
     notes: "TBD — no approved brand facts in the template"
   brand.type.scale:
-    label: "Scale"
+    label: "Type roles and scale"
     value: null
     status: unanswered
     sensitivity: internal

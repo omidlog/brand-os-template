@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { templateConfig } from './config.js'
 import { allModules, allQuestions } from './content/index.js'
+import { STARTER_PROFILES } from './content/profiles.js'
 import { buildMascotCatalog, CANONICAL_ANGLES, catalogCounts, CORE_MOTIONS, EXAMPLE_STAGES } from './content/mascot-catalog.js'
 import { renderIntroduction, renderModulePage, renderRecord } from './content/render.js'
 import { emptySession, InterviewEngine } from './engine.js'
@@ -95,6 +96,7 @@ export function writeStarterWorkspace(root: string): void {
     ...question.related_ids.map((related) => ({ from: question.id, to: related, relation: 'related' })),
   ])
   putYaml(path.join(root, 'brand', 'interview', 'knowledge-graph.yaml'), { schema_version: 1, edges })
+  for (const profile of STARTER_PROFILES) putYaml(path.join(root, 'brand', 'interview', 'profiles', `${profile.id}.yaml`), profile)
 
   for (const module of allModules()) {
     putText(path.join(root, module.dir, 'overview.md'), renderModulePage(module, questions))

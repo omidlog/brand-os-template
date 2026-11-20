@@ -6,8 +6,10 @@
 
 ```bash
 npm install
-npm run brand:init -- --name "Your brand" --slug your-brand --industry "TBD" --language en --languages en,fa,tr --mascot false --gamification false --publish private --yes
+npm run brand:init -- --name "Your brand" --slug your-brand --industry "TBD" --mascot false --gamification false --publish private --yes
 ```
+
+English is the default (`--language en --languages en`). To offer the optional Persian (RTL) and Turkish locales, add `--languages en,fa,tr`.
 
 4. Interview:
 

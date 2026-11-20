@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { parse } from 'yaml'
-import { applyInit, backupBrand, ensureApprovalSecret, getBrandStatus, getDesignComponent, getBrandTokens, InterviewEngine, migrateBrand, readPublicationPolicy, searchBrandDocs, writeStarterWorkspace } from '@brand-os/brand-core'
+import { applyInit, backupBrand, buildBusinessPlan, ensureApprovalSecret, readFacts, restoreBrand, getBrandStatus, getDesignComponent, getBrandTokens, InterviewEngine, migrateBrand, readPublicationPolicy, searchBrandDocs, writeStarterWorkspace } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import { prepareDocs } from '../scripts/prepare-docs.js'
 
@@ -91,4 +91,39 @@ test('unsafe SVG variants are rejected even without script elements', () => {
     fs.writeFileSync(file, svg)
     assert.equal(inspectAssetForPublication(root, `brand/assets/icons/${name}.svg`).ok, false)
   }
+})
+
+test('a backup includes migration history, so a restore undoes a half-written migration', () => {
+  const root = fixture()
+  migrateBrand(root)
+  const saved = backupBrand(root)
+  const history = fs.readFileSync(path.join(root, 'brand/migrations.yaml'), 'utf8')
+  const lock = fs.readFileSync(path.join(root, 'brand/engine.lock'), 'utf8')
+  assert.ok(saved.files.includes('brand/migrations.yaml'))
+  assert.ok(saved.files.includes('brand/engine.lock'))
+  fs.writeFileSync(path.join(root, 'brand/migrations.yaml'), 'schema_version: 1\napplied: {truncated\n')
+  fs.writeFileSync(path.join(root, 'brand/engine.lock'), '{')
+  assert.throws(() => migrateBrand(root))
+  restoreBrand(root, saved.directory)
+  assert.equal(fs.readFileSync(path.join(root, 'brand/migrations.yaml'), 'utf8'), history)
+  assert.equal(fs.readFileSync(path.join(root, 'brand/engine.lock'), 'utf8'), lock)
+  assert.doesNotThrow(() => migrateBrand(root))
+})
+
+test('an approved restricted fact is shown as approved and withheld in documents, not as missing', () => {
+  const root = fixture()
+  applyInit(root, { name: 'Withheld', slug: 'withheld-brand', industry: 'software', language: 'en', languages: ['en'], mascot: false, gamification: false, publish: 'private' })
+  const engine = new InterviewEngine(root)
+  assert.equal(engine.answerQuestion('business.finance.costs', 'RESTRICTED-DOC-CANARY').kind, 'recorded')
+  const result = engine.approvals().approveBatch({ ids: ['business.finance.costs'] }, ensureApprovalSecret(root))
+  assert.equal(result.approved, 1)
+  assert.equal(readFacts(root, 'approved', 'withheld-brand')['business.finance.costs']?.value, null)
+  const plan = buildBusinessPlan(engine, 'internal')
+  const costs = plan.sections.flatMap((section) => section.items).find((item) => item.id === 'business.finance.costs')
+  assert.equal(costs?.tag, 'approved')
+  assert.equal(costs?.withheld, true)
+  assert.equal(costs?.value, null)
+  assert.equal(JSON.stringify(plan).includes('RESTRICTED-DOC-CANARY'), false)
+  const publicPlan = buildBusinessPlan(engine, 'public')
+  assert.equal(publicPlan.sections.flatMap((section) => section.items).find((item) => item.id === 'business.finance.costs')?.tag, 'missing')
 })

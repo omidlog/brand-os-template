@@ -2,9 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
-import { compileTokens } from '@brand-os/design-tokens'
-import crypto from 'node:crypto'
+import { allModules, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
+import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import type { BrandConfig } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
 
@@ -57,6 +56,8 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
     'apps/docs/src/data/status.json',
     'apps/docs/src/data/catalog.json',
     'apps/docs/src/data/assets.json',
+    'apps/docs/src/data/brand-book.json',
+    'apps/docs/src/data/dashboard.json',
     'apps/docs/static/llms.txt',
     'apps/docs/static/llms-full.txt',
     'llms.txt',
@@ -201,7 +202,7 @@ function writePublicTokens(ctx: PrepareContext): void {
   const colors = Object.entries(compiled.flat).filter(([id, token]) => {
     if (!allowed.has(id) || token.type !== 'color' || !token.hex) return false
     const hash = approvals[id]?.value_sha256
-    return typeof hash === 'string' && hash === crypto.createHash('sha256').update(token.hex).digest('hex')
+    return typeof hash === 'string' && hash === tokenDigest(token)
   }).map(([id, token]) => ({ id, hex: token.hex!, description: token.description ?? '', theme: token.theme ?? 'both' }))
   const ids = new Set(colors.map((color) => color.id))
   const contrast = compiled.contrast.filter((pair) => ids.has(pair.fg) && ids.has(pair.bg))
@@ -262,7 +263,7 @@ function writeData(ctx: PrepareContext): void {
     states: Array<Record<string, unknown>>
   }
   const catalog = (ctx.mascot ? catalogDoc.states : [])
-    .filter((state) => ctx.audience !== 'public' || (state.status === 'approved' && pageIsPublic(ctx.root, String(state.id))))
+    .filter((state) => ctx.audience !== 'public' || ((state.status === 'approved' || state.status === 'published') && pageIsPublic(ctx.root, String(state.id))))
     .map((state) => {
       const sources = Array.isArray(state.source_assets) ? state.source_assets.filter((item): item is string => typeof item === 'string') : []
       const preview = sources.find((assetPath) => {
@@ -303,6 +304,11 @@ function writeData(ctx: PrepareContext): void {
   fs.writeFileSync(path.join(dataDir, 'status.json'), `${JSON.stringify(status, null, 2)}\n`)
   fs.writeFileSync(path.join(dataDir, 'catalog.json'), `${JSON.stringify({ states: catalog, enabled: ctx.mascot }, null, 2)}\n`)
   fs.writeFileSync(path.join(dataDir, 'assets.json'), `${JSON.stringify({ assets }, null, 2)}\n`)
+  // Audience projection: a public build only ever receives approved+published items and missing placeholders.
+  fs.writeFileSync(path.join(dataDir, 'brand-book.json'), `${JSON.stringify(buildBrandBook(ctx.engine, ctx.audience), null, 2)}\n`)
+  // The review dashboard is internal-only. ctx.audience can only be 'internal' after the
+  // publish_docs check in prepareDocs; a public build writes a stub with no brand data.
+  fs.writeFileSync(path.join(dataDir, 'dashboard.json'), `${JSON.stringify(buildDashboard(ctx.engine, ctx.audience), null, 2)}\n`)
   fs.mkdirSync(path.join(ctx.root, 'apps', 'docs', 'generated'), { recursive: true })
   fs.writeFileSync(
     path.join(ctx.root, 'apps', 'docs', 'generated', 'features.json'),

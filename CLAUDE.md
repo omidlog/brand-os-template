@@ -11,6 +11,7 @@ Start with:
 
 Skills for specific work:
 
+- `agent-skills/brand-interviewer/SKILL.md`
 - `agent-skills/brand-designer/SKILL.md`
 - `agent-skills/mascot-creator/SKILL.md`
 - `agent-skills/ui-designer/SKILL.md`

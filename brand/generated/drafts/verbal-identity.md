@@ -153,3 +153,21 @@ Value:
 
 TBD
 <!-- field:brand.verbal.microcopy end -->
+
+<!-- field:brand.verbal.voice_pairs start -->
+### Voice do and don’t
+
+- Question: `brand.verbal.voice_pairs`
+- Field: `brand.verbal.voice_pairs`
+- Status: unanswered
+- Visibility: internal
+- Authority: unverified
+- Source: none
+- Uncertainty: none
+- Updated: n/a
+- Answer id: n/a
+
+Value:
+
+TBD
+<!-- field:brand.verbal.voice_pairs end -->

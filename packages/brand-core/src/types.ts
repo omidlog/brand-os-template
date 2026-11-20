@@ -1,3 +1,4 @@
+import type { LlmConfig } from './llm/provider.js'
 export const STATUSES = [
   'not_started',
   'unanswered',
@@ -25,6 +26,11 @@ export const QUESTION_TYPES = [
   'boolean',
   'number',
   'url',
+  // Structured brand-core types. Stored as one canonical string; see structured.ts.
+  'color',
+  'font',
+  'logo_spec',
+  'voice_pairs',
 ] as const
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 
@@ -69,11 +75,13 @@ export interface FieldQuestion {
   priority: Priority
   order: number
   sensitivity: Visibility
+  /** Explicit approval grant. Preferred over the id-based guess in permissions.ts. Restricted questions must use `financial`. */
+  approval_grant?: 'financial' | 'visual' | 'public_copy' | 'canonical'
   language: Array<'en' | 'fa' | 'tr'>
   source_types: SourceType[]
   related_outputs: string[]
   related_ids: string[]
-  completion_rule: 'non_empty' | 'disposition' | 'one_of' | 'boolean' | 'number' | 'url'
+  completion_rule: 'non_empty' | 'disposition' | 'one_of' | 'boolean' | 'number' | 'url' | 'structured'
   allows_unknown: boolean
   required: boolean
   weight: number
@@ -131,6 +139,26 @@ export interface AnswerRecord {
   disposition_reason: string | null
   /** Opaque id in the gitignored encrypted store. Never a restricted value. */
   private_ref?: string | null
+  /** Set when the answer came from an interview proposal (agent or model extraction). */
+  proposal_state?: ProposalState | null
+}
+
+/**
+ * How certain an extracted interview proposal is.
+ * - proposed: the owner stated it; still a draft until a human approves it.
+ * - tentative: the owner described it as possible or future ("we may…"); never a decision.
+ * - unresolved: the owner said it is not decided; no value is stored.
+ */
+export const PROPOSAL_STATES = ['proposed', 'tentative', 'unresolved'] as const
+export type ProposalState = (typeof PROPOSAL_STATES)[number]
+
+/** A `note:` proposal waiting for `accept proposal N`. `state` is set when it came from free-text rules. */
+export interface PendingProposal {
+  question_id: string
+  value: string
+  quotation: string
+  state?: ProposalState
+  confidence?: number
 }
 
 export interface SessionState {
@@ -141,7 +169,7 @@ export interface SessionState {
   deferred: string[]
   pending_suggestions: string[]
   cursor_question_id: string | null
-  pending_proposals: Array<{ question_id: string; value: string; quotation: string }>
+  pending_proposals: PendingProposal[]
   started_at: string | null
   updated_at: string | null
   last_answer_id: string | null
@@ -181,6 +209,8 @@ export interface BrandConfig {
   }
   assets: { storage: string; lfs: boolean; bucket_url: string | null }
   links: Record<string, string | null>
+  /** Optional model provider for `brand:interview --assist`. Absent or provider none means no model. */
+  llm?: LlmConfig
 }
 
 export interface LedgerFile {

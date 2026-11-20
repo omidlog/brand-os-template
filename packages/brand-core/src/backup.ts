@@ -2,6 +2,8 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { migrateFactFiles } from './facts.js'
+import { migrateMascotCatalog, type MascotMigration } from './mascot-lifecycle.js'
+import { writeAtomic } from './fsutil.js'
 import { parse, stringify } from 'yaml'
 import { dataKey } from './private-store.js'
 
@@ -18,21 +20,14 @@ const RELATIVE = [
   'brand/brand.config.yaml',
   'brand/brand-manifest.json',
   'brand/publication-policy.yaml',
+  // Migration history and the engine lock, so a restore also undoes a half-applied migration.
+  'brand/migrations.yaml',
+  'brand/engine.lock',
   'brand/.private',
 ]
 
 export const ENGINE_VERSION = '0.3.0'
 export const RESET_CONFIRMATION = 'I understand this deletes interview state'
-
-export function writeAtomic(file: string, contents: string | Buffer): void {
-  fs.mkdirSync(path.dirname(file), { recursive: true })
-  const tmp = `${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`
-  fs.writeFileSync(tmp, contents)
-  const fd = fs.openSync(tmp, 'r+')
-  fs.fsyncSync(fd)
-  fs.closeSync(fd)
-  fs.renameSync(tmp, file)
-}
 
 function listFiles(root: string, relative: string): string[] {
   const full = path.join(root, relative)
@@ -68,9 +63,17 @@ export function backupBrand(root: string, destination?: string): { directory: st
   const body = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
   const checksum = crypto.createHash('sha256').update(body).digest('hex')
-  fs.writeFileSync(path.join(directory, 'backup.enc'), body)
-  fs.writeFileSync(path.join(directory, 'backup-manifest.json'), `${JSON.stringify({ files: files.length, checksum, iv: iv.toString('base64'), tag: tag.toString('base64'), encrypted: true }, null, 2)}\n`)
+  writeAtomic(path.join(directory, 'backup.enc'), body, { mode: 0o600 })
+  writeAtomic(path.join(directory, 'backup-manifest.json'), `${JSON.stringify({ files: files.length, checksum, iv: iv.toString('base64'), tag: tag.toString('base64'), encrypted: true }, null, 2)}\n`, { mode: 0o600 })
   return { directory, files, checksum }
+}
+
+function isRestorablePath(candidate: unknown): candidate is string {
+  if (typeof candidate !== 'string' || !candidate) return false
+  if (candidate.includes('\\') || path.posix.isAbsolute(candidate) || path.isAbsolute(candidate)) return false
+  if (candidate.split('/').some((segment) => segment === '..' || segment === '.' || segment === '')) return false
+  if (candidate.startsWith('brand/.private/backups/')) return false
+  return RELATIVE.some((prefix) => candidate === prefix || candidate.startsWith(`${prefix}/`))
 }
 
 export function restoreBrand(root: string, backupDir: string): { restored: string[] } {
@@ -83,18 +86,23 @@ export function restoreBrand(root: string, backupDir: string): { restored: strin
   const decipher = crypto.createDecipheriv('aes-256-gcm', dataKey(), Buffer.from(manifest.iv, 'base64'))
   decipher.setAuthTag(Buffer.from(manifest.tag, 'base64'))
   const payload = JSON.parse(Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8')) as { files: Array<{ path: string; data: string }> }
+  // Validate every path before writing anything, so an unsafe entry cannot leave a half-restored tree.
+  for (const file of payload.files) {
+    if (!isRestorablePath(file.path)) throw new Error(`Unsafe backup path ${String(file.path)}. Restore refused; nothing was written.`)
+  }
   const restored: string[] = []
   for (const file of payload.files) {
-    if (!file.path || file.path.includes('..') || path.isAbsolute(file.path) || !RELATIVE.some((prefix) => file.path === prefix || file.path.startsWith(`${prefix}/`)) || file.path.startsWith('brand/.private/backups/')) {
-      throw new Error(`Unsafe backup path ${file.path}`)
-    }
     writeAtomic(path.join(root, file.path), Buffer.from(file.data, 'base64'))
     restored.push(file.path)
   }
   return { restored }
 }
 
-export function migrateBrand(root: string): { from: string; to: string; content_rewritten: false } {
+/**
+ * Upgrades engine metadata, fact files and the mascot catalog lifecycle. Fact values and module prose are never
+ * rewritten (`content_rewritten: false`). The mascot migration only changes legacy `status` values.
+ */
+export function migrateBrand(root: string): { from: string; to: string; content_rewritten: false; mascot: MascotMigration } {
   const lockFile = path.join(root, 'brand', 'engine.lock')
   const current = fs.existsSync(lockFile) ? (JSON.parse(fs.readFileSync(lockFile, 'utf8')) as { version?: string }) : {}
   const from = current.version ?? '0.0.0'
@@ -107,20 +115,22 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   if (from !== ENGINE_VERSION && !log.applied.some((entry) => entry.id === id)) {
     log.applied.push({ id, touched: ['brand/engine.lock', 'brand/migrations.yaml'] })
   }
+  const mascot = migrateMascotCatalog(root)
+  if (mascot.files.length > 0) log.applied.push({ id: `mascot-lifecycle@${ENGINE_VERSION}`, touched: mascot.files })
   writeAtomic(logFile, stringify(log, { lineWidth: 100 }))
   writeAtomic(
     lockFile,
-    `${JSON.stringify({ version: ENGINE_VERSION, note: 'Migration rewrites fact files to canonical schema 2 and does not change fact values, catalogs, or assets.' }, null, 2)}\n`,
+    `${JSON.stringify({ version: ENGINE_VERSION, note: 'Migration rewrites fact files to canonical schema 2 and legacy mascot statuses to the lifecycle enum. It does not change fact values, module prose, or assets.' }, null, 2)}\n`,
   )
   const configFile = path.join(root, 'brand', 'brand.config.yaml')
   const brandId = fs.existsSync(configFile) && fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ? fs.readFileSync(configFile, 'utf8').match(/slug:\s*(\S+)/)?.[1] ?? 'unknown' : 'unknown'
   migrateFactFiles(root, brandId.replace(/['"]/g, ''))
   const gitignore = path.join(root, '.gitignore')
-  const required = ['brand/.private/', 'brand/restricted/facts.yaml', 'brand/restricted/drafts/', 'brand/generated/artifacts/']
+  const required = ['brand/.private/', 'brand/restricted/facts.yaml', 'brand/restricted/drafts/', 'brand/restricted/finance/', 'brand/generated/artifacts/']
   const text = fs.existsSync(gitignore) ? fs.readFileSync(gitignore, 'utf8') : ''
   const missing = required.filter((line) => !text.includes(line))
   if (missing.length > 0) fs.appendFileSync(gitignore, `${text.endsWith('\n') || text.length === 0 ? '' : '\n'}${missing.join('\n')}\n`)
-  return { from, to: ENGINE_VERSION, content_rewritten: false }
+  return { from, to: ENGINE_VERSION, content_rewritten: false, mascot }
 }
 
 export function resetInterviewState(root: string, confirmation: string): { backup: string } {
@@ -133,6 +143,7 @@ export function resetInterviewState(root: string, confirmation: string): { backu
     'brand/interview/session-state.yaml': 'schema_version: 1\nsession_id: null\nstatus: idle\nlocale: en\nhistory: []\ndeferred: []\npending_suggestions: []\ncursor_question_id: null\npending_proposals: []\nstarted_at: null\nupdated_at: null\nlast_answer_id: null\n',
     'brand/instance/draft-facts.yaml': 'schema_version: 1\nfacts: {}\n',
     'brand/instance/approved-facts.yaml': 'schema_version: 1\nfacts: {}\n',
+    'brand/interview/intake-log.yaml': 'schema_version: 1\nbatches: []\n',
   }
   for (const [relative, body] of Object.entries(writes)) writeAtomic(path.join(root, relative), body)
   return { backup: backup.directory }
