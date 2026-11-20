@@ -101,6 +101,20 @@ export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, 
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
 export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCES } from './token-generate.js'
 export type { GeneratedTokenResult, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult } from './token-generate.js'
+export {
+  BRAND_BOOK,
+  buildBrandBook,
+  buildBusinessPlan,
+  buildDocument,
+  buildMarketingPlan,
+  buildNamedDocument,
+  BUSINESS_PLAN,
+  DOCUMENT_KINDS,
+  ITEM_TAGS,
+  MARKETING_PLAN,
+  renderDocumentMarkdown,
+} from './documents/index.js'
+export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, DocumentSection, DocumentSpec, ItemTag, SectionSpec } from './documents/index.js'
 export { evaluateCondition } from './conditions.js'
 export { validateRepo } from './validate-repo.js'
 export { PROPOSAL_STATES } from './types.js'

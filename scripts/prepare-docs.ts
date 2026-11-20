@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
+import { allModules, buildBrandBook, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import type { BrandConfig } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -56,6 +56,7 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
     'apps/docs/src/data/status.json',
     'apps/docs/src/data/catalog.json',
     'apps/docs/src/data/assets.json',
+    'apps/docs/src/data/brand-book.json',
     'apps/docs/static/llms.txt',
     'apps/docs/static/llms-full.txt',
     'llms.txt',
@@ -302,6 +303,8 @@ function writeData(ctx: PrepareContext): void {
   fs.writeFileSync(path.join(dataDir, 'status.json'), `${JSON.stringify(status, null, 2)}\n`)
   fs.writeFileSync(path.join(dataDir, 'catalog.json'), `${JSON.stringify({ states: catalog, enabled: ctx.mascot }, null, 2)}\n`)
   fs.writeFileSync(path.join(dataDir, 'assets.json'), `${JSON.stringify({ assets }, null, 2)}\n`)
+  // Audience projection: a public build only ever receives approved+published items and missing placeholders.
+  fs.writeFileSync(path.join(dataDir, 'brand-book.json'), `${JSON.stringify(buildBrandBook(ctx.engine, ctx.audience), null, 2)}\n`)
   fs.mkdirSync(path.join(ctx.root, 'apps', 'docs', 'generated'), { recursive: true })
   fs.writeFileSync(
     path.join(ctx.root, 'apps', 'docs', 'generated', 'features.json'),

@@ -133,3 +133,136 @@ table {
   padding: 1rem;
   border-radius: 12px;
 }
+
+/* Brand Book. Logical properties only, so the page mirrors correctly in RTL locales. */
+.bb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  list-style: none;
+  padding-inline-start: 0;
+}
+
+.bb-section {
+  margin-block-start: 2.5rem;
+}
+
+.bb-item {
+  border-inline-start: 4px solid var(--ifm-color-emphasis-300);
+  padding-inline-start: 1rem;
+  margin-block: 1.25rem;
+}
+
+.bb-item--approved {
+  border-inline-start-color: #0F7A3A;
+}
+
+.bb-item--assumption {
+  border-inline-start-color: #8A5A00;
+}
+
+.bb-item--recommendation {
+  border-inline-start-color: #0C5C8A;
+}
+
+.bb-item header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.bb-item h3 {
+  margin: 0;
+}
+
+.bb-tag,
+.bb-status {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.05rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid currentColor;
+}
+
+.bb-tag--approved { color: #0F7A3A; }
+.bb-tag--assumption { color: #8A5A00; }
+.bb-tag--recommendation { color: #0C5C8A; }
+.bb-tag--missing { color: var(--ifm-color-emphasis-700); }
+
+[data-theme='dark'] .bb-tag--approved { color: #7FD6A0; }
+[data-theme='dark'] .bb-tag--assumption { color: #F2C66B; }
+[data-theme='dark'] .bb-tag--recommendation { color: #8CC8EE; }
+
+.bb-note,
+.bb-sources {
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-700);
+  margin-block: 0.25rem;
+}
+
+.bb-sources code {
+  margin-inline-end: 0.35rem;
+}
+
+.bb-value {
+  white-space: pre-wrap;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+.bb-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  padding-inline-start: 0;
+}
+
+.bb-swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-block-size: 6rem;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.bb-swatch code {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+}
+
+.bb-specimen {
+  margin-block: 0.75rem;
+  margin-inline: 0;
+}
+
+.bb-specimen p {
+  margin: 0;
+  text-align: start;
+}
+
+.bb-specimen figcaption {
+  font-size: 0.85rem;
+}
+
+.bb-logo {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.bb-logo dd {
+  margin: 0;
+}
+
+.bb-voice td,
+.bb-voice th {
+  text-align: start;
+  vertical-align: top;
+}

@@ -36,6 +36,7 @@
     "brand:export": "tsx scripts/brand.ts export",
     "brand:approve": "tsx scripts/brand.ts approve",
     "brand:publish": "tsx scripts/brand.ts publish",
+    "brand:document": "tsx scripts/brand.ts document",
     "brand:tokens:generate": "tsx scripts/brand.ts tokens:generate",
     "brand:tokens:approve": "tsx scripts/brand.ts tokens:approve",
     "brand:tokens:publish": "tsx scripts/brand.ts tokens:publish",

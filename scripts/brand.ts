@@ -421,6 +421,28 @@ if (command === 'init') {
   const report = runDoctor(root)
   console.log(values.json ? JSON.stringify(report, null, 2) : formatDoctor(report))
   if (!report.ok) process.exit(1)
+} else if (command === 'document') {
+  const { values } = parseArgs({
+    args: rest,
+    options: {
+      type: { type: 'string', default: 'brand-book' },
+      audience: { type: 'string', default: 'internal' },
+      json: { type: 'boolean', default: false },
+    },
+  })
+  const { buildNamedDocument, DOCUMENT_KINDS, renderDocumentMarkdown } = await import('@brand-os/brand-core')
+  const kind = DOCUMENT_KINDS.find((item) => item === values.type)
+  if (!kind || (values.audience !== 'internal' && values.audience !== 'public')) {
+    console.error(`Usage: brand:document --type ${DOCUMENT_KINDS.join('|')} [--audience internal|public] [--json]`)
+    process.exit(2)
+  }
+  if (values.audience === 'internal' && process.env.BRAND_OS_AGENT_TOKEN) {
+    // The internal edition includes drafts. Agents read approved knowledge through brand_retrieve instead.
+    console.error('The internal edition includes drafts and is for the owner. With an agent token, use --audience public or brand:query.')
+    process.exit(2)
+  }
+  const model = buildNamedDocument(engine, kind, values.audience)
+  console.log(values.json ? JSON.stringify(model, null, 2) : renderDocumentMarkdown(model))
 } else if (command === 'tokens:generate') {
   const { values } = parseArgs({ args: rest, options: { json: { type: 'boolean', default: false }, 'dry-run': { type: 'boolean', default: false } } })
   const { generateTokens } = await import('@brand-os/brand-core')
@@ -492,7 +514,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, tokens:generate, tokens:approve, tokens:publish, query, agent-token, doctor, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, document, tokens:generate, tokens:approve, tokens:publish, query, agent-token, doctor, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 

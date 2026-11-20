@@ -79,6 +79,7 @@ const config: Config = {
       title: features.brandName,
       items: [
         { to: '/docs/start/introduction', label: 'Docs', position: 'left' },
+        { to: '/brand-book', label: 'Brand Book', position: 'left' },
         { to: '/tokens', label: 'Tokens', position: 'left' },
         ...(features.mascot ? [{ to: '/mascot', label: 'Mascot', position: 'left' as const }] : []),
         { to: '/assets', label: 'Assets', position: 'left' },
