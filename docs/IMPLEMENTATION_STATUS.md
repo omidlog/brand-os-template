@@ -52,6 +52,9 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 | LLM adapter | Done (mock-tested) | `packages/brand-core/src/llm/` has providers `none`, `mock` and `anthropic`. The adapter has a timeout, input and output limits, and a request budget. Owner text is fenced as data. Restricted-looking passages are withheld before any provider. Restricted data is never sent; `allow_restricted_to_provider` is rejected by validation. Output is schema-validated. `--assist` falls back to deterministic rules. No test calls the network. |
 | Founder-core profile | Done | `brand/interview/profiles/founder-core.yaml` (40 ids, no restricted ones) is selected with `brand.profile`. Owner decision: review the list. |
 | Deterministic extraction | Partial | Keyword cues per locale (en base; fa and tr) cover offer, audience, B2B, pricing, and tentative, undecided, and correction markers. Everything else needs a model or an agent. |
+| Structured brand core | Done | Question types `color`, `font`, `logo_spec`, `voice_pairs` validated in `normalizeAnswer` (`packages/brand-core/src/structured.ts`) and the question schema. Founder-core uses them. Test: `tests/structured-answers.test.ts`. |
+| Generated tokens | Done | `brand:tokens:generate` writes drafts from approved facts only and never overwrites an approved id. `brand:tokens:approve` / `brand:tokens:publish` gate retrieval by hash and publication. Test: `tests/brand-tokens.test.ts`. |
+| Brand Book and plans | Done (3 documents) | Typed sections with approved / assumption / recommendation / missing tags and source ids for the Brand Book, business plan summary and marketing plan; `brand:document`; `/brand-book` docs page with swatches, specimens and voice pairs, English UI with fa/tr locale data. Public build carries no internal items. The other ~30 modules keep the generic compiled page. Test: `tests/brand-book.test.ts`. |
 | G4, G9 | Documented limit | Single shared proof, readable by any process running as the owner. |
 
 ## Commands that this remediation expects to pass
@@ -64,7 +67,7 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 
 `authorize()` gates submit, approval, publication, reveal, export, and the MCP tools. `include_unapproved` is not an MCP parameter. Backups and restricted values use `BRAND_OS_DATA_KEY` and fail closed when it is absent. Fact files migrate to canonical schema 2. Each module compiles a cited page that leaves missing sections missing. Figma import returns `not_configured` without credentials and does not overwrite tokens.
 
-Still external: SSO and hosted or remote MCP authentication (the `resolveAgentContext` seam is documented in ADR 0003), a hosted LLM, live Figma, and npm publishing. The approval proof remains a local file. Compiled pages are not a designed brand book, and fa/tr text other than the marked draft guidance paragraphs stays English. A CI matrix is not configured.
+Still external: SSO and hosted or remote MCP authentication (the `resolveAgentContext` seam is documented in ADR 0003), a hosted LLM, live Figma, and npm publishing. The approval proof remains a local file. Only the Brand Book, business plan and marketing plan have designed renderers; other modules are compiled field pages. fa/tr text other than the marked draft guidance paragraphs stays English. A CI matrix is not configured.
 
 ## Remaining security limits
 

@@ -31,6 +31,10 @@ npm run build
 | `npm run brand:review -- [--module <id> \| --ids <id,…>] [--json]` | Review queue: each draft or pending change against the approved revision, with impacted documents and questions. Restricted values are withheld. `--full` prints the older ledger recap. |
 | `npm run brand:approve -- --module <id>` or `-- --ids <id,chg-…>` | Approve a whole module or a list of question ids and change ids with one proof. Every item is reported (`approved`, `skipped`, `refused`, `stale`, `unknown`); nothing is dropped silently. A wrong proof changes nothing. `--dry-run` shows the queue without a proof. The proof is read from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused. Create the secret once with `npm run brand:doctor -- --create-approval-secret`. It lives in `brand/.private/approval-secret` and is not committed. |
 | `npm run brand:publish -- --ids <id,…>` or `-- --module <id>` | Add approved, public-classified facts to the publication allowlist. Approval never publishes. Internal and restricted facts are refused. `--unpublish` withdraws them. Same proof rules as approve. |
+| `npm run brand:document -- --type brand-book\|business-plan\|marketing-plan [--audience internal\|public] [--json]` | Render a cited document. Every item is tagged approved, assumption, recommendation, or missing, with source ids. Restricted values are withheld. The internal edition is refused while `BRAND_OS_AGENT_TOKEN` is set. |
+| `npm run brand:tokens:generate -- [--dry-run] [--json]` | Turn approved color, type-scale and logo-size answers into draft tokens in `brand/tokens/generated/`. Never overwrites an approved token id. |
+| `npm run brand:tokens:approve -- --ids <token.id,…>` | Record the value hash of generated tokens in `brand/tokens/approvals.yaml`. EXAMPLE base tokens are refused. Same proof rules as approve. |
+| `npm run brand:tokens:publish -- --ids <token.id,…> [--unpublish]` | Add hash-approved tokens to `approved_token_ids`. Same proof rules as approve. |
 | `npm run brand:doctor` | Check Node, `BRAND_OS_DATA_KEY`, the approval secret, the config and publication policy, and that `.env` is ignored. Never prints secret values. `--json` for machines. Exits non-zero on a hard failure. |
 | `npm run brand:export` | Gitignored snapshot. `--public` redacts non-public answers |
 | `npm run brand:validate` | Schema, catalog, token, and asset checks |
@@ -73,7 +77,7 @@ Restricted finance and partner fields are stored under `brand/restricted/` and a
 
 ## Tokens and assets
 
-Edit `brand/tokens/*.json`, then `npm run tokens:build`. Outputs are CSS variables and TypeScript. The palette is EXAMPLE and the contrast pairs in the template pass WCAG AA for the listed combinations. The SVG files under `brand/assets` are placeholders. The mascot turnaround is missing on purpose.
+Answer the structured color, type-scale and logo-size questions, approve them, then run `npm run brand:tokens:generate`. Generated drafts in `brand/tokens/generated/` override the EXAMPLE base values with the same id and stay drafts until `brand:tokens:approve` and `brand:tokens:publish`. You can still edit `brand/tokens/*.json` by hand, then `npm run tokens:build`. Outputs are CSS variables and TypeScript. The palette is EXAMPLE and the contrast pairs in the template pass WCAG AA for the listed combinations. The SVG files under `brand/assets` are placeholders. The mascot turnaround is missing on purpose.
 
 ## Agents
 
