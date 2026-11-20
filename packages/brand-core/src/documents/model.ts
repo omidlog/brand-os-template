@@ -151,7 +151,9 @@ export function itemFor(
   context: { facts: Record<string, CanonicalFact>; answers: Map<string, AnswerRecord>; audience: DocumentAudience; root: string; brandId: string },
 ): DocumentItem {
   const fact = context.facts[question.id]
-  const approved = fact && fact.status === 'approved' && fact.value !== null && fact.value !== undefined ? fact : null
+  // A restricted fact is approved with a null value and a private_ref; it is shown as approved and withheld.
+  const hasValue = fact ? (fact.value !== null && fact.value !== undefined) || Boolean(fact.private_ref) : false
+  const approved = fact && fact.status === 'approved' && hasValue ? fact : null
   if (context.audience === 'public') {
     // Public: only approved, public, published facts. No drafts, no recommendations, no restricted values.
     if (question.sensitivity === 'restricted') return missing(question, 'Not published.')

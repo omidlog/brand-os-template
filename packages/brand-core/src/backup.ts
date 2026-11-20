@@ -20,6 +20,9 @@ const RELATIVE = [
   'brand/brand.config.yaml',
   'brand/brand-manifest.json',
   'brand/publication-policy.yaml',
+  // Migration history and the engine lock, so a restore also undoes a half-applied migration.
+  'brand/migrations.yaml',
+  'brand/engine.lock',
   'brand/.private',
 ]
 
