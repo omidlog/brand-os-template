@@ -37,6 +37,15 @@ If a file disagrees with an approved fact, the approved fact wins until a person
 
 `npm run brand:interview` asks one question. `unknown`, `skip`, `not relevant`, and `decide later` are real answers and must not be filled in. `npm run brand:resume` continues from `brand/interview/session-state.yaml`.
 
+An agent can run the interview as a conversation. Follow `agent-skills/brand-interviewer/SKILL.md`. In short:
+
+- `npm run brand:next -- --json` returns the next questions with reasons, plus conflicts, follow-ups, and owner-only questions.
+- `npm run brand:interview -- --question <id> --answer "…" --json` answers any question in any order.
+- `npm run brand:propose -- --file batch.json --json` stores extracted proposals as drafts. Each proposal needs a verbatim quotation and a state: `proposed`, `tentative`, or `unresolved` with value `null`.
+- `npm run brand:interview -- --assist --file - --json` runs the built-in extractor. It uses a configured model, or deterministic rules if none is set.
+
+All of these produce drafts only. Restricted questions are refused: the owner answers them in the interactive interview. `brand.profile: founder-core` in `brand/brand.config.yaml` narrows the interview to about 40 questions.
+
 Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.
 
 ## Commands

@@ -10,7 +10,7 @@ Updated after the external audit remediation. “Fixed” means a test or a buil
 | P0-2 | Fixed | `materialize` creates missing files and does not overwrite existing catalogs, assets, or module pages. |
 | P0-3 | Fixed | Approved, audience-visible facts are written to `published/claims` during docs prepare, with approver and source id. |
 | P0-4 | Fixed | MCP uses `@modelcontextprotocol/sdk` stdio. A client test lists tools, calls them, and sends Persian text. |
-| P1-1 | Partial | Free-form `note:` lines become quoted draft proposals and are not approved. No hosted LLM is connected. A browser interview UI is not built. |
+| P1-1 | Partial | Free-form answers become quoted draft proposals (`note:`, `brand:propose`, `brand:interview --assist`) and are never approved. An Anthropic adapter exists but is off unless configured with a key, and its live behavior is not tested (tests use a mock and a stubbed fetch). A browser interview UI is not built. |
 | P1-2 | Fixed | Token, mascot, component, social, and search tools read the brand files and approved records. |
 | P1-3 | Fixed | `--actor owner` cannot approve. Approval requires the human proof in `brand/.private/approval-secret`. |
 | P1-4 | Partial | `upgradeCore` bumps `brand/engine.lock` and preserves content. The engine is not published to npm. |
@@ -48,6 +48,10 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 | G5 | Fixed | `brand:publish --ids|--module [--unpublish]` is wired to the approval service. Only approved public-classified facts with a value are published; the allowlist in `publication-policy.yaml` is written atomically. Approving a replacement for a published fact withdraws its publication until it is published again. Test: `tests/approval-batch.test.ts`. |
 | G6 | Fixed | Optional `approval_grant` on questions is preferred over the id guess. Restricted questions always need `financial`, and `brand:validate` fails when a restricted question declares anything else. Test: `tests/approval-batch.test.ts`. |
 | Batch review | Done | `brand:review --module|--ids [--json]` shows drafts and pending changes against the approved revision with impact. `brand:approve --module|--ids` approves with one proof and reports every item. Approval logic lives in `packages/brand-core/src/approval.ts`; the engine delegates to it. A change to an approved fact is a pending proposal and the approved revision stays canonical until that proposal is approved against its version. |
+| Agent interview | Done | `brand:interview --question <any id> --json`, `brand:next --json`, and `brand:propose --file` (zod-validated batch, verbatim quotations, drafts only, restricted and unknown ids refused, conflicts recorded in `brand/interview/intake-log.yaml`). Skill: `agent-skills/brand-interviewer/SKILL.md`. Test: `tests/interview-ai.test.ts`. |
+| LLM adapter | Done (mock-tested) | `packages/brand-core/src/llm/` has providers `none`, `mock` and `anthropic`. The adapter has a timeout, input and output limits, and a request budget. Owner text is fenced as data. Restricted-looking passages are withheld before any provider. Restricted data is never sent; `allow_restricted_to_provider` is rejected by validation. Output is schema-validated. `--assist` falls back to deterministic rules. No test calls the network. |
+| Founder-core profile | Done | `brand/interview/profiles/founder-core.yaml` (40 ids, no restricted ones) is selected with `brand.profile`. Owner decision: review the list. |
+| Deterministic extraction | Partial | Keyword cues per locale (en base; fa and tr) cover offer, audience, B2B, pricing, and tentative, undecided, and correction markers. Everything else needs a model or an agent. |
 | G4, G9 | Documented limit | Single shared proof, readable by any process running as the owner. |
 
 ## Commands that this remediation expects to pass

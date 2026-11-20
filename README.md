@@ -23,6 +23,10 @@ npm run build
 | `npm run brand:init -- --name "Name" --slug name --yes` | Set identity and reset the interview |
 | `npm run brand:interview` | Ask one question at a time |
 | `npm run brand:resume` | Continue the saved session |
+| `npm run brand:next -- [--json] [--profile <id>]` | Next questions with reasons, open conflicts, follow-ups, tentative and unresolved answers, and restricted questions that only the owner answers |
+| `npm run brand:interview -- --question <id> --answer "…" [--json]` | Answer any question in any order. This is the agent mode. Restricted questions are refused here. |
+| `npm run brand:propose -- --file <batch.json \| -> [--dry-run] [--json]` | Store a schema-validated batch of extracted proposals as drafts with quotations. It never approves. It rejects unknown and restricted ids, and quotations that are not in the source text. |
+| `npm run brand:interview -- --assist --file <text \| -> [--json]` | Read a free-form answer and propose drafts. It uses the model set in `llm` in `brand.config.yaml` (off by default), or deterministic rules if none is set. Restricted passages are withheld first. |
 | `npm run brand:status` | Coverage and approval, separately |
 | `npm run brand:review -- [--module <id> \| --ids <id,…>] [--json]` | Review queue: each draft or pending change against the approved revision, with impacted documents and questions. Restricted values are withheld. `--full` prints the older ledger recap. |
 | `npm run brand:approve -- --module <id>` or `-- --ids <id,chg-…>` | Approve a whole module or a list of question ids and change ids with one proof. Every item is reported (`approved`, `skipped`, `refused`, `stale`, `unknown`); nothing is dropped silently. A wrong proof changes nothing. `--dry-run` shows the queue without a proof. The proof is read from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused. Create the secret once with `npm run brand:doctor -- --create-approval-secret`. It lives in `brand/.private/approval-secret` and is not committed. |
