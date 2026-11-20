@@ -17,7 +17,7 @@
       "href": "/docs/brand/01-brand-strategy/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 7
+      "requiredUnanswered": 0
     },
     {
       "id": "verbal-identity",
@@ -27,7 +27,7 @@
       "href": "/docs/brand/02-verbal-identity/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 6
+      "requiredUnanswered": 0
     },
     {
       "id": "logo-system",
@@ -37,7 +37,7 @@
       "href": "/docs/brand/03-logo-system/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "color-system",
@@ -47,7 +47,7 @@
       "href": "/docs/brand/04-color-system/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "typography",
@@ -57,7 +57,7 @@
       "href": "/docs/brand/05-typography/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "mascot-identity",
@@ -67,7 +67,7 @@
       "href": "/docs/brand/06-mascot-identity/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "mascot-expression",
@@ -77,7 +77,7 @@
       "href": "/docs/brand/07-mascot-expression-pose-library/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "mascot-evolution",
@@ -87,7 +87,7 @@
       "href": "/docs/brand/08-mascot-evolution/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "illustration",
@@ -97,7 +97,7 @@
       "href": "/docs/brand/09-illustration-system/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "iconography",
@@ -107,7 +107,7 @@
       "href": "/docs/brand/10-iconography-graphic-elements/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "layout",
@@ -117,7 +117,7 @@
       "href": "/docs/brand/11-layout-composition/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "product-ui",
@@ -127,7 +127,7 @@
       "href": "/docs/brand/12-product-ui-system/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 6
+      "requiredUnanswered": 0
     },
     {
       "id": "motion",
@@ -137,7 +137,7 @@
       "href": "/docs/brand/13-motion-identity/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "sonic",
@@ -147,7 +147,7 @@
       "href": "/docs/brand/14-sonic-branding/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "photo-video",
@@ -157,7 +157,7 @@
       "href": "/docs/brand/15-photo-video-style/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "social",
@@ -167,7 +167,7 @@
       "href": "/docs/brand/16-social-media/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "campaigns",
@@ -177,7 +177,7 @@
       "href": "/docs/brand/17-marketing-campaigns/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 3
+      "requiredUnanswered": 0
     },
     {
       "id": "print",
@@ -187,7 +187,7 @@
       "href": "/docs/brand/18-print-merchandise/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 1
+      "requiredUnanswered": 0
     },
     {
       "id": "applications",
@@ -197,7 +197,7 @@
       "href": "/docs/brand/19-brand-applications/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "governance",
@@ -207,7 +207,7 @@
       "href": "/docs/brand/20-governance-assets/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 6
+      "requiredUnanswered": 0
     },
     {
       "id": "gamification",
@@ -217,7 +217,7 @@
       "href": "/docs/gamification/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "business-company",
@@ -227,7 +227,7 @@
       "href": "/docs/business/01-company-business-plan/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 11
+      "requiredUnanswered": 0
     },
     {
       "id": "business-marketing",
@@ -237,7 +237,7 @@
       "href": "/docs/business/02-marketing/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 6
+      "requiredUnanswered": 0
     },
     {
       "id": "business-product",
@@ -247,7 +247,7 @@
       "href": "/docs/business/03-product-services/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 7
+      "requiredUnanswered": 0
     },
     {
       "id": "business-sales",
@@ -257,7 +257,7 @@
       "href": "/docs/business/04-sales-revenue/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "business-customer",
@@ -267,7 +267,7 @@
       "href": "/docs/business/05-customer-experience/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "business-operations",
@@ -277,7 +277,7 @@
       "href": "/docs/business/06-operations-sops/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 3
+      "requiredUnanswered": 0
     },
     {
       "id": "business-finance",
@@ -287,7 +287,7 @@
       "href": "/docs/business/07-finance-unit-economics/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 5
+      "requiredUnanswered": 0
     },
     {
       "id": "business-engineering",
@@ -297,7 +297,7 @@
       "href": "/docs/business/08-engineering-security/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "business-legal",
@@ -307,7 +307,7 @@
       "href": "/docs/business/09-legal-compliance/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 6
+      "requiredUnanswered": 0
     },
     {
       "id": "business-growth",
@@ -317,7 +317,7 @@
       "href": "/docs/business/10-growth-experiments/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "business-goals",
@@ -327,7 +327,7 @@
       "href": "/docs/business/11-goals-kpis-reports/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 4
+      "requiredUnanswered": 0
     },
     {
       "id": "business-partnerships",
@@ -337,7 +337,7 @@
       "href": "/docs/business/12-partnerships-risk-investors/overview",
       "coverage": 0,
       "approval": 0,
-      "requiredUnanswered": 3
+      "requiredUnanswered": 0
     }
   ],
   "next": [],
