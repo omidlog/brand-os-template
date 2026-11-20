@@ -10,6 +10,7 @@ import { ApprovalService, normalizeAnswer, type AnswerMeta, type ApprovalStep } 
 import { exportPublic as projectPublic } from './projection.js'
 import { authorize, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
 import { backupBrand, migrateBrand } from './backup.js'
+import { loadProfile, type InterviewProfile } from './profiles.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
   AnswerRecord,
@@ -17,6 +18,7 @@ import type {
   BrandConfig,
   Contradiction,
   FieldQuestion,
+  ProposalState,
   LedgerFile,
   SessionState,
   SourceType,
@@ -174,12 +176,24 @@ export class InterviewEngine {
     })
   }
 
-  eligible(): FieldQuestion[] {
+  /** The active interview profile from brand.profile, or null when every question is in scope. */
+  profile(): InterviewProfile | null {
+    return loadProfile(this.root, this.config().brand.profile)
+  }
+
+  /**
+   * Open questions in asking order. The active profile narrows the set unless `profile` is given:
+   * pass `universal` to see the whole bank, or another profile id to preview it.
+   */
+  eligible(opts: { profile?: string } = {}): FieldQuestion[] {
     const ctx = this.context()
     const sectorAnswer = ctx.answers.get('business.identity.sector')
     const sector = sectorAnswer?.value === null || sectorAnswer?.value === undefined ? null : String(sectorAnswer.value)
+    const profile = opts.profile === undefined ? this.profile() : loadProfile(this.root, opts.profile)
+    const inProfile = profile ? new Set(profile.question_ids) : null
     return this.questions()
       .filter((question) => {
+        if (inProfile && !inProfile.has(question.id)) return false
         if (disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) return false
         const answer = ctx.answers.get(question.id)
         if (answer && answer.status !== 'unanswered') return false
@@ -207,10 +221,10 @@ export class InterviewEngine {
     return open.find((question) => !deferred.has(question.id)) ?? open.find((question) => deferred.has(question.id)) ?? null
   }
 
-  queue(limit = 10): FieldQuestion[] {
+  queue(limit = 10, opts: { profile?: string } = {}): FieldQuestion[] {
     const session = this.session()
     const deferred = new Set(session.deferred)
-    const open = this.eligible()
+    const open = this.eligible(opts)
     const ordered = [...open.filter((question) => !deferred.has(question.id)), ...open.filter((question) => deferred.has(question.id))]
     return ordered.slice(0, limit)
   }
@@ -304,32 +318,9 @@ export class InterviewEngine {
       })
     }
 
-    if (['unknown', "i don't know", 'idk'].includes(lower)) {
-      return this.record(current, null, {
-        sourceType: 'owner',
-        authority: 'unverified',
-        status: 'unknown',
-        uncertainty: 'Owner does not know. No value was invented.',
-        raw,
-      })
-    }
-    if (lower === 'skip') {
-      return this.record(current, null, {
-        sourceType: 'owner',
-        authority: 'unverified',
-        status: 'skipped',
-        uncertainty: 'Owner skipped. Field stays unresolved.',
-        raw,
-      })
-    }
-    if (['not relevant', 'n/a', 'na'].includes(lower)) {
-      return this.record(current, null, {
-        sourceType: 'owner',
-        authority: 'unverified',
-        status: 'not_applicable',
-        uncertainty: 'Owner marked this question not applicable.',
-        raw,
-      })
+    const disposition = dispositionFor(raw)
+    if (disposition) {
+      return this.record(current, null, { sourceType: 'owner', authority: 'unverified', status: disposition.status, uncertainty: disposition.uncertainty, raw })
     }
     if (['decide later', 'later'].includes(lower)) {
       if (!session.deferred.includes(current.id)) session.deferred.push(current.id)
@@ -437,6 +428,13 @@ export class InterviewEngine {
     if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
     const latest = this.context().answers.get(questionId)
     const impact = this.impact(questionId, question.sensitivity === 'restricted' ? '[restricted]' : rawValue)
+    if (latest?.status === 'approved' && dispositionFor(rawValue)) {
+      return {
+        kind: 'error',
+        questionId,
+        message: `${questionId} is approved. A change proposal needs a replacement value, not "${rawValue.trim()}". The approved fact was not changed.`,
+      }
+    }
     if (latest?.status === 'approved') {
       const proposal = this.requestChange(questionId, rawValue)
       return {
@@ -445,6 +443,21 @@ export class InterviewEngine {
         impact: { ...impact, approvalsPreserved: true, requiresConfirmation: true },
         message: `Approved fact was not changed. Proposal ${proposal.id} is pending. A human must approve that proposal. confirm=true is not authority.`,
       }
+    }
+    // `unknown`, `skip` and `n/a` are dispositions, not values. Storing the literal word would turn
+    // "I don't know" into a draft answer that reads like a fact.
+    const disposition = dispositionFor(rawValue)
+    if (disposition) {
+      if (latest) this.supersede(latest.answer_id)
+      const answer = this.appendAnswer(question, null, {
+        sourceType: 'owner',
+        authority: 'unverified',
+        status: disposition.status,
+        uncertainty: disposition.uncertainty,
+        raw: rawValue.trim(),
+      })
+      this.afterWrite(question, answer)
+      return { kind: 'recorded', questionId, status: disposition.status, impact, message: `Marked ${disposition.status}. No value was stored.` }
     }
     const normalized = normalizeAnswer(question, rawValue)
     if (!normalized.ok) return { kind: 'error', questionId, message: normalized.message }
@@ -458,6 +471,73 @@ export class InterviewEngine {
     })
     this.afterWrite(question, answer)
     return { kind: 'recorded', questionId, status: 'draft', impact, message: 'Draft updated. Not approved.' }
+  }
+
+  /**
+   * Answer any question by id, in any order. This is the entry point an interviewing agent uses.
+   * The same commands as the interactive interview apply (unknown, skip, n/a, estimate:). Questions
+   * that the current configuration or answers make not applicable are refused rather than recorded.
+   */
+  answerQuestion(questionId: string, rawInput: string): StepResult {
+    const write = authorize(operatorContext(this.config().brand.slug), { brand_id: this.config().brand.slug, classification: 'internal', status: 'draft', publication: 'unpublished' }, 'write')
+    if (!write.allow) return { kind: 'error', message: write.reason }
+    const question = this.question(questionId)
+    if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
+    const applicability = this.applicability(question)
+    if (applicability) return { kind: 'error', questionId, message: applicability }
+    const raw = normalizeCommand(rawInput).trim()
+    const disposition = dispositionFor(raw)
+    if (disposition) {
+      return this.record(question, null, { sourceType: 'owner', authority: 'unverified', status: disposition.status, uncertainty: disposition.uncertainty, raw })
+    }
+    const estimate = raw.match(/^estimate\s*:\s*([\s\S]+)$/i)
+    if (estimate) {
+      return this.recordNormalized(question, estimate[1] ?? '', {
+        sourceType: 'owner',
+        authority: 'estimated',
+        status: 'draft',
+        uncertainty: 'Owner described this as an estimate.',
+        confidence: 0.4,
+        raw,
+      })
+    }
+    return this.recordNormalized(question, raw, { sourceType: 'owner', authority: 'confirmed_by_owner', status: 'draft', uncertainty: null, raw })
+  }
+
+  /** Null when the question applies; otherwise the reason it does not under the current config and answers. */
+  applicability(question: FieldQuestion): string | null {
+    const ctx = this.context()
+    if (disabledModule(question.id, ctx)) return `${question.id} belongs to a module that is turned off in brand.config.yaml.`
+    if (shouldSkip(question.skip_when, ctx)) return `${question.id} does not apply to the current answers (${question.skip_when}).`
+    return null
+  }
+
+  /**
+   * Write one validated interview proposal as a draft or an unresolved marker. Callers (the proposal
+   * intake) have already refused restricted ids and approved targets; this re-checks both so the
+   * engine never lets a proposal become, or replace, an approved fact.
+   */
+  recordProposal(
+    question: FieldQuestion,
+    value: AnswerRecord['value'],
+    meta: { state: ProposalState; confidence: number; quotation: string; sourceReference: string; uncertainty: string },
+  ): AnswerRecord {
+    if (question.sensitivity === 'restricted') throw new Error(`Refusing to record a proposal for restricted ${question.id}.`)
+    const latest = this.context().answers.get(question.id)
+    if (latest?.status === 'approved') throw new Error(`Refusing to overwrite approved ${question.id} with a proposal.`)
+    if (latest) this.supersede(latest.answer_id)
+    const answer = this.appendAnswer(question, meta.state === 'unresolved' ? null : value, {
+      sourceType: 'agent_suggestion',
+      authority: 'unverified',
+      status: meta.state === 'unresolved' ? 'unknown' : 'draft',
+      uncertainty: meta.uncertainty,
+      confidence: meta.confidence,
+      sourceReference: meta.sourceReference,
+      raw: meta.quotation,
+      proposalState: meta.state,
+    })
+    this.afterWrite(question, answer)
+    return answer
   }
 
   /** Approval and publication live in approval.ts. The engine lends it narrow access to its ledger. */
@@ -563,6 +643,7 @@ export class InterviewEngine {
       superseded_by: null,
       disposition_reason: meta.uncertainty,
       private_ref: privateRef,
+      ...(meta.proposalState ? { proposal_state: meta.proposalState } : {}),
     }
     ledger.records.push(answer)
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
@@ -624,6 +705,7 @@ export class InterviewEngine {
       uncertainty: answer.uncertainty,
       answer_id: answer.answer_id,
       updated: answer.last_updated,
+      ...(answer.proposal_state ? { proposal_state: answer.proposal_state } : {}),
     }
     writeYaml(file, doc)
   }
@@ -856,6 +938,19 @@ export class InterviewEngine {
   }
 }
 
+const DISPOSITIONS: Array<{ words: string[]; status: Status; uncertainty: string }> = [
+  { words: ['unknown', "i don't know", 'idk'], status: 'unknown', uncertainty: 'Owner does not know. No value was invented.' },
+  { words: ['skip'], status: 'skipped', uncertainty: 'Owner skipped. Field stays unresolved.' },
+  { words: ['not relevant', 'n/a', 'na'], status: 'not_applicable', uncertainty: 'Owner marked this question not applicable.' },
+]
+
+/** `unknown`, `skip` and `n/a` (and their fa/tr aliases) mark a disposition. They are never stored as values. */
+export function dispositionFor(raw: string): { status: Status; uncertainty: string } | null {
+  const lower = normalizeCommand(raw).trim().toLowerCase()
+  const match = DISPOSITIONS.find((item) => item.words.includes(lower))
+  return match ? { status: match.status, uncertainty: match.uncertainty } : null
+}
+
 function extractPersianCandidates(text: string): Array<{ question_id: string; value: string; quotation: string }> {
   const found: Array<{ question_id: string; value: string; quotation: string }> = []
   if (text.includes('دانشجو')) {
@@ -922,6 +1017,7 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   writeYaml(path.join(root, 'brand', 'interview', 'answer-ledger.yaml'), { schema_version: 1, records: [] })
   writeYaml(path.join(root, 'brand', 'interview', 'contradictions.yaml'), { schema_version: 1, derived: true, items: [] })
   writeYaml(path.join(root, 'brand', 'interview', 'evidence-index.yaml'), { schema_version: 1, items: [] })
+  writeYaml(path.join(root, 'brand', 'interview', 'intake-log.yaml'), { schema_version: 1, batches: [] })
   writeYaml(path.join(root, 'brand', 'instance', 'draft-facts.yaml'), { schema_version: 1, facts: {} })
   writeYaml(path.join(root, 'brand', 'instance', 'approved-facts.yaml'), { schema_version: 1, facts: {} })
   // Never inherit publication grants when initializing a new brand instance.

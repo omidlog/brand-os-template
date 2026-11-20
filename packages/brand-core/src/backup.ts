@@ -133,6 +133,7 @@ export function resetInterviewState(root: string, confirmation: string): { backu
     'brand/interview/session-state.yaml': 'schema_version: 1\nsession_id: null\nstatus: idle\nlocale: en\nhistory: []\ndeferred: []\npending_suggestions: []\ncursor_question_id: null\npending_proposals: []\nstarted_at: null\nupdated_at: null\nlast_answer_id: null\n',
     'brand/instance/draft-facts.yaml': 'schema_version: 1\nfacts: {}\n',
     'brand/instance/approved-facts.yaml': 'schema_version: 1\nfacts: {}\n',
+    'brand/interview/intake-log.yaml': 'schema_version: 1\nbatches: []\n',
   }
   for (const [relative, body] of Object.entries(writes)) writeAtomic(path.join(root, relative), body)
   return { backup: backup.directory }

@@ -133,7 +133,18 @@ export interface AnswerRecord {
   disposition_reason: string | null
   /** Opaque id in the gitignored encrypted store. Never a restricted value. */
   private_ref?: string | null
+  /** Set when the answer came from an interview proposal (agent or model extraction). */
+  proposal_state?: ProposalState | null
 }
+
+/**
+ * How certain an extracted interview proposal is.
+ * - proposed: the owner stated it; still a draft until a human approves it.
+ * - tentative: the owner described it as possible or future ("we may…"); never a decision.
+ * - unresolved: the owner said it is not decided; no value is stored.
+ */
+export const PROPOSAL_STATES = ['proposed', 'tentative', 'unresolved'] as const
+export type ProposalState = (typeof PROPOSAL_STATES)[number]
 
 export interface SessionState {
   session_id: string | null

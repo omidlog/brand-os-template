@@ -9,6 +9,7 @@ import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
 import { approvalGrantErrors } from './permissions.js'
+import { profileErrors } from './profiles.js'
 import type { FieldQuestion } from './types.js'
 
 export interface ValidationReport {
@@ -40,6 +41,7 @@ export function validateRepo(root: string): ValidationReport {
   validateQuestionFiles(questions, errors)
   validateRegistry(root, questions, errors)
   validateConditions(questions, errors)
+  errors.push(...profileErrors(root, questions))
   validateMascot(root, errors)
   errors.push(...validateAssets(root))
   const compiled = compileTokens(root)

@@ -8,7 +8,7 @@ import { t, type Locale } from './i18n.js'
 import { canApprove, permissionFor, type ApprovalGrant } from './permissions.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import { readPublicationPolicy } from './publication.js'
-import type { AnswerRecord, Authority, FieldQuestion, SourceType, Status } from './types.js'
+import type { AnswerRecord, Authority, FieldQuestion, ProposalState, SourceType, Status } from './types.js'
 
 /**
  * Approval and publication service.
@@ -31,6 +31,7 @@ export interface AnswerMeta {
   raw?: string | null
   reviewedBy?: string | null
   privateRef?: string | null
+  proposalState?: ProposalState | null
 }
 
 /** What the interview engine lends the approval service. Built by the engine; never by a client. */
@@ -90,6 +91,8 @@ export interface ReviewItem {
     authority: Authority
     source_type: SourceType | null
     uncertainty: string | null
+    /** proposed | tentative when the draft came from an interview proposal. Tentative drafts are not decisions. */
+    proposal_state: ProposalState | null
   } | null
   approved: { value: unknown; version: number; publication: CanonicalFact['publication'] } | null
   changes: Array<{ id: string; proposed_value: string | null; expected_version: number; stale: boolean }>
@@ -440,6 +443,7 @@ export class ApprovalService {
             authority: latest.authority,
             source_type: latest.source_type,
             uncertainty: latest.uncertainty,
+            proposal_state: latest.proposal_state ?? null,
           }
         : null,
       approved: fact?.status === 'approved' ? { value: withheld ? null : fact.value, version: fact.version, publication: fact.publication } : null,

@@ -1,7 +1,26 @@
 export { templateConfig } from './config.js'
 export { allModules, allQuestions, moduleById } from './content/index.js'
 export { buildMascotCatalog, CANONICAL_ANGLES, CORE_MOTIONS, EXAMPLE_STAGES, catalogCounts } from './content/mascot-catalog.js'
-export { InterviewEngine, applyInit, emptySession, assertSlug, upgradeCore, syncManifest } from './engine.js'
+export { InterviewEngine, applyInit, dispositionFor, emptySession, assertSlug, upgradeCore, syncManifest } from './engine.js'
+export { listProfiles, loadProfile, profileErrors, UNIVERSAL_PROFILE } from './profiles.js'
+export type { InterviewProfile } from './profiles.js'
+export {
+  applyProposalBatch,
+  INTAKE_LIMITS,
+  intakeLogPath,
+  ModelOutputSchema,
+  openConflicts,
+  openFollowUps,
+  parseItems,
+  parseProposalBatch,
+  ProposalItemSchema,
+  quotationIsVerbatim,
+  readIntakeLog,
+  SOURCE_KINDS,
+} from './proposal-intake.js'
+export type { DroppedItem, IntakeConflict, IntakeItemResult, IntakeOrigin, IntakeOutcome, IntakeReport, ParseResult, ProposalBatch, ProposalItem } from './proposal-intake.js'
+export { nextReport } from './interview-next.js'
+export type { NextQuestion, NextReport } from './interview-next.js'
 export { backupBrand, migrateBrand, resetInterviewState, restoreBrand, RESET_CONFIRMATION } from './backup.js'
 export { writeAtomic } from './fsutil.js'
 export { authorize, agentContext, agentTokenContext, AGENT_PROFILES, guestContext, isAgentProfile, operatorContext, verifiedHumanContext } from './auth.js'
@@ -72,4 +91,5 @@ export {
 export type { RetrieveKind, RetrieveRequest, RetrievedItem, ToolResult } from './query.js'
 export { evaluateCondition } from './conditions.js'
 export { validateRepo } from './validate-repo.js'
-export type { BrandConfig, FieldQuestion, ModuleDef, AnswerRecord } from './types.js'
+export { PROPOSAL_STATES } from './types.js'
+export type { BrandConfig, FieldQuestion, ModuleDef, AnswerRecord, ProposalState } from './types.js'

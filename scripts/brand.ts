@@ -4,7 +4,7 @@ import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
 import { applyInit, backupBrand, InterviewEngine, migrateBrand, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
-import type { BatchResult, ReviewQueue, Selection } from '@brand-os/brand-core'
+import type { BatchResult, IntakeReport, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
 
 const [command, ...rest] = process.argv.slice(2)
 const root = process.cwd()
@@ -60,6 +60,7 @@ if (command === 'init') {
       batch: { type: 'string' },
       question: { type: 'string' },
       answer: { type: 'string' },
+      json: { type: 'boolean', default: false },
     },
   })
   if (values.batch) {
@@ -76,16 +77,94 @@ if (command === 'init') {
       steps += 1
     }
     console.log(`\n${engine.statusText()}`)
-  } else if (values.question && values.answer) {
-    const current = engine.current()
-    if (!current || current.id !== values.question) {
-      console.error(`Next question is ${current?.id ?? 'none'}, not ${values.question}.`)
+  } else if (values.question !== undefined || values.answer !== undefined) {
+    // Agent mode: answer any question by id, in any order. Same commands as the interactive interview.
+    if (!values.question || values.answer === undefined) {
+      console.error('Usage: brand:interview --question <id> --answer "<text | unknown | skip | n/a | estimate: …>" [--json]')
+      process.exit(2)
+    }
+    const { dispositionFor, nextReport } = await import('@brand-os/brand-core')
+    const question = engine.question(values.question)
+    if (question?.sensitivity === 'restricted' && !dispositionFor(values.answer)) {
+      // Restricted values must not travel through argv (shell history, process list) or an agent's context.
+      const message = `${values.question} is restricted. Answer it yourself in the interactive interview (npm run brand:interview). Nothing was recorded.`
+      if (values.json) console.log(JSON.stringify({ ok: false, kind: 'error', question_id: values.question, message }, null, 2))
+      else console.error(message)
       process.exit(1)
     }
-    console.log(engine.submit(values.answer).message)
+    const result = engine.answerQuestion(values.question, values.answer)
+    const ok = result.kind === 'recorded'
+    if (values.json) {
+      const upcoming = nextReport(engine, { limit: 3 })
+      console.log(
+        JSON.stringify(
+          {
+            ok,
+            kind: result.kind,
+            question_id: result.questionId ?? values.question,
+            status: result.status ?? null,
+            message: result.message,
+            impact: result.impact ?? null,
+            next: upcoming.next.map((item) => ({ id: item.id, prompt: item.prompt, reasons: item.reasons })),
+            conflicts: upcoming.conflicts.length,
+          },
+          null,
+          2,
+        ),
+      )
+    } else {
+      console.log(result.message)
+    }
+    if (!ok) process.exit(1)
   } else {
     await interactive()
   }
+} else if (command === 'next') {
+  const { values } = parseArgs({
+    args: rest,
+    options: {
+      json: { type: 'boolean', default: false },
+      limit: { type: 'string', default: '5' },
+      profile: { type: 'string' },
+      locale: { type: 'string' },
+    },
+  })
+  const { nextReport } = await import('@brand-os/brand-core')
+  const locale = values.locale === 'fa' || values.locale === 'tr' || values.locale === 'en' ? values.locale : undefined
+  const report = nextReport(engine, { limit: Number.parseInt(values.limit ?? '5', 10) || 5, profile: values.profile, locale })
+  if (values.json) console.log(JSON.stringify(report, null, 2))
+  else console.log(formatNext(report))
+} else if (command === 'propose') {
+  const { values } = parseArgs({
+    args: rest,
+    options: {
+      file: { type: 'string' },
+      'dry-run': { type: 'boolean', default: false },
+      json: { type: 'boolean', default: false },
+    },
+  })
+  if (!values.file) {
+    console.error('Usage: brand:propose --file <batch.json | -> [--dry-run] [--json]')
+    console.error('Stores schema-valid proposals as drafts with provenance. It never approves or publishes.')
+    process.exit(2)
+  }
+  const { applyProposalBatch, parseProposalBatch } = await import('@brand-os/brand-core')
+  let parsedJson: unknown
+  try {
+    const text = values.file === '-' ? await readAllStdin() : fs.readFileSync(path.resolve(values.file), 'utf8')
+    parsedJson = JSON.parse(text)
+  } catch (error) {
+    console.error(`Could not read a JSON proposal batch: ${error instanceof SyntaxError ? 'invalid JSON' : 'file not readable'}. Nothing was stored.`)
+    process.exit(2)
+  }
+  const parsed = parseProposalBatch(parsedJson)
+  if (!parsed.ok) {
+    if (values.json) console.log(JSON.stringify({ ok: false, errors: parsed.errors }, null, 2))
+    else console.error(`Proposal batch rejected. Nothing was stored.\n${parsed.errors.map((line) => `- ${line}`).join('\n')}`)
+    process.exit(1)
+  }
+  const report = applyProposalBatch(engine, parsed.batch, { origin: 'agent', dryRun: values['dry-run'], dropped: parsed.dropped })
+  console.log(values.json ? JSON.stringify(report, null, 2) : formatIntake(report))
 } else if (command === 'status') {
   console.log(engine.statusText())
 } else if (command === 'review') {
@@ -335,7 +414,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, status, review, validate, export, approve, publish, query, agent-token, doctor, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, query, agent-token, doctor, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 
@@ -365,7 +444,11 @@ function formatQueue(queue: ReviewQueue): string {
     lines.push(`## ${item.question_id} [${item.state}] ${item.classification}, needs ${item.required_grant}`)
     lines.push(`- ${item.reason}`)
     if (item.approved) lines.push(`- Approved v${item.approved.version} (${item.approved.publication}): ${show(item.approved.value, item.withheld)}`)
-    if (item.draft) lines.push(`- Draft ${item.draft.answer_id} (${item.draft.status}, ${item.draft.authority}): ${show(item.draft.value, item.withheld)}`)
+    if (item.draft) {
+      const state = item.draft.proposal_state ? `, ${item.draft.proposal_state} proposal` : ''
+      lines.push(`- Draft ${item.draft.answer_id} (${item.draft.status}, ${item.draft.authority}${state}): ${show(item.draft.value, item.withheld)}`)
+      if (item.draft.proposal_state === 'tentative') lines.push('- Tentative: the owner described this as possible, not decided. Approve only if it is now a decision.')
+    }
     for (const change of item.changes) {
       lines.push(`- Change ${change.id} against v${change.expected_version}${change.stale ? ' (stale)' : ''}: ${show(change.proposed_value, item.withheld)}`)
     }
@@ -375,6 +458,40 @@ function formatQueue(queue: ReviewQueue): string {
     lines.push('')
   }
   return lines.join('\n')
+}
+
+function formatIntake(report: IntakeReport): string {
+  const lines = [`${report.dry_run ? 'Dry run' : `Intake ${report.batch_id}`} (${report.origin}${report.provider ? `, ${report.provider}` : ''})`]
+  for (const item of report.results) {
+    lines.push(`${item.outcome.padEnd(15)} ${item.question_id ?? `#${item.index}`}${item.state ? ` [${item.state}]` : ''}  ${item.reason}`)
+  }
+  for (const conflict of report.conflicts) lines.push(`Ask: ${conflict.ask}`)
+  for (const item of report.follow_ups) lines.push(`Follow-up${item.question_id ? ` (${item.question_id})` : ''}: ${item.text}`)
+  for (const item of report.owner_questions) lines.push(`Owner asked: ${item.text}`)
+  if (report.redactions > 0) lines.push(`${report.redactions} passage(s) were withheld from the model as possible restricted data.`)
+  lines.push(report.notice)
+  return lines.join('\n')
+}
+
+function formatNext(report: NextReport): string {
+  const lines = [`# Next (${report.brand_id}, profile ${report.profile.id}: ${report.profile.answered}/${report.profile.total} answered)`, '']
+  for (const conflict of report.conflicts) lines.push(`Conflict on ${conflict.question_id}: ${conflict.ask}`)
+  for (const item of report.follow_ups) lines.push(`Follow-up${item.question_id ? ` (${item.question_id})` : ''}: ${item.text}`)
+  for (const item of report.next) {
+    lines.push(`- [${item.priority}] ${item.id}: ${item.prompt}`)
+    lines.push(`  why now: ${item.reasons.join('; ')}`)
+  }
+  if (report.tentative.length) lines.push('', `Tentative: ${report.tentative.map((item) => item.question_id).join(', ')}`)
+  if (report.unresolved.length) lines.push(`Unresolved: ${report.unresolved.map((item) => item.question_id).join(', ')}`)
+  if (report.owner_only.length) lines.push(`Owner-only (restricted): ${report.owner_only.map((item) => item.question_id).join(', ')}`)
+  lines.push('', ...report.suggested_actions.map((action) => `→ ${action}`))
+  return lines.join('\n')
+}
+
+async function readAllStdin(): Promise<string> {
+  const chunks: Buffer[] = []
+  for await (const chunk of input) chunks.push(Buffer.from(chunk as Buffer))
+  return Buffer.concat(chunks).toString('utf8')
 }
 
 function formatBatch(result: BatchResult): string {

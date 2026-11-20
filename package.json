@@ -28,6 +28,8 @@
     "brand:init": "tsx scripts/brand.ts init",
     "brand:interview": "tsx scripts/brand.ts interview",
     "brand:resume": "tsx scripts/brand.ts resume",
+    "brand:next": "tsx scripts/brand.ts next",
+    "brand:propose": "tsx scripts/brand.ts propose",
     "brand:status": "tsx scripts/brand.ts status",
     "brand:review": "tsx scripts/brand.ts review",
     "brand:validate": "tsx scripts/brand.ts validate",
