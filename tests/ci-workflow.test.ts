@@ -5,6 +5,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { parse } from 'yaml'
 import { writeStarterWorkspace } from '@brand-os/brand-core'
+import { docsBuildPlan } from '../scripts/build-docs.js'
 import { docsAudience } from '../scripts/docs-audience.js'
 import { prepareDocs } from '../scripts/prepare-docs.js'
 import { removeTempDir, tempDir } from './helpers/cleanup.js'
@@ -111,5 +112,44 @@ test('a public-docs brand: CI builds and scans the public docs, with and without
     for (const pattern of [/npm run build -w @brand-os\/docs/, /build:docs:nomascot/, /scan-public/]) assert.match(commands, pattern)
   } finally {
     removeTempDir(root)
+  }
+})
+
+const scripts = (JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts
+
+test('npm run build / ci: every docs build goes through build-docs, which follows publish_docs like CI', () => {
+  for (const name of ['build', 'ci']) assert.doesNotMatch(scripts[name], /--audience public/, `${name} must not force a public build`)
+  for (const name of ['docs:build', 'docs:build:fa', 'build:docs:nomascot']) assert.match(scripts[name], /scripts\/build-docs\.ts/, `${name} uses build-docs`)
+  assert.match(scripts.build, /docs:build/)
+  assert.match(scripts.ci, /npm run build\b/)
+  assert.match(scripts.ci, /build:docs:nomascot/)
+
+  const isPublic = (step: { args: string[] }) => step.args.join(' ').includes('--audience public')
+  const priv = brand('private')
+  const pub = brand('public')
+  try {
+    const main = docsBuildPlan(priv)
+    assert.equal(main.audience, 'private')
+    assert.ok(!main.steps.some(isPublic), 'a private brand never prepares public docs')
+    assert.ok(main.steps.some((step) => step.args.join(' ').includes('--audience internal')), 'it compiles the internal docs instead')
+    assert.match(main.note ?? '', /publish_docs is private/)
+    const nomascot = docsBuildPlan(priv, { nomascot: true })
+    assert.deepEqual(nomascot.steps, [])
+    assert.match(nomascot.note ?? '', /no public docs build/)
+
+    const fa = docsBuildPlan(pub, { extra: ['--locale', 'fa'] })
+    assert.equal(fa.audience, 'public')
+    assert.ok(fa.steps.some(isPublic))
+    assert.deepEqual(fa.steps.at(-1)?.args.slice(-2), ['--locale', 'fa'])
+    const pubNomascot = docsBuildPlan(pub, { nomascot: true }).steps[0].args.join(' ')
+    assert.match(pubNomascot, /--audience public --mascot false --gamification false/)
+
+    // The CLI itself: a private brand's nomascot build exits 0 without building anything.
+    const cli = spawnSync(process.execPath, ['--import', import.meta.resolve('tsx'), path.join(REPO, 'scripts/build-docs.ts'), '--nomascot'], { cwd: priv, encoding: 'utf8', timeout: 60_000 })
+    assert.equal(cli.status, 0, cli.stderr)
+    assert.match(cli.stdout, /publish_docs is private/)
+  } finally {
+    removeTempDir(priv)
+    removeTempDir(pub)
   }
 })
