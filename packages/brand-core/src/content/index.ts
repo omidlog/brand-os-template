@@ -1,9 +1,11 @@
 import { brandModules } from './brand-modules.js'
 import { businessModules } from './business-modules.js'
+import { personalCoreModules } from './personal-core.js'
+import { personalFacetModules } from './personal-facets.js'
 import type { FieldQuestion, ModuleDef } from '../types.js'
 
 export function allModules(): ModuleDef[] {
-  return [...brandModules, ...businessModules]
+  return [...brandModules, ...businessModules, ...personalCoreModules, ...personalFacetModules]
 }
 
 export function allQuestions(): FieldQuestion[] {

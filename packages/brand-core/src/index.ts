@@ -1,8 +1,16 @@
 export { templateConfig } from './config.js'
 export { allModules, allQuestions, moduleById } from './content/index.js'
 export { buildMascotCatalog, CANONICAL_ANGLES, CORE_MOTIONS, EXAMPLE_STAGES, catalogCounts } from './content/mascot-catalog.js'
-export { InterviewEngine, applyInit, dispositionFor, emptySession, assertSlug, upgradeCore, syncManifest } from './engine.js'
-export { listProfiles, loadProfile, profileErrors, UNIVERSAL_PROFILE } from './profiles.js'
+export { InterviewEngine, applyInit, dispositionFor, emptySession, assertSlug, upgradeCore, syncManifest, personalInit } from './engine.js'
+export { completenessScope, listProfiles, loadProfile, profileErrors, UNIVERSAL_PROFILE } from './profiles.js'
+export { PERSONAL_BRAND, PERSONAL_SHARED_QUESTIONS, STARTER_PROFILES } from './content/profiles.js'
+export { canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSONAL_CANONICAL_REFERENCES } from './personal.js'
+export type { CanonicalReference } from './personal.js'
+export { moduleEnabled, personalConfig } from './conditions.js'
+export { PRIVATE_CUES, privateDataFindings, privateDataRefusal } from './personal-privacy.js'
+export type { PrivateDataFinding, PrivateDataKind } from './personal-privacy.js'
+export { OWNERSHIP_STATES, RELATION_TYPES } from './structured.js'
+export type { OwnershipState, RelationshipEntry, RelationType } from './structured.js'
 export type { InterviewProfile } from './profiles.js'
 export {
   applyProposalBatch,
@@ -120,8 +128,8 @@ export {
 export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, DocumentSection, DocumentSpec, ItemTag, SectionSpec } from './documents/index.js'
 export { evaluateCondition } from './conditions.js'
 export { validateRepo } from './validate-repo.js'
-export { PROPOSAL_STATES } from './types.js'
-export type { BrandConfig, FieldQuestion, ModuleDef, AnswerRecord, ProposalState } from './types.js'
+export { PERSONAL_FACETS, PROPOSAL_STATES, PUBLICATION_REQUIREMENTS } from './types.js'
+export type { BrandConfig, FieldQuestion, ModuleDef, AnswerRecord, PersonalFacet, PersonalModuleConfig, ProposalState, PublicationRequirement } from './types.js'
 export {
   arr,
   breakEven,

@@ -1,5 +1,6 @@
 import type {
   FieldQuestion,
+  PublicationRequirement,
   ModuleDef,
   Priority,
   QuestionType,
@@ -31,6 +32,11 @@ export interface FqInput {
   docs?: string[]
   related?: string[]
   completion?: FieldQuestion['completion_rule']
+  grant?: FieldQuestion['approval_grant']
+  /** Publication gate beyond approval (personal claims). */
+  requires?: PublicationRequirement[]
+  /** A professional contact field (emails and contact URLs are allowed here). */
+  contact?: boolean
 }
 
 const SOURCE_TYPES: SourceType[] = ['owner', 'approved_import', 'external_cited', 'agent_suggestion']
@@ -47,7 +53,7 @@ export function fq(input: FqInput): FieldQuestion {
           ? 'number'
           : type === 'url'
             ? 'url'
-            : type === 'color' || type === 'font' || type === 'logo_spec' || type === 'voice_pairs'
+            : type === 'color' || type === 'font' || type === 'logo_spec' || type === 'voice_pairs' || type === 'relationships'
               ? 'structured'
               : 'non_empty')
   return {
@@ -67,6 +73,9 @@ export function fq(input: FqInput): FieldQuestion {
     priority: input.priority ?? 'high',
     order: input.order,
     sensitivity: input.sensitivity ?? 'internal',
+    ...(input.grant ? { approval_grant: input.grant } : {}),
+    ...(input.requires?.length ? { publication_requires: input.requires } : {}),
+    ...(input.contact ? { contact_field: true } : {}),
     language: ['en', 'fa', 'tr'],
     source_types: SOURCE_TYPES,
     related_outputs: input.docs ?? [],

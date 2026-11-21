@@ -2,9 +2,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
+import { allModules, moduleEnabled, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
-import type { BrandConfig } from '@brand-os/brand-core'
+import type { BrandConfig, PersonalFacet } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
 
 export interface PrepareOptions {
@@ -20,6 +20,7 @@ interface DocFile {
   url: string
   text: string
   optional?: string
+  facet?: string
   visibility: string
 }
 
@@ -79,11 +80,14 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
   }
   collect(ctx, path.join(root, 'brand', 'content'), docs)
   collect(ctx, path.join(root, 'brand', 'business-os'), docs)
+  collect(ctx, path.join(root, 'brand', 'personal'), docs)
   collect(ctx, path.join(root, 'brand', 'templates'), docs)
   const excluded = new Set<string>()
   for (const doc of docs) {
     if (doc.optional === 'mascot' && !ctx.mascot) excluded.add(doc.url)
     if (doc.optional === 'gamification' && !ctx.gamification) excluded.add(doc.url)
+    // Personal pages follow modules.personal, and a facet page also needs its facet.
+    if (doc.optional === 'personal' && !moduleEnabled({ optional: 'personal', facet: doc.facet as PersonalFacet | undefined }, ctx.config)) excluded.add(doc.url)
     if (doc.visibility === 'restricted') excluded.add(doc.url)
     if (ctx.audience === 'public' && doc.visibility === 'internal') excluded.add(doc.url)
     if (ctx.audience === 'public' && doc.source !== 'canonical' && !pageIsPublic(ctx.root, doc.source) && !pageIsPublic(ctx.root, doc.dest)) excluded.add(doc.url)
@@ -132,6 +136,7 @@ function collect(ctx: PrepareContext, dir: string, into: DocFile[]): void {
         url: `/docs/${dest.replace(/\.md$/, '')}`,
         text,
         optional: meta.optional_module,
+        facet: meta.personal_facet,
         visibility: meta.visibility ?? 'internal',
       })
     }
@@ -145,6 +150,7 @@ function destination(relative: string): string | null {
   if (relative.startsWith('brand/content/')) return `brand/${relative.slice('brand/content/'.length)}`
   if (relative.startsWith('brand/business-os/')) return `business/${relative.slice('brand/business-os/'.length)}`
   if (relative.startsWith('brand/templates/')) return `templates/${relative.slice('brand/templates/'.length)}`
+  if (relative.startsWith('brand/personal/')) return `personal/${relative.slice('brand/personal/'.length)}`
   return null
 }
 
@@ -174,6 +180,8 @@ function writeSidebars(ctx: PrepareContext, included: DocFile[]): void {
     category('Business OS', items('business/')),
     category('Approved Brand Book', items('brand-book/')),
     category('Approved Business Book', items('business-book/')),
+    category('Personal Brand', items('personal/')),
+    category('Approved Personal Book', items('personal-book/')),
     ctx.gamification ? category('Gamification', items('gamification/')) : null,
     category('Use cases', useCases),
     category('Templates', templates),

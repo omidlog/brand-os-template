@@ -7,6 +7,7 @@ import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
 import { booleanWord, t, type Locale } from './i18n.js'
 import { canApprove, permissionFor, type ApprovalGrant } from './permissions.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
+import { privateDataRefusal } from './personal-privacy.js'
 import { readPublicationPolicy } from './publication.js'
 import { isStructuredType, normalizeStructured } from './structured.js'
 import type { AnswerRecord, Authority, FieldQuestion, ProposalState, SourceType, Status } from './types.js'
@@ -670,12 +671,21 @@ function readApprovedMap(root: string): Record<string, { version?: number; value
   return readYaml<{ facts: Record<string, { version?: number; value?: unknown }> }>(file).facts ?? {}
 }
 
+export function isPersonalQuestion(question: Pick<FieldQuestion, 'id'>): boolean {
+  return question.id.startsWith('personal.')
+}
+
 export function normalizeAnswer(
   question: FieldQuestion,
   rawValue: string,
 ): { ok: true; value: string | number | boolean } | { ok: false; message: string } {
   const value = rawValue.trim()
   if (!value) return { ok: false, message: 'Empty answer. Use unknown, skip, or decide later.' }
+  // Personal Brand OS never stores a home address, personal phone, birth date, government id or family details.
+  if (isPersonalQuestion(question)) {
+    const refusal = privateDataRefusal(question, value)
+    if (refusal) return { ok: false, message: refusal }
+  }
   if (question.question_type === 'boolean') {
     const word = booleanWord(value)
     if (word) return { ok: true, value: word }

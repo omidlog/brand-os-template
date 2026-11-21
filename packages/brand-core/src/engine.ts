@@ -6,11 +6,13 @@ import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
 import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
 import { t, normalizeCommand, type Locale } from './i18n.js'
-import { ApprovalService, normalizeAnswer, type AnswerMeta, type ApprovalStep } from './approval.js'
+import { ApprovalService, isPersonalQuestion, normalizeAnswer, type AnswerMeta, type ApprovalStep } from './approval.js'
 import { exportPublic as projectPublic } from './projection.js'
 import { authorize, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
 import { backupBrand, migrateBrand } from './backup.js'
-import { loadProfile, type InterviewProfile } from './profiles.js'
+import { completenessScope, loadProfile, type InterviewProfile } from './profiles.js'
+import { privateDataRefusal } from './personal-privacy.js'
+import { personalConfig } from './conditions.js'
 import { extractByRules } from './llm/rules.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
@@ -22,10 +24,15 @@ import type {
   ProposalState,
   LedgerFile,
   PendingProposal,
+  PersonalFacet,
+  PersonalModuleConfig,
   SessionState,
   SourceType,
   Status,
 } from './types.js'
+import { PERSONAL_FACETS } from './types.js'
+import { templateConfig } from './config.js'
+import { ensureStarterProfiles } from './personal.js'
 
 export interface StepResult {
   kind: 'recorded' | 'info' | 'exit' | 'error' | 'impact'
@@ -57,7 +64,25 @@ export interface InitInput {
   gamification: boolean
   publish: 'public' | 'private'
   profile?: string
+  /** Turn on the Personal Brand OS module. Implied by `profile: personal-brand`. */
+  personal?: boolean
+  /** Personal facets, for example founder-executive and consultant-expert. Needs the personal module. */
+  facets?: string[]
   reset?: boolean
+}
+
+/** Personal module settings for brand:init. Throws on an unknown facet or facets without the module. */
+export function personalInit(input: Pick<InitInput, 'profile' | 'personal' | 'facets'>): PersonalModuleConfig {
+  const enabled = input.personal === true || input.profile === 'personal-brand'
+  const facets = [...new Set((input.facets ?? []).map((item) => item.trim()).filter(Boolean))]
+  const unknown = facets.filter((facet) => !(PERSONAL_FACETS as readonly string[]).includes(facet))
+  if (unknown.length) throw new Error(`Unknown personal facet ${unknown.join(', ')}. Use: ${PERSONAL_FACETS.join(', ')}.`)
+  if (facets.length && !enabled) throw new Error('Facets need the personal module. Use --profile personal-brand or --personal true.')
+  return { enabled, facets: facets as PersonalFacet[] }
+}
+
+function isPersonalBrand(config: BrandConfig): boolean {
+  return config.brand.profile === 'personal-brand' && personalConfig(config).enabled
 }
 
 const CONFIG_BINDINGS: Array<{ id: string; assign: (config: BrandConfig, value: string) => void }> = [
@@ -80,8 +105,18 @@ const CONFIG_BINDINGS: Array<{ id: string; assign: (config: BrandConfig, value: 
     },
   },
   {
+    id: 'personal.identity.public_name',
+    assign: (config, value) => {
+      if (!isPersonalBrand(config)) return
+      config.brand.working_name = value
+      config.brand.working_name_status = 'draft'
+    },
+  },
+  {
     id: 'business.identity.trade_name',
     assign: (config, value) => {
+      // A company trade name never renames a personal brand.
+      if (isPersonalBrand(config)) return
       config.brand.working_name = value
       config.brand.working_name_status = 'draft'
     },
@@ -525,6 +560,10 @@ export class InterviewEngine {
     meta: { state: ProposalState; confidence: number; quotation: string; sourceReference: string; uncertainty: string },
   ): AnswerRecord {
     if (question.sensitivity === 'restricted') throw new Error(`Refusing to record a proposal for restricted ${question.id}.`)
+    if (isPersonalQuestion(question)) {
+      const refusal = privateDataRefusal(question, value) ?? privateDataRefusal(question, meta.quotation)
+      if (refusal) throw new Error(refusal)
+    }
     const latest = this.context().answers.get(question.id)
     if (latest?.status === 'approved') throw new Error(`Refusing to overwrite approved ${question.id} with a proposal.`)
     if (latest) this.supersede(latest.answer_id)
@@ -575,8 +614,12 @@ export class InterviewEngine {
   }
 
   private applyApprovedName(question: FieldQuestion, answer: AnswerRecord): void {
-    if (question.id !== 'business.identity.trade_name' || typeof answer.value !== 'string') return
+    if (typeof answer.value !== 'string') return
     const config = this.config()
+    // For a personal brand the person's approved public name is the brand name. A company trade name
+    // never overwrites it, and the person's name never becomes a company's legal or trade name.
+    const personalBrand = isPersonalBrand(config)
+    if (question.id === 'personal.identity.public_name' ? !personalBrand : question.id !== 'business.identity.trade_name' || personalBrand) return
     config.brand.name = answer.value
     config.brand.name_status = 'approved'
     config.brand.working_name = answer.value
@@ -774,7 +817,7 @@ export class InterviewEngine {
   }
 
   statusReport() {
-    const report = completeness(this.questions(), this.context())
+    const report = completeness(this.questions(), this.context(), completenessScope(this.profile()))
     const next = this.queue(5).map((question) => ({
       id: question.id,
       priority: question.priority,
@@ -842,6 +885,10 @@ export class InterviewEngine {
     if (!proposal) return { kind: 'error', message: 'No proposal with that number.' }
     const question = this.question(proposal.question_id)
     if (!question) return { kind: 'error', message: 'That proposal no longer matches a question.' }
+    if (isPersonalQuestion(question)) {
+      const refusal = privateDataRefusal(question, proposal.value) ?? privateDataRefusal(question, proposal.quotation)
+      if (refusal) return { kind: 'error', questionId: question.id, message: refusal }
+    }
     if (proposal.state) {
       if (question.sensitivity === 'restricted') return { kind: 'error', message: 'Restricted questions are answered directly, not from a note.' }
       if (this.context().answers.get(question.id)?.status === 'approved') {
@@ -1025,6 +1072,9 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   config.brand.tagline = 'TBD'
   config.modules.mascot.enabled = input.mascot
   config.modules.gamification.enabled = input.gamification
+  const personal = personalInit(input)
+  config.modules.personal = { ...personal, note: config.modules.personal?.note ?? templateConfig().modules.personal?.note ?? '' }
+  ensureStarterProfiles(root)
   writeYaml(path.join(root, 'brand', 'brand.config.yaml'), config)
   writeYaml(path.join(root, 'brand', 'interview', 'session-state.yaml'), emptySession(input.language))
   writeYaml(path.join(root, 'brand', 'interview', 'answer-ledger.yaml'), { schema_version: 1, records: [] })

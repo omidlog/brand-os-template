@@ -25,6 +25,8 @@ if (command === 'init') {
       gamification: { type: 'string', default: 'false' },
       publish: { type: 'string', default: 'private' },
       profile: { type: 'string', default: 'universal' },
+      personal: { type: 'string' },
+      facets: { type: 'string' },
       yes: { type: 'boolean', default: false },
       reset: { type: 'boolean', default: false },
     },
@@ -49,9 +51,12 @@ if (command === 'init') {
     gamification: values.gamification === 'true',
     publish: values.publish === 'public' ? 'public' : 'private',
     profile: values.profile,
+    personal: values.personal === undefined ? undefined : values.personal === 'true',
+    facets: values.facets ? values.facets.split(',').map((item) => item.trim()).filter(Boolean) : [],
     reset: values.reset === true,
   })
-  console.log(`Initialized ${config.brand.name} (${config.brand.slug}). Mascot ${config.modules.mascot.enabled ? 'on' : 'off'}.`)
+  const personal = config.modules.personal
+  console.log(`Initialized ${config.brand.name} (${config.brand.slug}). Profile ${config.brand.profile}. Mascot ${config.modules.mascot.enabled ? 'on' : 'off'}. Personal ${personal?.enabled ? `on${personal.facets.length ? ` (${personal.facets.join(', ')})` : ''}` : 'off'}.`)
   console.log(engine.statusText())
 } else if (command === 'interview' || command === 'resume') {
   const { values } = parseArgs({

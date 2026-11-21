@@ -20,6 +20,7 @@ export function renderModulePage(module: ModuleDef, questions: FieldQuestion[]):
     'status_note: starter',
   ]
   if (module.optional) lines.push(`optional_module: ${module.optional}`)
+  if (module.facet) lines.push(`personal_facet: ${module.facet}`)
   lines.push(
     '---',
     '',

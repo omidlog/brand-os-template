@@ -28,7 +28,11 @@ function ratio(part: number, whole: number): number {
   return part / whole
 }
 
-export function completeness(questions: FieldQuestion[], ctx: ConditionContext): CompletenessReport {
+/**
+ * Coverage and approval over required questions. `scope`, when given, is an exclusive interview
+ * profile: questions outside it count as not applicable rather than missing.
+ */
+export function completeness(questions: FieldQuestion[], ctx: ConditionContext, scope: Set<string> | null = null): CompletenessReport {
   const byModule = new Map<string, ModuleScore>()
   const ensure = (module: string): ModuleScore => {
     const existing = byModule.get(module)
@@ -51,7 +55,7 @@ export function completeness(questions: FieldQuestion[], ctx: ConditionContext):
 
   for (const question of questions) {
     const score = ensure(question.module)
-    if (disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) {
+    if ((scope && !scope.has(question.id)) || disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) {
       score.notApplicable += 1
       continue
     }

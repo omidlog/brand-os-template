@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { z } from 'zod'
-import { normalizeAnswer } from './approval.js'
+import { isPersonalQuestion, normalizeAnswer } from './approval.js'
+import { privateDataRefusal } from './personal-privacy.js'
 import { latestAnswers } from './completeness.js'
 import { exists, readYaml, writeYaml } from './fsutil.js'
 import type { InterviewEngine } from './engine.js'
@@ -301,6 +302,10 @@ export function applyProposalBatch(
       return reject('provenance: the quotation does not appear verbatim in the source text')
     }
 
+    if (isPersonalQuestion(question)) {
+      const refusal = privateDataRefusal(question, item.quotation)
+      if (refusal) return reject(`privacy: ${refusal}`)
+    }
     let value: AnswerRecord['value'] = null
     if (item.state !== 'unresolved') {
       const normalized = normalizeAnswer(question, String(item.value))

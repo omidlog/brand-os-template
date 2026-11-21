@@ -4,6 +4,7 @@ import path from 'node:path'
 import { migrateFactFiles } from './facts.js'
 import { migrateMascotCatalog, type MascotMigration } from './mascot-lifecycle.js'
 import { writeAtomic } from './fsutil.js'
+import { migratePersonal } from './personal.js'
 import { parse, stringify } from 'yaml'
 import { dataKey } from './private-store.js'
 
@@ -117,6 +118,8 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   }
   const mascot = migrateMascotCatalog(root)
   if (mascot.files.length > 0) log.applied.push({ id: `mascot-lifecycle@${ENGINE_VERSION}`, touched: mascot.files })
+  const personal = migratePersonal(root)
+  if (personal.length > 0) log.applied.push({ id: `personal-brand@${ENGINE_VERSION}`, touched: personal })
   writeAtomic(logFile, stringify(log, { lineWidth: 100 }))
   writeAtomic(
     lockFile,

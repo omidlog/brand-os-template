@@ -10,6 +10,7 @@ import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
 import { approvalGrantErrors } from './permissions.js'
+import { canonicalReferenceErrors } from './personal.js'
 import { profileErrors, profileExists } from './profiles.js'
 import { llmConfigErrors } from './llm/provider.js'
 import type { BrandConfig, FieldQuestion } from './types.js'
@@ -44,6 +45,7 @@ export function validateRepo(root: string): ValidationReport {
   validateRegistry(root, questions, errors)
   validateConditions(questions, errors)
   errors.push(...profileErrors(root, questions))
+  errors.push(...canonicalReferenceErrors(questions))
   const configFile = path.join(root, 'brand', 'brand.config.yaml')
   if (fs.existsSync(configFile)) {
     const config = readYaml<BrandConfig>(configFile)

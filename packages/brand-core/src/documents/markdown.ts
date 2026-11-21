@@ -30,6 +30,12 @@ function structuredLines(value: StructuredValue): string[] {
       ]
     case 'voice_pairs':
       return ['| Do | Don’t |', '| --- | --- |', ...value.pairs.map((pair) => `| ${escape(pair.do)} | ${escape(pair.dont)} |`)]
+    case 'relationships':
+      return [
+        '| Relation | Organization | From | To | Ownership |',
+        '| --- | --- | --- | --- | --- |',
+        ...value.relationships.map((entry) => `| ${entry.relation} | ${escape(entry.organization)} | ${entry.from} | ${entry.to} | ${entry.ownership === 'unstated' ? 'not stated (no ownership claim)' : entry.ownership} |`),
+      ]
   }
 }
 

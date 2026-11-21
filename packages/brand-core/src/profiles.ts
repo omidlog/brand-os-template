@@ -15,6 +15,13 @@ export interface InterviewProfile {
   title: string
   description: string
   question_ids: string[]
+  /**
+   * When true, questions outside the profile are not applicable for completeness: they are neither
+   * required nor missing. A person-only brand then never reports a company legal name or a SaaS
+   * stack as missing work. They can still be answered by id. Defaults to false, so `founder-core`
+   * keeps scoring the whole bank as before.
+   */
+  exclusive?: boolean
 }
 
 const PROFILE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -45,7 +52,13 @@ export function loadProfile(root: string, id: string | null | undefined): Interv
     title: typeof doc.title === 'string' ? doc.title : id,
     description: typeof doc.description === 'string' ? doc.description : '',
     question_ids: Array.isArray(doc.question_ids) ? doc.question_ids.filter((item): item is string => typeof item === 'string') : [],
+    exclusive: doc.exclusive === true,
   }
+}
+
+/** Question ids that count for completeness, or null when every question in the bank counts. */
+export function completenessScope(profile: InterviewProfile | null): Set<string> | null {
+  return profile?.exclusive ? new Set(profile.question_ids) : null
 }
 
 /** Validation for every profile file: ids exist, no duplicates, and dependencies stay inside the profile. */
@@ -62,6 +75,7 @@ export function profileErrors(root: string, questions: FieldQuestion[]): string[
     }
     const doc = readYaml<Partial<InterviewProfile>>(path.join(dir, name))
     if (doc.id !== id) errors.push(`Interview profile ${name} must declare id: ${id}`)
+    if (doc.exclusive !== undefined && typeof doc.exclusive !== 'boolean') errors.push(`Interview profile ${id}: exclusive must be true or false`)
     const ids = Array.isArray(doc.question_ids) ? doc.question_ids : []
     if (ids.length === 0) errors.push(`Interview profile ${id} lists no questions`)
     const seen = new Set<string>()

@@ -2739,3 +2739,934 @@ fields:
       - brand/restricted/drafts/business-partnerships.md
     validator: non_empty
     related_ids: []
+  - id: personal.identity.public_name
+    module: personal-identity
+    field_path: personal.identity.public_name
+    label: Public name
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.identity.public_name
+    documents:
+      - brand/generated/drafts/personal-identity.md
+    validator: non_empty
+    related_ids:
+      - business.identity.trade_name
+  - id: personal.identity.headline
+    module: personal-identity
+    field_path: personal.identity.headline
+    label: Professional headline
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.identity.headline
+    documents:
+      - brand/generated/drafts/personal-identity.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.identity.roles
+    module: personal-identity
+    field_path: personal.identity.roles
+    label: Roles, specialties and industries
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.identity.roles
+    documents:
+      - brand/generated/drafts/personal-identity.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.identity.name_forms
+    module: personal-identity
+    field_path: personal.identity.name_forms
+    label: Other approved name forms
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.identity.name_forms
+    documents:
+      - brand/generated/drafts/personal-identity.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.identity.localized_headline
+    module: personal-identity
+    field_path: personal.identity.localized_headline
+    label: Localized headline
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.identity.localized_headline
+    documents:
+      - brand/generated/drafts/personal-identity.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.identity.service_scope
+    module: personal-identity
+    field_path: personal.identity.service_scope
+    label: Geographic service scope
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.identity.service_scope
+    documents:
+      - brand/generated/drafts/personal-identity.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.identity.pronouns
+    module: personal-identity
+    field_path: personal.identity.pronouns
+    label: Pronouns (optional)
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.identity.pronouns
+    documents:
+      - brand/generated/drafts/personal-identity.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.positioning.known_for
+    module: personal-positioning
+    field_path: personal.positioning.known_for
+    label: Known for
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.positioning.known_for
+    documents:
+      - brand/generated/drafts/personal-positioning.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.positioning.primary_audience
+    module: personal-positioning
+    field_path: personal.positioning.primary_audience
+    label: Primary audience
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.positioning.primary_audience
+    documents:
+      - brand/generated/drafts/personal-positioning.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.positioning.expertise
+    module: personal-positioning
+    field_path: personal.positioning.expertise
+    label: Expertise topics
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.positioning.expertise
+    documents:
+      - brand/generated/drafts/personal-positioning.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.positioning.outcome
+    module: personal-positioning
+    field_path: personal.positioning.outcome
+    label: Outcome you help create
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.positioning.outcome
+    documents:
+      - brand/generated/drafts/personal-positioning.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.positioning.perspective
+    module: personal-positioning
+    field_path: personal.positioning.perspective
+    label: Point of view
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.positioning.perspective
+    documents:
+      - brand/generated/drafts/personal-positioning.md
+      - brand/generated/drafts/personal-content.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.services.offers
+    module: personal-positioning
+    field_path: personal.services.offers
+    label: Offers
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.services.offers
+    documents:
+      - brand/generated/drafts/personal-positioning.md
+    validator: non_empty
+    related_ids:
+      - business.offer.summary
+  - id: personal.positioning.boundaries
+    module: personal-positioning
+    field_path: personal.positioning.boundaries
+    label: Expertise boundaries
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - personal.positioning.boundaries
+    documents:
+      - brand/generated/drafts/personal-positioning.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.story.origin
+    module: personal-story
+    field_path: personal.story.origin
+    label: Origin
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.story.origin
+    documents:
+      - brand/generated/drafts/personal-story.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.story.turning_points
+    module: personal-story
+    field_path: personal.story.turning_points
+    label: Turning points
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.story.turning_points
+    documents:
+      - brand/generated/drafts/personal-story.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.story.motivation
+    module: personal-story
+    field_path: personal.story.motivation
+    label: Motivation
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.story.motivation
+    documents:
+      - brand/generated/drafts/personal-story.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.story.timeline
+    module: personal-story
+    field_path: personal.story.timeline
+    label: Milestone timeline
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.story.timeline
+    documents:
+      - brand/generated/drafts/personal-story.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.story.next_chapter
+    module: personal-story
+    field_path: personal.story.next_chapter
+    label: Next chapter (aspiration)
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - personal.story.next_chapter
+    documents:
+      - brand/generated/drafts/personal-story.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.experience.relationships
+    module: personal-career
+    field_path: personal.experience.relationships
+    label: Organizations and relationships
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.experience.relationships
+    documents:
+      - brand/generated/drafts/personal-career.md
+    validator: structured
+    related_ids:
+      - business.identity.trade_name
+  - id: personal.experience.roles
+    module: personal-career
+    field_path: personal.experience.roles
+    label: Responsibilities by role
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.experience.roles
+    documents:
+      - brand/generated/drafts/personal-career.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.experience.highlights
+    module: personal-career
+    field_path: personal.experience.highlights
+    label: Demonstrable results
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.experience.highlights
+    documents:
+      - brand/generated/drafts/personal-career.md
+      - brand/generated/drafts/personal-proof.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.credibility.credentials
+    module: personal-career
+    field_path: personal.credibility.credentials
+    label: Education and certifications
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.credibility.credentials
+    documents:
+      - brand/generated/drafts/personal-career.md
+      - brand/generated/drafts/personal-proof.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.credibility.awards
+    module: personal-career
+    field_path: personal.credibility.awards
+    label: Awards and recognition
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.credibility.awards
+    documents:
+      - brand/generated/drafts/personal-career.md
+      - brand/generated/drafts/personal-proof.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.credibility.evidence
+    module: personal-proof
+    field_path: personal.credibility.evidence
+    label: Evidence sources
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.credibility.evidence
+    documents:
+      - brand/generated/drafts/personal-proof.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.portfolio.projects
+    module: personal-proof
+    field_path: personal.portfolio.projects
+    label: Shareable projects and case studies
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.portfolio.projects
+    documents:
+      - brand/generated/drafts/personal-proof.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.reputation.testimonials
+    module: personal-proof
+    field_path: personal.reputation.testimonials
+    label: Testimonials
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.reputation.testimonials
+    documents:
+      - brand/generated/drafts/personal-proof.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.reputation.conflicts
+    module: personal-proof
+    field_path: personal.reputation.conflicts
+    label: Conflicts of interest
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.reputation.conflicts
+    documents:
+      - brand/generated/drafts/personal-proof.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.governance.public_claim_policy
+    module: personal-proof
+    field_path: personal.governance.public_claim_policy
+    label: Public claim policy
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.governance.public_claim_policy
+    documents:
+      - brand/generated/drafts/personal-proof.md
+      - brand/generated/drafts/personal-boundaries.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.content.pillars
+    module: personal-content
+    field_path: personal.content.pillars
+    label: Content pillars
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.content.pillars
+    documents:
+      - brand/generated/drafts/personal-content.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.content.channels
+    module: personal-content
+    field_path: personal.content.channels
+    label: Channels and their goals
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.content.channels
+    documents:
+      - brand/generated/drafts/personal-content.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.content.channel_tone
+    module: personal-content
+    field_path: personal.content.channel_tone
+    label: Channel tone differences
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - personal.content.channel_tone
+    documents:
+      - brand/generated/drafts/personal-content.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.goals.outcomes
+    module: personal-content
+    field_path: personal.goals.outcomes
+    label: Outcome that matters
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.goals.outcomes
+    documents:
+      - brand/generated/drafts/personal-content.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.goals.kpis
+    module: personal-content
+    field_path: personal.goals.kpis
+    label: Measurement
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - personal.goals.kpis
+    documents:
+      - brand/generated/drafts/personal-content.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.media.photo_guidelines
+    module: personal-presence
+    field_path: personal.media.photo_guidelines
+    label: Portrait style
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.media.photo_guidelines
+    documents:
+      - brand/generated/drafts/personal-presence.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.media.avoid
+    module: personal-presence
+    field_path: personal.media.avoid
+    label: Images to avoid
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.media.avoid
+    documents:
+      - brand/generated/drafts/personal-presence.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.media.portraits
+    module: personal-presence
+    field_path: personal.media.portraits
+    label: Approved portraits and rights
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.media.portraits
+    documents:
+      - brand/generated/drafts/personal-presence.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.media.presentation
+    module: personal-presence
+    field_path: personal.media.presentation
+    label: Presentation guidelines
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - personal.media.presentation
+    documents:
+      - brand/generated/drafts/personal-presence.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.media.visual_templates
+    module: personal-presence
+    field_path: personal.media.visual_templates
+    label: Templates that reuse your look
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - personal.media.visual_templates
+    documents:
+      - brand/generated/drafts/personal-presence.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.privacy.boundaries
+    module: personal-boundaries
+    field_path: personal.privacy.boundaries
+    label: Private topics
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.privacy.boundaries
+    documents:
+      - brand/generated/drafts/personal-boundaries.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.privacy.never_publish
+    module: personal-boundaries
+    field_path: personal.privacy.never_publish
+    label: Never-publish details
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.privacy.never_publish
+    documents:
+      - brand/generated/drafts/personal-boundaries.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.contact.public_channels
+    module: personal-boundaries
+    field_path: personal.contact.public_channels
+    label: Public professional contact
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.contact.public_channels
+    documents:
+      - brand/generated/drafts/personal-boundaries.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.governance.reviewer
+    module: personal-boundaries
+    field_path: personal.governance.reviewer
+    label: Draft reviewer
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.governance.reviewer
+    documents:
+      - brand/generated/drafts/personal-boundaries.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.privacy.availability
+    module: personal-boundaries
+    field_path: personal.privacy.availability
+    label: Public availability
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.privacy.availability
+    documents:
+      - brand/generated/drafts/personal-boundaries.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.founder.ventures
+    module: personal-founder
+    field_path: personal.founder.ventures
+    label: Ventures and your role
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.founder.ventures
+    documents:
+      - brand/generated/drafts/personal-founder.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.founder.narrative
+    module: personal-founder
+    field_path: personal.founder.narrative
+    label: Founder narrative
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.founder.narrative
+    documents:
+      - brand/generated/drafts/personal-founder.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.founder.sectors
+    module: personal-founder
+    field_path: personal.founder.sectors
+    label: Sectors you build in
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.founder.sectors
+    documents:
+      - brand/generated/drafts/personal-founder.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.founder.leadership_topics
+    module: personal-founder
+    field_path: personal.founder.leadership_topics
+    label: Leadership topics
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.founder.leadership_topics
+    documents:
+      - brand/generated/drafts/personal-founder.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.founder.investor_relations
+    module: personal-founder
+    field_path: personal.founder.investor_relations
+    label: Investor and press positioning
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.founder.investor_relations
+    documents:
+      - brand/generated/drafts/personal-founder.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.consulting.methodology
+    module: personal-consultant
+    field_path: personal.consulting.methodology
+    label: Methodology
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.consulting.methodology
+    documents:
+      - brand/generated/drafts/personal-consultant.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.consulting.engagements
+    module: personal-consultant
+    field_path: personal.consulting.engagements
+    label: Engagement formats
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.consulting.engagements
+    documents:
+      - brand/generated/drafts/personal-consultant.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.consulting.target_clients
+    module: personal-consultant
+    field_path: personal.consulting.target_clients
+    label: Target clients
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.consulting.target_clients
+    documents:
+      - brand/generated/drafts/personal-consultant.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.consulting.pricing_policy
+    module: personal-consultant
+    field_path: personal.consulting.pricing_policy
+    label: Pricing publication policy
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.consulting.pricing_policy
+    documents:
+      - brand/generated/drafts/personal-consultant.md
+    validator: one_of
+    related_ids: []
+  - id: personal.consulting.confidentiality
+    module: personal-consultant
+    field_path: personal.consulting.confidentiality
+    label: Confidentiality and ethics
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.consulting.confidentiality
+    documents:
+      - brand/generated/drafts/personal-consultant.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.consulting.cta
+    module: personal-consultant
+    field_path: personal.consulting.cta
+    label: Inquiry call to action
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.consulting.cta
+    documents:
+      - brand/generated/drafts/personal-consultant.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.creator.series
+    module: personal-creator
+    field_path: personal.creator.series
+    label: Content series
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.creator.series
+    documents:
+      - brand/generated/drafts/personal-creator.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.creator.audience_segments
+    module: personal-creator
+    field_path: personal.creator.audience_segments
+    label: Audience segments
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.creator.audience_segments
+    documents:
+      - brand/generated/drafts/personal-creator.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.creator.metrics
+    module: personal-creator
+    field_path: personal.creator.metrics
+    label: Audience metrics (dated, sourced)
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.creator.metrics
+    documents:
+      - brand/generated/drafts/personal-creator.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.creator.sponsorship
+    module: personal-creator
+    field_path: personal.creator.sponsorship
+    label: Sponsorship categories
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.creator.sponsorship
+    documents:
+      - brand/generated/drafts/personal-creator.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.creator.disclosure
+    module: personal-creator
+    field_path: personal.creator.disclosure
+    label: Disclosure rules
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.creator.disclosure
+    documents:
+      - brand/generated/drafts/personal-creator.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.artist.practice
+    module: personal-artist
+    field_path: personal.artist.practice
+    label: Practice and philosophy
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.artist.practice
+    documents:
+      - brand/generated/drafts/personal-artist.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.artist.aesthetic
+    module: personal-artist
+    field_path: personal.artist.aesthetic
+    label: Aesthetic vocabulary
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.artist.aesthetic
+    documents:
+      - brand/generated/drafts/personal-artist.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.artist.portfolio_taxonomy
+    module: personal-artist
+    field_path: personal.artist.portfolio_taxonomy
+    label: Portfolio taxonomy
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.artist.portfolio_taxonomy
+    documents:
+      - brand/generated/drafts/personal-artist.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.artist.exhibitions
+    module: personal-artist
+    field_path: personal.artist.exhibitions
+    label: Exhibitions and publications
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.artist.exhibitions
+    documents:
+      - brand/generated/drafts/personal-artist.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.artist.usage_rights
+    module: personal-artist
+    field_path: personal.artist.usage_rights
+    label: Usage rights and credits
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - personal.artist.usage_rights
+    documents:
+      - brand/generated/drafts/personal-artist.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.speaking.topics
+    module: personal-speaker
+    field_path: personal.speaking.topics
+    label: Speaking topics
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.speaking.topics
+    documents:
+      - brand/generated/drafts/personal-speaker.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.speaking.abstracts
+    module: personal-speaker
+    field_path: personal.speaking.abstracts
+    label: Talk abstracts
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.speaking.abstracts
+    documents:
+      - brand/generated/drafts/personal-speaker.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.speaking.languages
+    module: personal-speaker
+    field_path: personal.speaking.languages
+    label: Speaking languages
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.speaking.languages
+    documents:
+      - brand/generated/drafts/personal-speaker.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.speaking.prior_talks
+    module: personal-speaker
+    field_path: personal.speaking.prior_talks
+    label: Previous talks
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.speaking.prior_talks
+    documents:
+      - brand/generated/drafts/personal-speaker.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.speaking.introduction
+    module: personal-speaker
+    field_path: personal.speaking.introduction
+    label: Stage introduction
+    required: true
+    weight: 2
+    sensitivity: public
+    question_ids:
+      - personal.speaking.introduction
+    documents:
+      - brand/generated/drafts/personal-speaker.md
+    validator: non_empty
+    related_ids: []
+  - id: personal.author.publications
+    module: personal-speaker
+    field_path: personal.author.publications
+    label: Publications
+    required: false
+    weight: 1
+    sensitivity: public
+    question_ids:
+      - personal.author.publications
+    documents:
+      - brand/generated/drafts/personal-speaker.md
+    validator: non_empty
+    related_ids: []

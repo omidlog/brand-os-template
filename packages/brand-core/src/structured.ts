@@ -13,7 +13,7 @@ import type { FieldQuestion, QuestionType } from './types.js'
  * be ASCII.
  */
 
-export const STRUCTURED_TYPES = ['color', 'font', 'logo_spec', 'voice_pairs'] as const
+export const STRUCTURED_TYPES = ['color', 'font', 'logo_spec', 'voice_pairs', 'relationships'] as const
 export type StructuredType = (typeof STRUCTURED_TYPES)[number]
 
 export interface ColorEntry {
@@ -40,21 +40,39 @@ export interface VoicePair {
   dont: string
 }
 
+/** How a person is connected to an organization. Founding or working somewhere never implies ownership. */
+export const RELATION_TYPES = ['founded', 'co-founded', 'employed', 'contracted', 'advised', 'consulted', 'collaborated', 'board', 'invested', 'volunteered', 'studied', 'taught'] as const
+export type RelationType = (typeof RELATION_TYPES)[number]
+/** Ownership is its own explicit statement. `unstated` is the default and means "no ownership claim". */
+export const OWNERSHIP_STATES = ['owner', 'co-owner', 'not-owner', 'unstated'] as const
+export type OwnershipState = (typeof OWNERSHIP_STATES)[number]
+
+export interface RelationshipEntry {
+  relation: RelationType
+  organization: string
+  from: string
+  to: string
+  ownership: OwnershipState
+}
+
 export type StructuredValue =
   | { type: 'color'; colors: ColorEntry[] }
   | { type: 'font'; fonts: FontEntry[] }
   | { type: 'logo_spec'; logo: LogoSpec }
   | { type: 'voice_pairs'; pairs: VoicePair[] }
+  | { type: 'relationships'; relationships: RelationshipEntry[] }
 
 type Normalized = { ok: true; value: string } | { ok: false; message: string }
 
-export const STRUCTURED_LIMITS = { colors: 24, fonts: 8, pairs: 12, pairText: 200, family: 64 } as const
+export const STRUCTURED_LIMITS = { colors: 24, fonts: 8, pairs: 12, pairText: 200, family: 64, relationships: 30, organization: 120 } as const
 
 export const STRUCTURED_FORMATS: Record<StructuredType, string> = {
   color: 'role #RRGGBB, separated by ; or new lines. Example: primary #123A73; surface #FFFFFF',
   font: 'role: Family, fallback… [@ size px[/line height]], one role per line or ;. Example: body: Inter, system-ui, sans-serif @ 16px/1.5',
   logo_spec: 'min-size: <px>; clear-space: <px or multiple of the mark height>. Example: min-size: 24px; clear-space: 0.5x',
   voice_pairs: 'do | don\'t, one pair per line or ;. Example: Say what happened and what to do next | Blame the user',
+  relationships:
+    'relation | organization | from | to [| ownership], one per line or ;. Relation: founded, co-founded, employed, contracted, advised, consulted, collaborated, board, invested, volunteered, studied, taught. Dates: YYYY or YYYY-MM; to may be present; either may be unknown. Ownership: owner, co-owner, not-owner or unstated (the default). Example: co-founded | Example Studio | 2019 | present | not-owner',
 }
 
 export function isStructuredType(type: QuestionType | string): type is StructuredType {
@@ -198,6 +216,38 @@ function normalizeVoice(raw: string): Normalized {
   return { ok: true, value: out.join('; ') }
 }
 
+const PERIOD = /^(?:\d{4}(?:-(?:0[1-9]|1[0-2]))?|unknown)$/
+
+function normalizeRelationships(raw: string): Normalized {
+  const items = entries(raw, /[;؛\n]+/)
+  if (items.length === 0) return fail('relationships', 'No relationships found.')
+  if (items.length > STRUCTURED_LIMITS.relationships) return fail('relationships', `At most ${STRUCTURED_LIMITS.relationships} relationships.`)
+  const out: string[] = []
+  for (const item of items) {
+    const parts = item.split('|').map((part) => part.trim())
+    if (parts.length < 4 || parts.length > 5) return fail('relationships', `“${item}” needs relation | organization | from | to, and optionally | ownership.`)
+    const relation = (parts[0] ?? '').toLowerCase()
+    if (!(RELATION_TYPES as readonly string[]).includes(relation)) {
+      return fail('relationships', `“${parts[0]}” is not a relation. Use one of ${RELATION_TYPES.join(', ')}.`)
+    }
+    const organization = (parts[1] ?? '').replace(/\s+/g, ' ')
+    if (!organization || organization.length > STRUCTURED_LIMITS.organization) {
+      return fail('relationships', `The organization in “${item}” must be 1 to ${STRUCTURED_LIMITS.organization} characters.`)
+    }
+    const from = asciiDigits(parts[2] ?? '').toLowerCase()
+    const to = asciiDigits(parts[3] ?? '').toLowerCase()
+    if (!PERIOD.test(from)) return fail('relationships', `Start “${parts[2]}” must be YYYY, YYYY-MM or unknown.`)
+    if (to !== 'present' && !PERIOD.test(to)) return fail('relationships', `End “${parts[3]}” must be YYYY, YYYY-MM, present or unknown.`)
+    if (from !== 'unknown' && /^\d/.test(to) && to.slice(0, 7) < from.slice(0, 7)) return fail('relationships', `“${item}” ends before it starts.`)
+    const ownership = (parts[4] ?? 'unstated').toLowerCase().replace(/^ownership\s*:\s*/, '')
+    if (!(OWNERSHIP_STATES as readonly string[]).includes(ownership)) {
+      return fail('relationships', `Ownership “${parts[4]}” must be one of ${OWNERSHIP_STATES.join(', ')}.`)
+    }
+    out.push(`${relation} | ${organization} | ${from} | ${to} | ownership: ${ownership}`)
+  }
+  return { ok: true, value: out.join('; ') }
+}
+
 /** Validate an owner's answer for a structured question and return its canonical stored form. */
 export function normalizeStructured(type: StructuredType, raw: string): Normalized {
   const value = raw.trim()
@@ -211,6 +261,8 @@ export function normalizeStructured(type: StructuredType, raw: string): Normaliz
       return normalizeLogo(value)
     case 'voice_pairs':
       return normalizeVoice(value)
+    case 'relationships':
+      return normalizeRelationships(value)
   }
 }
 
@@ -264,6 +316,20 @@ export function parseStructured(type: StructuredType, value: unknown): Structure
         pairs: canonical.split('; ').map((entry) => {
           const [doSide, dontSide] = entry.split(' | ')
           return { do: (doSide ?? '').replace(/^do: /, ''), dont: (dontSide ?? '').replace(/^don't: /, '') }
+        }),
+      }
+    case 'relationships':
+      return {
+        type,
+        relationships: canonical.split('; ').map((entry) => {
+          const [relation, organization, from, to, ownership] = entry.split(' | ')
+          return {
+            relation: relation as RelationType,
+            organization: organization ?? '',
+            from: from ?? 'unknown',
+            to: to ?? 'unknown',
+            ownership: (ownership ?? 'ownership: unstated').replace(/^ownership: /, '') as OwnershipState,
+          }
         }),
       }
   }

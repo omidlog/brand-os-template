@@ -31,6 +31,8 @@ export const QUESTION_TYPES = [
   'font',
   'logo_spec',
   'voice_pairs',
+  // Personal Brand OS: a person's organizations with an explicit relation, dates and ownership.
+  'relationships',
 ] as const
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 
@@ -50,6 +52,25 @@ export const AUTHORITIES = [
   'independently_verified',
 ] as const
 export type Authority = (typeof AUTHORITIES)[number]
+
+/**
+ * What a public release of a claim needs beyond approval. Checked by the publication gate
+ * (approval.ts) against the evidence register (evidence.ts).
+ * - verified_evidence: at least one verified, independent, unexpired source. Owner testimony never counts.
+ * - rights_permission: a verified, unexpired permission record (client, testimonial giver, photographed person).
+ */
+export const PUBLICATION_REQUIREMENTS = ['verified_evidence', 'rights_permission'] as const
+export type PublicationRequirement = (typeof PUBLICATION_REQUIREMENTS)[number]
+
+/** Personal Brand OS facets. A person may combine several; each adds a short question group. */
+export const PERSONAL_FACETS = ['founder-executive', 'consultant-expert', 'creator-educator', 'artist-designer', 'speaker-author'] as const
+export type PersonalFacet = (typeof PERSONAL_FACETS)[number]
+
+export interface PersonalModuleConfig {
+  enabled: boolean
+  facets: PersonalFacet[]
+  note?: string
+}
 
 export interface LocalizedPrompt {
   en: string
@@ -77,6 +98,10 @@ export interface FieldQuestion {
   sensitivity: Visibility
   /** Explicit approval grant. Preferred over the id-based guess in permissions.ts. Restricted questions must use `financial`. */
   approval_grant?: 'financial' | 'visual' | 'public_copy' | 'canonical'
+  /** Conditions a public release of this claim must meet beyond approval. */
+  publication_requires?: PublicationRequirement[]
+  /** A professional contact field. Email addresses and contact URLs are expected here and nowhere else in the personal modules. */
+  contact_field?: boolean
   language: Array<'en' | 'fa' | 'tr'>
   source_types: SourceType[]
   related_outputs: string[]
@@ -92,7 +117,7 @@ export interface FieldQuestion {
 export interface ModuleDef {
   id: string
   code: string
-  group: 'brand' | 'business' | 'system'
+  group: 'brand' | 'business' | 'personal' | 'system'
   title: string
   /** Repository directory that holds the human-readable module. */
   dir: string
@@ -102,7 +127,9 @@ export interface ModuleDef {
   owner: string
   purpose: string
   decision: string
-  optional?: 'mascot' | 'gamification'
+  optional?: 'mascot' | 'gamification' | 'personal'
+  /** Personal facet that this module belongs to. Its questions skip when the facet is not selected. */
+  facet?: PersonalFacet
   dependsOn: string[]
   guidance: string[]
   dos: string[]
@@ -202,6 +229,8 @@ export interface BrandConfig {
   modules: {
     mascot: { enabled: boolean; note: string }
     gamification: { enabled: boolean; note: string }
+    /** Personal Brand OS. Absent in configs written before Phase 8, which means disabled. */
+    personal?: PersonalModuleConfig
   }
   design: {
     figma: { file_url: string | null; file_key: string | null; library_url: string | null }

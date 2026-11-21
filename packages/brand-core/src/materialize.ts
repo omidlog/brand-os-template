@@ -54,6 +54,7 @@ function bankName(question: FieldQuestion): string {
   if (question.id.startsWith('brand.mascot.')) return 'mascot.yaml'
   if (question.id.startsWith('brand.gamification.')) return 'gamification.yaml'
   if (question.module.startsWith('business')) return 'business.yaml'
+  if (question.module.startsWith('personal')) return 'personal.yaml'
   return 'brand.yaml'
 }
 
