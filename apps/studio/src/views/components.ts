@@ -103,7 +103,7 @@ export function externalLink(href: string, label: SafeHtml | string, i: I18n, cl
 }
 
 function swatch(hex: string, label: string): SafeHtml {
-  return html`<svg class="swatch-chip" viewBox="0 0 40 40" role="img" aria-label="${label}"><rect width="40" height="40" rx="8" fill="${hex}"/><rect width="40" height="40" rx="8" fill="none" class="swatch-outline"/></svg>`
+  return html`<svg class="swatch-chip" role="img" aria-label="${label}"><rect width="100%" height="100%" fill="${hex}"/></svg>`
 }
 
 export function colorSwatch(input: { hex: string | null; name: string; meta?: SafeHtml; i: I18n }): SafeHtml {

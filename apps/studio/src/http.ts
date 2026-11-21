@@ -82,7 +82,9 @@ export function securityHeaders(res: ServerResponse, secure: boolean): void {
   res.setHeader('Content-Security-Policy', CSP)
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('Referrer-Policy', 'no-referrer')
+  // same-origin, not no-referrer: with no-referrer browsers send `Origin: null` on same-origin form
+  // posts, which the Origin check must refuse. No referrer ever reaches another origin either way.
+  res.setHeader('Referrer-Policy', 'same-origin')
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()')
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')

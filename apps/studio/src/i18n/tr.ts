@@ -168,6 +168,8 @@ export const tr: Messages = {
   'wizard.error.rate_limited': 'Kısa sürede çok fazla marka oluşturuldu. Daha sonra tekrar deneyin.',
 
   'provision.title': '{brand} oluşturuluyor',
+  'provision.titleReady': '{brand} hazır',
+  'provision.titleFailed': '{brand} oluşturulamadı',
   'provision.running': 'Özel depo oluşturuluyor. Bu genellikle bir dakikadan kısa sürer.',
   'provision.ready': 'Özel depo hazır.',
   'provision.failed': 'Oluşturma başarısız oldu.',
@@ -213,7 +215,7 @@ export const tr: Messages = {
   'overview.recentEmpty': 'Gösterilecek commit yok.',
   'overview.contradictions': '{count} açık çelişki',
   'overview.withheld': '{count} onaylı kısıtlı bilgi gizlendi',
-  'overview.approvedFacts': '{count} onaylı bilgi',
+  'overview.approvedFacts': 'Onaylı bilgiler: {count}',
   'overview.notInitialized': 'Bu depo henüz bir marka olarak başlatılmadı.',
   'overview.profile': 'Profil',
   'overview.locales': 'Diller',

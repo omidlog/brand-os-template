@@ -304,12 +304,14 @@ export function provisioningPage(ctx: ViewContext, record: BrandRecord): SafeHtm
           <div class="button-row"><a class="btn btn-primary" href="/brands/${record.slug}">${i.t('provision.viewBrand')}</a>${externalLink(repoUrl, i.t('common.openOnGitHub'), i)}</div>
         </section>`
       : ''
+  const titleKey: MessageKey = p.state === 'ready' ? 'provision.titleReady' : p.state === 'failed' ? 'provision.titleFailed' : 'provision.title'
+  const title = i.t(titleKey, { brand: record.display_name })
   return shell(ctx, {
-    title: i.t('provision.title', { brand: record.display_name }),
+    title,
     crumbs: [{ label: i.t('nav.myBrands'), href: '/brands' }, { label: record.display_name }],
     extraHead: p.state === 'running' ? html`<noscript><meta http-equiv="refresh" content="3"></noscript>` : html``,
     content: html`<div data-provisioning="${record.slug}" data-state="${p.state}">
-      ${pageHeader({ title: i.t('provision.title', { brand: record.display_name }), eyebrow: html`${code(`${record.repo.owner}/${record.repo.name}`)} · ${i.t('provision.attempts', { n: i.number(p.attempts) })}` })}
+      ${pageHeader({ title, eyebrow: html`${code(`${record.repo.owner}/${record.repo.name}`)} · ${i.t('provision.attempts', { n: i.number(p.attempts) })}` })}
       ${stateBanner}
       <div class="two-col">
         <section class="card">${steps}</section>
@@ -399,7 +401,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
     <div class="two-col">
       <section class="card" aria-labelledby="groups-title">
         <h2 class="card-title" id="groups-title">${i.t('overview.groups')}</h2>
-        <table class="table">
+        <div class="table-wrap"><table class="table">
           <thead><tr><th scope="col">${i.t('overview.group')}</th><th scope="col">${i.t('overview.requiredApproved')}</th><th scope="col">${i.t('overview.requiredUnanswered')}</th><th scope="col">${i.t('overview.pending')}</th></tr></thead>
           <tbody>${o.groups.map(
             (group) => html`<tr>
@@ -409,7 +411,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
               <td>${i.number(group.pending_review)}</td>
             </tr>`,
           )}</tbody>
-        </table>
+        </table></div>
       </section>
       <section class="card" aria-labelledby="next-title">
         <h2 class="card-title" id="next-title">${i.t('overview.next')}</h2>

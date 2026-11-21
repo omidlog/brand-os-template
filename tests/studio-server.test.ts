@@ -325,7 +325,7 @@ test('security headers, no tokens in any response, and the static bundle carries
       assert.equal(res.headers.get('x-frame-options'), 'DENY', pathname)
       assert.match(res.headers.get('content-security-policy') ?? '', /default-src 'none'.*script-src 'self'/)
       assert.equal(res.headers.get('x-content-type-options'), 'nosniff')
-      assert.equal(res.headers.get('referrer-policy'), 'no-referrer')
+      assert.equal(res.headers.get('referrer-policy'), 'same-origin')
       for (const secret of [READ_TOKEN, PROVISION_TOKEN, WEBHOOK_SECRET, s.config.ownerPasswordHash, 'JBSWY3DPEHPK3PXP', s.config.sessionSecret.toString('base64'), 'DECOY']) {
         assert.equal(text.includes(secret), false, `${pathname} leaks ${secret.slice(0, 12)}`)
       }

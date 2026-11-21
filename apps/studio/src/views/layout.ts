@@ -165,7 +165,7 @@ function documentShell(ctx: ViewContext, title: string, body: SafeHtml, extraHea
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<meta name="referrer" content="no-referrer">
+<meta name="referrer" content="same-origin">
 <meta name="robots" content="noindex, nofollow">
 <title>${title} · ${ctx.i.t('app.name')}</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">

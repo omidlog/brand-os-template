@@ -168,6 +168,8 @@ export const fa: Messages = {
   'wizard.error.rate_limited': 'در زمان کوتاهی برندهای زیادی ساخته شد. بعداً دوباره تلاش کنید.',
 
   'provision.title': 'در حال ساخت {brand}',
+  'provision.titleReady': '{brand} آماده است',
+  'provision.titleFailed': 'ساخت {brand} انجام نشد',
   'provision.running': 'مخزن خصوصی در حال ساخت است. معمولاً کمتر از یک دقیقه طول می‌کشد.',
   'provision.ready': 'مخزن خصوصی آماده است.',
   'provision.failed': 'ساخت ناموفق بود.',
@@ -213,7 +215,7 @@ export const fa: Messages = {
   'overview.recentEmpty': 'کامیتی برای نمایش نیست.',
   'overview.contradictions': '{count} تناقض باز',
   'overview.withheld': '{count} واقعیت محرمانهٔ تأییدشده محفوظ مانده است',
-  'overview.approvedFacts': '{count} واقعیت تأییدشده',
+  'overview.approvedFacts': 'واقعیت‌های تأییدشده: {count}',
   'overview.notInitialized': 'این مخزن هنوز به‌عنوان برند مقداردهی اولیه نشده است.',
   'overview.profile': 'نوع',
   'overview.locales': 'زبان‌ها',
