@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@brand-os/brand-core": ["packages/brand-core/src/index.ts"],
+      "@brand-os/brand-core/creative": ["packages/brand-core/src/creative/index.ts"],
       "@brand-os/design-tokens": ["packages/design-tokens/src/index.ts"],
       "@brand-os/asset-catalog": ["packages/asset-catalog/src/index.ts"]
     }

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Creative Learning MVP (Sprint 1)
+
+Theme: auditable memory of the owner's design choices, built on the Knowledge Inbox. Guide: `docs-internal/CREATIVE_LEARNING.md`.
+
+### Added
+
+- `packages/brand-core/src/creative/` (subpath export `@brand-os/brand-core/creative`): projects, variants, feedback links, selection, scoped preferences with owner approval and supersession, and next-session context with `knowledge:kn_…@<sha256>` provenance.
+- `npm run brand:creative` (`scripts/creative.ts`).
+- `agent-skills/creative-memory/SKILL.md`.
+
+### Security
+
+- Owner-only: refused under `BRAND_OS_AGENT_TOKEN`; records in gitignored `brand/.private/creative`; restricted notes cannot be linked; brand-wide approval refused; approved facts, ledger and publication state are never written.
+
 ## Unreleased — Knowledge Inbox (Baalda-inspired)
 
 Theme: capture messy ideas per brand, find them in fa/tr/en, link them, and turn them into draft proposals without ever bypassing approval. Guide: `docs-internal/KNOWLEDGE.md`.

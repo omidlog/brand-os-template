@@ -20,5 +20,6 @@ Skills for specific work:
 - `agent-skills/motion-designer/SKILL.md`
 - `agent-skills/social-designer/SKILL.md`
 - `agent-skills/knowledge-inbox/SKILL.md` (notes are unapproved ideas; `docs-internal/KNOWLEDGE.md`)
+- `agent-skills/creative-memory/SKILL.md` (design feedback and scoped preferences; `docs-internal/CREATIVE_LEARNING.md`)
 
 Claude Code can read this checkout only after the folder is open in a permitted session. A chat product does not automatically see this private repository.
