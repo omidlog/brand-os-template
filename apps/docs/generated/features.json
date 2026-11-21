@@ -1,6 +1,6 @@
 {
-  "mascot": false,
-  "gamification": false,
+  "mascot": true,
+  "gamification": true,
   "audience": "public",
   "brandName": "Unpublished",
   "nameStatus": "unpublished"

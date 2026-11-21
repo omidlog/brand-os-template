@@ -60,6 +60,36 @@
       "requiredUnanswered": 0
     },
     {
+      "id": "mascot-identity",
+      "title": "Mascot Identity",
+      "code": "06",
+      "group": "brand",
+      "href": "/docs/brand-book/mascot-identity",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 0
+    },
+    {
+      "id": "mascot-expression",
+      "title": "Mascot Expression & Pose Library",
+      "code": "07",
+      "group": "brand",
+      "href": "/docs/brand-book/mascot-expression",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 0
+    },
+    {
+      "id": "mascot-evolution",
+      "title": "Mascot Evolution",
+      "code": "08",
+      "group": "brand",
+      "href": "/docs/brand-book/mascot-evolution",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 0
+    },
+    {
       "id": "illustration",
       "title": "Illustration System",
       "code": "09",
@@ -175,6 +205,16 @@
       "code": "20",
       "group": "brand",
       "href": "/docs/brand-book/governance",
+      "coverage": 0,
+      "approval": 0,
+      "requiredUnanswered": 0
+    },
+    {
+      "id": "gamification",
+      "title": "Gamification",
+      "code": "G",
+      "group": "system",
+      "href": "/docs/brand-book/gamification",
       "coverage": 0,
       "approval": 0,
       "requiredUnanswered": 0
