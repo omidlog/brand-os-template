@@ -109,6 +109,7 @@ Branch `feat/phase-10-prep`, stacked on Phase 9. Docs: `docs-internal/phase-10/`
 | Item | Status | Note |
 | --- | --- | --- |
 | Auth hardening behind a proxy | Done | Rightmost `X-Forwarded-For` hop, Host allowlist (`421`), health readiness (`503` on an unwritable data dir), keep-alive above the proxy's. Test: `tests/studio-hardening.test.ts`. |
+| Registry with CLI next to the server | Fixed | A live server now sees `studio register`/`unregister` at once and never overwrites them. Test: `tests/studio-hardening.test.ts`. |
 | Owner bootstrap | Done | `studio bootstrap-owner` (0600 env file, TOTP verified on a terminal) and `studio check-config`. Test: `tests/studio-cli.test.ts` (runs the real CLI). |
 | Production bundle | Done | `npm run studio:build` (esbuild, pinned). The build refuses `brand/`, docs and `.env` inputs. |
 | Image and Compose | Done, not built here | Digest-pinned base, non-root, read-only root, `cap_drop: ALL`, 512 MiB, health check, `restart: unless-stopped`, `./data` volume, published only on `172.18.0.1:8083`. Static checks in `tests/studio-deploy.test.ts`. The image build and container run are in `.github/workflows/studio-image.yml`, which has not run here (no Docker in this environment). |

@@ -17,6 +17,10 @@ Theme: everything the launch operator needs to run the read-only Studio at `stud
 - Tests: `studio-hardening`, `studio-cli`, `studio-deploy`, `studio-browser-production`; CI workflow `studio-image.yml` (image build, Compose run, smoke test, restore drill).
 - Docs: `docs-internal/phase-10/` (architecture, deployment contract, operations, deploy runbook, Grok handoff, Claude editing workflow, security review).
 
+### Fixed
+
+- Studio registry: `studio register` and `unregister` run next to a live server (for example via `docker compose exec`) used to be invisible to the server until restart, and the server's next save, such as a new brand, overwrote them. The registry now reloads the file whenever it changed on disk.
+
 ### Not included
 
 - The live launch (VPS, Caddy reload, TLS, owner enrollment, GitHub tokens, test repository). See `GROK_HANDOFF.md`.

@@ -28,6 +28,7 @@ Phase 10 adds no route.
 | Owner bootstrap | Three separate commands printing secrets to stdout | Easy to mishandle on a server. | `studio bootstrap-owner` writes one 0600 env file. Enrollment details go to stderr only, the password is asked twice, and the first TOTP code is verified on a terminal. `studio check-config` validates the environment without printing values. | `studio-cli` |
 | Compression | n/a | Compressing HTML that carries CSRF tokens enables BREACH-style attacks. | The Caddy snippet compresses `/static/*` only. | `studio-deploy` |
 | Proxy headers | n/a | A proxy CSP would break the sandboxing CSP on asset previews. | Caddy sets HSTS, nosniff, DENY, Referrer-Policy and X-Robots-Tag, and removes `Server`. It never sets CSP. | `studio-deploy` |
+| Registry consistency | The server keeps the registry in memory | `studio register` next to the live server was invisible to it until restart, and the server's next save, such as a new brand, overwrote it (lost mapping). | The registry reloads whenever the file changed on disk (atomic writes replace the inode). | `studio-hardening`: fails on the old code |
 | Image and container | n/a | | Digest-pinned base, non-root `node` user, npm removed, read-only root filesystem, `cap_drop: ALL`, `no-new-privileges`, memory, CPU and PID limits. Only `172.18.0.1:8083` is published. | `studio-deploy`, CI workflow |
 
 ### Unchanged and re-checked
