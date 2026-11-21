@@ -19,7 +19,7 @@
     "lint": "eslint .",
     "validate": "tsx scripts/validate.ts",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:e2e": "STUDIO_E2E_REQUIRED=1 node --import tsx --test tests/studio-browser.test.ts",
+    "test:e2e": "STUDIO_E2E_REQUIRED=1 node --import tsx --test tests/studio-browser.test.ts tests/studio-browser-production.test.ts",
     "docs:start": "tsx scripts/prepare-docs.ts --audience internal && npm run start -w @brand-os/docs",
     "docs:build": "tsx scripts/prepare-docs.ts --audience public && npm run build -w @brand-os/docs",
     "docs:build:fa": "tsx scripts/prepare-docs.ts --audience public && npm run build -w @brand-os/docs -- --locale fa",

@@ -171,7 +171,8 @@ export class Browser {
     private readonly profile: string,
   ) {}
 
-  static async launch(executable: string): Promise<Browser> {
+  /** `extraArgs` lets a test map test hostnames to loopback or accept its own self-signed certificate. */
+  static async launch(executable: string, extraArgs: string[] = []): Promise<Browser> {
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-chrome-'))
     const child = spawn(
       executable,
@@ -189,6 +190,7 @@ export class Browser {
         '--metrics-recording-only',
         '--remote-debugging-port=0',
         `--user-data-dir=${profile}`,
+        ...extraArgs,
         'about:blank',
       ],
       { stdio: ['ignore', 'ignore', 'pipe'] },
