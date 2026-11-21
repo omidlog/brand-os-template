@@ -29,7 +29,7 @@ interface Repo {
   is_template: boolean
   default_branch: string
   head: string | null
-  pulls: Array<{ number: number; title: string; head: string; draft: boolean; base?: string; body?: string }>
+  pulls: Array<{ number: number; title: string; head: string; draft: boolean; base?: string; body?: string; state?: 'open' | 'closed'; comments?: string[] }>
   /** Branches other than the default branch (name -> commit). */
   branches: Map<string, string>
 }
@@ -325,7 +325,7 @@ export class FakeGitHub {
     if (method === 'GET' && rest[0] === 'pulls') {
       return json(
         200,
-        repo.pulls.map((pull) => ({ number: pull.number, title: pull.title, html_url: `https://github.com/${repo.owner}/${repo.name}/pull/${pull.number}`, head: { ref: pull.head }, draft: pull.draft, updated_at: new Date().toISOString() })),
+        repo.pulls.filter((pull) => pull.state !== 'closed').map((pull) => ({ number: pull.number, title: pull.title, html_url: `https://github.com/${repo.owner}/${repo.name}/pull/${pull.number}`, head: { ref: pull.head }, draft: pull.draft, updated_at: new Date().toISOString() })),
       )
     }
     if (method === 'GET' && rest[0] === 'tarball' && rest[1]) {
@@ -379,11 +379,23 @@ export class FakeGitHub {
       const head = String(body.head)
       if (!repo.branches.has(head)) return json(422, { message: 'Validation Failed: head does not exist' })
       if (String(body.base) !== repo.default_branch) return json(422, { message: 'Validation Failed: base' })
-      if (repo.pulls.some((pull) => pull.head === head)) return json(422, { message: 'A pull request already exists' })
+      if (repo.pulls.some((pull) => pull.head === head && pull.state !== 'closed')) return json(422, { message: 'A pull request already exists' })
       const number = repo.pulls.reduce((max, pull) => Math.max(max, pull.number), 0) + 1
       const pull = { number, title: String(body.title), head, draft: false, base: String(body.base), body: String(body.body) }
       repo.pulls.push(pull)
       return json(201, { number, title: pull.title, html_url: `https://github.com/${repo.owner}/${repo.name}/pull/${number}`, head: { ref: head }, draft: false, updated_at: new Date().toISOString() })
+    }
+    if (method === 'PATCH' && rest[0] === 'pulls' && rest.length === 2) {
+      const pull = repo.pulls.find((item) => item.number === Number(rest[1]))
+      if (!pull) return json(404, { message: 'Not Found' })
+      if (body.state === 'closed' || body.state === 'open') pull.state = body.state
+      return json(200, { number: pull.number, state: pull.state ?? 'open' })
+    }
+    if (method === 'POST' && rest[0] === 'issues' && rest[2] === 'comments' && rest.length === 3) {
+      const pull = repo.pulls.find((item) => item.number === Number(rest[1]))
+      if (!pull) return json(404, { message: 'Not Found' })
+      pull.comments = [...(pull.comments ?? []), String(body.body)]
+      return json(201, { id: this.nextId++ })
     }
     if (method === 'PATCH' && rest[0] === 'git' && rest[1] === 'refs' && rest[2] === 'heads') {
       const commit = this.commits.get(String(body.sha))
