@@ -20,7 +20,8 @@ Theme: capture messy ideas per brand, find them in fa/tr/en, link them, and turn
 - `brand:knowledge propose` / `provenance`: note → draft proposals over the existing intake, with `knowledge:<id>@<sha256>` provenance, stale detection and a preview of every quotation that would enter tracked interview files.
 - `knowledge-read` agent-token profile and read-only MCP tools `knowledge_list`, `knowledge_search`, `knowledge_read`, `knowledge_backlinks`, `knowledge_suggest_proposal` (shared notes only). Existing profiles unchanged.
 - `agent-skills/knowledge-inbox/SKILL.md`.
-- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`, `knowledge-proposals`, `knowledge-agent`.
+- Studio: read-only **Knowledge** section for merged shared notes (labelled unverified ideas), en/fa/tr, filters, search, detail with backlinks and linked questions. No new write route.
+- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`, `knowledge-proposals`, `knowledge-agent`, `knowledge-studio`; Knowledge page browser checks in `studio-browser`.
 
 ## Unreleased — Phase 9: Read-only Brand OS Studio
 

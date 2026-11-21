@@ -186,6 +186,44 @@ pending change proposal instead), drafts stored with `authority: unverified`. `i
 - Editing a note after proposing marks those proposals stale (`provenance`, `doctor`). Nothing is refreshed,
   retracted or rewritten automatically; archiving a note lists the proposals that cite it.
 
+## Studio (read only)
+
+Once a shared note is merged into the default branch and Studio has refreshed, the brand gets a **Knowledge** section
+(`/brands/<slug>/knowledge`). The sidebar entry appears only when the merged commit has shared notes or files Studio
+withheld; there is no flag. Every card and the detail page carry *Unverified idea* and *Not an approved brand fact*.
+
+- Source: the merged default-branch commit only. Studio's archive filter admits `brand/knowledge/shared/*.md` and
+  nothing else under `brand/knowledge` (no README, cache, links file, sub-folders or `brand/.private`). Open pull
+  requests do not change the page.
+- Projection (`buildStudioKnowledge`, `packages/brand-core/src/knowledge/studio.ts`): shared scope only, no writes, no
+  cache. Withheld by path and reason, never with text: another brand's slug, `classification: restricted`, anything the
+  share checks would refuse (credentials, personal private data, restricted financial/legal cues), malformed files,
+  wrong names, symlinks. At most 1,000 notes (most recently updated first, with a notice), 12,000 characters of body
+  per note and 3,000,000 in total; beyond that the excerpt and the GitHub link remain.
+- Page: groups Inbox / Triaged / Active with counts, Archived behind a filter, GET search (same normalization as the
+  CLI) and filters for status, type and tag. Detail: the body as escaped plain text (Markdown, images and links are
+  not rendered or fetched; `[[kn_…]]` becomes a link only to another projected note), source kind, dates, tags, file,
+  revision, merged commit, *Open file on GitHub*, linked questions (with their brand section, or *not in this brand's
+  question bank*), links and backlinks among projected notes, and a copyable Claude Code prompt that contains only the
+  note id.
+- No new non-GET route. Guests get the same redirect for real and forged slugs. A note id from another brand, a local
+  note or a guessed id answers 404.
+- A cache written by an older Studio (without this section) is rebuilt once at the same commit.
+
+## Performance baseline
+
+Measured 2026-11-21 on the development container (Node 24, tmpfs-backed temp dir), synthetic 60-word notes, half
+local and half shared. Not a gate; a baseline for later decisions (FTS5 only if these become a problem).
+
+| Notes | Index build (cold) | Index build (cache hit) | Search on built index | CLI search incl. index | Studio projection | Studio search |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1,000 | 309 ms | 216 ms | 5 ms | 215 ms | 221 ms (500 shared) | 12 ms |
+| 10,000 | 2,057 ms | 2,007 ms | 27 ms | 2,085 ms | 1,466 ms (5,000 shared, 1,000 projected, 1.3 MiB) | 24 ms |
+
+The cache records file states for `doctor`; it does not yet skip parsing, so a cache hit is barely faster. Each CLI
+call re-reads every note: fine for hundreds to a few thousand notes, about 2 s at 10,000. Studio builds the projection
+once per merged commit, not per request.
+
 ## Agents and MCP
 
 Claude Code uses the local CLI (skill: `agent-skills/knowledge-inbox/SKILL.md`). The MCP server adds five read-only

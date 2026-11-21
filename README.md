@@ -149,6 +149,10 @@ Official brand sentences are never auto-translated. See `docs-internal/LOCALIZAT
 
 Answer the structured color, type-scale and logo-size questions, approve them, then run `npm run brand:tokens:generate`. Generated drafts in `brand/tokens/generated/` override the EXAMPLE base values with the same id and stay drafts until `brand:tokens:approve` and `brand:tokens:publish`. You can still edit `brand/tokens/*.json` by hand, then `npm run tokens:build`. Outputs are CSS variables and TypeScript. The palette is EXAMPLE and the contrast pairs in the template pass WCAG AA for the listed combinations. The SVG files under `brand/assets` are placeholders. The mascot turnaround is missing on purpose.
 
+## Knowledge Inbox
+
+Throw messy ideas into the brand with `npm run brand:knowledge -- capture` (local and untracked by default), find them later in Persian, Turkish or English (`search`), link them, and turn part of one into **draft** proposals with verbatim quotations (`propose`, preview first). A note is never a brand fact: drafts still go through `brand:review`, `brand:approve` and `brand:publish`. `share` moves a safe note into `brand/knowledge/shared/` in this private repository, where Studio shows it read-only after merge. Restricted notes are encrypted. Guide: `docs-internal/KNOWLEDGE.md`; Claude Code skill: `agent-skills/knowledge-inbox/SKILL.md`.
+
 ## Studio
 
 One private Studio shows every brand at `/brands/<slug>` and creates new ones. It is a viewer plus a repository provisioner, not an editor:
@@ -156,7 +160,7 @@ One private Studio shows every brand at `/brands/<slug>` and creates new ones. I
 1. Sign in (password and authenticator code), choose **New brand**, and enter name, slug, profile (business or personal brand), languages, optional mascot and gamification, and the GitHub destination. Studio creates one **private** repository from this template with the same initializer as `brand:init`, and shows progress, errors and retry.
 2. Copy the repository URL or the **Claude Code starter prompt** and open a new Claude Code session. Claude Code needs its own GitHub access to the private repository (a clone or an authorized GitHub connection); a link is not permission.
 3. Edit in Claude Code, approve facts yourself with the local CLI, and merge the pull request.
-4. Refresh Studio: it shows the merged default branch with its commit SHA and sync time, cited documents, tokens, approved assets, history and open pull requests (labelled non-canonical).
+4. Refresh Studio: it shows the merged default branch with its commit SHA and sync time, cited documents, tokens, approved assets, shared knowledge notes (labelled unverified ideas), history and open pull requests (labelled non-canonical).
 
 Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub write is creating a new repository. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. Deployment to a server is a separate step and not part of this template yet.
 
