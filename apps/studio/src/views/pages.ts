@@ -615,7 +615,8 @@ export function assetsPage(ctx: ViewContext, view: BrandView, flash: string | nu
           <button type="button" class="chip" aria-pressed="true" data-filter="*">${i.t('common.all')}</button>
           ${kinds.map((kind) => html`<button type="button" class="chip" aria-pressed="false" data-filter="${kind}">${kind}</button>`)}
         </div>
-        <ul class="asset-grid" role="list">${p.assets.map((asset) => assetCard(ctx, view.record.slug, asset))}</ul>`
+        <h2 class="visually-hidden" id="asset-list-title">${i.t('nav.assets')}</h2>
+        <ul class="asset-grid" role="list" aria-labelledby="asset-list-title">${p.assets.map((asset) => assetCard(ctx, view.record.slug, asset))}</ul>`
       : emptyState({ icon: 'image', title: i.t('assets.empty'), body: i.t('assets.subtitle') })}
     ${p.mascot
       ? html`<section class="card" aria-labelledby="mascot-title">

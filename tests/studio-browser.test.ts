@@ -281,9 +281,20 @@ test('keyboard: skip link first, visible focus, and the mobile drawer opens, tra
   await page.waitFor(`document.getElementById('sidebar').classList.contains('is-open')`)
   assert.equal(await page.eval<string>(`document.querySelector('[data-drawer-open]').getAttribute('aria-expanded')`), 'true')
   assert.equal(await page.eval<boolean>(`document.getElementById('sidebar').contains(document.activeElement)`), true, 'focus moves into the drawer')
+  assert.equal(await page.eval<boolean>(`document.querySelector('.main-col').inert`), true, 'the page behind the open drawer is inert')
+  // Tabbing past the last control in the drawer never lands on the page behind it.
+  for (let step = 0; step < 40; step += 1) await page.press('Tab')
+  assert.equal(await page.eval<boolean>(`!document.querySelector('.main-col').contains(document.activeElement)`), true, 'Tab stays out of the inert page')
   await page.press('Escape')
   await page.waitFor(`!document.getElementById('sidebar').classList.contains('is-open')`)
+  assert.equal(await page.eval<boolean>(`document.querySelector('.main-col').inert`), false, 'closing the drawer restores the page')
   assert.equal(await page.eval<boolean>(`document.activeElement.matches('[data-drawer-open]')`), true, 'focus returns to the menu button')
+  // A drawer left open while the window widens to desktop closes, so the page never stays inert.
+  await page.click('[data-drawer-open]')
+  await page.waitFor(`document.getElementById('sidebar').classList.contains('is-open')`)
+  await page.viewport(1440, 900)
+  await page.waitFor(`!document.querySelector('.main-col').inert`)
+  await page.viewport(390, 844, true)
   // The handoff copy actions are reachable and usable on a phone.
   await assertNoOverflow('handoff @390')
   assert.equal(await page.eval<number>(`document.querySelectorAll('[data-copy-target]').length`) >= 2, true)

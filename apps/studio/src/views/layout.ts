@@ -81,7 +81,7 @@ function sidebar(ctx: ViewContext, brand?: { view: BrandView; section: BrandSect
       <a class="product" href="/brands">${productLogo()}<span class="product-name"><span class="signal-dot" aria-hidden="true"></span>${i.t('app.name')}</span></a>
       <button type="button" class="icon-btn sidebar-close" data-drawer-close aria-label="${i.t('nav.closeMenu')}">${icon('close')}</button>
     </div>
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="${i.t('nav.myBrands')}">
       <div class="nav-group">
         <div class="nav-group-head">
           <a class="nav-link ${brandsLink ? 'is-active' : ''}" href="/brands" ${brandsLink ? html`aria-current="page"` : ''}>${icon('layers')}<span>${i.t('nav.myBrands')}</span></a>

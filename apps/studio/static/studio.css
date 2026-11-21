@@ -586,7 +586,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .doc-counts .count { font-weight: 600; font-variant-numeric: tabular-nums; }
 .doc-section { display: grid; gap: var(--studio-space-3); scroll-margin-block-start: 72px; }
 .doc-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--studio-space-3); padding-block-end: var(--studio-space-2); border-block-end: 1px solid var(--studio-color-border-subtle); }
-.doc-section-head h3 { font: 600 24px/1.2 var(--studio-font-display); }
+.doc-section-head h2 { font: 600 24px/1.2 var(--studio-font-display); }
 .doc-section-purpose { color: var(--studio-color-text-secondary); max-width: 720px; }
 .doc-items { display: grid; gap: var(--studio-space-3); }
 .doc-item { background: var(--studio-color-bg-surface); border: 1px solid var(--studio-color-border-subtle); border-inline-start-width: 3px; border-radius: var(--studio-radius-md); padding: var(--studio-space-4); display: grid; gap: var(--studio-space-2); }
