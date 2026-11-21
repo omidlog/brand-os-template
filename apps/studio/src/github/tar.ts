@@ -141,8 +141,22 @@ export function extractTarGz(archive: Buffer, options: ExtractOptions): ExtractR
 const EXCLUDED_PREFIXES = ['brand/.private/', 'brand/restricted/', 'brand/exports/', 'brand/generated/artifacts/']
 const EXCLUDED_NAMES = new Set(['approval-secret', 'agent-tokens.json', 'access-log.jsonl', 'store.json'])
 
+/**
+ * `brand/knowledge/` holds the owner's notes. Only explicitly shared notes, one level deep under
+ * `brand/knowledge/shared/` and named `*.md`, may reach Studio. Caches, link registries, READMEs and any
+ * other file there stay out even if committed. The check is case-insensitive so `brand/Knowledge/` on a
+ * case-insensitive checkout cannot slip past it.
+ */
+const SHARED_NOTE = /^brand\/knowledge\/shared\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}\.md$/
+
+export function studioKnowledgePathAllowed(relative: string): boolean {
+  return SHARED_NOTE.test(relative)
+}
+
 export function studioPathAllowed(relative: string): boolean {
   if (!relative.startsWith('brand/')) return false
+  // Checked first: nothing below may re-admit a knowledge path.
+  if (relative.toLowerCase().startsWith('brand/knowledge/') || relative.toLowerCase() === 'brand/knowledge') return studioKnowledgePathAllowed(relative)
   if (EXCLUDED_PREFIXES.some((prefix) => relative.startsWith(prefix))) return false
   const base = relative.split('/').pop() ?? ''
   if (base === '.env' || base.startsWith('.env.')) return false

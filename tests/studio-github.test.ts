@@ -41,6 +41,37 @@ test('tar extraction keeps only allowlisted regular files and refuses traversal,
   assert.equal(repoRelative('p/a\\b'), null)
 })
 
+test('Studio reads only shared knowledge notes; every other brand/knowledge path is blocked first', () => {
+  const allowed = ['brand/knowledge/shared/kn_550e8400-e29b-41d4-a716-446655440000.md', 'brand/knowledge/shared/idea.md']
+  const blocked = [
+    'brand/knowledge/README.md',
+    'brand/knowledge/links.yaml',
+    'brand/knowledge/.cache/index.json',
+    'brand/knowledge/local/kn_x.md',
+    'brand/knowledge/shared/.hidden.md',
+    'brand/knowledge/shared/nested/kn_x.md',
+    'brand/knowledge/shared/kn_x.yaml',
+    'brand/knowledge/shared/kn_x.md.bak',
+    'brand/Knowledge/local/kn_x.md',
+    'brand/KNOWLEDGE/shared/../local/x.md',
+    'brand/knowledge/shared/kn_x.MD',
+    'brand/knowledge',
+    'brand/.private/knowledge/local/kn_x.md',
+  ]
+  for (const file of allowed) assert.equal(studioPathAllowed(file), true, file)
+  for (const file of blocked) assert.equal(studioPathAllowed(file), false, file)
+  const archive = makeTarGz([
+    { path: 'o-r-abc/brand/brand.config.yaml', data: Buffer.from('brand: {}\n') },
+    { path: 'o-r-abc/brand/knowledge/shared/kn_a.md', data: Buffer.from('shared') },
+    { path: 'o-r-abc/brand/knowledge/.cache/index.json', data: Buffer.from('CACHE') },
+    { path: 'o-r-abc/brand/knowledge/links.yaml', data: Buffer.from('LINKS') },
+    { path: 'o-r-abc/brand/knowledge/shared/link.md', type: '2', linkTarget: '../../.private/knowledge/local/kn_b.md' },
+  ])
+  const report = extractTarGz(archive, { destRoot: tmp(), include: studioPathAllowed })
+  assert.deepEqual(report.files.sort(), ['brand/brand.config.yaml', 'brand/knowledge/shared/kn_a.md'])
+  assert.ok(report.skipped.some((item) => item.path === 'brand/knowledge/shared/link.md' && item.reason === 'symlink'))
+})
+
 test('tar extraction stops a decompression bomb and an oversized file', () => {
   const big = makeTarGz([{ path: 'o-r-a/brand/big.bin', data: Buffer.alloc(2 * 1024 * 1024) }])
   const report = extractTarGz(big, { destRoot: tmp(), include: studioPathAllowed, maxFileBytes: 1024 * 1024 })
