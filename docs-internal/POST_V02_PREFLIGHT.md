@@ -82,4 +82,6 @@ I read the core rather than the 0.2.0 review. These are the facts that shape Pha
 
 **GO for Phase 8** (Personal Brand OS) on `feat/phase-8-personal-brand-os`. Phases 1–7 are merged, CI is green on `main` and locally, and the interview, documents, tokens, finance, mascot and journeys all have working, tested implementations.
 
-**Phase 9** (read-only Studio) is a separate run, branch and PR, and has not started. Phase 8 must not add any Studio code or any web write path.
+**Phase 9** (read-only Studio) is a separate run, branch and PR. Phase 8 must not add any Studio code or any web write path.
+
+**Update (Phase 9).** Phase 9 is implemented on `feat/phase-9-read-only-studio`, stacked on Phase 8. It adds `apps/studio` only; Phase 8 code paths are unchanged and Studio reads Phase 8 data from Git-tracked files without `brand/.private`. No write-capable Studio screen was ever built, so none had to be removed. Status: `docs/IMPLEMENTATION_STATUS.md` (Phase 9); guide: `docs-internal/STUDIO.md`.

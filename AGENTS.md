@@ -61,6 +61,15 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - For a bio, LinkedIn text or other deliverable, call `draft_personal_content` (or `brand:query --tool draft_personal_content --query <deliverable> [--section <id>]`) and use only what it returns. The result is a draft for the owner to approve.
 - Portraits, case-study images, client logos and testimonials are public only with a granted public `rights` record. A missing asset is missing; never guess a URL.
 
+## Brand OS Studio
+
+Studio (`apps/studio`, guide `docs-internal/STUDIO.md`) is a private, read-only viewer. It shows the merged default branch of each brand repository and can create a new private repository from this template. It never edits a brand.
+
+- Make every brand change here, in the brand repository, through the core CLI and the normal branch and pull request flow. Studio shows it after the owner merges and refreshes.
+- Do not add a Studio route, form or API that writes brand facts, documents, assets, approvals, tokens or Git state. The only non-GET routes are sign-in, sign-out, provisioning (create, retry), refresh and the signed webhook; `tests/studio-server.test.ts` pins that list.
+- Never add chat, an AI model call, agent execution or token issuance to Studio, and never send a GitHub token, raw tree, `.private` or restricted value to the browser.
+- An unmerged pull request is not canonical. Tell the owner whether a change is merged.
+
 ## Commands
 
 `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, and `npm run build`.

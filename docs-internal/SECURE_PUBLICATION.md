@@ -26,6 +26,10 @@ Public builds are **deny-by-default**. An approval status is not a grant to publ
 - SVGs are conservatively rejected if active or embedded content is detected. For untrusted uploads, add a maintained XML-aware sanitizer before production usage.
 - Run the public build, scanner and adversarial integration tests in CI, then inspect the complete output artifact before deployment.
 
+## Studio
+
+Brand OS Studio (`docs-internal/STUDIO.md`) is not a publication channel. It renders internal projections server-side, only to the signed-in owner, and never serves a static build of private brand data. It cannot approve or publish. Publication still goes through `brand/publication-policy.yaml` and the CLI.
+
 ## Not production-complete yet
 
 This patch hardens source projection and local tooling. It does **not** implement authenticated multi-tenant remote MCP, true human-only publication approvals, full financial modeling, LLM conversational interviews, or live Figma integration. Those still need implementation and dedicated integration/security reviews.
