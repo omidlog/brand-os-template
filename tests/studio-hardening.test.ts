@@ -122,7 +122,7 @@ test('behind the proxy: secure __Host- cookies, HSTS, and sign-in works only for
 
 test('behind the proxy: only the public Host is served (no DNS rebinding or stray virtual hosts); /healthz stays reachable', async () => {
   await withProxiedStudio(async (_s, port) => {
-    for (const host of ['evil.example', `127.0.0.1:${port}`, `${PUBLIC_HOST}.evil.example`, 'localhost']) {
+    for (const host of ['evil.example', `127.0.0.1:${port}`, `${PUBLIC_HOST}.evil.example`, `evil.example:443`, 'localhost', '[::1]:80', '%%%']) {
       const client = new ProxiedClient(port, host)
       for (const pathname of ['/login', '/brands', '/static/studio.js']) {
         const res = await client.request('GET', pathname)
@@ -136,8 +136,9 @@ test('behind the proxy: only the public Host is served (no DNS rebinding or stra
     const health = await new ProxiedClient(port, `127.0.0.1:${port}`).request('GET', '/healthz')
     assert.equal(health.status, 200)
     assert.equal(health.body, 'ok\n')
-    // Host matching is case-insensitive, as DNS is.
+    // Host matching is by hostname and case-insensitive, as DNS is; the port depends on the proxy hop.
     assert.equal((await new ProxiedClient(port, PUBLIC_HOST.toUpperCase()).request('GET', '/login')).status, 200)
+    assert.equal((await new ProxiedClient(port, `${PUBLIC_HOST}:443`).request('GET', '/login')).status, 200)
   })
 })
 

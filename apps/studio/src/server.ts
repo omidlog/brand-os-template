@@ -130,11 +130,18 @@ export function createStudio(deps: StudioDeps): {
    * Beyond loopback, Studio answers only for its public host (DNS rebinding, stray virtual hosts).
    * The proxy passes the original Host through. `/healthz` stays reachable for the container check.
    */
-  const publicHost = new URL(config.publicOrigin)
-  const expectedHost = isLoopback(publicHost.hostname) ? null : publicHost.host.toLowerCase()
+  const publicHostname = new URL(config.publicOrigin).hostname.toLowerCase()
+  const expectedHostname = isLoopback(publicHostname) ? null : publicHostname
   function hostAllowed(req: IncomingMessage): boolean {
-    if (expectedHost === null) return true
-    return (req.headers.host ?? '').toLowerCase() === expectedHost
+    if (expectedHostname === null) return true
+    const header = req.headers.host
+    if (!header || header.length > 300) return false
+    try {
+      // The hostname decides (DNS rebinding uses a foreign name); the port depends on the proxy hop.
+      return new URL(`http://${header}`).hostname === expectedHostname
+    } catch {
+      return false
+    }
   }
 
   function sameOrigin(req: IncomingMessage): boolean {

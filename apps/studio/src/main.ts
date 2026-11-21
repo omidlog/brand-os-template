@@ -23,6 +23,8 @@ function main(): void {
   const server = createHttpServer(studio.handle)
   server.listen(config.port, config.host, () => {
     log(`listening on http://${config.host}:${config.port} (public origin ${config.publicOrigin})`)
+    const revision = process.env.STUDIO_BUILD_REVISION
+    if (revision && /^[0-9a-f]{7,40}$/.test(revision)) log(`build revision ${revision}`)
     if (!isLoopback(config.host)) log('bound beyond loopback: only the TLS reverse proxy may reach this port.')
     if (!isLoopback(config.host) && !config.trustProxy) log('warning: STUDIO_TRUST_PROXY is off, so rate limits see the proxy address, not the client.')
     if (!config.github.readToken) log('GitHub read access is not configured; brand pages cannot sync.')
