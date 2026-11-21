@@ -100,6 +100,12 @@ test('signing in again with an authentication code that was already used says to
     const text = await reused.text()
     assert.match(text, /already used/)
     assert.match(text, /Wait for a new code/)
+    // Assistive technology: only the code field is marked invalid and described by the error; the login
+    // name is kept, so focus starts at the password, which has to be typed again.
+    assert.match(text, /id="login-error"/)
+    assert.match(text, /id="totp"[^>]*aria-describedby="login-error totp-hint"[^>]*aria-invalid="true"/)
+    assert.match(text, /id="password"[^>]*autofocus/)
+    assert.doesNotMatch(text, /id="login"[^>]*(aria-invalid|autofocus)/)
     assert.equal(again.cookies.has('studio_session'), false)
     // A plainly wrong code keeps the generic message.
     const token3 = await again.csrf('/login')
@@ -108,6 +114,8 @@ test('signing in again with an authentication code that was already used says to
     const wrongText = await wrong.text()
     assert.match(wrongText, /Sign-in failed/)
     assert.doesNotMatch(wrongText, /already used/)
+    assert.match(wrongText, /id="login"[^>]*aria-invalid="true" aria-describedby="login-error"[^>]*autofocus/)
+    assert.match(wrongText, /id="password"[^>]*aria-invalid="true"/)
   } finally {
     await s.close()
   }

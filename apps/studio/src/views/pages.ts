@@ -26,31 +26,42 @@ import { brandAvatar, plainShell, refreshButton, shell, type BrandSection, type 
 
 /* ---------------------------------------------------------------- sign in */
 
-export function loginPage(ctx: ViewContext, input: { csrf: string; totp: boolean; error?: string; notice?: string; next: string; login?: string }): SafeHtml {
+/**
+ * `invalid` marks fields for assistive technology after a failed attempt: `credentials` marks every
+ * field (the message stays generic, so it does not say which one was wrong); `totp` marks only the
+ * code field, for a code that was already used. The login name is kept, so focus then starts at the
+ * password, which is never re-filled.
+ */
+export function loginPage(ctx: ViewContext, input: { csrf: string; totp: boolean; error?: string; notice?: string; next: string; login?: string; invalid?: 'credentials' | 'totp' }): SafeHtml {
   const { i } = ctx
+  const errorRef = input.error ? 'login-error' : ''
+  const credentialsInvalid = input.invalid === 'credentials' ? html`aria-invalid="true" aria-describedby="${errorRef}"` : ''
+  const totpInvalid = input.invalid ? html`aria-invalid="true"` : ''
+  const totpDescribedBy = input.invalid ? `${errorRef} totp-hint`.trim() : 'totp-hint'
+  const focusPassword = input.invalid === 'totp' && Boolean(input.login)
   return plainShell(
     ctx,
     i.t('login.title'),
     html`<section class="auth-card" aria-labelledby="login-title">
       <h1 id="login-title" class="auth-title">${i.t('login.title')}</h1>
       <p class="auth-subtitle">${i.t('login.subtitle')}</p>
-      ${input.error ? banner({ tone: 'danger', body: input.error, live: true }) : ''}
+      ${input.error ? banner({ tone: 'danger', body: input.error, live: true, id: 'login-error' }) : ''}
       ${input.notice ? banner({ tone: 'info', body: input.notice, live: true }) : ''}
       <form method="post" action="/login" class="form" novalidate>
         <input type="hidden" name="_csrf" value="${input.csrf}">
         <input type="hidden" name="next" value="${input.next}">
         <div class="field">
           <label class="field-label" for="login">${i.t('login.login')}</label>
-          <input class="input" id="login" name="login" autocomplete="username" required dir="ltr" value="${input.login ?? ''}" autofocus>
+          <input class="input" id="login" name="login" autocomplete="username" required dir="ltr" value="${input.login ?? ''}" ${credentialsInvalid} ${focusPassword ? '' : html`autofocus`}>
         </div>
         <div class="field">
           <label class="field-label" for="password">${i.t('login.password')}</label>
-          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required dir="ltr">
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required dir="ltr" ${credentialsInvalid} ${focusPassword ? html`autofocus` : ''}>
         </div>
         ${input.totp
           ? html`<div class="field">
               <label class="field-label" for="totp">${i.t('login.totp')}</label>
-              <input class="input input-code" id="totp" name="totp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required dir="ltr" aria-describedby="totp-hint">
+              <input class="input input-code" id="totp" name="totp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required dir="ltr" aria-describedby="${totpDescribedBy}" ${totpInvalid}>
               <p class="field-hint" id="totp-hint">${i.t('login.totpHint')}</p>
             </div>`
           : ''}

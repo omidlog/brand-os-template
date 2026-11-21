@@ -227,12 +227,12 @@ export function createStudio(deps: StudioDeps): {
     ctx.res.end(fs.readFileSync(path.join(STATIC_DIR, name)))
   }
 
-  function showLogin(ctx: RequestContext, options: { error?: string; status?: number; login?: string } = {}): void {
+  function showLogin(ctx: RequestContext, options: { error?: string; status?: number; login?: string; invalid?: 'credentials' | 'totp' } = {}): void {
     const nonce = crypto.randomBytes(24).toString('base64url')
     ctx.res.setHeader('Set-Cookie', serializeCookie(loginCookie, nonce, { secure: config.secureCookies, maxAgeSeconds: 900 }))
     const next = safeLocalPath(ctx.url.searchParams.get('next') ?? first(ctx.form.next), '/brands')
     const notice = ctx.url.searchParams.get('signed_out') === '1' ? ctx.i.t('login.signedOut') : undefined
-    render(ctx, options.status ?? 200, pages.loginPage(view(ctx), { csrf: loginCsrfToken(config.sessionSecret, nonce), totp: totp !== null, notice, error: options.error, next, login: options.login }))
+    render(ctx, options.status ?? 200, pages.loginPage(view(ctx), { csrf: loginCsrfToken(config.sessionSecret, nonce), totp: totp !== null, notice, error: options.error, next, login: options.login, invalid: options.invalid }))
   }
 
   const loginForm: Handler = (ctx) => {
@@ -259,7 +259,7 @@ export function createStudio(deps: StudioDeps): {
       globalLoginLimiter.take('all')
       log(`login failed from ${ip}`)
       const error = ctx.i.t(totpResult === 'reused' ? 'login.codeUsed' : 'login.failed')
-      return showLogin(ctx, { error, status: 401, login: submitted.slice(0, 64) })
+      return showLogin(ctx, { error, status: 401, login: submitted.slice(0, 64), invalid: totpResult === 'reused' ? 'totp' : 'credentials' })
     }
     loginLimiter.reset(ip)
     if (ctx.sessionId) sessions.destroy(ctx.sessionId)
