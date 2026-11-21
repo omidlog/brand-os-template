@@ -54,6 +54,8 @@ export interface ProvisionDeps {
   log?: (line: string) => void
 }
 
+/** Path segments Studio uses itself under /brands/. */
+const RESERVED_SLUGS = new Set(['new'])
 // eslint-disable-next-line no-control-regex -- refusing control characters is the point
 const CONTROL = /[\u0000-\u001f\u007f]/
 
@@ -74,7 +76,7 @@ export function validateRequest(input: Record<string, unknown>, allowedOwners: s
   const slug = typeof input.slug === 'string' ? input.slug.trim() : ''
   try {
     assertSlug(slug)
-    if (slug.length < 2 || slug.length > 60) throw new Error('length')
+    if (slug.length < 2 || slug.length > 60 || RESERVED_SLUGS.has(slug)) throw new Error('length')
   } catch {
     errors.slug = 'slug_invalid'
   }

@@ -33,6 +33,8 @@ export interface StudioConfig {
   idleTtlMs: number
   syncTtlMs: number
   secureCookies: boolean
+  /** Trust the first X-Forwarded-For hop (only behind the single reverse proxy on the same host). */
+  trustProxy: boolean
   github: GitHubSettings
 }
 
@@ -140,6 +142,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): StudioConfig {
     idleTtlMs: idleMinutes * 60_000,
     syncTtlMs: syncSeconds * 1000,
     secureCookies: originUrl?.protocol === 'https:',
+    trustProxy: env.STUDIO_TRUST_PROXY === '1' || env.STUDIO_TRUST_PROXY === 'true',
     github: { readToken, provisionToken, templateOwner, templateRepo, allowedOwners, webhookSecret },
   }
 }

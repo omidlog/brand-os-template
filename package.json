@@ -51,6 +51,9 @@
     "brand:retract": "tsx scripts/brand.ts retract",
     "brand:reset": "tsx scripts/brand.ts reset",
     "mcp:serve": "tsx scripts/mcp.ts",
+    "studio:start": "tsx apps/studio/src/main.ts",
+    "studio": "tsx apps/studio/src/cli.ts",
+    "studio:hash-password": "tsx apps/studio/src/cli.ts hash-password",
     "example:education": "tsx scripts/example-run.ts education-app",
     "example:b2b": "tsx scripts/example-run.ts b2b-saas"
   },

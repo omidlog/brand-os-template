@@ -53,8 +53,8 @@ export interface SyncDeps {
 
 const EMPTY: SyncStatus = { state: 'never', sha: null, committed_at: null, synced_at: null, checked_at: null, attempted_at: null, repo_private: null, last_error: null }
 
-export function brandIsReady(record: BrandRecord | null): record is BrandRecord {
-  return record !== null && (record.provisioning === null || record.provisioning.state === 'ready')
+export function brandIsReady(record: BrandRecord): boolean {
+  return record.provisioning === null || record.provisioning.state === 'ready'
 }
 
 export class SyncService {
@@ -135,7 +135,7 @@ export class SyncService {
 
   private async doRefresh(slug: string): Promise<CachedBrand> {
     const record = this.deps.registry.get(slug)
-    if (!brandIsReady(record)) throw new Error('Brand is not ready.')
+    if (!record || !brandIsReady(record)) throw new Error('Brand is not ready.')
     const previous = this.readState(slug)
     const at = this.now().toISOString()
     const status: SyncStatus = { ...(previous?.status ?? EMPTY), attempted_at: at }

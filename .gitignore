@@ -18,3 +18,4 @@ brand/generated/artifacts/
 .idea/
 .vscode/
 *.tsbuildinfo
+.studio-data/
