@@ -1,5 +1,6 @@
 // Brand OS Studio: progressive enhancement only. Every page works without this script.
-// No data is fetched here except the provisioning status of the page being viewed.
+// No data is fetched here except the provisioning status of the page being viewed and, in the
+// new-brand wizard, a read-only check that the chosen repository name is free.
 ;(function () {
   'use strict'
   var root = document.documentElement
@@ -105,7 +106,10 @@
 
     // New brand wizard: one step at a time, with the server still validating everything.
     var wizard = document.querySelector('[data-wizard]')
-    if (wizard) setupWizard(wizard, !!summary)
+    if (wizard) {
+      setupNameCheck(wizard)
+      setupWizard(wizard, !!summary)
+    }
 
     // Provisioning status polling.
     var provisioning = document.querySelector('[data-provisioning]')
@@ -129,6 +133,93 @@
       setTimeout(poll, 800)
     }
   })
+
+  // Fills a message template: {repo} and {suggestion} become left-to-right isolated names, so a
+  // repository name stays readable inside Persian (RTL) text.
+  function fillTemplate(el, template, vars) {
+    template.split(/(\{\w+\})/).forEach(function (part) {
+      var match = /^\{(\w+)\}$/.exec(part)
+      if (match && Object.prototype.hasOwnProperty.call(vars, match[1])) {
+        var name = document.createElement('bdi')
+        name.setAttribute('dir', 'ltr')
+        name.textContent = vars[match[1]]
+        el.appendChild(name)
+      } else if (part) el.appendChild(document.createTextNode(part))
+    })
+  }
+
+  // Repository name check (read-only GET). It never blocks Next or Create: the server checks again.
+  function setupNameCheck(form) {
+    var region = form.querySelector('[data-repo-check]')
+    var repo = form.elements.repo
+    var owner = form.elements.owner
+    var slug = form.elements.slug
+    if (!region || !repo || !owner) return
+    var button = form.querySelector('[data-repo-check-button]')
+    var seq = 0
+    var timer = null
+    var msg = function (name) { return region.getAttribute('data-msg-' + name) || '' }
+    function name() { return (repo.value || (slug && slug.value) || '').trim() }
+    function show(state, parts) {
+      region.textContent = ''
+      region.setAttribute('data-state', state)
+      parts.forEach(function (part, k) {
+        // A real space between parts, so screen readers do not run the sentences together.
+        if (k > 0) region.appendChild(document.createTextNode(' '))
+        if (part.button) {
+          var use = document.createElement('button')
+          use.type = 'button'
+          use.className = 'btn btn-secondary btn-sm'
+          use.setAttribute('data-use-suggestion', part.button)
+          fillTemplate(use, msg('use'), { suggestion: part.button })
+          use.addEventListener('click', function () {
+            repo.value = part.button
+            repo.dispatchEvent(new window.Event('input', { bubbles: true }))
+            repo.focus()
+            check()
+          })
+          region.appendChild(use)
+        } else {
+          var span = document.createElement('span')
+          fillTemplate(span, part.text, part.vars || {})
+          region.appendChild(span)
+        }
+      })
+    }
+    function check() {
+      window.clearTimeout(timer)
+      var value = name()
+      var mine = ++seq
+      if (!value) { region.textContent = ''; region.removeAttribute('data-state'); return }
+      show('checking', [{ text: msg('checking'), vars: { repo: value } }])
+      var query = 'owner=' + encodeURIComponent(owner.value) + '&repo=' + encodeURIComponent(value) +
+        '&slug=' + encodeURIComponent(slug ? slug.value : '') + '&retry_of=' + encodeURIComponent(region.getAttribute('data-retry-of') || '')
+      fetch('/brands/new/repo-check.json?' + query, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : { state: 'unknown' } })
+        .then(function (data) {
+          if (mine !== seq) return
+          if (data.state === 'free') return show('free', [{ text: msg('free'), vars: { repo: value } }])
+          if (data.state === 'invalid') return show('invalid', [{ text: msg('invalid') }])
+          if (data.state === 'taken') {
+            var parts = [{ text: msg(data.where === 'studio' ? 'taken-studio' : 'taken-github'), vars: { repo: value } }]
+            if (data.suggestion) parts.push({ text: msg('suggest'), vars: { suggestion: data.suggestion } }, { button: data.suggestion })
+            return show('taken', parts)
+          }
+          show('unknown', [{ text: msg('unknown') }])
+        })
+        .catch(function () { if (mine === seq) show('unknown', [{ text: msg('unknown') }]) })
+    }
+    function later() { window.clearTimeout(timer); timer = setTimeout(check, 600) }
+    if (button) { button.hidden = false; button.addEventListener('click', check) }
+    repo.addEventListener('input', later)
+    repo.addEventListener('blur', function () { if (region.getAttribute('data-state') !== 'checking') check() })
+    // The slug (and the name, which fills the slug) may fill the repository name too.
+    if (slug) slug.addEventListener('input', later)
+    if (form.elements.name) form.elements.name.addEventListener('input', later)
+    owner.addEventListener('change', check)
+    // An "Edit and retry" form arrives prefilled: tell the owner straight away whether the name is free.
+    if (region.getAttribute('data-retry-of') && name()) check()
+  }
 
   function setupWizard(form, hasErrors) {
     var steps = Array.prototype.slice.call(form.querySelectorAll('[data-step]'))
