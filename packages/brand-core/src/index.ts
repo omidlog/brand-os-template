@@ -6,6 +6,22 @@ export { completenessScope, listProfiles, loadProfile, profileErrors, UNIVERSAL_
 export { PERSONAL_BRAND, PERSONAL_SHARED_QUESTIONS, STARTER_PROFILES } from './content/profiles.js'
 export { canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSONAL_CANONICAL_REFERENCES } from './personal.js'
 export type { CanonicalReference } from './personal.js'
+export {
+  addEvidence,
+  claimVerification,
+  EVIDENCE_KINDS,
+  EVIDENCE_SOURCES,
+  EVIDENCE_STATUSES,
+  evidenceFor,
+  evidencePath,
+  gatePasses,
+  publicationBlockers,
+  readEvidence,
+  unpublishBlocked,
+} from './evidence.js'
+export type { AddEvidenceInput, ClaimVerification, EvidenceItem, EvidenceKind, EvidenceSource, EvidenceStatus } from './evidence.js'
+export { RIGHTS_SUBJECTS, rightsBlocker, rightsSubject } from './asset-rights.js'
+export type { RightsSubject } from './asset-rights.js'
 export { moduleEnabled, personalConfig } from './conditions.js'
 export { PRIVATE_CUES, privateDataFindings, privateDataRefusal } from './personal-privacy.js'
 export type { PrivateDataFinding, PrivateDataKind } from './personal-privacy.js'

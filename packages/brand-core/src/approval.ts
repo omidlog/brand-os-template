@@ -7,6 +7,7 @@ import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
 import { booleanWord, t, type Locale } from './i18n.js'
 import { canApprove, permissionFor, type ApprovalGrant } from './permissions.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
+import { publicationBlockers, readEvidence, reviewEvidence as reviewEvidenceRecord, unpublishBlocked, withdrawEvidence as withdrawEvidenceRecord } from './evidence.js'
 import { privateDataRefusal } from './personal-privacy.js'
 import { readPublicationPolicy } from './publication.js'
 import { isStructuredType, normalizeStructured } from './structured.js'
@@ -583,6 +584,7 @@ export class ApprovalService {
       return { ok: false, proof: 'accepted', changed: 0, results: ids.map((id) => ({ id, outcome: 'refused', reason: 'Publication refused.' })) }
     }
     const results: PublishResult['results'] = []
+    const evidence = readEvidence(this.root)
     const add: string[] = []
     const remove: string[] = []
     for (const id of ids) {
@@ -619,6 +621,11 @@ export class ApprovalService {
         results.push({ id, outcome: 'refused', reason: 'Approved fact has no value to publish.' })
         continue
       }
+      const blockers = question ? publicationBlockers(question, fact.value, evidence, new Date(this.now())) : []
+      if (blockers.length) {
+        results.push({ id, outcome: 'refused', reason: blockers.join(' ') })
+        continue
+      }
       if (fact.publication === 'published' && policy.approved_fact_ids.includes(id)) {
         results.push({ id, outcome: 'unchanged', reason: `Already published (version ${fact.version}).` })
         continue
@@ -633,6 +640,60 @@ export class ApprovalService {
     }
     const changed = add.length + remove.length
     return { ok: !results.some((item) => item.outcome === 'refused' || item.outcome === 'unknown'), proof: 'accepted', changed, results }
+  }
+
+  // ---- evidence and retraction (Personal Brand OS) -----------------------------------------
+
+  /**
+   * Owner review of an evidence or permission record. Verified and rejected both need the proof.
+   * A rejection can make a published claim fail its gate; such claims are unpublished at once.
+   */
+  reviewEvidence(id: string, decision: 'verified' | 'rejected', proof: string | undefined, reason: string | null = null, actor = 'owner'): { ok: boolean; message: string; unpublished: string[] } {
+    if (!this.proofMatches(proof)) return { ok: false, message: 'Evidence review requires the human proof. Nothing was changed.', unpublished: [] }
+    const item = reviewEvidenceRecord(this.root, id, decision, actor, new Date(this.now()), reason)
+    const unpublished = unpublishBlocked(this.root, this.host.brandId(), new Date(this.now()))
+    const kind = item.source_type === 'owner_testimony' && item.kind === 'verification' ? ' Owner testimony stays owner-stated; it never counts as independent verification.' : ''
+    return { ok: true, message: `${id} ${decision} for ${item.claim_id}.${kind}`, unpublished }
+  }
+
+  /** Withdraw evidence or a permission. Needs no proof because it only restricts publication. */
+  withdrawEvidence(id: string, reason: string): { ok: boolean; message: string; unpublished: string[] } {
+    const item = withdrawEvidenceRecord(this.root, id, reason, new Date(this.now()))
+    const unpublished = unpublishBlocked(this.root, this.host.brandId(), new Date(this.now()))
+    return {
+      ok: true,
+      message: `${id} withdrawn for ${item.claim_id}.${unpublished.length ? ` Unpublished: ${unpublished.join(', ')}.` : ''}`,
+      unpublished,
+    }
+  }
+
+  /**
+   * Retract an approved claim entirely (for example a wrong credential). Needs the proof. The approved
+   * fact and its publication grant are removed, the ledger keeps the history with a deprecated record,
+   * and drafts and documents that cited it are rebuilt from what remains.
+   */
+  retract(questionId: string, proof: string | undefined, reason: string): ApprovalStep {
+    if (!this.proofMatches(proof)) return { kind: 'error', code: 'proof', questionId, message: 'Retraction requires the human proof. Nothing was changed.' }
+    const question = this.host.question(questionId)
+    if (!question) return { kind: 'error', code: 'invalid', questionId, message: `Unknown question ${questionId}.` }
+    const brandId = this.host.brandId()
+    const facts = readFacts(this.root, 'approved', brandId)
+    const fact = facts[questionId]
+    if (!fact) return { kind: 'error', code: 'not_approvable', questionId, message: `${questionId} has no approved fact to retract.` }
+    delete facts[questionId]
+    writeFacts(this.root, 'approved', facts)
+    this.updatePolicy([], [questionId])
+    const latest = this.host.latestAnswers().get(questionId)
+    if (latest) this.host.supersede(latest.answer_id)
+    const answer = this.host.appendAnswer(question, null, {
+      sourceType: 'owner',
+      authority: 'unverified',
+      status: 'deprecated',
+      uncertainty: `Retracted by the owner: ${reason.trim().slice(0, 300) || 'no reason given'}. Version ${fact.version} is kept in the ledger history only.`,
+      reviewedBy: 'owner',
+    })
+    this.host.afterWrite(question, answer)
+    return { kind: 'recorded', questionId, status: 'deprecated', message: `Retracted ${questionId} (was version ${fact.version}). It is no longer approved or published. Documents were rebuilt.` }
   }
 
   private updatePolicy(add: string[], remove: string[]): void {

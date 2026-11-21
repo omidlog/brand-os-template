@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, moduleEnabled, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
+import { allModules, factIsPublic, moduleEnabled, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import type { BrandConfig, PersonalFacet } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -361,6 +361,8 @@ function writePublished(ctx: PrepareContext): void {
     if (fact.status !== 'approved' || classification === 'restricted') return false
     if (ctx.audience === 'public' && !allowed.has(id)) return false
     if (ctx.audience === 'public' && (classification !== 'public' || fact.publication !== 'published')) return false
+    // Same gate as every other public reader: evidence, rights and privacy for personal claims.
+    if (ctx.audience === 'public' && !factIsPublic(ctx.root, id, facts[id] as never, ctx.config.brand.slug)) return false
     return true
   })
   if (visible.length === 0) lines.push('No approved claims for this audience yet.')

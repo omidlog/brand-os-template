@@ -8,6 +8,8 @@ import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import { appendAccessLog, queryFingerprint } from './access-log.js'
 import { authorize, guestContext, type AgentProfile, type Audience, type AuthContext, type Role } from './auth.js'
+import { rightsBlocker } from './asset-rights.js'
+import { claimVerification, gatePasses, readEvidence } from './evidence.js'
 import { readFacts } from './facts.js'
 import { factIsPublic, readPublicationPolicy } from './publication.js'
 import { isUsableLifecycle } from './mascot-lifecycle.js'
@@ -148,6 +150,8 @@ function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalR
   const facts = readFacts(root, 'approved', brandId)
   const policy = readPublicationPolicy(root)
   const questions = new Map(engine.questions().map((question) => [question.id, question]))
+  const evidence = readEvidence(root)
+  const now = new Date()
   const terms = (req.query ?? '').toLowerCase().split(/\s+/).filter(Boolean)
   const explicit = req.ids !== undefined
   const items: RetrievedItem[] = []
@@ -164,7 +168,8 @@ function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalR
     }
     // The registry wins if a fact file claims a lower classification than the question that owns it.
     const classification = higher(fact.classification, question ? audienceOf(question.sensitivity) : undefined)
-    const published = fact.publication === 'published' && policy.approved_fact_ids.includes(id)
+    // The evidence, rights and privacy gate applies to every public reader, here as in factIsPublic.
+    const published = fact.publication === 'published' && policy.approved_fact_ids.includes(id) && gatePasses(root, id, fact.value)
     const decision = readable(ctx, brandId, { classification, status: fact.status, published, module })
     const base = {
       id,
@@ -195,7 +200,9 @@ function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalR
       const haystack = `${id} ${String(fact.value)}`.toLowerCase()
       if (!terms.every((term) => haystack.includes(term))) continue
     }
-    items.push({ ...base, value: fact.value, withheld: false, reason: null })
+    // Personal claims carry their verification label so a reader never mistakes owner testimony for a verified fact.
+    const meta = question && id.startsWith('personal.') ? { verification: claimVerification(question, evidence, now) } : undefined
+    items.push({ ...base, value: fact.value, withheld: false, reason: null, ...(meta ? { meta } : {}) })
   }
   return { allow: true, reason: 'allowed', items: terms.length > 0 ? items.slice(0, 20) : items, missing, source: FACTS_PATH }
 }
@@ -243,7 +250,8 @@ function readableAssets(engine: InterviewEngine, ctx: AuthContext): Row[] {
   const manifest = readYamlFile<{ assets?: Row[] }>(root, MANIFEST_PATH, {})
   return (manifest.assets ?? []).filter((asset) => {
     if (typeof asset.id !== 'string' || typeof asset.checksum_sha256 !== 'string') return false
-    const published = policy.approved_asset_ids.includes(asset.id)
+    // Portraits and other rights-sensitive assets are public only with granted public-use rights.
+    const published = policy.approved_asset_ids.includes(asset.id) && rightsBlocker(root, asset) === null
     const module = asset.id.includes('mascot') ? 'mascot-identity' : 'assets'
     if (!readable(ctx, brandId, { classification: audienceOf(asset.visibility), status: asset.status, published, module }).allow) return false
     return inspectAssetForPublication(root, String(asset.path), asset.checksum_sha256).ok
@@ -252,7 +260,7 @@ function readableAssets(engine: InterviewEngine, ctx: AuthContext): Row[] {
 
 function assetItem(engine: InterviewEngine, asset: Row): RetrievedItem {
   const root = engine.workspaceRoot()
-  const published = readPublicationPolicy(root).approved_asset_ids.includes(String(asset.id))
+  const published = readPublicationPolicy(root).approved_asset_ids.includes(String(asset.id)) && rightsBlocker(root, asset) === null
   return {
     id: String(asset.id),
     brand_id: engine.config().brand.slug,

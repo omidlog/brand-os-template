@@ -41,21 +41,42 @@ function isBusinessModule(module: string): boolean {
   return module === 'business' || module.startsWith('business-')
 }
 
+function isPersonalModule(module: string): boolean {
+  return module.startsWith('personal-')
+}
+
+/**
+ * Personal Brand OS modules a profiled agent may read. Career relationships, credentials, the
+ * evidence register, founder/investor positioning and privacy boundaries are `internal-read` only.
+ */
+const DESIGN_PERSONAL_MODULES = new Set(['personal-identity', 'personal-presence', 'personal-artist'])
+const MARKETING_PERSONAL_MODULES = new Set([
+  'personal-identity',
+  'personal-positioning',
+  'personal-story',
+  'personal-content',
+  'personal-presence',
+  'personal-consultant',
+  'personal-creator',
+  'personal-speaker',
+])
+
 export const AGENT_PROFILES: Record<AgentProfile, { description: string; allowsModule: (module: string) => boolean }> = {
   'internal-read': {
     description: 'Approved internal facts in every module. No restricted values.',
     allowsModule: () => true,
   },
   design: {
-    description: 'Approved internal brand, visual, product UI, and mascot facts. No business modules.',
-    allowsModule: (module) => !isBusinessModule(module),
+    description: 'Approved internal brand, visual, product UI, and mascot facts, plus personal identity and visual presence. No business modules, career history or privacy boundaries.',
+    allowsModule: (module) => (isPersonalModule(module) ? DESIGN_PERSONAL_MODULES.has(module) : !isBusinessModule(module)),
   },
   marketing: {
-    description: 'Approved internal brand facts plus company, customer, product, sales, marketing, and growth modules.',
-    allowsModule: (module) => !isBusinessModule(module) || MARKETING_BUSINESS_MODULES.has(module),
+    description: 'Approved internal brand facts plus company, customer, product, sales, marketing, and growth modules, and personal identity, positioning, story, content, presence and offer facets. No career history, evidence register or privacy boundaries.',
+    allowsModule: (module) =>
+      isPersonalModule(module) ? MARKETING_PERSONAL_MODULES.has(module) : !isBusinessModule(module) || MARKETING_BUSINESS_MODULES.has(module),
   },
   finance: {
-    description: 'Approved internal business modules and governance status. Restricted values stay withheld.',
+    description: 'Approved internal business modules and governance status. Restricted values stay withheld. No personal modules.',
     allowsModule: (module) => isBusinessModule(module) || module === 'governance',
   },
 }

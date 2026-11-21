@@ -149,5 +149,7 @@ export function resetInterviewState(root: string, confirmation: string): { backu
     'brand/interview/intake-log.yaml': 'schema_version: 1\nbatches: []\n',
   }
   for (const [relative, body] of Object.entries(writes)) writeAtomic(path.join(root, relative), body)
+  // Evidence belongs to the reset interview state; the backup above keeps the old register.
+  fs.rmSync(path.join(root, 'brand', 'interview', 'evidence-register.yaml'), { force: true })
   return { backup: backup.directory }
 }

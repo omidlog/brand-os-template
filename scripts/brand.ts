@@ -235,6 +235,109 @@ if (command === 'init') {
   const file = path.join(dir, values.public ? 'public-snapshot.json' : 'latest-snapshot.json')
   fs.writeFileSync(file, `${JSON.stringify(snapshot, null, 2)}\n`)
   console.log(`Wrote ${path.relative(root, file)}. Full snapshots can contain restricted answers and are gitignored.`)
+} else if (command === 'evidence') {
+  // Evidence & rights register for personal claims. add/list/withdraw are open; verify/reject need the owner proof.
+  const [action, ...args] = rest
+  const { values } = parseArgs({
+    args,
+    options: {
+      claim: { type: 'string' },
+      kind: { type: 'string', default: 'verification' },
+      source: { type: 'string' },
+      reference: { type: 'string' },
+      quote: { type: 'string' },
+      note: { type: 'string' },
+      'granted-by': { type: 'string' },
+      scope: { type: 'string' },
+      'review-due': { type: 'string' },
+      id: { type: 'string' },
+      reason: { type: 'string' },
+      json: { type: 'boolean', default: false },
+      proof: { type: 'string' },
+    },
+  })
+  if (values.proof !== undefined) {
+    console.error('--proof is not accepted on the command line. Nothing was changed.')
+    process.exit(2)
+  }
+  const { addEvidence, readEvidence, claimVerification, publicationBlockers } = await import('@brand-os/brand-core')
+  try {
+    if (action === 'add') {
+      if (!values.claim || !values.source || !values.reference) {
+        console.error('Usage: brand:evidence add --claim <question id> --source owner_testimony|document|public_record|third_party|link --reference <url or where it is held> [--kind verification|permission] [--scope public|internal] [--granted-by <role or organization>] [--quote <text>] [--note <text>] [--review-due YYYY-MM-DD]')
+        process.exit(2)
+      }
+      const item = addEvidence(root, engine.questions(), {
+        claim_id: values.claim,
+        kind: values.kind as 'verification' | 'permission',
+        source_type: values.source as 'owner_testimony',
+        reference: values.reference,
+        quote: values.quote ?? null,
+        note: values.note ?? null,
+        granted_by: values['granted-by'] ?? null,
+        scope: (values.scope as 'public' | 'internal' | undefined) ?? null,
+        review_due: values['review-due'] ?? null,
+        recorded_by: process.env.BRAND_OS_AGENT_TOKEN ? 'agent' : 'owner',
+      })
+      console.log(values.json ? JSON.stringify(item, null, 2) : `Recorded ${item.id} for ${item.claim_id} as pending. The owner verifies it with brand:evidence verify --id ${item.id}.`)
+    } else if (action === 'verify' || action === 'reject') {
+      if (!values.id) {
+        console.error(`Usage: brand:evidence ${action} --id ev-0001 [--reason <text>]. The proof is read from BRAND_OS_APPROVAL_PROOF, piped stdin, or a hidden prompt.`)
+        process.exit(2)
+      }
+      if (process.env.BRAND_OS_AGENT_TOKEN) {
+        console.error('Evidence review is a human action. Run it from a shell without an agent token.')
+        process.exit(2)
+      }
+      const result = engine.approvals().reviewEvidence(values.id, action === 'verify' ? 'verified' : 'rejected', await readApprovalProof(), values.reason ?? null)
+      console.log(result.message + (result.unpublished.length ? ` Unpublished: ${result.unpublished.join(', ')}.` : ''))
+      if (!result.ok) process.exit(1)
+    } else if (action === 'withdraw') {
+      if (!values.id || !values.reason) {
+        console.error('Usage: brand:evidence withdraw --id ev-0001 --reason <why>')
+        process.exit(2)
+      }
+      const result = engine.approvals().withdrawEvidence(values.id, values.reason)
+      engine.rebuildDrafts()
+      console.log(result.message)
+    } else if (action === 'list' || action === undefined) {
+      const items = readEvidence(root).filter((item) => !values.claim || item.claim_id === values.claim)
+      if (values.json) console.log(JSON.stringify(items, null, 2))
+      else if (items.length === 0) console.log('No evidence recorded.')
+      else for (const item of items) console.log(`${item.id} ${item.status.padEnd(9)} ${item.kind.padEnd(12)} ${item.source_type.padEnd(15)} ${item.claim_id} — ${item.reference}${item.review_due ? ` (review by ${item.review_due})` : ''}`)
+    } else if (action === 'check') {
+      const now = new Date()
+      const items = readEvidence(root)
+      const claims = engine.questions().filter((question) => question.publication_requires?.length && (!values.claim || question.id === values.claim))
+      for (const question of claims) {
+        const blockers = publicationBlockers(question, null, items, now)
+        console.log(`${question.id}: ${claimVerification(question, items, now)}${blockers.length ? ` — blocked: ${blockers.join(' ')}` : ' — eligible after approval'}`)
+      }
+    } else {
+      console.error('Usage: brand:evidence list|add|verify|reject|withdraw|check')
+      process.exit(2)
+    }
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    process.exit(1)
+  }
+} else if (command === 'retract') {
+  const { values } = parseArgs({ args: rest, options: { question: { type: 'string' }, reason: { type: 'string' }, proof: { type: 'string' } } })
+  if (values.proof !== undefined) {
+    console.error('--proof is not accepted on the command line. Nothing was changed.')
+    process.exit(2)
+  }
+  if (!values.question || !values.reason) {
+    console.error('Usage: brand:retract --question <id> --reason <why>. Removes an approved claim, unpublishes it and rebuilds drafts. Needs the owner proof.')
+    process.exit(2)
+  }
+  if (process.env.BRAND_OS_AGENT_TOKEN) {
+    console.error('Retraction is a human action. Run it from a shell without an agent token.')
+    process.exit(2)
+  }
+  const step = engine.approvals().retract(values.question, await readApprovalProof(), values.reason)
+  console.log(step.message)
+  if (step.kind === 'error') process.exit(1)
 } else if (command === 'approve' || command === 'publish') {
   const { values } = parseArgs({
     args: rest,

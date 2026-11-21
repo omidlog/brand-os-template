@@ -1080,6 +1080,8 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   writeYaml(path.join(root, 'brand', 'interview', 'answer-ledger.yaml'), { schema_version: 1, records: [] })
   writeYaml(path.join(root, 'brand', 'interview', 'contradictions.yaml'), { schema_version: 1, derived: true, items: [] })
   writeYaml(path.join(root, 'brand', 'interview', 'evidence-index.yaml'), { schema_version: 1, items: [] })
+  // A new brand never inherits another brand's evidence or permissions.
+  fs.rmSync(path.join(root, 'brand', 'interview', 'evidence-register.yaml'), { force: true })
   writeYaml(path.join(root, 'brand', 'interview', 'intake-log.yaml'), { schema_version: 1, batches: [] })
   writeYaml(path.join(root, 'brand', 'instance', 'draft-facts.yaml'), { schema_version: 1, facts: {} })
   writeYaml(path.join(root, 'brand', 'instance', 'approved-facts.yaml'), { schema_version: 1, facts: {} })
