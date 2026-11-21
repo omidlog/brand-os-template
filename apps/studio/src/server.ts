@@ -79,6 +79,12 @@ const STATIC_FILES: Record<string, string> = {
   'studio.css': 'text/css; charset=utf-8',
   'studio.js': 'text/javascript; charset=utf-8',
   'favicon.svg': 'image/svg+xml',
+  'logo-omid-ataei-white.svg': 'image/svg+xml',
+  'fonts/inter-var.woff2': 'font/woff2',
+  'fonts/rajdhani-medium.woff2': 'font/woff2',
+  'fonts/rajdhani-semibold.woff2': 'font/woff2',
+  'fonts/rajdhani-bold.woff2': 'font/woff2',
+  'fonts/vazirmatn-var.woff2': 'font/woff2',
 }
 const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'history', 'handoff'] as const
 
@@ -214,7 +220,8 @@ export function createStudio(deps: StudioDeps): {
     if (!type) return notFound(ctx)
     ctx.res.statusCode = 200
     ctx.res.setHeader('Content-Type', type)
-    ctx.res.setHeader('Cache-Control', 'public, max-age=300')
+    // Font files never change under the same name; everything else may change on deploy.
+    ctx.res.setHeader('Cache-Control', name.startsWith('fonts/') ? 'public, max-age=604800' : 'public, max-age=300')
     ctx.res.end(fs.readFileSync(path.join(STATIC_DIR, name)))
   }
 
@@ -478,7 +485,7 @@ export function createStudio(deps: StudioDeps): {
   const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)'
   const routes: Route[] = [
     { method: 'GET', pattern: /^\/healthz$/, auth: 'none', handle: health },
-    { method: 'GET', pattern: /^\/static\/([a-z0-9.-]+)$/, auth: 'none', handle: staticFile },
+    { method: 'GET', pattern: /^\/static\/((?:fonts\/)?[a-z0-9.-]+)$/, auth: 'none', handle: staticFile },
     { method: 'GET', pattern: /^\/login$/, auth: 'none', handle: loginForm },
     { method: 'POST', pattern: /^\/login$/, auth: 'none', writes: 'creates an owner session', handle: login },
     { method: 'POST', pattern: /^\/logout$/, auth: 'session', writes: 'ends the owner session', handle: logout },
