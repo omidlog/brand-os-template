@@ -89,7 +89,7 @@ function profileBadge(ctx: ViewContext, profile: 'business' | 'personal-brand'):
   return profile === 'personal-brand' ? badge(ctx.i.t('brands.profilePersonal'), 'accent', 'user') : badge(ctx.i.t('brands.profileBusiness'), 'neutral', 'briefcase')
 }
 
-export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced: Map<string, { sha: string | null; at: string | null }> }): SafeHtml {
+export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced: Map<string, { sha: string | null; at: string | null }>; discarded?: boolean }): SafeHtml {
   const { i } = ctx
   const newButton = input.canCreate ? html`<a class="btn btn-primary" href="/brands/new">${icon('plus')}<span>${i.t('nav.newBrand')}</span></a>` : ''
   const content = ctx.brands.length
@@ -113,6 +113,7 @@ export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced
     title: i.t('brands.title'),
     crumbs: [{ label: i.t('nav.myBrands') }],
     content: html`${pageHeader({ title: i.t('brands.title'), subtitle: i.t('brands.subtitle'), actions: ctx.brands.length ? newButton || undefined : undefined })}
+      ${input.discarded ? banner({ tone: 'success', body: i.t('discard.done'), live: true }) : ''}
       ${!input.canCreate && ctx.brands.length ? banner({ tone: 'info', body: i.t('brands.notConfigured') }) : ''}
       ${content}`,
   })
@@ -128,6 +129,8 @@ export interface WizardState {
   template: string
   templateState: 'ok' | 'missing' | 'unknown'
   configured: boolean
+  /** Set when this form edits a failed provisioning attempt ("Edit and retry"). */
+  retryOf?: { slug: string; repo: string; repoMayRemain: boolean } | null
 }
 
 const FACETS = ['founder-executive', 'consultant-expert', 'creator-educator', 'artist-designer', 'speaker-author'] as const
@@ -155,8 +158,10 @@ export function wizardPage(ctx: ViewContext, state: WizardState): SafeHtml {
       : state.templateState === 'missing'
         ? badge(i.t('wizard.templateMissing'), 'danger', 'alert')
         : badge(i.t('wizard.templateUnknown'), 'warning', 'clock')
+  const retry = state.retryOf ?? null
   const form = html`<form method="post" action="/brands/new" class="wizard" data-wizard novalidate>
     <input type="hidden" name="_csrf" value="${ctx.csrf ?? ''}">
+    ${retry ? html`<input type="hidden" name="retry_of" value="${retry.slug}">` : ''}
     <ol class="stepper" aria-label="${i.t('wizard.stepsLabel')}">
       ${steps.map((step, index) => html`<li class="stepper-item" data-step-indicator="${step.id}"><span class="stepper-num" aria-hidden="true">${i.number(index + 1)}</span><span class="stepper-label">${i.t(step.key)}</span></li>`)}
     </ol>
@@ -218,8 +223,21 @@ export function wizardPage(ctx: ViewContext, state: WizardState): SafeHtml {
       </div>
       <div class="field">
         <label class="field-label" for="repo">${i.t('wizard.repo')}</label>
-        <input class="input mono" id="repo" name="repo" maxlength="100" dir="ltr" value="${String(v.repo ?? '')}" ${invalid('repo')} data-repo-target>
+        <div class="input-row">
+          <input class="input mono" id="repo" name="repo" maxlength="100" dir="ltr" value="${String(v.repo ?? '')}" ${state.errors.repo ? html`aria-invalid="true"` : ''} aria-describedby="${state.errors.repo ? 'repo-error ' : ''}repo-hint repo-check" data-repo-target>
+          <button type="button" class="btn btn-secondary btn-sm" data-repo-check-button hidden>${i.t('wizard.nameCheck')}</button>
+        </div>
         <p class="field-hint" id="repo-hint">${i.t('wizard.repoHint')}</p>${err('repo')}
+        <div class="name-check" id="repo-check" role="status" aria-live="polite" data-repo-check
+          data-retry-of="${retry?.slug ?? ''}"
+          data-msg-checking="${i.t('wizard.nameChecking')}"
+          data-msg-free="${i.t('wizard.nameFree')}"
+          data-msg-taken-github="${i.t('wizard.nameTakenGithub')}"
+          data-msg-taken-studio="${i.t('wizard.nameTakenStudio')}"
+          data-msg-suggest="${i.t('wizard.nameSuggest')}"
+          data-msg-use="${i.t('wizard.nameUse')}"
+          data-msg-unknown="${i.t('wizard.nameUnknown')}"
+          data-msg-invalid="${i.t('wizard.error.repo_invalid')}"></div>
       </div>
       <div class="field">
         <span class="field-label">${i.t('wizard.template')}</span>
@@ -247,7 +265,13 @@ export function wizardPage(ctx: ViewContext, state: WizardState): SafeHtml {
   return shell(ctx, {
     title: i.t('wizard.title'),
     crumbs: [{ label: i.t('nav.myBrands'), href: '/brands' }, { label: i.t('nav.newBrand') }],
-    content: html`${pageHeader({ title: i.t('wizard.title'), subtitle: i.t('wizard.subtitle') })}
+    content: html`${pageHeader({ title: retry ? i.t('wizard.retryTitle') : i.t('wizard.title'), subtitle: i.t('wizard.subtitle') })}
+      ${retry
+        ? banner({
+            tone: 'info',
+            body: html`<p>${i.t('wizard.retryBody')}</p>${retry.repoMayRemain ? html`<p>${i.t('discard.repoRemains')} ${code(retry.repo)}</p>` : ''}`,
+          })
+        : ''}
       ${!state.configured ? banner({ tone: 'warning', body: i.t('wizard.notConfigured') }) : ''}
       ${state.formError ? banner({ tone: 'danger', body: state.formError, live: true }) : ''}
       ${errorList.length
@@ -281,7 +305,9 @@ export function provisioningPage(ctx: ViewContext, record: BrandRecord): SafeHtm
             title: i.t('provision.failed'),
             body: html`<p dir="auto">${p.error?.message ?? ''}</p>${p.cleanup === 'done' ? html`<p>${i.t('provision.cleanupDone')}</p>` : p.cleanup === 'required' ? html`<p>${i.t('provision.cleanupRequired')}</p>` : ''}`,
             live: true,
-            actions: html`<form method="post" action="/brands/${record.slug}/provisioning/retry"><input type="hidden" name="_csrf" value="${ctx.csrf ?? ''}"><button class="btn btn-primary btn-sm" type="submit">${icon('refresh')}<span>${i.t('provision.retry')}</span></button></form>`,
+            actions: html`<form method="post" action="/brands/${record.slug}/provisioning/retry"><input type="hidden" name="_csrf" value="${ctx.csrf ?? ''}"><button class="btn btn-primary btn-sm" type="submit">${icon('refresh')}<span>${i.t('provision.retry')}</span></button></form>
+              <a class="btn btn-secondary btn-sm" href="/brands/new?retry=${record.slug}" data-edit-retry>${i.t('provision.editRetry')}</a>
+              <a class="btn btn-ghost btn-sm" href="/brands/${record.slug}/provisioning/discard" data-discard>${i.t('provision.discard')}</a>`,
           })
   const steps = html`<ol class="timeline" aria-label="${i.t('provision.stepsLabel')}">
     ${p.steps.map((step) => {
@@ -318,6 +344,29 @@ export function provisioningPage(ctx: ViewContext, record: BrandRecord): SafeHtm
         ${ready}
       </div>
     </div>`,
+  })
+}
+
+/** Confirmation before a failed attempt is removed from Studio's registry. Works without JavaScript. */
+export function discardPage(ctx: ViewContext, record: BrandRecord): SafeHtml {
+  const { i } = ctx
+  const p = record.provisioning!
+  const repoMayRemain = p.cleanup === 'required'
+  const title = i.t('discard.title')
+  return shell(ctx, {
+    title,
+    crumbs: [{ label: i.t('nav.myBrands'), href: '/brands' }, { label: record.display_name, href: `/brands/${record.slug}/provisioning` }, { label: title }],
+    content: html`${pageHeader({ title, eyebrow: code(`${record.repo.owner}/${record.repo.name}`) })}
+      <section class="card" aria-labelledby="discard-title">
+        <h2 class="card-title" id="discard-title" dir="auto">${record.display_name}</h2>
+        <p>${i.t('discard.body')}</p>
+        ${repoMayRemain ? banner({ tone: 'warning', body: html`${i.t('discard.repoRemains')} ${code(`${record.repo.owner}/${record.repo.name}`)}` }) : ''}
+        <form method="post" action="/brands/${record.slug}/provisioning/discard" class="button-row">
+          <input type="hidden" name="_csrf" value="${ctx.csrf ?? ''}">
+          <button class="btn btn-danger" type="submit" data-discard-confirm>${i.t('discard.confirm')}</button>
+          <a class="btn btn-secondary" href="/brands/${record.slug}/provisioning">${i.t('common.cancel')}</a>
+        </form>
+      </section>`,
   })
 }
 

@@ -402,6 +402,17 @@ code.mono { background: var(--studio-color-bg-subtle); border: 1px solid var(--s
 .btn-secondary:active { background: var(--studio-color-bg-hover); box-shadow: inset 0 0 0 1.5px var(--studio-color-border-strong), var(--studio-shadow-md); }
 .btn-ghost { background: transparent; color: var(--studio-color-text-secondary); }
 .btn-ghost:hover { background: var(--studio-color-bg-hover); color: var(--studio-color-text-primary); }
+.btn-danger { background: var(--studio-color-status-danger-bg); color: var(--studio-color-status-danger); box-shadow: inset 0 0 0 1.5px var(--studio-color-status-danger); }
+.btn-danger:hover { box-shadow: inset 0 0 0 2px var(--studio-color-status-danger), var(--studio-shadow-md); }
+/* Repository name check (wizard step 4). Logical properties only, so RTL needs nothing extra. */
+.input-row { display: flex; gap: var(--studio-space-2); align-items: center; }
+.input-row .input { flex: 1 1 auto; min-inline-size: 0; }
+.name-check { display: flex; flex-wrap: wrap; gap: var(--studio-space-2); align-items: center; font: var(--studio-type-label); min-block-size: 1.5em; }
+.name-check:empty { display: none; }
+.name-check[data-state="free"] { color: var(--studio-color-status-approved); }
+.name-check[data-state="taken"], .name-check[data-state="invalid"] { color: var(--studio-color-status-danger); }
+.name-check[data-state="unknown"], .name-check[data-state="checking"] { color: var(--studio-color-text-secondary); }
+.name-check bdi { font-family: var(--studio-font-mono); }
 .btn-sm { --btn-px: 14px; min-height: 32px; font-size: 12px; }
 .btn-lg { --btn-px: 32px; min-height: 48px; font-size: 14px; }
 .btn-block { width: 100%; }
