@@ -159,7 +159,7 @@ export interface InitChanges {
 }
 
 /** Runs the core initializer on an extracted checkout and returns the file changes. */
-export function initializeCheckout(root: string, request: ProvisionRequest): InitChanges {
+export function initializeCheckout(root: string, request: ProvisionRequest, template?: { repository: string; commit: string | null }): InitChanges {
   const before = hashTree(root)
   applyInit(root, {
     name: request.name,
@@ -173,6 +173,8 @@ export function initializeCheckout(root: string, request: ProvisionRequest): Ini
     profile: request.profile === 'personal-brand' ? 'personal-brand' : 'universal',
     personal: request.profile === 'personal-brand',
     facets: request.facets,
+    // The checkout holds only brand/, so the template version is unknown here; the commit is what counts.
+    template: template ? { repository: template.repository, commit: template.commit, version: null, source: 'studio' } : undefined,
   })
   const after = hashTree(root)
   const write: InitChanges['write'] = []
@@ -417,10 +419,17 @@ export class ProvisioningService {
         const { errors } = validateRequest({ ...request }, this.deps.allowedOwners)
         if (Object.keys(errors).length) throw new StepError('invalid_request', 'The request is no longer valid.')
       })
-      await this.step(slug, 'check_template', async () => {
+      const templateCommit = await this.step(slug, 'check_template', async () => {
         const template = await github.getRepo(templateOwner, templateRepo)
         if (!template) throw new StepError('template_unavailable', 'The Brand OS template repository is not reachable with the provisioning access.')
         if (!template.is_template) throw new StepError('template_unavailable', 'The configured template repository is not marked as a GitHub template.')
+        // Recorded in brand/template-version.json so template:update knows where this brand starts.
+        // Best effort: a brand without a recorded commit can still be updated with --base.
+        try {
+          return (await github.getBranchHead(templateOwner, templateRepo, template.default_branch)).sha
+        } catch {
+          return null
+        }
       })
       const known = this.deps.registry.get(slug)?.repo.id ?? null
       let repo = await this.step(slug, 'check_destination', async () => {
@@ -475,7 +484,7 @@ export class ProvisioningService {
         const config = readConfig(checkout)
         if (!config) throw new StepError('template_invalid', 'The template content has no brand/brand.config.yaml.')
         if (config.initialized === true && config.slug === request.slug) return null
-        return initializeCheckout(checkout, request)
+        return initializeCheckout(checkout, request, { repository: `${templateOwner}/${templateRepo}`, commit: templateCommit })
       })
       let commit = head.sha
       if (!changes) {
