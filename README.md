@@ -29,6 +29,8 @@ For a person rather than a company, use `--profile personal-brand` and pick face
 
 `brand:init` defaults to `--language en --languages en` and `--publish private`. Add locales with `--languages en,fa,tr` (see below). Scripts do not load `.env`; keep `BRAND_OS_DATA_KEY` in your shell or secret manager. Run `npm run brand:doctor` whenever something looks wrong; it never prints secret values.
 
+`npm run help` lists the main scripts in groups, with one plain-English line each.
+
 ## Commands
 
 ```bash

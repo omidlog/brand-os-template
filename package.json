@@ -12,6 +12,7 @@
     "apps/*"
   ],
   "scripts": {
+    "help": "tsx scripts/help.ts",
     "materialize": "tsx scripts/materialize.ts",
     "tokens:build": "tsx packages/design-tokens/src/cli.ts",
     "prepare:docs": "tsx scripts/prepare-docs.ts",
