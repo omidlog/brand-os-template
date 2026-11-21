@@ -7,6 +7,10 @@ import {
   AGENT_TOKEN_ENV,
   appendNote,
   approvalProofMatches,
+  InterviewEngine,
+  noteProvenance,
+  proposeFromNote,
+  staleProposalIssues,
   archiveNote,
   backlinks,
   captureNote,
@@ -70,6 +74,8 @@ const HELP = `brand:knowledge <command> [options]
   recover   --id kn_… --revision <sha256-prefix> --expected-revision <current sha256>
   share     --id kn_… --dry-run   then: --expected-revision <sha256> [--confirm-private owner/repo]
   unshare   --id kn_… --expected-revision <sha256>
+  propose   --id kn_… [--file items.json] [--apply --expected-revision <sha256>]   drafts only, never approval
+  provenance --id kn_…           proposals that cite this note, and whether they are stale
   doctor    diagnostics without note text
   migrate   [--apply]            fill missing metadata (idempotent)
 
@@ -284,7 +290,7 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
     case 'show': {
       const loaded = findNote(ws, need(values, 'id'), { includeRestricted: restricted })
       const links = loaded.scope === 'restricted' ? null : backlinks(ws, loaded.id)
-      const extras = {}
+      const extras = loaded.scope === 'restricted' ? {} : { provenance: noteProvenance(new InterviewEngine(root), loaded.id, loaded.revision) }
       const data = { ok: true, ...summarize(loaded), meta: loaded.note.meta, body: loaded.note.body, issues: loaded.note.issues, links, ...extras }
       print(values, data, () =>
         [
@@ -373,7 +379,8 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       const id = need(values, 'id')
       const fn = command === 'archive' ? archiveNote : restoreNote
       const result = fn(ws, id, { expectedRevision: values['expected-revision'], includeRestricted: restricted })
-      const extras = {}
+      const provenance = restricted ? [] : noteProvenance(new InterviewEngine(root), id, null)
+      const extras = command === 'archive' && provenance.length ? { stale_proposals: provenance } : {}
       print(values, { ok: true, ...result, ...extras }, () =>
         [
           result.changed ? `${command === 'archive' ? 'Archived' : 'Restored'} ${id}. Revision ${result.revision}.` : `${id} was already ${command === 'archive' ? 'archived' : 'not archived'}.`,
@@ -420,7 +427,8 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       return
     }
     case 'doctor': {
-      const report = knowledgeDoctor(ws)
+      const engine = new InterviewEngine(root)
+      const report = knowledgeDoctor(ws, () => staleProposalIssues(engine, ws))
       print(values, report, () =>
         [
           `Knowledge (${report.brand_slug}): ${report.notes.local} local, ${report.notes.shared} shared, ${report.notes.restricted} restricted${report.notes.restricted_locked ? ' (not checked: no key)' : ''}`,
@@ -429,6 +437,51 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
         ].join('\n'),
       )
       if (!report.ok) process.exit(1)
+      return
+    }
+    case 'propose': {
+      if (restricted) throw new KnowledgeError('refused', 'Restricted notes never become proposals.')
+      if (values.apply && process.env[AGENT_TOKEN_ENV]) throw new KnowledgeError('refused', `Storing drafts from a note is a local owner action. Refusing while ${AGENT_TOKEN_ENV} is set.`)
+      let items: unknown
+      const raw = await content(values, { required: false })
+      if (raw !== undefined) {
+        try {
+          items = JSON.parse(raw)
+        } catch {
+          throw new KnowledgeError('invalid_input', 'The proposal items file is not valid JSON. Nothing was stored.')
+        }
+      }
+      const result = proposeFromNote(new InterviewEngine(root), ws, need(values, 'id'), { items, apply: values.apply, expectedRevision: values['expected-revision'] })
+      print(values, result, () =>
+        [
+          `${result.dry_run ? 'Preview (dry run, nothing stored)' : `Stored as drafts (intake ${result.report?.batch_id})`} for ${result.note.id} @ ${result.note.revision.slice(0, 12)}`,
+          `Source: ${result.source_ref} (${result.authority === 'owner_words' ? 'owner’s words' : 'third-party, not owner authority'})`,
+          `Candidate questions: ${result.candidates.map((item) => item.question_id).join(', ') || 'none'}`,
+          ...result.refused_links.map((item) => `Refused link ${item.question_id}: ${item.reason}`),
+          ...(result.report ? result.report.results.map((item) => `  ${item.outcome.padEnd(15)} ${item.question_id ?? `#${item.index}`}${item.state ? ` [${item.state}]` : ''}  ${item.reason}`) : []),
+          ...(result.report?.conflicts ?? []).map((item) => `  Ask: ${item.ask}`),
+          ...result.tracked_quotations.map((item) => `  Would copy into ${item.files.join(' + ')}: ${item.question_id} “${item.quotation}”`),
+          ...result.warnings.map((item) => `Warning: ${item}`),
+          ...result.next_steps.map((item) => `→ ${item}`),
+          'Nothing was approved or published.',
+        ].join('\n'),
+      )
+      return
+    }
+    case 'provenance': {
+      const id = need(values, 'id')
+      let revision: string | null = null
+      try {
+        revision = findNote(ws, id).revision
+      } catch (error) {
+        if (!(error instanceof KnowledgeError) || error.code !== 'not_found') throw error
+      }
+      const items = noteProvenance(new InterviewEngine(root), id, revision)
+      print(values, { ok: true, id, current_revision: revision, items }, () =>
+        items.length
+          ? items.map((item) => `${item.batch_id}  ${item.received_at}  ${item.stale ? 'STALE (note edited since)' : 'current'}  ${item.results.map((r) => `${r.question_id}:${r.outcome}`).join(', ')}`).join('\n')
+          : 'No proposals cite this note.',
+      )
       return
     }
     case 'migrate': {

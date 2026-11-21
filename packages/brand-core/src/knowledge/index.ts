@@ -26,3 +26,7 @@ export { confirmVisibility, detectVisibility, githubRepoFromRemote, shareNote, u
 export type { SharePreview, Visibility } from './share.js'
 export { knowledgeDoctor, migrateNotes } from './doctor.js'
 export type { KnowledgeDoctorReport, KnowledgeIssue } from './doctor.js'
+export { candidateQuestions, KNOWLEDGE_REF_PREFIX, knowledgeRef, noteProvenance, parseKnowledgeRef, proposeFromNote, staleProposalIssues } from './proposals.js'
+export type { Candidate, ProposalPreview, ProvenanceEntry, RefusedLink } from './proposals.js'
+export { KNOWLEDGE_TOOL_LIMITS, KNOWLEDGE_TOOLS, knowledgeAccess, runKnowledgeTool } from './agent.js'
+export type { KnowledgeTool, KnowledgeToolArgs, KnowledgeToolResult } from './agent.js'

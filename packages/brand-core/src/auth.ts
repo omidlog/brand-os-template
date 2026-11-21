@@ -26,7 +26,7 @@ export interface ResourceRef {
  * Every profile is read-only, limited to the `internal` audience, and has no `restricted` scope, so
  * restricted (financial or legal) values are never returned to an agent in this release.
  */
-export type AgentProfile = 'internal-read' | 'design' | 'marketing' | 'finance'
+export type AgentProfile = 'internal-read' | 'design' | 'marketing' | 'finance' | 'knowledge-read'
 
 const MARKETING_BUSINESS_MODULES = new Set([
   'business-company',
@@ -78,6 +78,15 @@ export const AGENT_PROFILES: Record<AgentProfile, { description: string; allowsM
   finance: {
     description: 'Approved internal business modules and governance status. Restricted values stay withheld. No personal modules.',
     allowsModule: (module) => isBusinessModule(module) || module === 'governance',
+  },
+  /**
+   * The only profile the knowledge_* MCP tools answer. Facts as internal-read, plus read access to the
+   * owner's explicitly shared, merged-into-Git knowledge notes (unapproved ideas, labelled as such). Never
+   * local or restricted notes, never writes. Existing tokens keep their profile, so none gains note access.
+   */
+  'knowledge-read': {
+    description: 'Approved internal facts in every module, plus shared knowledge notes (brand/knowledge/shared) labelled as unapproved ideas. No local or restricted notes. No restricted values.',
+    allowsModule: () => true,
   },
 }
 
