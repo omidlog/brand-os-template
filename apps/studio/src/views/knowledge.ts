@@ -209,7 +209,7 @@ export function knowledgeNotePage(ctx: ViewContext, view: BrandView, note: Studi
     ${brandHeader(ctx, view, note.title, i.t('knowledge.subtitle'))}
     <div class="note-badges">${ideaLabels(ctx)}${badge(i.t(`knowledge.kind.${note.kind}` as MessageKey), 'neutral')}${statusBadge(ctx, note.status)}</div>
     ${banner({ tone: 'warning', title: i.t('knowledge.notFact'), body: i.t('knowledge.factStatus') })}
-    <div class="two-col two-col-wide">
+    <div class="two-col two-col-wide kn-page-cols">
       <section class="card" aria-labelledby="kn-body-title">
         <h2 class="card-title" id="kn-body-title">${i.t('knowledge.bodyTitle')}</h2>
         ${note.body !== null ? html`<div class="note-body" dir="auto" lang="${note.language ?? ''}">${noteBody(view, note.body, titles)}</div>` : html`<p class="note-excerpt" dir="auto">${note.excerpt}</p>`}
@@ -219,7 +219,7 @@ export function knowledgeNotePage(ctx: ViewContext, view: BrandView, note: Studi
       <div class="stack">
         <section class="card" aria-labelledby="kn-details-title">
           <h2 class="card-title" id="kn-details-title">${i.t('knowledge.details')}</h2>
-          <dl class="meta-list">
+          <dl class="meta-list kn-meta">
             <div><dt>${i.t('knowledge.source')}</dt><dd>${i.t(`knowledge.sourceKind.${note.source_kind}` as MessageKey)}</dd></div>
             <div><dt>${i.t('knowledge.created')}</dt><dd>${i.dateTime(note.created_at)}</dd></div>
             <div><dt>${i.t('knowledge.updatedLabel')}</dt><dd>${i.dateTime(note.updated_at)}</dd></div>

@@ -761,3 +761,5 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   .kn-filters { grid-template-columns: minmax(0, 1fr); }
 }
 .kn-section-title { margin-block-end: var(--studio-space-3); }
+.kn-meta code.mono, .kn-withheld code.mono, .kn-questions code.mono, .kn-links code.mono { white-space: normal; overflow-wrap: anywhere; }
+.kn-page-cols > * { min-width: 0; }
