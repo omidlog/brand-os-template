@@ -606,6 +606,30 @@ if (command === 'init') {
     for (const item of result.results) console.log(`${item.outcome.padEnd(11)} ${item.id}  ${item.reason}`)
   }
   if (!result.ok) process.exit(1)
+} else if (command === 'assets') {
+  const [sub, ...args] = rest
+  if (sub === 'check') {
+    const { values } = parseArgs({ args, options: { ids: { type: 'string' }, json: { type: 'boolean', default: false } } })
+    const { checkAssets } = await import('@brand-os/asset-catalog')
+    const ids = values.ids ? values.ids.split(',').map((id) => id.trim()).filter(Boolean) : undefined
+    const reports = checkAssets(root, ids)
+    if (values.json) console.log(JSON.stringify({ ok: reports.every((report) => report.ok), assets: reports }, null, 2))
+    else {
+      for (const report of reports) {
+        console.log(`${(report.ok ? 'ok' : report.fixable ? 'fixable' : 'refused').padEnd(8)} ${report.id}  ${report.path}`)
+        for (const issue of report.issues) console.log(`         ${issue.fixable ? 'fixable' : 'blocks '} ${issue.code}${issue.line ? ` line ${issue.line}` : ''}: ${issue.message}`)
+        for (const warning of report.warnings) console.log(`         warning ${warning.code}${warning.line ? ` line ${warning.line}` : ''}: ${warning.message}`)
+        if (report.fix) console.log(`         fix: ${report.fix}`)
+        else if (!report.ok) console.log('         fix: not automatic. Fix the source file and export it again.')
+      }
+      const failing = reports.filter((report) => !report.ok).length
+      console.log(reports.length === 0 ? 'No SVG assets in the manifest.' : `${reports.length} SVG asset(s) checked, ${failing} not publishable.`)
+    }
+    if (reports.some((report) => !report.ok)) process.exit(1)
+  } else {
+    console.error('Usage: brand:assets check [--ids <asset.id,…>] [--json]')
+    process.exit(sub ? 1 : 0)
+  }
 } else if (command === 'finance') {
   const { values } = parseArgs({ args: rest, options: { input: { type: 'string' }, json: { type: 'boolean', default: false } } })
   if (!values.input) {
@@ -651,7 +675,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, document, tokens:generate, tokens:approve, tokens:publish, query, agent-token, doctor, finance, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, document, tokens:generate, tokens:approve, tokens:publish, assets, query, agent-token, doctor, finance, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 

@@ -176,3 +176,38 @@ function derivationErrors(repoRoot: string, asset: AssetRecord): string[] {
   }
   return errors
 }
+
+export interface SvgAssetReport {
+  id: string
+  path: string
+  status: string
+  ok: boolean
+  fixable: boolean
+  issues: SvgIssue[]
+  warnings: SvgIssue[]
+  /** The command to run when every issue is fixable, otherwise null. */
+  fix: string | null
+}
+
+/** `brand:assets check`: every present SVG in the manifest, with the same verdict Studio, docs and MCP apply. */
+export function checkAssets(repoRoot: string, ids?: string[]): SvgAssetReport[] {
+  const manifest = parse(fs.readFileSync(path.join(repoRoot, 'brand', 'assets', 'asset-manifest.yaml'), 'utf8')) as AssetManifest
+  const reports: SvgAssetReport[] = []
+  for (const asset of manifest.assets ?? []) {
+    if (ids && !ids.includes(asset.id)) continue
+    if (!asset.present || typeof asset.path !== 'string' || !asset.path.toLowerCase().endsWith('.svg')) continue
+    const full = path.join(repoRoot, asset.path)
+    let issues: SvgIssue[]
+    let warnings: SvgIssue[] = []
+    if (!assetPathIsSafe(repoRoot, asset.path)) issues = [{ code: 'not-svg', message: 'The path is outside brand/assets.', line: null, fixable: false }]
+    else if (!fs.existsSync(full)) issues = [{ code: 'not-svg', message: 'The file is missing.', line: null, fixable: false }]
+    else {
+      const text = fs.readFileSync(full, 'utf8')
+      issues = svgPublicationIssues(text)
+      warnings = checkSvg(text).warnings
+    }
+    const fixable = issues.length > 0 && issues.every((issue) => issue.fixable)
+    reports.push({ id: asset.id, path: asset.path, status: asset.status, ok: issues.length === 0, fixable, issues, warnings, fix: fixable ? normalizeCommand(asset.id) : null })
+  }
+  return reports
+}
