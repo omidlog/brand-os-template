@@ -251,6 +251,7 @@ function writeData(ctx: PrepareContext): void {
     modules: allModules()
       .filter((module) => (module.optional === 'mascot' ? ctx.mascot : true))
       .filter((module) => (module.optional === 'gamification' ? ctx.gamification : true))
+      .filter((module) => (module.optional === 'personal' ? moduleEnabled(module, ctx.config) : true))
       .map((module) => {
         const score = report.modules.find((item) => item.module === module.id)
         return {
@@ -258,7 +259,7 @@ function writeData(ctx: PrepareContext): void {
           title: module.title,
           code: module.code,
           group: module.group,
-          href: projection ? `/docs/${module.group === 'business' ? 'business-book' : 'brand-book'}/${module.id}` : `/docs/${module.docPath}`,
+          href: projection ? `/docs/${module.group === 'business' ? 'business-book' : module.group === 'personal' ? 'personal-book' : 'brand-book'}/${module.id}` : `/docs/${module.docPath}`,
           coverage: projection ? 0 : score?.coverage ?? 0,
           approval: projection ? 0 : score?.approval ?? 0,
           requiredUnanswered: projection ? 0 : score?.requiredUnanswered ?? 0,

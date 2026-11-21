@@ -762,6 +762,9 @@ test('journey D: founder+consultant personal brand from init through evidence, p
   prepareDocs(root, { audience: 'internal', rootIndex: false })
   assert.ok(fs.existsSync(path.join(docs, 'docs/personal-book/personal-founder.md')))
   assert.ok(!fs.existsSync(path.join(docs, 'docs/personal-book/personal-speaker.md')), 'unselected facet page is not built')
+  const statusData = JSON.parse(fs.readFileSync(path.join(docs, 'src/data/status.json'), 'utf8')) as { modules: Array<{ id: string; href: string }> }
+  assert.ok(statusData.modules.some((module) => module.id === 'personal-founder'))
+  assert.ok(!statusData.modules.some((module) => module.id === 'personal-speaker'), 'unselected facet is not listed')
 
   // 7. Retrieval: internal-read sees the explicit relationship; marketing does not.
   const relation = brandRetrieve(new InterviewEngine(root), agentTokenContext(D_SLUG, 'agt_d_read', 'internal-read'), { kind: 'facts', ids: ['personal.experience.relationships'] })
