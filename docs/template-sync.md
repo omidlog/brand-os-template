@@ -2,6 +2,8 @@
 
 How a fix in the Brand OS template reaches every brand repository, in plain words.
 
+**Status: complete.** All six parts below are built and tested with local git repositories and a fake GitHub. It has not yet run against real GitHub: go through *Before turning this on for real* first.
+
 ## The idea
 
 There is one template repository and one private repository per brand. Each brand repository started as a copy of the template. When the template gets a fix or a feature, every brand should get it too, without anyone copying files by hand and without losing anything the brand wrote.
@@ -63,6 +65,25 @@ The template repository is private, so a brand repository's own `GITHUB_TOKEN` c
 - Studio **opens** update pull requests and never merges them. This is Studio's second permitted write, after creating a new private repository. It never writes brand files (apart from moving `brand/template-version.json` forward), facts, approvals or the default branch. Every request is recorded in Studio's audit log.
 - **Periodic check.** Studio checks every brand against the template on its own, every 6 hours by default (`STUDIO_TEMPLATE_CHECK_MINUTES`; `0` turns it off). By default it only checks, so the brand list shows **Updates available** without anyone opening the page. Set `STUDIO_TEMPLATE_AUTO_PR=1` and it also opens the update pull request for each brand that is behind. It keeps at most one open update pull request per brand: if one is open, it links it and opens nothing. If GitHub fails or limits requests, it waits longer before trying again. Each run is written to the audit log.
 
+## Or let the brand repository do it (optional)
+
+For brands that do not use Studio, every brand repository has a **Template update** GitHub Action (`.github/workflows/template-update.yml`, a template file). Once a week and when you press **Run workflow**, it does what **Open update PR** does, from inside the brand repository, and keeps one update pull request open. It needs a repository secret, `BRAND_OS_TEMPLATE_TOKEN`, that can read the private template; without it the workflow prints *Template update is off* and does nothing. It never pushes to `main`, never merges and never touches brand files. Studio and the Action can both be on and still leave one update pull request: Studio links any open update pull request instead of opening one, and the Action opens nothing when one for the latest template is open (an older one it replaces and closes).
+
+Setup, step by step: `docs/template-update-action.md`.
+
+## How it is tested
+
+Besides the unit tests for each part, `tests/template-sync-e2e.test.ts` runs the whole story with a fake brand and no network: create a brand from a template, change the template (a core file, a shared file, a template copy of a brand file, a migration), let the Action open the update pull request, merge it, and check that the brand's record moved forward and the next update is empty. Brand files are compared before and after every step and never change.
+
+## Before turning this on for real
+
+- [ ] **Studio's provisioning token** (`STUDIO_GITHUB_PROVISION_TOKEN`) has **Contents: Read and write** and **Pull requests: Read and write** on the brand repositories (the allowlisted owner), and can read the template. Without Pull requests write, **Open update PR** reports that it could not open the pull request.
+- [ ] Every brand repository has a `brand/template-version.json` with a real template commit. A brand without one shows *No template record*: run `npm run template:update -- --template <template clone> --base <commit>` once.
+- [ ] Try **Open update PR** by hand on one brand first, read the pull request, and merge it yourself.
+- [ ] Only then decide on `STUDIO_TEMPLATE_AUTO_PR`. It is `0` (check only) by default; `1` makes the periodic check open update pull requests on its own, at most one open per brand.
+- [ ] Brand repositories that use the Action instead: add `BRAND_OS_TEMPLATE_TOKEN` (template **Contents: Read-only**), allow Actions to create pull requests, and add `BRAND_OS_PR_TOKEN` (brand repository **Contents**, **Pull requests** and **Workflows: Read and write**) if updates may change workflow files. See `docs/template-update-action.md`.
+- [ ] Write down when each token expires.
+
 ## Plan
 
 | Chunk | What | Status |
@@ -71,5 +92,5 @@ The template repository is private, so a brand repository's own `GITHUB_TOKEN` c
 | 2 | Studio: record the template commit at creation, **Updates available** indicator, **Open update PR** through the GitHub API (mocked in tests); document the second write | Done |
 | 3 | Studio periodic job: check every brand and open at most one open update PR per brand; skip when one is already open. Opening is off unless `STUDIO_TEMPLATE_AUTO_PR=1` | Done |
 | 4 | Versioned migrations for breaking changes (`.brand-os/migrations/NNNN-name.json`: ordered, run once, core files only, data not code), run by `template:update` and Studio and listed in the commit and PR | Done |
-| 5 | Optional brand-side GitHub Action ("Template update") for owners who add a repository secret that can read the template | Planned |
-| 6 | Fake-brand end-to-end test: create, change template, update PR, merge locally, second update is empty | Planned |
+| 5 | Optional brand-side GitHub Action ("Template update", `workflow_dispatch` and weekly) for owners who add the `BRAND_OS_TEMPLATE_TOKEN` secret; keeps one update pull request open; off without the secret | Done |
+| 6 | Fake-brand end-to-end test: create, change template, update PR, merge locally, second update is empty | Done |

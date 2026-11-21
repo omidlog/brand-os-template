@@ -2,7 +2,7 @@
 
 An optional way for a brand repository to get Brand OS template updates on its own, without Studio. It is the workflow `.github/workflows/template-update.yml`, which every brand repository already has because it comes with the template. It does nothing until you add one secret.
 
-If you use Studio's **Open update PR** or its periodic check, you do not need this. Both can be on at the same time: each one sees an update pull request the other opened and does not open a second one.
+If you use Studio's **Open update PR** or its periodic check, you do not need this. Both can be on at the same time and there is still only one update pull request: Studio links any open update pull request instead of opening one, and this action opens nothing when one for the latest template is open, whoever opened it (an older one it replaces, as below).
 
 ## What it does
 
