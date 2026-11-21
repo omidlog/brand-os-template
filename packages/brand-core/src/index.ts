@@ -126,6 +126,8 @@ export { DRAFT_RULES, draftPersonalContent, MASCOT_FILTER_KEYS } from './query.j
 export { asciiDigits, isStructuredType, normalizeStructured, parseStructured, STRUCTURED_FORMATS, STRUCTURED_TYPES, structuredFor } from './structured.js'
 export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, VoicePair } from './structured.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
+export { approveAssets } from './asset-approval.js'
+export type { AssetApprovalOutcome, AssetApprovalResult } from './asset-approval.js'
 export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCES } from './token-generate.js'
 export type { GeneratedTokenResult, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult } from './token-generate.js'
 export {

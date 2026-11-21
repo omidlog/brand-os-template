@@ -15,6 +15,8 @@ const RELATIVE = [
   'brand/business-os',
   'brand/mascot',
   'brand/assets',
+  // Originals of normalized SVGs. Never served, but the manifest's derived_from points at them.
+  'brand/assets-src',
   'brand/tokens',
   'brand/templates',
   'brand/generated',

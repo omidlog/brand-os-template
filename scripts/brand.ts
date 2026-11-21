@@ -648,8 +648,42 @@ if (command === 'init') {
       if (reports.some((report) => report.approval === 'reset')) console.log('An approval was reset. The owner approves the new file with: npm run brand:assets -- approve --ids <id>')
     }
     if (reports.some((report) => !report.ok)) process.exit(1)
+  } else if (sub === 'approve') {
+    const { values } = parseArgs({
+      args,
+      options: {
+        ids: { type: 'string' },
+        actor: { type: 'string', default: 'owner' },
+        json: { type: 'boolean', default: false },
+        // Declared only so it can be refused without echoing its value.
+        proof: { type: 'string' },
+      },
+    })
+    if (values.proof !== undefined) {
+      console.error('--proof is not accepted: a secret on the command line leaks into shell history and the process list. Nothing was changed.')
+      process.exit(2)
+    }
+    if (process.env.BRAND_OS_AGENT_TOKEN) {
+      console.error('brand:assets approve refuses to run while BRAND_OS_AGENT_TOKEN is set. Asset approval is a human action.')
+      process.exit(2)
+    }
+    const ids = (values.ids ?? '').split(',').map((id) => id.trim()).filter(Boolean)
+    if (ids.length === 0) {
+      console.error('Usage: brand:assets approve --ids <asset.id,…> [--actor owner] [--json]')
+      console.error('The approval proof is read from BRAND_OS_APPROVAL_PROOF, piped stdin, or a hidden prompt. Never from argv.')
+      process.exit(2)
+    }
+    const { approveAssets } = await import('@brand-os/brand-core')
+    const result = approveAssets(root, ids, await readApprovalProof(), values.actor ?? 'owner')
+    if (values.json) console.log(JSON.stringify(result, null, 2))
+    else {
+      if (result.proof === 'rejected') console.log('Proof rejected. Nothing was changed.')
+      for (const item of result.results) console.log(`${item.outcome.padEnd(10)} ${item.id}  ${item.reason}`)
+    }
+    if (!result.ok) process.exit(1)
   } else {
     console.error('Usage: brand:assets check [--ids <asset.id,…>] [--json]')
+    console.error('       brand:assets approve --ids <asset.id,…> [--actor owner] [--json]   (owner only; proof never on argv)')
     console.error('       brand:assets normalize <asset.id> [--dry-run] [--json]')
     process.exit(sub ? 1 : 0)
   }
