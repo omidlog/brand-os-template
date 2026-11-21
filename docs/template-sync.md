@@ -37,7 +37,7 @@ npm run template:update -- --template ../brand-os-template          # dry run: p
 npm run template:update -- --template ../brand-os-template --apply  # creates branch template-update/<sha> and commits
 ```
 
-Options: `--to <ref>` picks a template commit or tag (default: the template's `HEAD`), `--base <sha>` sets the starting commit when the brand has no record yet, `--branch <name>` names the branch, `--json` prints the plan as JSON. The command never pushes; push the branch and open a pull request as usual.
+Options: `--to <ref>` picks a template commit or tag (default: the template's `HEAD`), `--base <sha>` sets the starting commit when the brand has no record yet, `--branch <name>` names the branch, `--json` prints the plan as JSON. The command never pushes; push the branch and open a pull request as usual. It exits with code 2 when some files need a person, so scripts notice.
 
 ## Who does it automatically (planned)
 
@@ -52,7 +52,7 @@ The template repository is private, so a brand repository's own `GITHUB_TOKEN` c
 | Chunk | What | Status |
 | --- | --- | --- |
 | 1 | Manifest (`.brand-os/sync.json`), template version record, `template:update` CLI with dry run and apply on a new branch, tests with throwaway git repositories | Done in part 1 |
-| 2 | Studio: record the template commit at creation, **Updates available** indicator, **Open update PR** through the GitHub API (mocked in tests); document the second write | Next |
+| 2 | Studio: record the template commit at creation (done), **Updates available** indicator, **Open update PR** through the GitHub API (mocked in tests); document the second write | Started |
 | 3 | Studio periodic job: check every brand and open at most one open update PR per brand; skip when one is already open | Planned |
 | 4 | Versioned migrations for breaking changes (`.brand-os/migrations/<version>`), run by the update and listed in the PR | Planned |
 | 5 | Optional brand-side GitHub Action ("Template update") for owners who add a repository secret that can read the template | Planned |

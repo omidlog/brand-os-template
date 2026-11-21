@@ -144,7 +144,9 @@ The starter prompt tells Claude Code to stop and ask for access rather than gues
 
 ## Template updates
 
-Each brand repository is an independent copy made from the template at creation time. Engine improvements to the template do not flow into existing brand repositories automatically. To upgrade a brand, merge or cherry-pick the template changes into its repository in Claude Code and run `npm run brand:migrate` there, then merge as usual; Studio shows the result after refresh.
+Each brand repository is an independent copy made from the template at creation time. When Studio creates a brand it records the template head commit in `brand/template-version.json`. To upgrade a brand today, run `npm run template:update -- --template <template clone>` in the brand repository (Claude Code can do this), review the dry run, add `--apply` to get a `template-update/<sha>` branch, run `npm run brand:migrate`, push and open a pull request, then merge as usual; Studio shows the result after refresh. See `docs/template-sync.md`.
+
+Planned, not built: an **Updates available** indicator and an **Open update PR** action. Opening (never merging) an update pull request will be Studio's second permitted write; until it ships, Studio's only write is creating a repository.
 
 ## Tests
 
