@@ -48,7 +48,7 @@ export type OpenResult =
   | { ok: true; code: 'opened'; pull: PullSummary; branch: string; written: number; conflicts: number }
   | { ok: true; code: 'exists'; pull: PullSummary }
   | { ok: true; code: 'current' }
-  | { ok: false; code: 'not_configured' | 'untracked' | 'busy' | 'failed'; message?: string }
+  | { ok: false; code: 'not_configured' | 'untracked' | 'busy' | 'failed'; message?: string; rateLimited?: boolean }
 
 export interface TemplateUpdateDeps {
   registry: Registry
@@ -70,6 +70,7 @@ interface HeadCache {
   /** No new GitHub read before this time (TTL, or a back-off after an error). */
   until: number
   error: string | null
+  rateLimited: boolean
 }
 
 const SHA_RE = /^[0-9a-f]{40}$/
@@ -146,11 +147,11 @@ export class TemplateUpdateService {
         const repo = await this.deps.github.getRepo(this.deps.templateOwner, this.deps.templateRepo)
         if (!repo) throw new GitHubError('not_found', 404, 'The template repository is not reachable.')
         const head = await this.deps.github.getBranchHead(this.deps.templateOwner, this.deps.templateRepo, repo.default_branch)
-        this.head = { sha: head.sha, at, until: at + this.ttlMs, error: null }
+        this.head = { sha: head.sha, at, until: at + this.ttlMs, error: null, rateLimited: false }
       } catch (error) {
         const limited = error instanceof GitHubError && error.kind === 'rate_limited'
         const message = error instanceof GitHubError ? error.message : 'The template could not be read.'
-        this.head = { sha: this.head?.sha ?? null, at: this.head?.at ?? at, until: at + (limited ? 15 * 60_000 : 2 * 60_000), error: message }
+        this.head = { sha: this.head?.sha ?? null, at: this.head?.at ?? at, until: at + (limited ? 15 * 60_000 : 2 * 60_000), error: message, rateLimited: limited }
         this.deps.log?.(`template head check failed: ${error instanceof GitHubError ? error.kind : 'internal'}`)
       }
       return this.head.sha
@@ -159,6 +160,11 @@ export class TemplateUpdateService {
     })
     this.inflight = job
     return job
+  }
+
+  /** Outcome of the last template head read: an error message (null when it worked) and whether GitHub rate-limited it. */
+  get headError(): { error: string | null; rateLimited: boolean } {
+    return { error: this.head?.error ?? null, rateLimited: this.head?.rateLimited ?? false }
   }
 
   /** Compares a brand's recorded template commit with a template head. Pure. */
@@ -193,7 +199,7 @@ export class TemplateUpdateService {
       const message = error instanceof GitHubError ? error.message : error instanceof Error && error.name === 'UpdateError' ? error.message : 'The update could not be prepared.'
       this.audit({ actor, slug, record, result: 'failed', ...details, message })
       this.deps.log?.(`template update failed for ${slug}: ${error instanceof GitHubError ? error.kind : 'internal'}`)
-      return { ok: false, code: 'failed', message }
+      return { ok: false, code: 'failed', message, rateLimited: error instanceof GitHubError && error.kind === 'rate_limited' }
     } finally {
       fs.rmSync(work, { recursive: true, force: true })
       this.busy.delete(slug)
