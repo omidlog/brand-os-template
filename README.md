@@ -6,6 +6,8 @@ A private-first GitHub template for one brand and the business system inside it.
 
 Brand OS is English-first. Persian (fa, right to left) and Turkish (tr) are equal, optional locales. See [Languages and locales](#languages-and-locales).
 
+Brand OS Studio (`apps/studio`) is an optional private, read-only web viewer for all your brands that can also create a new private brand repository from this template. Editing always happens in Claude Code inside the brand's repository. See [Studio](#studio).
+
 ## Quickstart (new brand)
 
 Use **Use this template** to create a new private repository, clone it, then:
@@ -74,6 +76,9 @@ npm run build
 | `npm run brand:validate` | Schema, catalog, token, and asset checks |
 | `npm run example:education` | Education-app fixture in a temp directory |
 | `npm run example:b2b` | Mascot-free B2B fixture in a temp directory |
+| `npm run studio:start` | Start the private read-only Studio on `127.0.0.1:4100` (configuration from the environment, see `apps/studio/.env.example`). |
+| `npm run studio:hash-password`, `npm run studio -- totp-secret\|session-secret\|brands\|register\|unregister` | Owner server commands for Studio: password hash, secrets, and registering an existing private brand repository. |
+| `npm run test:e2e` | Studio browser tests in headless Chrome (they also run inside `npm test` when Chrome is installed, and skip otherwise). |
 
 Details: `docs-internal/SETUP.md`.
 
@@ -143,6 +148,17 @@ Official brand sentences are never auto-translated. See `docs-internal/LOCALIZAT
 ## Tokens and assets
 
 Answer the structured color, type-scale and logo-size questions, approve them, then run `npm run brand:tokens:generate`. Generated drafts in `brand/tokens/generated/` override the EXAMPLE base values with the same id and stay drafts until `brand:tokens:approve` and `brand:tokens:publish`. You can still edit `brand/tokens/*.json` by hand, then `npm run tokens:build`. Outputs are CSS variables and TypeScript. The palette is EXAMPLE and the contrast pairs in the template pass WCAG AA for the listed combinations. The SVG files under `brand/assets` are placeholders. The mascot turnaround is missing on purpose.
+
+## Studio
+
+One private Studio shows every brand at `/brands/<slug>` and creates new ones. It is a viewer plus a repository provisioner, not an editor:
+
+1. Sign in (password and authenticator code), choose **New brand**, and enter name, slug, profile (business or personal brand), languages, optional mascot and gamification, and the GitHub destination. Studio creates one **private** repository from this template with the same initializer as `brand:init`, and shows progress, errors and retry.
+2. Copy the repository URL or the **Claude Code starter prompt** and open a new Claude Code session. Claude Code needs its own GitHub access to the private repository (a clone or an authorized GitHub connection); a link is not permission.
+3. Edit in Claude Code, approve facts yourself with the local CLI, and merge the pull request.
+4. Refresh Studio: it shows the merged default branch with its commit SHA and sync time, cited documents, tokens, approved assets, history and open pull requests (labelled non-canonical).
+
+Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub write is creating a new repository. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. Deployment to a server is a separate step and not part of this template yet.
 
 ## Agent instructions
 

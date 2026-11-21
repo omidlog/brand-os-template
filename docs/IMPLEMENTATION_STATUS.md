@@ -81,7 +81,26 @@ Branch `feat/phase-8-personal-brand-os`. Entry gate: `docs-internal/POST_V02_PRE
 | Draft operation | Done | `draft_personal_content` MCP tool and `brand:query` handler; always `draft`, no authority. |
 | Migration | Done | `brand:migrate` adds the bank, profile, registry entries and config block additively and idempotently. |
 | End-to-end | Done | Journey D in `tests/journeys.test.ts`: founder+consultant brand through the real CLI, evidence, publication, documents, docs builds, retrieval, withdrawal, backup, restore, migrate. |
-| Studio (Phase 9) | Not started | Separate branch and PR. Read-only. |
+| Studio (Phase 9) | See below | Studio shows personal brands read-only and does not edit them. |
+
+## Phase 9: Read-only Brand OS Studio
+
+Branch `feat/phase-9-read-only-studio`, stacked on Phase 8. Guide, architecture and security model: `docs-internal/STUDIO.md`. Phase 8 Personal Brand OS remains supported; Studio displays it and does not edit it.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Product contract | Done | One Studio, routes `/brands/<slug>`. Viewer plus repository provisioner. No chat, AI, interview UI, edit or approval controls, uploads, Git actions, token issuance or terminal. The complete non-GET route list is pinned by a test. |
+| Owner authentication | Done | scrypt password, TOTP (required beyond loopback), login nonce, rate limits, server-side sessions with HttpOnly SameSite=Strict cookies, CSRF and Origin on every authenticated POST, strict CSP and security headers. One owner account; sessions are in memory. |
+| Repository provisioning | Done | The single write: private repository from the template, core `applyInit` on a temporary checkout, one fast-forward commit, privacy verification, duplicate and concurrency refusal, retries, partial-create cleanup or a recorded cleanup-required state, resume after restart. Separate provisioning credential scoped to allowlisted destinations and the configured template. |
+| Read path | Done | Merged default branch only, safe tar extraction of `brand/` without `.private` or `restricted`, projection from the brand-core functions, credential guard, cached SHA and times, stale and failed states that keep the last good commit, slug and repository-id checks against cross-brand content. |
+| Refresh | Done | Manual refresh, refresh on view after the TTL, signed push webhook with replay protection. |
+| Screens | Done | My brands, New brand wizard, provisioning status, Overview, Brand Book, Design System, Assets & Mascot, Business OS, Personal Brand (only when enabled), History & Review (open PRs labelled non-canonical), GitHub & Claude Code handoff, Account & GitHub. |
+| Design and accessibility | Done | `studio.*` design variables, light and dark, responsive (1440/1024/390 px checked in a browser), skip link, focus ring, keyboard drawer, labelled fields, status as text plus icon. |
+| Localization | Done | en, fa (RTL, layout mirroring verified in a browser) and tr catalogs with identical keys and placeholders. Brand content inside documents stays in the language the repository holds. |
+| Server CLI | Done | `npm run studio:hash-password`, `npm run studio -- totp-secret\|session-secret\|brands\|register\|unregister`. Registering an existing repository is server-side only. No automated tests for the CLI wrapper itself; it calls the tested registry, hashing and GitHub client. |
+| Tests | Done | 48 Studio tests in five files with an in-memory GitHub (no network, no real repositories). `tests/studio-browser.test.ts` drives headless Chrome inside `npm test` when Chrome is installed and skips otherwise; `npm run test:e2e` requires it. |
+| VPS deployment | Not started | Phase 10: reverse proxy, TLS, process supervision, DNS for `studio.omidataei.com`. Nothing is deployed. |
+| Live GitHub | Not verified | All GitHub behavior is tested against a fake at the HTTP level. A first real run against GitHub (token permissions, template generation timing) is still owed. |
 
 ## Commands that this remediation expects to pass
 

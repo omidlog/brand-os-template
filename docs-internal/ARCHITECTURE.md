@@ -10,6 +10,7 @@ Brand OS is one repository per brand. Business OS is the `brand/business-os/` tr
 | `packages/design-tokens` | DTCG compiler to CSS and TypeScript, WCAG contrast |
 | `packages/asset-catalog` | Manifest checksums |
 | `apps/docs` | Docusaurus 3 portal |
+| `apps/studio` | Private, authenticated, read-only Studio for all brands, plus owner-only creation of new private brand repositories. Guide: `docs-internal/STUDIO.md` |
 | `brand/` | Content, tokens, mascot catalog, assets, interview state |
 | `schemas/` | JSON Schema draft-07 |
 
@@ -24,6 +25,10 @@ See `docs-internal/adr/0001-stack.md` and `docs-internal/adr/0002-tokens.md`.
 ## Interview data flow
 
 A command stores an append-only ledger row, updates `brand/instance/draft-facts.yaml` (restricted values replaced with a marker), updates the field block in the related draft, and refreshes `contradictions.yaml`. Approval copies a non-secret view into `approved-facts.yaml` and records the actor. Changing an approved answer requires confirmation and withdraws the approval first.
+
+## Studio
+
+One Studio serves every brand at `/brands/<slug>`. It reads each brand's merged default branch from GitHub through a server-side registry, builds a safe projection with the brand-core functions, and caches it with the commit SHA. Its only write is provisioning a new private repository from this template with the core initializer. Studio never edits a brand; Claude Code does that in the brand repository, and the owner approves with the local CLI. Details and the security model: `docs-internal/STUDIO.md`.
 
 ## What is not in this version
 

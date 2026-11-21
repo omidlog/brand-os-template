@@ -9,6 +9,7 @@ Start with:
 - `brand/instance/approved-facts.yaml` before repeating any brand claim
 - `docs/IMPLEMENTATION_STATUS.md` before calling a feature finished
 - `docs-internal/PERSONAL_BRAND.md` when `modules.personal.enabled` is true (person-centered brands, evidence, privacy)
+- `docs-internal/STUDIO.md` before touching `apps/studio` (read-only viewer; the only write is creating a new private repository)
 
 Skills for specific work:
 

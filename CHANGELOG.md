@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased — Phase 9: Read-only Brand OS Studio
+
+Theme: one private place to create brands and see their approved state, while all editing stays in Claude Code. Guide: `docs-internal/STUDIO.md`.
+
+### Breaking changes
+
+- None for brand repositories, the CLI, MCP or the docs build. Studio is a new, optional app.
+
+### Added
+
+- `apps/studio`: private, authenticated, read-only Studio at `/brands/<slug>` with owner sign-in (password and TOTP), the New Brand wizard, provisioning status, Overview, Brand Book, Design System, Assets & Mascot, Business OS, Personal Brand (Phase 8, read-only), History & Review and the GitHub & Claude Code handoff (copy repository URL, copy starter prompt, private-access notice).
+- Owner-only provisioning of one private repository per brand from the template using the core initializer, with retries, partial-create cleanup and concurrency locks. This is Studio's only write.
+- Read path from the merged default branch with safe archive extraction, projections from brand-core, cached SHA and sync time, stale and error states, and a signed push webhook.
+- en, fa (RTL) and tr interface catalogs; light and dark themes; responsive layout.
+- `npm run studio:start`, `npm run studio`, `npm run studio:hash-password`, `npm run test:e2e`; `apps/studio/.env.example`.
+- Tests: `studio-github`, `studio-provision`, `studio-sync`, `studio-server` and `studio-browser` (real headless Chrome when installed), 205 tests in total.
+
+### Not included
+
+- Server deployment (Phase 10). No Studio is running anywhere because of this change.
+
 ## Unreleased — Phase 8: Personal Brand OS
 
 Theme: one engine for people as well as companies. A personal brand is an optional module with combinable facets, explicit relationships to organizations, evidence and rights for public claims, and ten source-backed deliverables. Guide: `docs-internal/PERSONAL_BRAND.md`. Review: `docs-internal/PHASE_8_PERSONAL_BRAND_REVIEW.md`.
