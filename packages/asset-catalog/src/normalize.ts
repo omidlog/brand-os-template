@@ -4,7 +4,8 @@
  *
  * What it does, and nothing more:
  * - runs SVGO with exactly five plugins: removeComments, removeMetadata, removeEditorsNSData,
- *   inlineStyles and convertStyleToAttrs. No plugin that changes a shape, a number or a path runs;
+ *   inlineStyles and convertStyleToAttrs. No plugin that changes a shape, a number or a path runs.
+ *   Then it drops a UTF-8 `<?xml …?>` declaration (see dropUtf8Declaration);
  * - refuses the result unless every geometry attribute is byte-identical and the strict checker
  *   (both gates) passes on the output. SVGO only optimizes; the checker is the security gate;
  * - keeps the untouched original in brand/assets-src/ (never served), and records `derived_from`
@@ -53,6 +54,7 @@ export function normalizeSvg(input: string): NormalizeResult {
   } catch (error) {
     return { ok: false, reason: 'svgo-error', message: `SVGO could not read the file: ${error instanceof Error ? error.message.slice(0, 200) : 'unknown error'}`, issues: [], before }
   }
+  output = dropUtf8Declaration(output)
   if (!output.endsWith('\n')) output += '\n'
   const issues = svgPublicationIssues(output)
   if (issues.length > 0) return { ok: false, reason: 'output-refused', message: 'The normalized file still fails the SVG check, so nothing was written.', issues, before }
@@ -62,6 +64,19 @@ export function normalizeSvg(input: string): NormalizeResult {
     return { ok: false, reason: 'geometry-changed', message: 'A shape attribute changed during normalization, so nothing was written.', issues: [], before }
   }
   return { ok: true, output, changed: output !== input, before }
+}
+
+/**
+ * Drops a leading `<?xml …?>` declaration when it declares UTF-8 or no encoding, which is what an
+ * SVG without one means anyway. It carries nothing for rendering, and checkers older than this
+ * package refuse any `<?`, so a normalized file is also accepted by brands that have not updated
+ * yet. A declaration of another encoding is kept, because dropping it would change the text.
+ */
+function dropUtf8Declaration(svg: string): string {
+  const match = /^\uFEFF?\s*<\?xml\s([^?]*)\?>\s*/.exec(svg)
+  if (!match) return svg
+  const encoding = /\bencoding\s*=\s*["']([^"']+)["']/i.exec(match[1]!)?.[1]
+  return encoding === undefined || /^utf-?8$/i.test(encoding) ? svg.slice(match[0].length) : svg
 }
 
 export interface RenderCheck {

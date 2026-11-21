@@ -91,11 +91,18 @@ test('the normalizer fixes Illustrator and Inkscape exports without changing a s
     assert.equal(checkSvg(result.output).ok, true, name)
     assert.deepEqual(geometrySignature(result.output), geometrySignature(input), `${name} geometry`)
     assert.doesNotMatch(result.output, /<style|style=|<!--|sodipodi|inkscape:|<metadata/)
+    assert.match(result.output, /^<svg[\s>]/, `${name}: a UTF-8 XML declaration is dropped so older checkers accept the file`)
     const render = await renderCompare(input, result.output)
     assert.equal(render.result, 'identical', `${name}: ${JSON.stringify(render)}`)
   }
   const figma = normalizeSvg(fixture('figma-export.svg'))
   assert.ok(figma.ok && !figma.changed && figma.output === fixture('figma-export.svg'))
+})
+
+test('an XML declaration of another encoding is kept', () => {
+  const latin = '<?xml version="1.0" encoding="ISO-8859-1"?>\n<svg xmlns="http://www.w3.org/2000/svg"><!-- x --><rect width="1" height="1"/></svg>'
+  const result = normalizeSvg(latin)
+  assert.ok(result.ok && result.output.startsWith('<?xml version="1.0" encoding="ISO-8859-1"?>'))
 })
 
 test('the render check sees a one-colour change', async () => {
