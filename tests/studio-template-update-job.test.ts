@@ -46,9 +46,11 @@ class FakeScheduler implements Scheduler {
   }
   /** Fires the pending timer and waits until its run has finished and scheduled the next one. */
   async fire(job: TemplateUpdateJob): Promise<void> {
-    const [[id, entry]] = [...this.pending.entries()]
-    this.pending.delete(id!)
-    entry!.callback()
+    const first = [...this.pending.entries()][0]
+    assert.ok(first, 'a timer is pending')
+    const [id, entry] = first
+    this.pending.delete(id)
+    entry.callback()
     await job.settled()
     await new Promise((resolve) => setImmediate(resolve))
   }
