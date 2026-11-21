@@ -657,7 +657,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* ------------------------------------------------------------ copy blocks */
 .copy-block { display: grid; gap: var(--studio-space-2); }
 .copy-head { display: flex; align-items: center; justify-content: space-between; gap: var(--studio-space-3); }
-.copy-text { width: 100%; padding: 10px 12px; border-radius: var(--studio-radius-md); border: 1px solid var(--studio-color-border-input); background: var(--studio-color-bg-subtle); color: var(--studio-color-text-primary); font-size: 13px; line-height: 1.55; resize: vertical; text-align: left; }
+.copy-text { width: 100%; padding: 10px 12px; border-radius: var(--studio-radius-md); border: 1px solid var(--studio-color-border-input); background: var(--studio-color-bg-subtle); color: var(--studio-color-text-primary); font-size: 13px; line-height: 1.55; resize: vertical; text-align: start; }
 
 /* ------------------------------------------------------------ plain (sign-in) */
 /* The site's admin sign-in: a dark brand panel (grid, lime glow, hatched band) beside a light form panel. */
