@@ -337,11 +337,22 @@ test('security headers, no tokens in any response, and the static bundle carries
     assert.match(account.text, /Connected as studio-owner/)
     const staticDir = path.resolve(import.meta.dirname, '../apps/studio/static')
     assert.deepEqual(scanPublicTree(staticDir), [])
-    for (const file of fs.readdirSync(staticDir)) {
-      const text = fs.readFileSync(path.join(staticDir, file), 'utf8')
-      for (const needle of ['STUDIO_', 'token', 'Acme', 'api.github.com', 'anthropic', 'claude']) assert.equal(text.toLowerCase().includes(needle.toLowerCase()), false, `${file} contains ${needle}`)
+    const files = fs.readdirSync(staticDir, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile())
+    for (const entry of files) {
+      const relative = path.relative(staticDir, path.join(entry.parentPath, entry.name))
+      // Self-hosted fonts (binary WOFF2) and their license are the only files below the top level.
+      if (relative.includes(path.sep)) assert.match(relative, /^fonts[/\\]([a-z0-9-]+\.woff2|OFL\.txt)$/, `unexpected static file ${relative}`)
+      if (relative.endsWith('.woff2')) continue
+      const text = fs.readFileSync(path.join(staticDir, relative), 'utf8')
+      for (const needle of ['STUDIO_', 'token', 'Acme', 'api.github.com', 'anthropic', 'claude']) assert.equal(text.toLowerCase().includes(needle.toLowerCase()), false, `${relative} contains ${needle}`)
     }
-    for (const name of ['studio.css', 'studio.js', 'favicon.svg']) assert.equal((await client.get(`/static/${name}`)).status, 200)
+    for (const name of ['studio.css', 'studio.js', 'favicon.svg', 'logo-omid-ataei-white.svg']) assert.equal((await client.get(`/static/${name}`)).status, 200)
+    for (const name of ['inter-var', 'rajdhani-medium', 'rajdhani-semibold', 'rajdhani-bold', 'vazirmatn-var']) {
+      const font = await client.get(`/static/fonts/${name}.woff2`)
+      assert.equal(font.status, 200, name)
+      assert.equal(font.headers.get('content-type'), 'font/woff2', name)
+    }
+    assert.equal((await client.get('/static/fonts/OFL.txt')).status, 404, 'only allowlisted files are served')
     assert.equal((await client.get('/static/..%2fsrc%2fconfig.ts')).status, 404)
     assert.equal((await client.get('/static/server.ts')).status, 404)
   })

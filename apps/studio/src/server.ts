@@ -6,7 +6,7 @@ import { verifyPassword } from './auth/password.js'
 import { RateLimiter } from './auth/rate-limit.js'
 import { loginCsrfToken, safeEqual, SessionStore, type Session } from './auth/session.js'
 import { TotpVerifier } from './auth/totp.js'
-import type { StudioConfig } from './config.js'
+import { isLoopback, type StudioConfig } from './config.js'
 import type { GitHubClient } from './github/client.js'
 import { GitHubError } from './github/client.js'
 import { DeliveryLog, parsePush, verifyWebhookSignature } from './github/webhook.js'
@@ -79,6 +79,12 @@ const STATIC_FILES: Record<string, string> = {
   'studio.css': 'text/css; charset=utf-8',
   'studio.js': 'text/javascript; charset=utf-8',
   'favicon.svg': 'image/svg+xml',
+  'logo-omid-ataei-white.svg': 'image/svg+xml',
+  'fonts/inter-var.woff2': 'font/woff2',
+  'fonts/rajdhani-medium.woff2': 'font/woff2',
+  'fonts/rajdhani-semibold.woff2': 'font/woff2',
+  'fonts/rajdhani-bold.woff2': 'font/woff2',
+  'fonts/vazirmatn-var.woff2': 'font/woff2',
 }
 const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'history', 'handoff'] as const
 
@@ -111,14 +117,37 @@ export function createStudio(deps: StudioDeps): {
   const loginCookie = config.secureCookies ? '__Host-studio_login' : 'studio_login'
   const langCookie = 'studio_lang'
 
+  /**
+   * The client address for rate limits. Behind the single trusted reverse proxy, the proxy appends the
+   * address it saw as the LAST X-Forwarded-For entry; anything to its left came from the client and
+   * can be forged, so only the rightmost hop is used.
+   */
   function clientIp(req: IncomingMessage): string {
     if (config.trustProxy) {
       const forwarded = req.headers['x-forwarded-for']
-      const value = Array.isArray(forwarded) ? forwarded[0] : forwarded
-      const hop = value?.split(',')[0]?.trim()
-      if (hop) return hop
+      const value = Array.isArray(forwarded) ? forwarded.join(',') : forwarded
+      const hop = value?.split(',').map((item) => item.trim()).filter(Boolean).pop()
+      if (hop && hop.length <= 64) return hop
     }
     return req.socket.remoteAddress ?? 'unknown'
+  }
+
+  /**
+   * Beyond loopback, Studio answers only for its public host (DNS rebinding, stray virtual hosts).
+   * The proxy passes the original Host through. `/healthz` stays reachable for the container check.
+   */
+  const publicHostname = new URL(config.publicOrigin).hostname.toLowerCase()
+  const expectedHostname = isLoopback(publicHostname) ? null : publicHostname
+  function hostAllowed(req: IncomingMessage): boolean {
+    if (expectedHostname === null) return true
+    const header = req.headers.host
+    if (!header || header.length > 300) return false
+    try {
+      // The hostname decides (DNS rebinding uses a foreign name); the port depends on the proxy hop.
+      return new URL(`http://${header}`).hostname === expectedHostname
+    } catch {
+      return false
+    }
   }
 
   function sameOrigin(req: IncomingMessage): boolean {
@@ -171,11 +200,18 @@ export function createStudio(deps: StudioDeps): {
 
   /* ------------------------------------------------------------ handlers */
 
+  /** Liveness and readiness in one: the process answers and its data directory is writable. Reveals nothing else. */
   const health: Handler = (ctx) => {
-    ctx.res.statusCode = 200
+    let ok = true
+    try {
+      fs.accessSync(config.dataDir, fs.constants.W_OK)
+    } catch {
+      ok = false
+    }
+    ctx.res.statusCode = ok ? 200 : 503
     ctx.res.setHeader('Content-Type', 'text/plain; charset=utf-8')
     ctx.res.setHeader('Cache-Control', 'no-store')
-    ctx.res.end('ok\n')
+    ctx.res.end(ok ? 'ok\n' : 'unavailable\n')
   }
 
   const staticFile: Handler = (ctx, match) => {
@@ -184,7 +220,8 @@ export function createStudio(deps: StudioDeps): {
     if (!type) return notFound(ctx)
     ctx.res.statusCode = 200
     ctx.res.setHeader('Content-Type', type)
-    ctx.res.setHeader('Cache-Control', 'public, max-age=300')
+    // Font files never change under the same name; everything else may change on deploy.
+    ctx.res.setHeader('Cache-Control', name.startsWith('fonts/') ? 'public, max-age=604800' : 'public, max-age=300')
     ctx.res.end(fs.readFileSync(path.join(STATIC_DIR, name)))
   }
 
@@ -448,7 +485,7 @@ export function createStudio(deps: StudioDeps): {
   const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)'
   const routes: Route[] = [
     { method: 'GET', pattern: /^\/healthz$/, auth: 'none', handle: health },
-    { method: 'GET', pattern: /^\/static\/([a-z0-9.-]+)$/, auth: 'none', handle: staticFile },
+    { method: 'GET', pattern: /^\/static\/((?:fonts\/)?[a-z0-9.-]+)$/, auth: 'none', handle: staticFile },
     { method: 'GET', pattern: /^\/login$/, auth: 'none', handle: loginForm },
     { method: 'POST', pattern: /^\/login$/, auth: 'none', writes: 'creates an owner session', handle: login },
     { method: 'POST', pattern: /^\/logout$/, auth: 'session', writes: 'ends the owner session', handle: logout },
@@ -474,6 +511,13 @@ export function createStudio(deps: StudioDeps): {
     } catch {
       res.statusCode = 400
       res.end()
+      return
+    }
+    if (url.pathname !== '/healthz' && !hostAllowed(req)) {
+      res.statusCode = 421
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+      res.setHeader('Cache-Control', 'no-store')
+      res.end('Misdirected request.\n')
       return
     }
     const cookies = parseCookies(req.headers.cookie)

@@ -1,6 +1,6 @@
-import http from 'node:http'
 import { buildStudio } from './app.js'
 import { ConfigError, isLoopback, loadConfig } from './config.js'
+import { createHttpServer } from './listen.js'
 
 /**
  * Starts Studio. Binds 127.0.0.1 by default; on a VPS the reverse proxy is the only public listener.
@@ -20,12 +20,13 @@ function main(): void {
   }
   const log = (line: string): void => console.log(`[studio] ${new Date().toISOString()} ${line}`)
   const studio = buildStudio(config, { log })
-  const server = http.createServer((req, res) => void studio.handle(req, res))
-  server.headersTimeout = 20_000
-  server.requestTimeout = 60_000
+  const server = createHttpServer(studio.handle)
   server.listen(config.port, config.host, () => {
     log(`listening on http://${config.host}:${config.port} (public origin ${config.publicOrigin})`)
-    if (!isLoopback(config.host)) log('warning: bound beyond loopback. Put Studio behind a TLS reverse proxy.')
+    const revision = process.env.STUDIO_BUILD_REVISION
+    if (revision && /^[0-9a-f]{7,40}$/.test(revision)) log(`build revision ${revision}`)
+    if (!isLoopback(config.host)) log('bound beyond loopback: only the TLS reverse proxy may reach this port.')
+    if (!isLoopback(config.host) && !config.trustProxy) log('warning: STUDIO_TRUST_PROXY is off, so rate limits see the proxy address, not the client.')
     if (!config.github.readToken) log('GitHub read access is not configured; brand pages cannot sync.')
     if (!config.github.provisionToken) log('Repository provisioning is not configured; the new-brand wizard is disabled.')
   })

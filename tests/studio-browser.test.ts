@@ -89,6 +89,8 @@ test('owner journey in a real browser: sign in, step through the wizard, watch p
   await page.goto(`${s.url}/brands`)
   assert.match(await page.eval<string>('location.pathname'), /^\/login$/)
   await assertAccessible('login')
+  assert.equal(await page.eval<boolean>(`(() => { const img = document.querySelector('.plain-aside .product-logo'); return img.complete && img.naturalWidth > 0 && img.alt === 'Omid Ataei' })()`), true, 'the sign-in page shows the omidataei.com logo')
+  assert.deepEqual(await contrastFailures(), [], 'login: text contrast')
   await capture('login')
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
@@ -169,6 +171,91 @@ test('every brand page renders cleanly, without overflow, at desktop, tablet and
   await page.goto(`${s.url}/brands/acme-learning`)
   assert.ok((await text('.topbar')).includes(sha.slice(0, 7)))
   assertClean('brand pages')
+})
+
+/**
+ * WCAG AA text contrast in the rendered page: every visible element with its own text, against the
+ * background colours of its ancestors blended together (gradients and images are not counted).
+ */
+async function contrastFailures(): Promise<string[]> {
+  return page.eval<string[]>(`(() => {
+    const parse = (value) => {
+      const m = value.match(/^rgba?\\(([^)]+)\\)$/) || value.match(/^color\\(srgb ([^)]+)\\)$/)
+      if (!m) return null
+      const parts = m[1].split(/[ ,/]+/).filter(Boolean).map(Number)
+      const scale = value.startsWith('color(') ? 255 : 1
+      return { r: parts[0] * scale, g: parts[1] * scale, b: parts[2] * scale, a: parts.length > 3 ? parts[3] : 1 }
+    }
+    const over = (top, bottom) => ({ r: top.r * top.a + bottom.r * (1 - top.a), g: top.g * top.a + bottom.g * (1 - top.a), b: top.b * top.a + bottom.b * (1 - top.a), a: 1 })
+    const background = (el) => {
+      const layers = []
+      for (let node = el; node; node = node.parentElement) {
+        const bg = parse(getComputedStyle(node).backgroundColor)
+        if (bg && bg.a > 0) { layers.push(bg); if (bg.a >= 1) break }
+      }
+      return layers.reverse().reduce((acc, layer) => over(layer, acc), { r: 255, g: 255, b: 255, a: 1 })
+    }
+    const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b) }
+    const failures = []
+    for (const el of document.querySelectorAll('body *')) {
+      if (!['SCRIPT', 'STYLE', 'OPTION'].includes(el.tagName) && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) {
+        const style = getComputedStyle(el)
+        const box = el.getBoundingClientRect()
+        if (box.width === 0 || box.height === 0 || style.visibility === 'hidden' || el.closest('[hidden], [aria-hidden="true"], .visually-hidden, .skip-link')) continue
+        const fg = parse(style.color)
+        if (!fg) continue
+        const bg = background(el)
+        const [hi, lo] = [lum(over(fg, bg)), lum(bg)].sort((a, b) => b - a)
+        const ratio = (hi + 0.05) / (lo + 0.05)
+        const size = parseFloat(style.fontSize)
+        const large = size >= 24 || (size >= 18.66 && Number(style.fontWeight) >= 700)
+        if (ratio < (large ? 3 : 4.5)) failures.push(el.tagName.toLowerCase() + '.' + el.className + ' "' + el.textContent.trim().slice(0, 30) + '" ' + ratio.toFixed(2))
+      }
+    }
+    return failures
+  })()`)
+}
+
+test('the omidataei.com identity: self-hosted fonts, the logo on sign-in and in the shell, AA contrast in light and dark', { skip }, async () => {
+  await page.viewport(1440, 900)
+  await page.goto(`${s.url}/brands/acme-learning`)
+  assert.equal(await page.eval<string>(`document.querySelector('link[rel=icon]').getAttribute('href')`), '/static/favicon.svg')
+  const logo = await page.eval<{ src: string; alt: string; loaded: boolean }>(`(() => { const img = document.querySelector('.sidebar .product-logo'); return { src: img.getAttribute('src'), alt: img.alt, loaded: img.complete && img.naturalWidth > 0 } })()`)
+  assert.deepEqual(logo, { src: '/static/logo-omid-ataei-white.svg', alt: 'Omid Ataei', loaded: true }, 'the shell shows the omidataei.com logo')
+  await page.eval('document.fonts.ready.then(() => true)')
+  const fonts = await page.eval<{ h1: string; body: string; display: boolean; text: boolean }>(`({
+    h1: getComputedStyle(document.querySelector('h1')).fontFamily,
+    body: getComputedStyle(document.body).fontFamily,
+    display: document.fonts.check('600 36px "Studio Rajdhani"'),
+    text: [...document.fonts].some((f) => f.family.includes('Studio Inter') && f.status === 'loaded'),
+  })`)
+  assert.match(fonts.h1, /^"Studio Rajdhani"/, 'headings use the site display face')
+  assert.match(fonts.body, /^"Studio Inter"/, 'body text uses Inter')
+  assert.ok(fonts.display && fonts.text, 'both faces load from the Studio origin')
+  // The active page carries the lime signal.
+  assert.equal(await page.eval<string>(`getComputedStyle(document.querySelector('.nav-link.is-active .icon')).color`), 'rgb(213, 254, 0)')
+
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
+    for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/design', '/brands/acme-learning/history', '/brands/new', '/account']) {
+      await page.goto(`${s.url}${pathname}`)
+      assert.deepEqual(await contrastFailures(), [], `${scheme} ${pathname}: text contrast`)
+    }
+    if (shots) {
+      for (const pathname of ['/brands', '/brands/acme-learning']) {
+        await page.goto(`${s.url}${pathname}`)
+        await page.screenshot(path.join(shots, `${scheme}${pathname.replaceAll('/', '-')}.png`))
+      }
+    }
+  }
+  await page.send('Emulation.setEmulatedMedia', { features: [] })
+
+  await page.goto(`${s.url}/brands/acme-learning?lang=fa`)
+  await page.eval('document.fonts.ready.then(() => true)')
+  assert.match(await page.eval<string>(`getComputedStyle(document.body).fontFamily`), /^"Studio Vazirmatn"/, 'Persian uses Vazirmatn')
+  assert.equal(await page.eval<boolean>(`document.fonts.check('400 14px "Studio Vazirmatn"', 'سلام')`), true)
+  await page.goto(`${s.url}/brands?lang=en`)
+  assertClean('identity')
 })
 
 test('keyboard: skip link first, visible focus, and the mobile drawer opens, traps Escape and returns focus', { skip }, async () => {
