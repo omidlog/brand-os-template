@@ -7,6 +7,8 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # A normal run takes under 10 minutes; never let a stuck step burn the 6-hour default.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,16 +16,26 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # A private brand (brand.publish_docs: private, the default for brands Studio creates) never
+      # gets a public docs build: prepare-docs refuses one. The public steps below run only for
+      # public brands; prepare:docs itself picks the internal audience for a private brand.
+      - name: docs audience
+        id: docs
+        run: npx tsx scripts/docs-audience.ts
       - run: npm run lint
       - run: npm run tokens:build
       - run: npm run prepare:docs
       - run: npm run typecheck
       - run: npm run validate
       - run: npm run test
-      - run: npm run build -w @brand-os/docs
-      - run: npx tsx scripts/scan-public.ts apps/docs/build
-      - run: npm run build:docs:nomascot
-      - run: npx tsx scripts/scan-public.ts apps/docs/build
+        timeout-minutes: 15
+      - name: public docs build and scan
+        if: steps.docs.outputs.publish == 'public'
+        run: |
+          npm run build -w @brand-os/docs
+          npx tsx scripts/scan-public.ts apps/docs/build
+          npm run build:docs:nomascot
+          npx tsx scripts/scan-public.ts apps/docs/build
       # The internal audience (drafts, internal Brand Book, review dashboard) must compile too.
       # It is never deployed and is not scanned as public.
       - name: internal docs build compiles

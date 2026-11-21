@@ -4,11 +4,11 @@ import fs from 'node:fs'
 import http from 'node:http'
 import https from 'node:https'
 import type { AddressInfo } from 'node:net'
-import os from 'node:os'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
 import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
+import { closeServer, removeTempDir, teardown, tempDir } from './helpers/cleanup.js'
 import { OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
 
@@ -48,7 +48,7 @@ function listen(server: http.Server | https.Server): Promise<number> {
 
 before(async () => {
   if (skip) return
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-tls-'))
+  dir = tempDir('studio-tls-')
   const made = spawnSync('openssl', ['req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256', '-nodes', '-days', '1', '-subj', `/CN=${STUDIO_HOST}`, '-addext', `subjectAltName=DNS:${STUDIO_HOST},DNS:${EVIL_HOST},DNS:${CROSS_HOST}`, '-keyout', path.join(dir, 'key.pem'), '-out', path.join(dir, 'cert.pem')], { encoding: 'utf8' })
   assert.equal(made.status, 0, made.stderr)
   const tls = { key: fs.readFileSync(path.join(dir, 'key.pem')), cert: fs.readFileSync(path.join(dir, 'cert.pem')) }
@@ -91,17 +91,20 @@ before(async () => {
   page = await browser.newPage()
   await page.viewport(1280, 900)
   await page.send('Network.enable')
-})
+}, { timeout: 120_000 })
 
 after(async () => {
   if (skip) return
-  page?.close()
-  await browser?.close()
-  await s?.close()
-  await new Promise<void>((resolve) => proxy.close(() => resolve()))
-  await new Promise<void>((resolve) => evil.close(() => resolve()))
-  fs.rmSync(dir, { recursive: true, force: true })
-})
+  // Every step runs even if one fails: a server left listening keeps the test process alive.
+  await teardown(
+    () => page?.close(),
+    () => browser?.close(),
+    () => s?.close(),
+    () => proxy && closeServer(proxy),
+    () => evil && closeServer(evil),
+    () => dir && removeTempDir(dir),
+  )
+}, { timeout: 60_000 })
 
 interface CdpCookie {
   name: string

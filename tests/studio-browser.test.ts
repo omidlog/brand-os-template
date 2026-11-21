@@ -3,6 +3,7 @@ import path from 'node:path'
 import { after, before, test } from 'node:test'
 import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
+import { teardown } from './helpers/cleanup.js'
 import { approve, editOutsideStudio } from './helpers/edits.js'
 import { OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
@@ -30,15 +31,17 @@ before(async () => {
   s = await startStudio()
   page = await browser.newPage()
   await page.viewport(1440, 900)
-})
+}, { timeout: 120_000 })
 
 after(async () => {
   if (!chrome) return
-  // Close the browser first: its keep-alive connections would otherwise hold the server open.
-  page?.close()
-  await browser?.close()
-  await s?.close()
-})
+  // Every step runs even if one fails: a server left listening keeps the test process alive.
+  await teardown(
+    () => page?.close(),
+    () => browser?.close(),
+    () => s?.close(),
+  )
+}, { timeout: 60_000 })
 
 /** Every page must render with no console error, uncaught exception or CSP violation. */
 function assertClean(where: string): void {
@@ -323,6 +326,75 @@ test('Persian mirrors the layout right-to-left while code, SHAs and URLs stay le
   assert.equal(await page.eval<string>('document.documentElement.lang'), 'tr')
   await page.goto(`${s.url}/brands?lang=en`)
   assertClean('locales')
+})
+
+test('failed provisioning: Edit and retry is prefilled, the live name check suggests a free name (keyboard, RTL), Discard asks first', { skip }, async () => {
+  await page.viewport(1440, 900)
+  await page.goto(`${s.url}/brands?lang=en`)
+  s.github.addRepo(OWNER, 'beta', new Map([['README.md', Buffer.from('someone else')]]))
+  const base = { name: 'Beta Studio', slug: 'beta', profile: 'business' as const, facets: [], default_locale: 'en' as const, locales: ['en' as const], mascot: false, gamification: false, owner: OWNER }
+  assert.ok(s.studio.provisioning.start({ ...base, repo: 'beta' }, 'owner').ok)
+  await s.studio.provisioning.settled()
+
+  await page.goto(`${s.url}/brands/beta/provisioning`)
+  assert.match(await text('main'), /could not be created/)
+  await assertAccessible('provisioning failed')
+  await page.navigation(() => page.click('[data-edit-retry]'))
+  assert.equal(await page.eval<string>('location.pathname + location.search'), '/brands/new?retry=beta')
+  assert.match(await text('h1'), /Edit and retry/)
+  assert.equal(await page.eval<string>(`document.querySelector('#name').value`), 'Beta Studio')
+  assert.equal(await page.eval<string>(`document.querySelector('#repo').value`), 'beta')
+  // The prefilled name is checked at once; the result is announced politely and offers a free name.
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'taken'`)
+  assert.equal(await page.eval<string>(`document.querySelector('[data-repo-check]').getAttribute('aria-live')`), 'polite')
+  assert.match(await text('[data-repo-check]'), /beta already exists on GitHub\. Try beta-brand\./)
+  for (let k = 0; k < 3; k += 1) await page.click('[data-wizard-next]')
+  assert.equal(await page.eval<boolean>(`document.querySelector('[data-step="repository"]').hidden`), false)
+  await assertAccessible('wizard edit and retry')
+  // Keyboard: the suggestion is a real button; Enter applies it and the name is checked again.
+  await page.eval(`document.querySelector('[data-use-suggestion]').focus()`)
+  await page.press('Enter')
+  assert.equal(await page.eval<string>(`document.querySelector('#repo').value`), 'beta-brand')
+  assert.equal(await page.eval<string>('document.activeElement.id'), 'repo', 'focus returns to the repository field')
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'free'`)
+  assert.match(await text('[data-repo-check]'), /beta-brand is free\./)
+  assertClean('edit and retry')
+
+  // Persian: the message reads right-to-left while the repository names stay isolated left-to-right.
+  await page.goto(`${s.url}/brands/new?retry=beta&lang=fa`)
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'taken'`)
+  assert.equal(await page.eval<string>(`getComputedStyle(document.querySelector('[data-repo-check]')).direction`), 'rtl')
+  assert.deepEqual(await page.eval<string[]>(`[...document.querySelectorAll('[data-repo-check] bdi')].map((el) => el.dir + ':' + el.textContent)`), ['ltr:beta', 'ltr:beta-brand', 'ltr:beta-brand'])
+  await assertNoOverflow('fa edit and retry')
+  await capture('fa-wizard-name-taken')
+  await page.goto(`${s.url}/brands/new?retry=beta&lang=en`)
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'taken'`)
+  await page.eval(`(() => { const r = document.querySelector('#repo'); r.value = 'beta-brand'; r.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  for (let k = 0; k < 4; k += 1) await page.click('[data-wizard-next]')
+  await page.navigation(() => page.click('[data-submit]'))
+  assert.equal(await page.eval<string>('location.pathname'), '/brands/beta/provisioning')
+  await s.studio.provisioning.settled()
+  await page.waitFor(`document.querySelector('[data-provisioning]')?.getAttribute('data-state') === 'ready'`, 20_000)
+  await s.studio.sync.settled()
+  assert.equal(s.github.repo(OWNER, 'beta-brand')?.private, true)
+  assert.ok(s.github.repo(OWNER, 'beta'), 'the repository that was in the way is untouched')
+
+  // Discard: a confirmation page first, then only Studio's record goes; GitHub is never called.
+  assert.ok(s.studio.provisioning.start({ ...base, slug: 'gamma', name: 'Gamma', repo: 'beta' }, 'owner').ok)
+  await s.studio.provisioning.settled()
+  await page.goto(`${s.url}/brands/gamma/provisioning`)
+  await page.navigation(() => page.click('[data-discard]'))
+  assert.equal(await page.eval<string>('location.pathname'), '/brands/gamma/provisioning/discard')
+  assert.match(await text('main'), /Nothing on GitHub is changed or deleted/)
+  await assertAccessible('discard confirmation')
+  assert.ok(s.studio.registry.get('gamma'), 'opening the confirmation changes nothing')
+  const calls = s.github.calls.length
+  await page.navigation(() => page.click('[data-discard-confirm]'))
+  assert.equal(await page.eval<string>('location.pathname + location.search'), '/brands?discarded=1')
+  assert.match(await text('main'), /The failed attempt was discarded/)
+  assert.equal(s.studio.registry.get('gamma'), null)
+  assert.equal(s.github.calls.length, calls, 'discarding never calls GitHub')
+  assertClean('discard')
 })
 
 test('the browser enforces the CSP: an injected inline script never runs and no page loads a third-party origin', { skip }, async () => {

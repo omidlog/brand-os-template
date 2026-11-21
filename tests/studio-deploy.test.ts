@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import fs from 'node:fs'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -146,6 +146,16 @@ async function freePort(): Promise<number> {
   return port
 }
 
+/** SIGTERM, then SIGKILL after 15 s. Resolves at once if the process already exited (waiting on 'exit' then would hang forever). */
+async function stop(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()))
+  child.kill('SIGTERM')
+  const timer = setTimeout(() => child.kill('SIGKILL'), 15_000)
+  await exited
+  clearTimeout(timer)
+}
+
 async function waitFor(url: string, headers: Record<string, string> = {}): Promise<void> {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
@@ -199,8 +209,7 @@ test('the production bundle runs as in the container and passes the smoke test; 
       assert.match(log, /build revision 0123456789abcdef/)
       for (const value of Object.values(parseEnv(fs.readFileSync(ownerFile, 'utf8')))) assert.equal(log.includes(value!), false, 'no secret in the log')
     } finally {
-      server.kill('SIGTERM')
-      await new Promise((resolve) => server.once('exit', resolve))
+      await stop(server)
     }
     assert.match(log, /shutting down/, 'stops gracefully on SIGTERM (docker stop)')
   } finally {
@@ -217,7 +226,7 @@ test('the smoke test fails loudly against a server that leaks data or lacks the 
   await new Promise<void>((resolve) => leaky.listen(0, '127.0.0.1', resolve))
   try {
     const port = (leaky.address() as AddressInfo).port
-    const smoke = spawn('bash', [path.join(INFRA, 'smoke-test.sh'), '--base', `http://127.0.0.1:${port}`, '--host', 'studio.example.test'])
+    const smoke = spawn('bash', [path.join(INFRA, 'smoke-test.sh'), '--base', `http://127.0.0.1:${port}`, '--host', 'studio.example.test'], { stdio: ['ignore', 'pipe', 'ignore'], timeout: 120_000 })
     let out = ''
     smoke.stdout.on('data', (chunk: Buffer) => (out += chunk.toString()))
     const status = await new Promise<number | null>((resolve) => smoke.once('exit', resolve))
@@ -245,7 +254,8 @@ test('backup and restore drill: Studio state survives a restart from a restored 
     await s.studio.provisioning.settled()
     await s.studio.sync.settled()
   } finally {
-    await s.close()
+    // The drill backs up this directory after the server stops; the finally below removes it.
+    await s.close({ keepData: true })
   }
   try {
     fs.mkdirSync(path.join(dataDir, 'work-sync-leftover'), { recursive: true })

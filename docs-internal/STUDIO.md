@@ -18,6 +18,7 @@ There is no chat, no Claude or other AI integration, no interview UI, no fact ed
 | `POST /login`, `POST /logout` | The owner session |
 | `POST /brands/new` | Provisions one new private repository (the single GitHub write) |
 | `POST /brands/<slug>/provisioning/retry` | Retries a failed provisioning of that new repository |
+| `POST /brands/<slug>/provisioning/discard` | Removes a failed attempt from Studio's own registry. Never calls GitHub |
 | `POST /brands/<slug>/refresh` | Re-reads GitHub into Studio's read cache |
 | `POST /webhooks/github` | Marks a brand's cache stale (signed push events only) |
 
@@ -27,7 +28,8 @@ There is no chat, no Claude or other AI integration, no interview UI, no fact ed
 
 1. Sign in (password and authenticator code).
 2. **New brand**: name, URL slug, profile (business/startup or personal brand with facets), languages, optional mascot and gamification, and the GitHub account or organization to create the repository in. Review, then **Create private repository**.
-3. Studio shows each provisioning step live. On success: **Copy repository URL**, **Copy starter prompt**, **View brand**.
+   Before anything is created, the wizard checks that `owner/name` is free (one read-only GET with the provisioning credential, only for allowlisted owners). If it is taken, the wizard says so in a polite live region and offers `<slug>-brand` (then `-2`, `-3` …) as a button. Without JavaScript the server runs the same check on submit and shows the suggestion as a field error.
+3. Studio shows each provisioning step live. On success: **Copy repository URL**, **Copy starter prompt**, **View brand**. On failure: **Retry** (same answers), **Edit and retry** (the wizard prefilled with the previous answers; change the repository name, account or slug, and the failed attempt is replaced) and **Discard this attempt** (after a confirmation page, removes only Studio's record; nothing on GitHub is changed or deleted, and a repository that still needs cleanup is named so you can remove it yourself).
 4. Open a **new Claude Code session** and paste the starter prompt (or open your local clone). See [Private repository access for Claude Code](#private-repository-access-for-claude-code).
 5. Claude Code reads `AGENTS.md`, `CLAUDE.md`, `README.md` and `brand/brand.config.yaml`, interviews you, edits the brand through the core CLI, validates, and prepares a branch and pull request when you ask. You approve facts yourself with the local CLI, never by pasting a secret into chat.
 6. Merge the pull request on GitHub.

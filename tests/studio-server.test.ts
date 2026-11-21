@@ -189,6 +189,7 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
         'POST ^\\/webhooks\\/github$',
         'POST ^\\/brands\\/new$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/retry$',
+        'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/discard$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/refresh$',
       ],
     )
