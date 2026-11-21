@@ -196,4 +196,6 @@ export {
   updateCommitMessage,
   writeTemplateRecord,
 } from './template-sync.js'
+export { formatMigrationRuns, migrationFiles, migrationPaths, MIGRATIONS_DIR, parseMigration, pendingMigrations, planMigrations } from './template-migrations.js'
+export type { DeleteOperation, Migration, MigrationOperation, MigrationRun, MigrationSources } from './template-migrations.js'
 export type { ApplyResult, ChangeSources, Classification, PlannedChange, SyncKind, SyncManifest, SyncRule, TemplateRecord, UpdateAction, UpdatePlan } from './template-sync.js'

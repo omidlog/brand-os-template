@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { formatMigrationRuns, migrationFiles, MIGRATIONS_DIR, parseMigration, pendingMigrations, planMigrations, type MigrationRun } from './template-migrations.js'
 
 /**
  * Template sync: bring template fixes into a brand repository without touching brand-owned files.
@@ -212,6 +213,8 @@ export interface UpdatePlan {
   version: string | null
   changes: PlannedChange[]
   upToDate: boolean
+  /** Versioned migrations run by this update (see template-migrations.ts), in order. */
+  migrations?: MigrationRun[]
 }
 
 export interface PlanOptions {
@@ -310,13 +313,13 @@ export function planTemplateUpdate(options: PlanOptions): UpdatePlan {
   const changed = git(templateRoot, ['diff', '--name-only', '--no-renames', '-z', from, to])
     .split('\0')
     .filter(Boolean)
-  const changes = planChanges({
-    manifest,
-    changed,
-    base: (relative) => showFile(templateRoot, from, relative),
-    theirs: (relative) => showFile(templateRoot, to, relative),
-    local: (relative) => readLocal(brandRoot, relative),
-  })
+  const base = (relative: string) => showFile(templateRoot, from, relative)
+  const theirs = (relative: string) => showFile(templateRoot, to, relative)
+  const local = (relative: string) => readLocal(brandRoot, relative)
+  const planned = planChanges({ manifest, changed, base, theirs, local })
+  const listMigrations = (commit: string) => migrationFiles(git(templateRoot, ['ls-tree', '-r', '--name-only', '-z', commit, '--', MIGRATIONS_DIR]).split('\0').filter(Boolean))
+  const pending = pendingMigrations(listMigrations(from), listMigrations(to)).map((name) => parseMigration(name, theirs(`${MIGRATIONS_DIR}/${name}`)!.toString('utf8'), manifest))
+  const { changes, runs } = planMigrations(pending, planned, { base, theirs, local })
   return {
     repository: manifest.template.repository ?? record?.repository ?? null,
     from,
@@ -324,6 +327,7 @@ export function planTemplateUpdate(options: PlanOptions): UpdatePlan {
     version: templateVersion(templateRoot, to),
     changes,
     upToDate: from === to,
+    migrations: runs,
   }
 }
 
@@ -393,6 +397,7 @@ export function updateCommitMessage(plan: UpdatePlan): string {
     lines.push('', 'Needs a person (not changed):')
     for (const change of conflicts) lines.push(`- ${change.path}: ${change.reason}`)
   }
+  if (plan.migrations?.length) lines.push('', 'Migrations:', ...formatMigrationRuns(plan.migrations).map((line) => line.replaceAll('`', '')))
   return lines.join('\n')
 }
 
@@ -421,6 +426,7 @@ export function formatUpdatePlan(plan: UpdatePlan, applied?: ApplyResult): strin
     lines.push('', `${LABELS[action]}: ${items.length}`)
     for (const item of items) lines.push(`  ${item.path}${action === 'conflict' || (action === 'skip' && !item.matched) ? ` (${item.reason})` : ''}`)
   }
+  if (plan.migrations?.length) lines.push('', `Migrations: ${plan.migrations.length}`, ...formatMigrationRuns(plan.migrations).map((line) => `  ${line.slice(2).replaceAll('`', '')}`))
   lines.push('')
   if (applied) {
     lines.push(applied.commit ? `Committed ${applied.written.length} file(s) on branch ${applied.branch} (${applied.commit.slice(0, 12)}). Push it and open a pull request; nothing was pushed or merged.` : `Branch ${applied.branch} created; nothing to commit.`)
