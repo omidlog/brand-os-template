@@ -6,6 +6,7 @@ import { ProvisioningService } from './provision.js'
 import { Registry } from './registry.js'
 import { createStudio } from './server.js'
 import { SyncService } from './sync.js'
+import { TemplateUpdateService } from './template-update.js'
 
 /** Wires the services. Tests pass `fetch` (an in-memory GitHub) and `sleep`; production uses the defaults. */
 export function buildStudio(config: StudioConfig, options: { fetch?: FetchLike; sleep?: (ms: number) => Promise<void>; now?: () => number; log?: (line: string) => void } = {}) {
@@ -29,6 +30,16 @@ export function buildStudio(config: StudioConfig, options: { fetch?: FetchLike; 
     onReady: (slug) => void sync.refresh(slug).catch(() => undefined),
     log: options.log,
   })
-  const studio = createStudio({ config, registry, sync, provisioning, readClient, provisionClient, now, log: options.log })
-  return { ...studio, registry, sync, provisioning, readClient, provisionClient }
+  const templateUpdates = new TemplateUpdateService({
+    registry,
+    github: provisionClient,
+    templateOwner: config.github.templateOwner,
+    templateRepo: config.github.templateRepo,
+    allowedOwners: config.github.provisionToken ? config.github.allowedOwners : [],
+    dataDir: config.dataDir,
+    now,
+    log: options.log,
+  })
+  const studio = createStudio({ config, registry, sync, provisioning, templateUpdates, readClient, provisionClient, now, log: options.log })
+  return { ...studio, registry, sync, provisioning, templateUpdates, readClient, provisionClient }
 }
