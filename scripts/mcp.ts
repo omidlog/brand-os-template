@@ -5,6 +5,8 @@ import {
   AGENT_TOKEN_ENV,
   AgentTokenError,
   brandRetrieve,
+  draftPersonalContent,
+  PERSONAL_SPECS,
   getAssetMetadata,
   getBrandGuidelines,
   getBrandOverview,
@@ -93,6 +95,19 @@ server.registerTool(
     }),
   },
   async ({ kind, module, ids, query, filters }) => text(brandRetrieve(engine, caller, { kind, module, ids, query, filters })),
+)
+
+server.registerTool(
+  'draft_personal_content',
+  {
+    description:
+      'Draft operation for a Personal Brand OS deliverable (for example professional-bio section short, or linkedin-pack). Returns only approved personal facts this server may read, each with its verification label (verified, owner_stated, unverified), plus the ids that are missing. It has no authority: it cannot approve, publish or write. Compose the draft from these facts only and return it to the owner for approval.',
+    inputSchema: z.object({
+      deliverable: z.enum(Object.keys(PERSONAL_SPECS) as [string, ...string[]]),
+      section: z.string().max(80).optional(),
+    }),
+  },
+  async ({ deliverable, section }) => text(draftPersonalContent(engine, deliverable, caller, section)),
 )
 
 const transport = new StdioServerTransport()

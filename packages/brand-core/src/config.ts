@@ -45,6 +45,11 @@ export function templateConfig(): BrandConfig {
         enabled: true,
         note: 'EXAMPLE configuration. Disable when the product has no game-like progression.',
       },
+      personal: {
+        enabled: false,
+        facets: [],
+        note: 'Personal Brand OS. Turn on for a person-centered brand (brand:init --profile personal-brand). Facets add short question groups.',
+      },
     },
     design: {
       figma: { file_url: null, file_key: null, library_url: null },

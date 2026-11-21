@@ -45,9 +45,21 @@ An agent can run the interview as a conversation. Follow `agent-skills/brand-int
 - `npm run brand:propose -- --file batch.json --json` stores extracted proposals as drafts. Each proposal needs a verbatim quotation and a state: `proposed`, `tentative`, or `unresolved` with value `null`.
 - `npm run brand:interview -- --assist --file - --json` runs the built-in extractor. It uses a configured model, or deterministic rules if none is set.
 
-All of these produce drafts only. Restricted questions are refused: the owner answers them in the interactive interview. `brand.profile: founder-core` in `brand/brand.config.yaml` narrows the interview to about 40 questions.
+All of these produce drafts only. Restricted questions are refused: the owner answers them in the interactive interview. `brand.profile: founder-core` in `brand/brand.config.yaml` narrows the interview to about 40 questions. `brand.profile: personal-brand` interviews a person (see below).
 
 Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.
+
+## Personal brands
+
+When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follow `docs-internal/PERSONAL_BRAND.md`.
+
+- A person is not a company. Never copy a person's name into a company field or the reverse. Organizations live in `personal.experience.relationships`; never infer ownership from a founder, employee or advisor relation.
+- Never invent degrees, clients, awards, revenue, seniority, talks, testimonials or numbers. If it is not an approved fact, it is missing.
+- Never ask for or record a home address, personal phone, birth date, government id or family details. The engine refuses them; do not rephrase to get around it.
+- Treat a personal fact labelled `owner_stated` or `unverified` as the owner's word, never as independently verified.
+- You may record evidence with `npm run brand:evidence -- add`. You may not verify, reject, publish or retract. Hand the evidence id to the owner.
+- For a bio, LinkedIn text or other deliverable, call `draft_personal_content` (or `brand:query --tool draft_personal_content --query <deliverable> [--section <id>]`) and use only what it returns. The result is a draft for the owner to approve.
+- Portraits, case-study images, client logos and testimonials are public only with a granted public `rights` record. A missing asset is missing; never guess a URL.
 
 ## Commands
 

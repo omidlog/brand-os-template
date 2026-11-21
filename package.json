@@ -47,6 +47,8 @@
     "brand:backup": "tsx scripts/brand.ts backup",
     "brand:restore": "tsx scripts/brand.ts restore",
     "brand:migrate": "tsx scripts/brand.ts migrate",
+    "brand:evidence": "tsx scripts/brand.ts evidence",
+    "brand:retract": "tsx scripts/brand.ts retract",
     "brand:reset": "tsx scripts/brand.ts reset",
     "mcp:serve": "tsx scripts/mcp.ts",
     "example:education": "tsx scripts/example-run.ts education-app",

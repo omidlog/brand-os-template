@@ -4,7 +4,8 @@ import type { InterviewEngine } from '../engine.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
 import { factIsPublic } from '../publication.js'
 import { isStructuredType, parseStructured, type StructuredType, type StructuredValue } from '../structured.js'
-import type { AnswerRecord, FieldQuestion } from '../types.js'
+import { claimVerification, evidenceFor, readEvidence, type ClaimVerification, type EvidenceItem } from '../evidence.js'
+import type { AnswerRecord, FieldQuestion, PersonalFacet } from '../types.js'
 
 /**
  * Section model shared by the Brand Book, business plan and marketing plan.
@@ -22,7 +23,20 @@ import type { AnswerRecord, FieldQuestion } from '../types.js'
 export const ITEM_TAGS = ['approved', 'assumption', 'recommendation', 'missing'] as const
 export type ItemTag = (typeof ITEM_TAGS)[number]
 export type DocumentAudience = 'public' | 'internal'
-export type DocumentKind = 'brand-book' | 'business-plan' | 'marketing-plan'
+export const PERSONAL_DOCUMENT_KINDS = [
+  'personal-brand-book',
+  'professional-bio',
+  'linkedin-pack',
+  'website-pack',
+  'media-kit',
+  'speaker-kit',
+  'content-strategy',
+  'portfolio-pack',
+  'services-pack',
+  'evidence-register',
+] as const
+export type PersonalDocumentKind = (typeof PERSONAL_DOCUMENT_KINDS)[number]
+export type DocumentKind = 'brand-book' | 'business-plan' | 'marketing-plan' | PersonalDocumentKind
 
 export interface DocumentItem {
   id: string
@@ -35,6 +49,20 @@ export interface DocumentItem {
   version: number | null
   withheld: boolean
   note: string | null
+  /**
+   * Personal claims only: verified (independent, current evidence), owner_stated (the owner's word),
+   * unverified (needs evidence, has none) or not_required. Null for non-personal items.
+   */
+  verification: ClaimVerification | null
+}
+
+export interface LengthReport {
+  /** Guideline word range. A guideline, never a target to pad toward. */
+  guideline: [number, number]
+  /** Words in the approved values of this section. */
+  approved_words: number
+  state: 'below' | 'within' | 'above'
+  note: string
 }
 
 export interface DocumentSection {
@@ -43,6 +71,7 @@ export interface DocumentSection {
   purpose: string
   status: 'complete' | 'partial' | 'missing'
   items: DocumentItem[]
+  length?: LengthReport
 }
 
 export interface DocumentModel {
@@ -63,12 +92,16 @@ export interface SectionSpec {
   questions: string[]
   /** Include the first guidance line of each module behind these questions as a recommendation (internal only). */
   guidance?: boolean
+  /** Word guideline for composed text such as bio lengths. Reported, never padded. */
+  words?: [number, number]
 }
 
 export interface DocumentSpec {
   kind: DocumentKind
   title: string
   sections: SectionSpec[]
+  /** Personal documents need the personal module; a facet document also needs its facet. */
+  requires?: { personal: true; facet?: PersonalFacet }
 }
 
 const MISSING_NOTES: Record<string, string> = {
@@ -104,6 +137,7 @@ function missing(question: FieldQuestion, note: string, sources: string[] = []):
     version: null,
     withheld: false,
     note,
+    verification: null,
   }
 }
 
@@ -119,6 +153,7 @@ function fromFact(question: FieldQuestion, fact: CanonicalFact, withheld: boolea
     version: fact.version,
     withheld,
     note: withheld ? 'Restricted. Approved, but the value is never shown in a document.' : null,
+    verification: null,
   }
 }
 
@@ -143,13 +178,46 @@ function fromDraft(question: FieldQuestion, answer: AnswerRecord): DocumentItem 
     version: null,
     withheld: restricted,
     note: restricted ? `${note} Restricted value withheld.` : note,
+    verification: null,
   }
 }
 
-export function itemFor(
-  question: FieldQuestion,
-  context: { facts: Record<string, CanonicalFact>; answers: Map<string, AnswerRecord>; audience: DocumentAudience; root: string; brandId: string },
-): DocumentItem {
+export interface ItemContext {
+  facts: Record<string, CanonicalFact>
+  answers: Map<string, AnswerRecord>
+  audience: DocumentAudience
+  root: string
+  brandId: string
+  evidence?: EvidenceItem[]
+  now?: Date
+}
+
+/** An item with its personal verification label and evidence ids, when the claim is personal. */
+export function itemFor(question: FieldQuestion, context: ItemContext): DocumentItem {
+  const item = baseItemFor(question, context)
+  if (!question.id.startsWith('personal.') || item.tag === 'missing' || item.tag === 'recommendation') return item
+  const evidence = context.evidence ?? []
+  const now = context.now ?? new Date()
+  const verification = claimVerification(question, evidence, now)
+  const found = evidenceFor(question.id, evidence, now)
+  const ids = context.audience === 'public' ? [] : [...found.independent, ...found.permissions].map((entry) => `evidence:${entry.id}`)
+  const label =
+    verification === 'verified'
+      ? 'Verified by an independent, current source.'
+      : verification === 'owner_stated'
+        ? 'Owner-stated. Not independently verified.'
+        : verification === 'unverified'
+          ? 'Unverified. Needs a source before public release.'
+          : null
+  return {
+    ...item,
+    verification,
+    source_ids: [...item.source_ids, ...ids],
+    note: label ? (item.note ? `${item.note} ${label}` : label) : item.note,
+  }
+}
+
+function baseItemFor(question: FieldQuestion, context: ItemContext): DocumentItem {
   const fact = context.facts[question.id]
   // A restricted fact is approved with a null value and a private_ref; it is shown as approved and withheld.
   const hasValue = fact ? (fact.value !== null && fact.value !== undefined) || Boolean(fact.private_ref) : false
@@ -170,6 +238,25 @@ export function itemFor(
   return missing(question, 'Not answered yet.')
 }
 
+function words(text: string): number {
+  return text.split(/\s+/u).filter((word) => /[\p{L}\p{N}]/u.test(word)).length
+}
+
+/** Word count of approved values against a guideline. Short stays short: nothing is invented to fill it. */
+export function lengthReport(items: DocumentItem[], guideline: [number, number]): LengthReport {
+  const approved = items.filter((item) => item.tag === 'approved' && !item.withheld && item.value !== null)
+  const count = approved.reduce((sum, item) => sum + words(String(item.value)), 0)
+  const [min, max] = guideline
+  const state = count < min ? 'below' : count > max ? 'above' : 'within'
+  const note =
+    state === 'below'
+      ? `Approved material is ${count} words, below the ${min}–${max} guideline. It is not padded: approve more facts to lengthen it.`
+      : state === 'above'
+        ? `Approved material is ${count} words, above the ${min}–${max} guideline. Choose which approved facts to leave out; nothing is rewritten automatically.`
+        : `Approved material is ${count} words, within the ${min}–${max} guideline.`
+  return { guideline, approved_words: count, state, note }
+}
+
 function sectionStatus(items: DocumentItem[]): DocumentSection['status'] {
   const facts = items.filter((item) => item.tag !== 'recommendation')
   const approved = facts.filter((item) => item.tag === 'approved').length
@@ -182,12 +269,14 @@ export function buildDocument(engine: InterviewEngine, spec: DocumentSpec, audie
   const root = engine.workspaceRoot()
   const config = engine.config()
   const brandId = config.brand.slug
-  const context = {
+  const context: ItemContext = {
     facts: readFacts(root, 'approved', brandId),
     answers: latestAnswers(engine.ledger().records),
     audience,
     root,
     brandId,
+    evidence: readEvidence(root),
+    now: new Date(),
   }
   const modules = new Map(allModules().map((module) => [module.id, module]))
   const sections: DocumentSection[] = spec.sections.map((section) => {
@@ -214,10 +303,13 @@ export function buildDocument(engine: InterviewEngine, spec: DocumentSpec, audie
           version: null,
           withheld: false,
           note: 'Template guidance. Not a brand decision.',
+          verification: null,
         })
       }
     }
-    return { id: section.id, title: section.title, purpose: section.purpose, status: sectionStatus(items), items }
+    const built: DocumentSection = { id: section.id, title: section.title, purpose: section.purpose, status: sectionStatus(items), items }
+    if (section.words) built.length = lengthReport(items, section.words)
+    return built
   })
   const counts: Record<ItemTag, number> = { approved: 0, assumption: 0, recommendation: 0, missing: 0 }
   for (const section of sections) for (const item of section.items) counts[item.tag] += 1

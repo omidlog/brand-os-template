@@ -64,6 +64,25 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 | Language rule | Done | English base for CLI, docs, question text, examples and defaults; `brand:init --languages` defaults to `en`; fa and tr are locale data. Persian/RTL and Turkish input, extraction, storage and retrieval are tested (`tests/interview-ai.test.ts`, `tests/structured-answers.test.ts`, `tests/journeys.test.ts`). |
 | G4, G9 | Documented limit | Single shared proof, readable by any process running as the owner. |
 
+## Phase 8: Personal Brand OS
+
+Branch `feat/phase-8-personal-brand-os`. Entry gate: `docs-internal/POST_V02_PREFLIGHT.md`. Review, acceptance evidence and gaps: `docs-internal/PHASE_8_PERSONAL_BRAND_REVIEW.md`. Guide: `docs-internal/PERSONAL_BRAND.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Personal module and facets | Done | `modules.personal { enabled, facets }`; absent means off, so v0.2 brands are unchanged. Facets `founder-executive`, `consultant-expert`, `creator-educator`, `artist-designer`, `speaker-author` combine through the condition engine. Test: `tests/personal-brand.test.ts`. |
+| `personal-brand` profile | Done | Exclusive: company, SaaS and mascot questions are not applicable, not missing. `founder-core` still scores the whole bank. |
+| Question bank | Done | 8 core and 5 facet modules, 71 questions, en/fa/tr prompts as locale data, generated and drift-checked like the other banks. Module guidance text is English. |
+| Person vs organization | Done | `relationships` answer type with explicit relation, dates and ownership (default `unstated`). Canonical reference table validated by `brand:validate`. |
+| Privacy guard | Done (heuristic) | Home address, personal phone, birth date, government id and family details refused on every personal write path and in the evidence register. Not a legal compliance certification. |
+| Evidence and rights | Done | `brand/interview/evidence-register.yaml`; owner-only verification; owner testimony never counts as verified; `publication_requires` enforced at publish time and again at read time (publication, MCP, public docs). Withdrawal unpublishes; `brand:retract` removes a claim. Portrait and case-study assets need granted public rights. Test: `tests/personal-evidence.test.ts`. |
+| Agent profiles | Done | Career history, evidence and privacy boundaries are `internal-read` only. |
+| Deliverables | Done (CLI/JSON) | Ten documents on the shared model with verification labels and bio length reports. No designed portal page for them yet. Test: `tests/personal-documents.test.ts`. |
+| Draft operation | Done | `draft_personal_content` MCP tool and `brand:query` handler; always `draft`, no authority. |
+| Migration | Done | `brand:migrate` adds the bank, profile, registry entries and config block additively and idempotently. |
+| End-to-end | Done | Journey D in `tests/journeys.test.ts`: founder+consultant brand through the real CLI, evidence, publication, documents, docs builds, retrieval, withdrawal, backup, restore, migrate. |
+| Studio (Phase 9) | Not started | Separate branch and PR. Read-only. |
+
 ## Commands that this remediation expects to pass
 
 `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.

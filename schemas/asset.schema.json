@@ -12,6 +12,19 @@
     "path": { "type": "string" },
     "present": { "type": "boolean" },
     "visibility": { "enum": ["public", "internal", "restricted"] },
-    "checksum_sha256": { "type": ["string", "null"] }
+    "checksum_sha256": { "type": ["string", "null"] },
+    "subject": { "enum": ["portrait", "person", "case_study", "client_logo", "testimonial", null] },
+    "rights": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["granted", "pending", "revoked", "none"] },
+        "scope": { "enum": ["public", "internal"] },
+        "holder": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "expires": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "evidence_id": { "type": ["string", "null"], "pattern": "^ev-\\d{4,}$" },
+        "note": { "type": "string", "maxLength": 400 }
+      }
+    }
   }
 }

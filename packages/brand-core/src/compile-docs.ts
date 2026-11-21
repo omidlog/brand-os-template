@@ -1,3 +1,4 @@
+import { moduleEnabled } from './conditions.js'
 import { allModules } from './content/index.js'
 import type { InterviewEngine } from './engine.js'
 import { readFacts } from './facts.js'
@@ -18,8 +19,7 @@ export function compileModulePages(engine: InterviewEngine, audience: 'public' |
   const brandId = engine.config().brand.slug
   const facts = readFacts(engine.workspaceRoot(), 'approved', brandId)
   return allModules()
-    .filter((module) => (module.optional === 'mascot' ? engine.config().modules.mascot.enabled : true))
-    .filter((module) => (module.optional === 'gamification' ? engine.config().modules.gamification.enabled : true))
+    .filter((module) => moduleEnabled(module, engine.config()))
     .map((module) => {
       const lines = [
         '---',
@@ -50,7 +50,7 @@ export function compileModulePages(engine: InterviewEngine, audience: 'public' |
         lines.push(`- Source id: \`${fact.id}\``, `- Version: ${fact.version}`, `- Revision: \`${fact.revision_hash ?? ''}\``, `- Status: ${fact.status}`, '')
       }
       lines.push('## Coverage', '', `${cited} cited fields. ${module.fields.length - cited} missing.`, '')
-      const group = module.group === 'business' ? 'business-book' : 'brand-book'
+      const group = module.group === 'business' ? 'business-book' : module.group === 'personal' ? 'personal-book' : 'brand-book'
       return {
         dest: `${group}/${module.id}.md`,
         url: `/docs/${group}/${module.id}`,

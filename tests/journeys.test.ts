@@ -683,3 +683,104 @@ test('journey C: failed model responses, prompt injection, missing credentials a
   const noKey = cli(root, ['next', '--json'])
   assert.equal(noKey.status, 0, noKey.stderr)
 })
+
+test('journey D: founder+consultant personal brand from init through evidence, publication, documents, docs, retrieval and backup', () => {
+  const D_SLUG = 'sample-person'
+  const PRIVATE_CANARY = 'CANARY-D-CAREER'
+  const root = workspace('d')
+  // 1. Initialize through the real CLI with the personal profile and two facets.
+  const init = cli(root, ['init', '--name', 'Sample Person', '--slug', D_SLUG, '--profile', 'personal-brand', '--facets', 'founder-executive,consultant-expert', '--publish', 'public', '--yes'])
+  assert.equal(init.status, 0, init.stderr)
+  assert.match(init.stdout, /Personal on \(founder-executive, consultant-expert\)/)
+  const badFacet = cli(root, ['init', '--name', 'X', '--slug', 'x', '--profile', 'personal-brand', '--facets', 'astronaut', '--yes', '--reset'])
+  assert.notEqual(badFacet.status, 0)
+  const engine = new InterviewEngine(root)
+  assert.equal(engine.config().brand.slug, D_SLUG, 'a refused re-init changed nothing')
+
+  // 2. The interview asks the person, not a company: no legal entity, SaaS or mascot questions.
+  const next = cli(root, ['next', '--json'])
+  assert.equal(next.status, 0, next.stderr)
+  assert.ok(!/business\.identity\.legal_name|brand\.mascot\.|brand\.ui\./.test(next.stdout))
+  const status = cli(root, ['status'])
+  assert.match(status.stdout, /personal\.identity\.public_name|personal\.identity\.headline/)
+
+  // 3. Answers through the CLI, including a structured relationship with no ownership claim.
+  const proof = ensureApprovalSecret(root)
+  for (const [id, value] of [
+    ['personal.identity.public_name', 'Sample Person'],
+    ['personal.identity.headline', 'Founder and product strategy advisor'],
+    ['personal.positioning.known_for', 'Known for calm product discovery, by seed-stage founders.'],
+    ['personal.experience.relationships', `co-founded | Sample Studio | 2019 | present; employed | ${PRIVATE_CANARY} Corp | 2014 | 2018`],
+    ['personal.founder.ventures', 'Sample Studio: co-founder and product lead'],
+    ['personal.consulting.pricing_policy', 'on_request'],
+  ] as const) {
+    const result = cli(root, ['interview', '--question', id, '--answer', value])
+    assert.equal(result.status, 0, `${id}: ${result.stderr}${result.stdout}`)
+  }
+  const refused = cli(root, ['interview', '--question', 'personal.story.origin', '--answer', 'My home address is 1 Sample Road'])
+  assert.match(refused.stdout + refused.stderr, /home address/)
+  const fresh = new InterviewEngine(root)
+  assert.equal(fresh.config().brand.legal_name, 'TBD', 'founding a company did not create a legal entity or ownership')
+
+  // 4. Owner approval with the proof on stdin; publication of the founder claim needs evidence.
+  const ids = 'personal.identity.public_name,personal.identity.headline,personal.positioning.known_for,personal.experience.relationships,personal.founder.ventures'
+  const approved = cli(root, ['approve', '--ids', ids], {}, `${proof}\n`)
+  assert.equal(approved.status, 0, approved.stderr + approved.stdout)
+  assert.equal(new InterviewEngine(root).config().brand.name, 'Sample Person')
+  const blocked = cli(root, ['publish', '--ids', 'personal.founder.ventures'], {}, `${proof}\n`)
+  assert.notEqual(blocked.status, 0)
+  assert.match(blocked.stdout, /evidence/)
+  const added = cli(root, ['evidence', 'add', '--claim', 'personal.founder.ventures', '--source', 'public_record', '--reference', 'https://registry.example.org/sample-studio', '--json'])
+  assert.equal(added.status, 0, added.stderr)
+  const evidenceId = (JSON.parse(added.stdout) as { id: string }).id
+  assert.equal(cli(root, ['evidence', 'verify', '--id', evidenceId], { BRAND_OS_AGENT_TOKEN: 'x' }).status, 2, 'agents cannot verify')
+  assert.equal(cli(root, ['evidence', 'verify', '--id', evidenceId], {}, `${proof}\n`).status, 0)
+  const published = cli(root, ['publish', '--ids', 'personal.identity.public_name,personal.identity.headline,personal.founder.ventures'], {}, `${proof}\n`)
+  assert.equal(published.status, 0, published.stdout)
+  const career = cli(root, ['publish', '--ids', 'personal.experience.relationships'], {}, `${proof}\n`)
+  assert.notEqual(career.status, 0, 'internal career records are never published')
+
+  // 5. Documents: the bio cites the approved facts; the evidence register shows the source.
+  const bio = cli(root, ['document', '--type', 'professional-bio'])
+  assert.equal(bio.status, 0, bio.stderr)
+  assert.match(bio.stdout, /Founder and product strategy advisor/)
+  assert.match(bio.stdout, /not padded/)
+  const register = cli(root, ['document', '--type', 'evidence-register'])
+  assert.match(register.stdout, new RegExp(evidenceId))
+  const check = cli(root, ['evidence', 'check', '--claim', 'personal.founder.ventures'])
+  assert.match(check.stdout, /personal\.founder\.ventures: verified/)
+
+  // 6. Public docs build and guest retrieval: published claims only, no career canary anywhere.
+  prepareDocs(root, { audience: 'public', rootIndex: false })
+  const docs = path.join(root, 'apps/docs')
+  const claims = fs.readFileSync(path.join(docs, 'docs/published/claims.md'), 'utf8')
+  assert.match(claims, /Founder and product strategy advisor/)
+  assert.deepEqual(scanPublicTree(docs), [])
+  assert.deepEqual(walkText(docs, [PRIVATE_CANARY]), [])
+  const guest = brandRetrieve(new InterviewEngine(root), guestContext(D_SLUG), { kind: 'facts' })
+  assert.deepEqual(items(guest).map((item) => item.id).sort(), ['personal.founder.ventures', 'personal.identity.headline', 'personal.identity.public_name'])
+  prepareDocs(root, { audience: 'internal', rootIndex: false })
+  assert.ok(fs.existsSync(path.join(docs, 'docs/personal-book/personal-founder.md')))
+  assert.ok(!fs.existsSync(path.join(docs, 'docs/personal-book/personal-speaker.md')), 'unselected facet page is not built')
+  const statusData = JSON.parse(fs.readFileSync(path.join(docs, 'src/data/status.json'), 'utf8')) as { modules: Array<{ id: string; href: string }> }
+  assert.ok(statusData.modules.some((module) => module.id === 'personal-founder'))
+  assert.ok(!statusData.modules.some((module) => module.id === 'personal-speaker'), 'unselected facet is not listed')
+
+  // 7. Retrieval: internal-read sees the explicit relationship; marketing does not.
+  const relation = brandRetrieve(new InterviewEngine(root), agentTokenContext(D_SLUG, 'agt_d_read', 'internal-read'), { kind: 'facts', ids: ['personal.experience.relationships'] })
+  assert.match(String(items(relation)[0]?.value), /co-founded \| Sample Studio \| 2019 \| present \| ownership: unstated/)
+  const marketing = brandRetrieve(new InterviewEngine(root), agentTokenContext(D_SLUG, 'agt_d_mkt', 'marketing'), { kind: 'facts', ids: ['personal.experience.relationships'] })
+  assert.ok(items(marketing).every((item) => item.withheld))
+
+  // 8. Withdrawal unpublishes; backup, restore and migrate keep the personal brand intact.
+  const backup = backupBrand(root)
+  const withdrawn = cli(root, ['evidence', 'withdraw', '--id', evidenceId, '--reason', 'Registry entry corrected'])
+  assert.match(withdrawn.stdout, /Unpublished: personal\.founder\.ventures/)
+  assert.equal(brandRetrieve(new InterviewEngine(root), guestContext(D_SLUG), { kind: 'facts', ids: ['personal.founder.ventures'] }).missing.length, 1)
+  restoreBrand(root, backup.directory)
+  migrateBrand(root)
+  const restored = new InterviewEngine(root)
+  assert.equal(readFacts(root, 'approved', D_SLUG)['personal.founder.ventures']?.publication, 'published')
+  assert.deepEqual(restored.config().modules.personal?.facets, ['founder-executive', 'consultant-expert'])
+  assert.deepEqual(validateRepo(root).errors, [])
+})

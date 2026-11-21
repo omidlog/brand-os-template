@@ -186,3 +186,36 @@ edges:
   - from: business.offer.value_proposition
     to: business.partners.narrative
     relation: prerequisite
+  - from: personal.identity.public_name
+    to: business.identity.trade_name
+    relation: related
+  - from: personal.identity.public_name
+    to: personal.identity.name_forms
+    relation: prerequisite
+  - from: personal.identity.headline
+    to: personal.identity.localized_headline
+    relation: prerequisite
+  - from: personal.services.offers
+    to: business.offer.summary
+    relation: related
+  - from: personal.experience.relationships
+    to: business.identity.trade_name
+    relation: related
+  - from: personal.experience.relationships
+    to: personal.experience.roles
+    relation: prerequisite
+  - from: personal.positioning.known_for
+    to: personal.content.pillars
+    relation: prerequisite
+  - from: personal.content.channels
+    to: personal.content.channel_tone
+    relation: prerequisite
+  - from: personal.goals.outcomes
+    to: personal.goals.kpis
+    relation: prerequisite
+  - from: personal.experience.relationships
+    to: personal.founder.ventures
+    relation: prerequisite
+  - from: personal.speaking.topics
+    to: personal.speaking.abstracts
+    relation: prerequisite

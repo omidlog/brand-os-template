@@ -235,6 +235,97 @@
       "path": "brand/business-os/12-partnerships-risk-investors/overview.md",
       "draft": "brand/generated/drafts/business-partnerships.md",
       "optional": null
+    },
+    {
+      "id": "personal-identity",
+      "title": "Personal Identity",
+      "path": "brand/personal/01-identity/overview.md",
+      "draft": "brand/generated/drafts/personal-identity.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-positioning",
+      "title": "Personal Positioning",
+      "path": "brand/personal/02-positioning/overview.md",
+      "draft": "brand/generated/drafts/personal-positioning.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-story",
+      "title": "Professional Story",
+      "path": "brand/personal/03-story/overview.md",
+      "draft": "brand/generated/drafts/personal-story.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-career",
+      "title": "Experience & Credentials",
+      "path": "brand/personal/04-career/overview.md",
+      "draft": "brand/generated/drafts/personal-career.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-proof",
+      "title": "Evidence, Portfolio & Reputation",
+      "path": "brand/personal/05-proof/overview.md",
+      "draft": "brand/generated/drafts/personal-proof.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-content",
+      "title": "Thought Leadership & Channels",
+      "path": "brand/personal/06-content/overview.md",
+      "draft": "brand/generated/drafts/personal-content.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-presence",
+      "title": "Visual Presence & Media",
+      "path": "brand/personal/07-presence/overview.md",
+      "draft": "brand/generated/drafts/personal-presence.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-boundaries",
+      "title": "Privacy, Contact & Governance",
+      "path": "brand/personal/08-boundaries/overview.md",
+      "draft": "brand/generated/drafts/personal-boundaries.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-founder",
+      "title": "Facet: Founder & Executive",
+      "path": "brand/personal/facets/founder-executive/overview.md",
+      "draft": "brand/generated/drafts/personal-founder.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-consultant",
+      "title": "Facet: Consultant, Expert & Mentor",
+      "path": "brand/personal/facets/consultant-expert/overview.md",
+      "draft": "brand/generated/drafts/personal-consultant.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-creator",
+      "title": "Facet: Creator & Educator",
+      "path": "brand/personal/facets/creator-educator/overview.md",
+      "draft": "brand/generated/drafts/personal-creator.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-artist",
+      "title": "Facet: Artist & Designer",
+      "path": "brand/personal/facets/artist-designer/overview.md",
+      "draft": "brand/generated/drafts/personal-artist.md",
+      "optional": "personal"
+    },
+    {
+      "id": "personal-speaker",
+      "title": "Facet: Speaker & Author",
+      "path": "brand/personal/facets/speaker-author/overview.md",
+      "draft": "brand/generated/drafts/personal-speaker.md",
+      "optional": "personal"
     }
   ],
   "tokens": [

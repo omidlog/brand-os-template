@@ -30,7 +30,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.identity.public_name_override",
@@ -44,7 +45,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.verbal.tagline",
@@ -58,7 +60,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "business.offer.summary",
@@ -72,7 +75,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "business.customer.primary_segment",
@@ -86,7 +90,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         }
       ]
     },
@@ -108,7 +113,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.strategy.vision",
@@ -122,7 +128,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.strategy.values",
@@ -136,7 +143,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.strategy.differentiation",
@@ -150,7 +158,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.strategy.promise",
@@ -164,7 +173,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.personality.traits",
@@ -178,7 +188,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.strategy.decision_rule",
@@ -192,7 +203,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         }
       ]
     },
@@ -214,7 +226,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.verbal.voice",
@@ -228,7 +241,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.verbal.voice_pairs",
@@ -242,7 +256,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.verbal.forbidden",
@@ -256,7 +271,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.verbal.microcopy",
@@ -270,7 +286,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.verbal.localization",
@@ -284,7 +301,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         }
       ]
     },
@@ -306,7 +324,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.color.themes",
@@ -320,7 +339,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.color.semantics",
@@ -334,7 +354,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.color.contrast",
@@ -348,7 +369,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         }
       ]
     },
@@ -370,7 +392,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.type.scale",
@@ -384,7 +407,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.type.fallback",
@@ -398,7 +422,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.type.license",
@@ -412,7 +437,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.type.rtl",
@@ -426,7 +452,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         }
       ]
     },
@@ -448,7 +475,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.logo.min_size",
@@ -462,7 +490,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.logo.clear_space",
@@ -476,7 +505,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.logo.misuse",
@@ -490,7 +520,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.logo.masters",
@@ -504,7 +535,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         }
       ]
     },
@@ -526,7 +558,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.gov.versioning",
@@ -540,7 +573,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.gov.deprecation",
@@ -554,7 +588,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.gov.license",
@@ -568,7 +603,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.gov.ai",
@@ -582,7 +618,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         },
         {
           "id": "brand.gov.cadence",
@@ -596,7 +633,8 @@
           ],
           "version": null,
           "withheld": false,
-          "note": "Not published."
+          "note": "Not published.",
+          "verification": null
         }
       ]
     }

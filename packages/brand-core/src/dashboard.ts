@@ -1,4 +1,5 @@
 import type { Audience } from './auth.js'
+import { moduleEnabled } from './conditions.js'
 import { allModules } from './content/index.js'
 import type { InterviewEngine } from './engine.js'
 import { openConflicts } from './proposal-intake.js'
@@ -80,8 +81,7 @@ export function buildDashboard(engine: InterviewEngine, audience: Audience): Das
   for (const item of queue.items) pendingByModule.set(item.module, (pendingByModule.get(item.module) ?? 0) + 1)
   const config = engine.config()
   const modules: DashboardModule[] = allModules()
-    .filter((module) => (module.optional === 'mascot' ? config.modules.mascot.enabled : true))
-    .filter((module) => (module.optional === 'gamification' ? config.modules.gamification.enabled : true))
+    .filter((module) => moduleEnabled(module, config))
     .map((module) => {
       const score = report.modules.find((item) => item.module === module.id)
       return {

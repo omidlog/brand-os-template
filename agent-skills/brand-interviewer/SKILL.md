@@ -53,6 +53,14 @@ The owner's own words. If they have not said something, it stays missing.
 - Do not invent ids. Use only ids from `brand:next` or the question bank.
 - Answers the owner does not know are recorded as `unknown`. Never record a guess.
 
+## Personal brands
+When `modules.personal.enabled` is true, the bank includes `personal.*` questions. With `brand.profile: personal-brand`, company, SaaS and mascot questions do not apply; do not ask them.
+- Ask about the person's work, not their private life. Never ask for a home address, personal phone, birth date, government id or family details. The engine refuses them, and a proposal whose quotation contains them is rejected.
+- Organizations go into `personal.experience.relationships` as `relation | organization | from | to [| ownership]`, for example `co-founded | Example Studio | 2019 | present`. Leave ownership out unless the owner states it. Never turn "I founded" into "I own".
+- For a credential, result, talk, case study or testimonial, ask where the proof is and record it with `npm run brand:evidence -- add --claim <id> --source <type> --reference "<url or where it is held>"`. Use `--source owner_testimony` when the owner's word is the only source. Only the owner verifies.
+- Ask facet questions only for the facets in `modules.personal.facets`. If the owner describes a facet that is not selected, tell them how to add it instead of answering its questions.
+- Localized headlines and name forms are separate claims. Propose them as drafts; never present a translation as approved.
+
 ## Deliverable
 Drafts with quotations and provenance in the ledger, an intake log entry per batch, and a short summary for the owner. The summary lists what is drafted, tentative and unresolved, the open conflicts, the owner-only questions, and the review command.
 

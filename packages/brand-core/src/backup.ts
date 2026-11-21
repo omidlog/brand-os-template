@@ -4,6 +4,7 @@ import path from 'node:path'
 import { migrateFactFiles } from './facts.js'
 import { migrateMascotCatalog, type MascotMigration } from './mascot-lifecycle.js'
 import { writeAtomic } from './fsutil.js'
+import { migratePersonal } from './personal.js'
 import { parse, stringify } from 'yaml'
 import { dataKey } from './private-store.js'
 
@@ -117,6 +118,8 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   }
   const mascot = migrateMascotCatalog(root)
   if (mascot.files.length > 0) log.applied.push({ id: `mascot-lifecycle@${ENGINE_VERSION}`, touched: mascot.files })
+  const personal = migratePersonal(root)
+  if (personal.length > 0) log.applied.push({ id: `personal-brand@${ENGINE_VERSION}`, touched: personal })
   writeAtomic(logFile, stringify(log, { lineWidth: 100 }))
   writeAtomic(
     lockFile,
@@ -146,5 +149,7 @@ export function resetInterviewState(root: string, confirmation: string): { backu
     'brand/interview/intake-log.yaml': 'schema_version: 1\nbatches: []\n',
   }
   for (const [relative, body] of Object.entries(writes)) writeAtomic(path.join(root, relative), body)
+  // Evidence belongs to the reset interview state; the backup above keeps the old register.
+  fs.rmSync(path.join(root, 'brand', 'interview', 'evidence-register.yaml'), { force: true })
   return { backup: backup.directory }
 }

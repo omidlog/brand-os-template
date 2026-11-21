@@ -1,6 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { parse } from 'yaml'
+import { rightsBlocker, type RightsAsset } from './asset-rights.js'
+import { gatePasses } from './evidence.js'
 import type { CanonicalFact } from './facts.js'
 
 /** Publication requires an explicit human-maintained allowlist; approval is not publication. */
@@ -42,13 +44,17 @@ export function readPublicationPolicy(root: string): PublicationPolicy {
 
 export function factIsPublic(root: string, id: string, fact: CanonicalFact | undefined, brandId: string): boolean {
   if (!fact || fact.id !== id || fact.brand_id !== brandId) return false
+  // gatePasses re-checks evidence, rights and privacy at read time, so a withdrawn permission or an
+  // expired review date hides a claim even if the allowlist was not updated yet.
   return fact.status === 'approved' && fact.classification === 'public' && fact.publication === 'published' &&
-    fact.value !== null && fact.value !== undefined && readPublicationPolicy(root).approved_fact_ids.includes(id)
+    fact.value !== null && fact.value !== undefined && readPublicationPolicy(root).approved_fact_ids.includes(id) &&
+    gatePasses(root, id, fact.value)
 }
 
-export function assetIsPublic(root: string, asset: { id?: unknown; status?: unknown; visibility?: unknown }): boolean {
+export function assetIsPublic(root: string, asset: { id?: unknown; status?: unknown; visibility?: unknown } & RightsAsset): boolean {
+  // Portraits, case-study images, client logos and testimonials also need granted public-use rights.
   return typeof asset.id === 'string' && asset.status === 'approved' && asset.visibility === 'public' &&
-    readPublicationPolicy(root).approved_asset_ids.includes(asset.id)
+    readPublicationPolicy(root).approved_asset_ids.includes(asset.id) && rightsBlocker(root, asset) === null
 }
 
 export function pageIsPublic(root: string, page: string): boolean {

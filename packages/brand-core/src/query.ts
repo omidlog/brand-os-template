@@ -8,6 +8,11 @@ import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import { appendAccessLog, queryFingerprint } from './access-log.js'
 import { authorize, guestContext, type AgentProfile, type Audience, type AuthContext, type Role } from './auth.js'
+import { rightsBlocker } from './asset-rights.js'
+import { moduleEnabled } from './conditions.js'
+import type { DocumentSpec } from './documents/model.js'
+import { PERSONAL_SPECS } from './documents/personal.js'
+import { claimVerification, gatePasses, readEvidence } from './evidence.js'
 import { readFacts } from './facts.js'
 import { factIsPublic, readPublicationPolicy } from './publication.js'
 import { isUsableLifecycle } from './mascot-lifecycle.js'
@@ -148,6 +153,8 @@ function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalR
   const facts = readFacts(root, 'approved', brandId)
   const policy = readPublicationPolicy(root)
   const questions = new Map(engine.questions().map((question) => [question.id, question]))
+  const evidence = readEvidence(root)
+  const now = new Date()
   const terms = (req.query ?? '').toLowerCase().split(/\s+/).filter(Boolean)
   const explicit = req.ids !== undefined
   const items: RetrievedItem[] = []
@@ -164,7 +171,8 @@ function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalR
     }
     // The registry wins if a fact file claims a lower classification than the question that owns it.
     const classification = higher(fact.classification, question ? audienceOf(question.sensitivity) : undefined)
-    const published = fact.publication === 'published' && policy.approved_fact_ids.includes(id)
+    // The evidence, rights and privacy gate applies to every public reader, here as in factIsPublic.
+    const published = fact.publication === 'published' && policy.approved_fact_ids.includes(id) && gatePasses(root, id, fact.value)
     const decision = readable(ctx, brandId, { classification, status: fact.status, published, module })
     const base = {
       id,
@@ -195,7 +203,9 @@ function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalR
       const haystack = `${id} ${String(fact.value)}`.toLowerCase()
       if (!terms.every((term) => haystack.includes(term))) continue
     }
-    items.push({ ...base, value: fact.value, withheld: false, reason: null })
+    // Personal claims carry their verification label so a reader never mistakes owner testimony for a verified fact.
+    const meta = question && id.startsWith('personal.') ? { verification: claimVerification(question, evidence, now) } : undefined
+    items.push({ ...base, value: fact.value, withheld: false, reason: null, ...(meta ? { meta } : {}) })
   }
   return { allow: true, reason: 'allowed', items: terms.length > 0 ? items.slice(0, 20) : items, missing, source: FACTS_PATH }
 }
@@ -243,7 +253,8 @@ function readableAssets(engine: InterviewEngine, ctx: AuthContext): Row[] {
   const manifest = readYamlFile<{ assets?: Row[] }>(root, MANIFEST_PATH, {})
   return (manifest.assets ?? []).filter((asset) => {
     if (typeof asset.id !== 'string' || typeof asset.checksum_sha256 !== 'string') return false
-    const published = policy.approved_asset_ids.includes(asset.id)
+    // Portraits and other rights-sensitive assets are public only with granted public-use rights.
+    const published = policy.approved_asset_ids.includes(asset.id) && rightsBlocker(root, asset) === null
     const module = asset.id.includes('mascot') ? 'mascot-identity' : 'assets'
     if (!readable(ctx, brandId, { classification: audienceOf(asset.visibility), status: asset.status, published, module }).allow) return false
     return inspectAssetForPublication(root, String(asset.path), asset.checksum_sha256).ok
@@ -252,7 +263,7 @@ function readableAssets(engine: InterviewEngine, ctx: AuthContext): Row[] {
 
 function assetItem(engine: InterviewEngine, asset: Row): RetrievedItem {
   const root = engine.workspaceRoot()
-  const published = readPublicationPolicy(root).approved_asset_ids.includes(String(asset.id))
+  const published = readPublicationPolicy(root).approved_asset_ids.includes(String(asset.id)) && rightsBlocker(root, asset) === null
   return {
     id: String(asset.id),
     brand_id: engine.config().brand.slug,
@@ -931,4 +942,58 @@ export function resolveAgentRequest(engine: InterviewEngine, requestId: 'instagr
     gap: rows.length === 0 ? 'Approved artwork is missing.' : 'Approved rows are included.',
     enabled: engine.config().modules.mascot.enabled,
   }
+}
+
+export const DRAFT_RULES = [
+  'This is a draft operation. It has no authority to approve, publish, or write brand facts.',
+  'Use only the facts returned here. Do not add degrees, clients, awards, numbers, testimonials or outcomes.',
+  'A fact labelled owner_stated or unverified must not be presented as independently verified.',
+  'Missing facts stay missing: say what is missing instead of inventing a replacement.',
+  'Never include private contact details, home location, family or health information.',
+  'Return the draft to the owner. Only the owner approves it, with the approval proof, in a trusted local shell.',
+]
+
+/**
+ * Approved personal facts for one deliverable, read through the same authorized retrieval path as
+ * every other tool, packaged for a drafting agent. The result is always `draft`: it carries no
+ * approval or publication authority, and missing or unreadable facts are listed instead of guessed.
+ */
+export function draftPersonalContent(engine: InterviewEngine, deliverable: string, ctx?: AuthContext, sectionId?: string): ToolResult {
+  const spec = (PERSONAL_SPECS as Record<string, DocumentSpec | undefined>)[deliverable]
+  const ids = spec ? [...new Set(spec.sections.filter((section) => !sectionId || section.id === sectionId).flatMap((section) => section.questions))] : []
+  const config = engine.config()
+  const result = run(engine, ctx, { kind: 'facts', ids }, {
+    tool: 'draft_personal_content',
+    source: FACTS_PATH,
+    emptyStatus: 'missing',
+    note: () => 'Draft operation. Approved facts this caller may read; everything else is listed as missing.',
+    data: (retrieval) => ({
+      operation: 'draft',
+      authority: 'none',
+      deliverable,
+      rules: DRAFT_RULES,
+      sections: (spec?.sections ?? [])
+        .filter((section) => !sectionId || section.id === sectionId)
+        .map((section) => ({
+          id: section.id,
+          title: section.title,
+          words: section.words ?? null,
+          facts: section.questions
+            .map((id) => retrieval.items.find((item) => item.id === id && !item.withheld))
+            .filter((item): item is RetrievedItem => Boolean(item))
+            .map((item) => ({ id: item.id, value: item.value, verification: (item.meta?.verification as string | undefined) ?? 'not_required', revision: item.revision })),
+        })),
+      missing: ids.filter((id) => !retrieval.items.some((item) => item.id === id && !item.withheld)),
+    }),
+    denied: { operation: 'draft', authority: 'none', deliverable, sections: [], missing: ids },
+  })
+  if (result.status === 'denied') return result
+  if (!spec || (sectionId && !spec.sections.some((section) => section.id === sectionId))) {
+    return { ...result, status: 'missing', approved: false, approval_state: 'missing', note: `Unknown deliverable or section. Use one of: ${Object.keys(PERSONAL_SPECS).join(', ')}.` }
+  }
+  if (!moduleEnabled({ optional: 'personal', facet: spec.requires?.facet }, config)) {
+    return { ...result, status: 'not_applicable', approved: false, approval_state: 'not_applicable', note: 'The personal module or the facet for this deliverable is turned off.', data: { operation: 'draft', authority: 'none', deliverable, sections: [], missing: [] } }
+  }
+  // Always a draft: reading approved facts never turns the composed text into an approved one.
+  return { ...result, status: 'draft', approved: false, approval_state: 'draft' }
 }
