@@ -25,8 +25,22 @@ Each brand repository also records which template commit it came from, in `brand
    - core file the brand never edited: take the template's version;
    - core file the brand did edit: leave it alone and report a conflict for a person to look at;
    - merge-carefully file: merge both sides; a clean merge is applied, a conflict is reported.
-4. Put the result on a **new branch** with one commit, never on `main`.
-5. A person reviews and merges the pull request. Nothing is merged automatically.
+4. Run the template's **migrations** that are new since the brand's recorded commit (see below).
+5. Put the result on a **new branch** with one commit, never on `main`.
+6. A person reviews and merges the pull request. Nothing is merged automatically.
+
+## Migrations
+
+Most template changes are just new versions of files, and steps 1 to 3 handle them. Sometimes a change needs a little more, for example removing an old template file that a brand still has but that the normal comparison does not see. For that the template ships **migrations** in `.brand-os/migrations/`:
+
+- Each migration is a small JSON file with a number, such as `0001-remove-old-build.json`. They run in number order.
+- A migration runs once per brand: only migrations that are new since the brand's recorded template commit run. Running one again changes nothing.
+- A migration may only touch template-owned (core) files. If one names a brand file or a shared file, the update stops and nothing is written.
+- Today a migration can do one thing: **delete** a core file. It deletes the brand's copy only if the brand never edited it. An edited copy is left alone and listed under *Needs a person*.
+- Migrations are plain data, not programs, so Studio can run them safely.
+- `template:update` and Studio's update pull request both run them, and both list them, in order, with what each one did: *applied*, *nothing to do* or *needs a person*.
+
+How to write one: `.brand-os/migrations/README.md`.
 
 ## Running it yourself
 
@@ -56,6 +70,6 @@ The template repository is private, so a brand repository's own `GITHUB_TOKEN` c
 | 1 | Manifest (`.brand-os/sync.json`), template version record, `template:update` CLI with dry run and apply on a new branch, tests with throwaway git repositories | Done in part 1 |
 | 2 | Studio: record the template commit at creation, **Updates available** indicator, **Open update PR** through the GitHub API (mocked in tests); document the second write | Done |
 | 3 | Studio periodic job: check every brand and open at most one open update PR per brand; skip when one is already open. Opening is off unless `STUDIO_TEMPLATE_AUTO_PR=1` | Done |
-| 4 | Versioned migrations for breaking changes (`.brand-os/migrations/<version>`), run by the update and listed in the PR | Planned |
+| 4 | Versioned migrations for breaking changes (`.brand-os/migrations/NNNN-name.json`: ordered, run once, core files only, data not code), run by `template:update` and Studio and listed in the commit and PR | Done |
 | 5 | Optional brand-side GitHub Action ("Template update") for owners who add a repository secret that can read the template | Planned |
 | 6 | Fake-brand end-to-end test: create, change template, update PR, merge locally, second update is empty | Planned |
