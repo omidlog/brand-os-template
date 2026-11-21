@@ -19,5 +19,6 @@ Skills for specific work:
 - `agent-skills/ui-designer/SKILL.md`
 - `agent-skills/motion-designer/SKILL.md`
 - `agent-skills/social-designer/SKILL.md`
+- `agent-skills/knowledge-inbox/SKILL.md` (notes are unapproved ideas; `docs-internal/KNOWLEDGE.md`)
 
 Claude Code can read this checkout only after the folder is open in a permitted session. A chat product does not automatically see this private repository.

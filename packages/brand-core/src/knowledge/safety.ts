@@ -28,10 +28,12 @@ export interface SafetyReport {
 
 /** Credentials, personal private data (home address, phone, id numbers…) and restricted (financial/legal) cues. */
 export function safetyReport(text: string): SafetyReport {
+  // Note ids (kn_<uuid>) contain digit runs that the phone and long-number detectors would flag.
+  const withoutIds = text.replace(/\bkn_[a-z0-9][a-z0-9-]{2,63}/g, 'kn_note')
   return {
     credentials: credentialFindings(text),
-    personal: privateDataFindings(text).map((finding) => finding.kind),
-    restricted_passages: redactRestricted(text).redactions,
+    personal: privateDataFindings(withoutIds).map((finding) => finding.kind),
+    restricted_passages: redactRestricted(withoutIds).redactions,
   }
 }
 

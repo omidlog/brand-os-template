@@ -154,3 +154,45 @@ guest). No search call contacts a model or the network.
 
 The index is built in process from the files. `brand/.private/knowledge/cache/index.json` records which file states
 were indexed so `doctor` can detect a stale or corrupt cache; deleting it is always safe.
+
+## From a note to a draft proposal
+
+```bash
+npm run brand:knowledge -- propose --id kn_…                       # preview with deterministic rules
+npm run brand:knowledge -- propose --id kn_… --file items.json     # preview an agent's extraction
+npm run brand:knowledge -- propose --id kn_… --file items.json --apply --expected-revision <sha>
+npm run brand:knowledge -- provenance --id kn_…
+```
+
+The bridge reuses the interview's proposal intake unchanged (`parseItems`, `applyProposalBatch`): strict schema,
+verbatim quotations, restricted and not-applicable questions refused, approved facts never overwritten (a conflict or a
+pending change proposal instead), drafts stored with `authority: unverified`. `items.json` has the model-output shape
+`{ "proposals": [...], "follow_ups"?: [...], "owner_questions"?: [...] }`; the caller cannot set the source.
+
+- `source.ref = knowledge:<id>@<sha256>`; `source_text` is the note body with restricted-looking sentences withheld,
+  so they can never be quoted into the ledger. Bodies over 50,000 characters (the intake limit) are refused: split
+  the note.
+- Candidate question ids come from the note's `question_ids`, then tag/title words matched against ids and labels,
+  limited to applicable, non-restricted questions (no mascot questions for a brand without a mascot). No candidates
+  and no rule proposals → `unmapped_idea`; the note stays a note.
+- **The preview lists `tracked_quotations`.** Applying copies each quotation into `brand/interview/answer-ledger.yaml`
+  (and conflicts into `intake-log.yaml`), which are tracked: quoting a local note moves those words into Git when the
+  interview files are committed.
+- `owner_note`, `meeting` and `agent_capture` notes map to the intake's `owner_note` source. `research` and
+  `imported_text` notes map to `imported_text`, can be previewed, and are refused on `--apply`: the owner restates the
+  decision as their own note and proposes from that.
+- `--apply` needs the previewed revision (checked under the note lock) and is refused while `BRAND_OS_AGENT_TOKEN` is
+  set. Then `brand:review`, `brand:approve` (proof) and `brand:publish` work as before.
+- Editing a note after proposing marks those proposals stale (`provenance`, `doctor`). Nothing is refreshed,
+  retracted or rewritten automatically; archiving a note lists the proposals that cite it.
+
+## Agents and MCP
+
+Claude Code uses the local CLI (skill: `agent-skills/knowledge-inbox/SKILL.md`). The MCP server adds five read-only
+tools (`knowledge_list`, `knowledge_search`, `knowledge_read`, `knowledge_backlinks`, `knowledge_suggest_proposal`)
+that answer only a token with the new `knowledge-read` profile. Existing `internal-read`, `design`, `marketing` and
+`finance` tokens, guests and unprofiled agents get `denied`, so no existing token gained access. The tools see shared
+notes classified internal for this brand only; local, restricted and guessed ids all return `not_found`. Search
+returns notes and approved facts in separate lists. `knowledge_suggest_proposal` returns candidates only (no dry run
+against the ledger, which would expose draft values). There is no MCP write tool: a stdio caller cannot be proven to
+be the owner.

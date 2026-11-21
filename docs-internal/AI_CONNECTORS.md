@@ -52,6 +52,7 @@ All profiles are read-only and never get restricted values.
 | `design` | brand, visual, product UI, and mascot modules |
 | `marketing` | brand modules plus company, customer, product, sales, marketing, and growth |
 | `finance` | business modules and governance status |
+| `knowledge-read` | approved facts in every module, plus the read-only `knowledge_*` tools over shared notes (`brand/knowledge/shared`), labelled unapproved ideas. Never local or restricted notes. Issue with `brand:agent-token issue --profile knowledge-read`. |
 
 Restricted fields (finance figures, budgets, partner shares, board details) come back as `value: null, withheld: true` for every profile. Agents can never approve, publish, or write.
 

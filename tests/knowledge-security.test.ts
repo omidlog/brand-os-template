@@ -16,6 +16,7 @@ import {
   listNotes,
   noteHistory,
   openWorkspace,
+  safetyReport,
   scanAll,
   searchNotes,
   shareNote,
@@ -154,6 +155,16 @@ test('share: dry run writes nothing; unknown or public visibility, credentials, 
   assert.equal(back.scope, 'local')
   assert.match(back.warning, /Earlier commits still contain it/)
   assert.ok(noteHistory(ws, ok.id).length >= 1)
+})
+
+test('links to other notes never look like phone numbers or long numbers to the share checks', () => {
+  const ids = ['kn_00000000-0000-4000-8000-000000000000', 'kn_12345678-9012-4345-8678-901234567890', 'kn_98765432-1098-4765-a432-109876543210']
+  for (const id of ids) {
+    const report = safetyReport(`Builds on [[${id}]] and ${id}.`)
+    assert.deepEqual(report.personal, [], id)
+    assert.equal(report.restricted_passages, 0, id)
+  }
+  assert.deepEqual(safetyReport('Call me on +90 532 123 45 67').personal, ['phone'], 'real phone numbers are still caught')
 })
 
 test('visibility detection fails closed and owner confirmation must name the origin repository', () => {

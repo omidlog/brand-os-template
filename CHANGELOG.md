@@ -17,7 +17,10 @@ Theme: capture messy ideas per brand, find them in fa/tr/en, link them, and turn
 - `packages/brand-core/src/knowledge/`: note model (`kn_<uuid>`, reader-computed sha256 revision), local-by-default store under `brand/.private/knowledge`, AES-256-GCM restricted notes, revision-checked edits with anchors, per-note locks, snapshots and recovery, idempotent append, archive/restore, fa/tr/en search, links/backlinks/related/duplicates, fail-closed share to Git, doctor and migrate.
 - `npm run brand:knowledge` (`scripts/knowledge.ts`).
 - `brand:backup` now includes `brand/knowledge`.
-- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`.
+- `brand:knowledge propose` / `provenance`: note → draft proposals over the existing intake, with `knowledge:<id>@<sha256>` provenance, stale detection and a preview of every quotation that would enter tracked interview files.
+- `knowledge-read` agent-token profile and read-only MCP tools `knowledge_list`, `knowledge_search`, `knowledge_read`, `knowledge_backlinks`, `knowledge_suggest_proposal` (shared notes only). Existing profiles unchanged.
+- `agent-skills/knowledge-inbox/SKILL.md`.
+- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`, `knowledge-proposals`, `knowledge-agent`.
 
 ## Unreleased — Phase 9: Read-only Brand OS Studio
 

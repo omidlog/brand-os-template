@@ -113,6 +113,8 @@ Branch `feat/knowledge-inbox`. Guide: `docs-internal/KNOWLEDGE.md`. Review: `doc
 | A2 Search and links | Done | fa/tr/en normalization, deterministic ranking, filters, pagination, typed links, backlinks, related, duplicate suggestions. In-process index; no FTS or embeddings. |
 | A3 Safe edits | Done | Required revision, unique anchors, per-note O_EXCL lock, idempotent append; concurrency tested with six processes. |
 | Share to Git | Done | Dry-run preview, fail-closed visibility (origin + GitHub CLI, or owner confirmation naming origin), credential/personal/restricted refusal. Not publication. |
+| B1 Proposal bridge | Done | Existing intake reused; preview by default; revision-checked apply; third-party notes preview-only; 50,000-character limit; ledger-quote leak shown. Gate B tested end to end. |
+| B2 Agent access | Done | CLI and skill for Claude Code; `knowledge-read` profile and five read-only MCP tools over shared notes. No MCP writes. |
 
 ## Commands that this remediation expects to pass
 
