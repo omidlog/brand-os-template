@@ -82,6 +82,8 @@ npm run build
 
 Details: `docs-internal/SETUP.md`.
 
+Before you commit: `npm run ci` runs lint, typecheck, validate, tests and both docs builds (Node 22 or newer). The docs build rewrites tracked generated files (`apps/docs/generated/features.json`, `apps/docs/src/data/catalog.json`, `apps/docs/src/data/status.json`) and may delete `llms.txt` and `llms-full.txt`. Unless your change is meant to regenerate them, restore them with `git checkout -- apps/docs/generated apps/docs/src/data llms.txt llms-full.txt`. `npm run test` gives every test a deadline and cleans its own temp directory, so a hung server fails the run instead of blocking it.
+
 ## Mark this repository as a template
 
 GitHub → **Settings** → **General** → check **Template repository**. This checkout is already private and marked as a template. Leave it that way. Do not put secrets in it.

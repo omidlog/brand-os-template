@@ -83,7 +83,7 @@ Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100, Node)
 
 ## Security model
 
-- Owner sign-in: scrypt password hash, TOTP (required whenever Studio is reachable beyond loopback), a login nonce, per-IP and global rate limits, generic failure messages.
+- Owner sign-in: scrypt password hash, TOTP (required whenever Studio is reachable beyond loopback), a login nonce, per-IP and global rate limits, generic failure messages. Each authenticator code works once; signing in again with a code that was already used says so and asks you to wait for a new code (the attempt still counts against the rate limit).
 - Sessions: random ids held server-side, HttpOnly, `SameSite=Strict`, `Secure` and `__Host-` prefix on https, absolute and idle expiry, destroyed on sign-out.
 - Every authenticated POST checks the CSRF token and `Origin`. Only form-encoded bodies are accepted.
 - Guests receive a redirect or 401 for every route, identical for real and forged slugs, so brands cannot be enumerated.
