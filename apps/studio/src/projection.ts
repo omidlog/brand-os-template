@@ -7,6 +7,7 @@ import {
   PERSONAL_DOCUMENT_KINDS,
   readFacts,
   readPublicationPolicy,
+  readTemplateRecord,
   rightsBlocker,
 } from '@brand-os/brand-core'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard } from '@brand-os/brand-core'
@@ -61,6 +62,8 @@ export interface ProjectionAsset {
 
 export interface StudioProjection {
   schema_version: 1
+  /** The template commit recorded in brand/template-version.json; null when the brand has no record. Absent in caches built before template sync. */
+  template?: { commit: string | null; repository: string | null } | null
   brand: {
     name: string
     name_status: string
@@ -140,6 +143,17 @@ export interface PreviewFile {
   key: string
   source: string
   mime: string
+}
+
+function templateRecord(root: string): StudioProjection['template'] {
+  try {
+    const record = readTemplateRecord(root)
+    if (!record) return null
+    const repository = record.repository && /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/.test(record.repository) ? record.repository : null
+    return { commit: record.commit, repository }
+  } catch {
+    return null
+  }
 }
 
 export function buildProjection(root: string, expectedSlug: string): { projection: StudioProjection; previews: PreviewFile[] } {
@@ -318,6 +332,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     assets,
     mascot,
     personal: personal ? { facets, documents: personalDocs } : null,
+    template: templateRecord(root),
   }
   assertNoSecrets(projection)
   return { projection, previews }
