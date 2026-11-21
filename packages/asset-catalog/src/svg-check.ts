@@ -16,34 +16,37 @@
  * `inspectAssetForPublication` combines this with the older regex gate; both must pass.
  */
 
-export type SvgIssueCode =
-  | 'too-large'
-  | 'parse'
-  | 'not-svg'
-  | 'doctype'
-  | 'processing-instruction'
-  | 'comment'
-  | 'cdata'
-  | 'script'
-  | 'foreign-object'
-  | 'image'
-  | 'use'
-  | 'link'
-  | 'animation'
-  | 'font'
-  | 'element'
-  | 'editor-data'
-  | 'foreign-namespace'
-  | 'namespace'
-  | 'style-element'
-  | 'style-attribute'
-  | 'event-handler'
-  | 'external-reference'
-  | 'active-value'
-  | 'missing-reference'
-  | 'reference-target'
-  | 'legacy-gate'
-  | 'text'
+export const SVG_ISSUE_CODES = [
+  'too-large',
+  'parse',
+  'not-svg',
+  'doctype',
+  'processing-instruction',
+  'comment',
+  'cdata',
+  'script',
+  'foreign-object',
+  'image',
+  'use',
+  'link',
+  'animation',
+  'font',
+  'element',
+  'editor-data',
+  'foreign-namespace',
+  'namespace',
+  'style-element',
+  'style-attribute',
+  'event-handler',
+  'external-reference',
+  'active-value',
+  'missing-reference',
+  'reference-target',
+  'legacy-gate',
+  'text',
+] as const
+
+export type SvgIssueCode = (typeof SVG_ISSUE_CODES)[number]
 
 export interface SvgIssue {
   code: SvgIssueCode

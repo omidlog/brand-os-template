@@ -6,7 +6,7 @@ import { parse } from 'yaml'
 import { checkSvg } from './svg-check.js'
 import type { SvgIssue } from './svg-check.js'
 
-export { analyzeDeclarations, checkSvg, EDITOR_NAMESPACES, geometrySignature, SVG_NS } from './svg-check.js'
+export { analyzeDeclarations, checkSvg, EDITOR_NAMESPACES, geometrySignature, SVG_ISSUE_CODES, SVG_NS } from './svg-check.js'
 export type { SvgCheck, SvgIssue, SvgIssueCode } from './svg-check.js'
 
 export interface AssetRecord {
