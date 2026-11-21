@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased — Phase 8: Personal Brand OS
+
+Theme: one engine for people as well as companies. A personal brand is an optional module with combinable facets, explicit relationships to organizations, evidence and rights for public claims, and ten source-backed deliverables. Guide: `docs-internal/PERSONAL_BRAND.md`. Review: `docs-internal/PHASE_8_PERSONAL_BRAND_REVIEW.md`.
+
+### Breaking changes
+
+- None for existing brands. A config without `modules.personal` is treated as disabled, and `brand:migrate` adds the block with `enabled: false`.
+- Assets with `subject: portrait | person | case_study | client_logo | testimonial`, or tagged `portrait`, `headshot`, `case-study`, `client-logo` or `testimonial`, are no longer public without a granted, public, unexpired `rights` record.
+- The MCP server lists one more tool, `draft_personal_content`. Clients that pin the exact tool list need an update.
+- `DocumentItem` has a new `verification` field (null for non-personal items), and `DocumentSection` may carry a `length` report.
+
+### Added
+
+- `brand:init --profile personal-brand --facets <list>` and `--personal true`; `modules.personal { enabled, facets }`.
+- Personal question bank (`brand/interview/question-bank/personal.yaml`): identity, positioning, story, experience and credentials, evidence and portfolio, thought leadership and channels, visual presence, privacy and contact, plus founder, consultant, creator, artist and speaker facets. Prompts in English with fa and tr locale data.
+- Condition `config.modules.personal.facets has|lacks <facet>` and `config.brand.profile`; `moduleEnabled()` shared by the dashboard, compiled pages and docs build.
+- Exclusive interview profiles (`exclusive: true`): questions outside the profile are not applicable for completeness.
+- `relationships` structured answer type with relation, dates and ownership state.
+- Privacy guard for personal answers, proposals and evidence (`personal-privacy.ts`).
+- Evidence and rights register with `brand:evidence list|add|verify|reject|withdraw|check`, publication requirements (`verified_evidence`, `rights_permission`) and `brand:retract`.
+- Asset `subject` and `rights` fields in `schemas/asset.schema.json`.
+- Documents: `personal-brand-book`, `professional-bio`, `linkedin-pack`, `website-pack`, `media-kit`, `speaker-kit`, `content-strategy`, `portfolio-pack`, `services-pack`, `evidence-register`.
+- `draft_personal_content` (MCP and `brand:query`): approved facts for one deliverable, always a draft.
+- Personal pages in the docs build (`Personal Brand`, `Approved Personal Book`) when the module is on.
+- Tests: `personal-brand`, `personal-evidence`, `personal-documents` and journey D (157 tests in total).
+
+### Changed
+
+- `design`, `marketing` and `finance` agent profiles read only the person-facing personal modules (finance none). Career history, evidence and privacy boundaries are `internal-read` only.
+- `factIsPublic`, MCP retrieval and the public claims list re-check evidence, rights and privacy at read time.
+- `brand:migrate` adds the personal bank, profile, field-registry and knowledge-graph entries and config block when missing.
+- `brand:init` and `brand:reset` clear the evidence register, so a new brand never inherits another brand's evidence.
+
 ## 0.2.0 — 2026-11-20
 
 Theme: approved brand truth that agents can actually use. Scoped agent access, an agent-driven interview, batch approval and publication, cited documents and tokens from structured answers, finance and mascot retrieval, end-to-end journeys, and an internal review dashboard.

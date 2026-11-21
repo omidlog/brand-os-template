@@ -8,6 +8,7 @@ Start with:
 - `brand/brand-manifest.json` for the document index
 - `brand/instance/approved-facts.yaml` before repeating any brand claim
 - `docs/IMPLEMENTATION_STATUS.md` before calling a feature finished
+- `docs-internal/PERSONAL_BRAND.md` when `modules.personal.enabled` is true (person-centered brands, evidence, privacy)
 
 Skills for specific work:
 
