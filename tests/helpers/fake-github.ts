@@ -29,7 +29,9 @@ interface Repo {
   is_template: boolean
   default_branch: string
   head: string | null
-  pulls: Array<{ number: number; title: string; head: string; draft: boolean }>
+  pulls: Array<{ number: number; title: string; head: string; draft: boolean; base?: string; body?: string }>
+  /** Branches other than the default branch (name -> commit). */
+  branches: Map<string, string>
 }
 
 export interface Fault {
@@ -168,6 +170,7 @@ export class FakeGitHub {
       default_branch: options.default_branch ?? 'main',
       head: null,
       pulls: [],
+      branches: new Map(),
     }
     this.repos.set(`${owner}/${name}`.toLowerCase(), repo)
     this.commitTree(repo, new Map(tree), 'Initial commit')
@@ -185,6 +188,13 @@ export class FakeGitHub {
     this.commits.set(commit.sha, commit)
     repo.head = commit.sha
     return commit.sha
+  }
+
+  /** The files at any commit. */
+  treeAt(commitSha: string): Tree {
+    const commit = this.commits.get(commitSha)
+    if (!commit) throw new Error('no commit')
+    return new Map(this.trees.get(commit.tree)!)
   }
 
   headTree(owner: string, name: string): Tree {
@@ -349,6 +359,31 @@ export class FakeGitHub {
       if (!this.trees.has(commit.tree)) return json(422, { message: 'tree missing' })
       this.commits.set(commit.sha, commit)
       return json(201, { sha: commit.sha })
+    }
+    if (method === 'GET' && rest[0] === 'git' && rest[1] === 'ref' && rest[2] === 'heads') {
+      const branch = rest.slice(3).join('/')
+      const at = branch === repo.default_branch ? repo.head : repo.branches.get(branch)
+      if (!at) return json(404, { message: 'Not Found' })
+      return json(200, { ref: `refs/heads/${branch}`, object: { sha: at, type: 'commit' } })
+    }
+    if (method === 'POST' && rest[0] === 'git' && rest[1] === 'refs' && rest.length === 2) {
+      const ref = String(body.ref)
+      if (!ref.startsWith('refs/heads/')) return json(422, { message: 'Reference name is invalid' })
+      const branch = ref.slice('refs/heads/'.length)
+      if (branch === repo.default_branch || repo.branches.has(branch)) return json(422, { message: 'Reference already exists' })
+      if (!this.commits.has(String(body.sha))) return json(422, { message: 'Object does not exist' })
+      repo.branches.set(branch, String(body.sha))
+      return json(201, { ref, object: { sha: String(body.sha) } })
+    }
+    if (method === 'POST' && rest[0] === 'pulls' && rest.length === 1) {
+      const head = String(body.head)
+      if (!repo.branches.has(head)) return json(422, { message: 'Validation Failed: head does not exist' })
+      if (String(body.base) !== repo.default_branch) return json(422, { message: 'Validation Failed: base' })
+      if (repo.pulls.some((pull) => pull.head === head)) return json(422, { message: 'A pull request already exists' })
+      const number = repo.pulls.reduce((max, pull) => Math.max(max, pull.number), 0) + 1
+      const pull = { number, title: String(body.title), head, draft: false, base: String(body.base), body: String(body.body) }
+      repo.pulls.push(pull)
+      return json(201, { number, title: pull.title, html_url: `https://github.com/${repo.owner}/${repo.name}/pull/${number}`, head: { ref: head }, draft: false, updated_at: new Date().toISOString() })
     }
     if (method === 'PATCH' && rest[0] === 'git' && rest[1] === 'refs' && rest[2] === 'heads') {
       const commit = this.commits.get(String(body.sha))
