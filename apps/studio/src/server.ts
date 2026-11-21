@@ -6,7 +6,7 @@ import { verifyPassword } from './auth/password.js'
 import { RateLimiter } from './auth/rate-limit.js'
 import { loginCsrfToken, safeEqual, SessionStore, type Session } from './auth/session.js'
 import { TotpVerifier } from './auth/totp.js'
-import type { StudioConfig } from './config.js'
+import { isLoopback, type StudioConfig } from './config.js'
 import type { GitHubClient } from './github/client.js'
 import { GitHubError } from './github/client.js'
 import { DeliveryLog, parsePush, verifyWebhookSignature } from './github/webhook.js'
@@ -111,14 +111,30 @@ export function createStudio(deps: StudioDeps): {
   const loginCookie = config.secureCookies ? '__Host-studio_login' : 'studio_login'
   const langCookie = 'studio_lang'
 
+  /**
+   * The client address for rate limits. Behind the single trusted reverse proxy, the proxy appends the
+   * address it saw as the LAST X-Forwarded-For entry; anything to its left came from the client and
+   * can be forged, so only the rightmost hop is used.
+   */
   function clientIp(req: IncomingMessage): string {
     if (config.trustProxy) {
       const forwarded = req.headers['x-forwarded-for']
-      const value = Array.isArray(forwarded) ? forwarded[0] : forwarded
-      const hop = value?.split(',')[0]?.trim()
-      if (hop) return hop
+      const value = Array.isArray(forwarded) ? forwarded.join(',') : forwarded
+      const hop = value?.split(',').map((item) => item.trim()).filter(Boolean).pop()
+      if (hop && hop.length <= 64) return hop
     }
     return req.socket.remoteAddress ?? 'unknown'
+  }
+
+  /**
+   * Beyond loopback, Studio answers only for its public host (DNS rebinding, stray virtual hosts).
+   * The proxy passes the original Host through. `/healthz` stays reachable for the container check.
+   */
+  const publicHost = new URL(config.publicOrigin)
+  const expectedHost = isLoopback(publicHost.hostname) ? null : publicHost.host.toLowerCase()
+  function hostAllowed(req: IncomingMessage): boolean {
+    if (expectedHost === null) return true
+    return (req.headers.host ?? '').toLowerCase() === expectedHost
   }
 
   function sameOrigin(req: IncomingMessage): boolean {
@@ -171,11 +187,18 @@ export function createStudio(deps: StudioDeps): {
 
   /* ------------------------------------------------------------ handlers */
 
+  /** Liveness and readiness in one: the process answers and its data directory is writable. Reveals nothing else. */
   const health: Handler = (ctx) => {
-    ctx.res.statusCode = 200
+    let ok = true
+    try {
+      fs.accessSync(config.dataDir, fs.constants.W_OK)
+    } catch {
+      ok = false
+    }
+    ctx.res.statusCode = ok ? 200 : 503
     ctx.res.setHeader('Content-Type', 'text/plain; charset=utf-8')
     ctx.res.setHeader('Cache-Control', 'no-store')
-    ctx.res.end('ok\n')
+    ctx.res.end(ok ? 'ok\n' : 'unavailable\n')
   }
 
   const staticFile: Handler = (ctx, match) => {
@@ -474,6 +497,13 @@ export function createStudio(deps: StudioDeps): {
     } catch {
       res.statusCode = 400
       res.end()
+      return
+    }
+    if (url.pathname !== '/healthz' && !hostAllowed(req)) {
+      res.statusCode = 421
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+      res.setHeader('Cache-Control', 'no-store')
+      res.end('Misdirected request.\n')
       return
     }
     const cookies = parseCookies(req.headers.cookie)

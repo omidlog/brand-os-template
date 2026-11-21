@@ -55,6 +55,7 @@
     "studio:start": "tsx apps/studio/src/main.ts",
     "studio": "tsx apps/studio/src/cli.ts",
     "studio:hash-password": "tsx apps/studio/src/cli.ts hash-password",
+    "studio:build": "tsx scripts/build-studio.ts",
     "example:education": "tsx scripts/example-run.ts education-app",
     "example:b2b": "tsx scripts/example-run.ts b2b-saas"
   },
@@ -64,6 +65,7 @@
     "@types/node": "22.19.21",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "tsx": "4.23.0",
     "typescript": "5.9.3",
