@@ -17,7 +17,7 @@ export interface ViewContext {
   now: number
 }
 
-export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'history' | 'handoff'
+export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'history' | 'handoff'
 
 export interface BrandView {
   record: BrandRecord
@@ -33,6 +33,7 @@ const SECTIONS: Array<{ id: BrandSection; key: MessageKey; icon: IconName; path:
   { id: 'assets', key: 'nav.assets', icon: 'image', path: '/assets' },
   { id: 'business', key: 'nav.business', icon: 'briefcase', path: '/business' },
   { id: 'personal', key: 'nav.personal', icon: 'user', path: '/personal' },
+  { id: 'knowledge', key: 'nav.knowledge', icon: 'idea', path: '/knowledge' },
   { id: 'history', key: 'nav.history', icon: 'history', path: '/history' },
   { id: 'handoff', key: 'nav.handoff', icon: 'handoff', path: '/handoff' },
 ]
@@ -41,6 +42,8 @@ export function brandSections(view: BrandView): typeof SECTIONS {
   const projection = view.cached.projection
   return SECTIONS.filter((section) => {
     if (section.id === 'personal') return projection?.brand.modules.personal === true
+    // No flag: the page is listed once the merged branch has shared notes (or files Studio withheld).
+    if (section.id === 'knowledge') return Boolean(projection?.knowledge && (projection.knowledge.total > 0 || projection.knowledge.withheld.length > 0))
     return true
   })
 }

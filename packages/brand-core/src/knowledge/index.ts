@@ -30,3 +30,5 @@ export { candidateQuestions, KNOWLEDGE_REF_PREFIX, knowledgeRef, noteProvenance,
 export type { Candidate, ProposalPreview, ProvenanceEntry, RefusedLink } from './proposals.js'
 export { KNOWLEDGE_TOOL_LIMITS, KNOWLEDGE_TOOLS, knowledgeAccess, runKnowledgeTool } from './agent.js'
 export type { KnowledgeTool, KnowledgeToolArgs, KnowledgeToolResult } from './agent.js'
+export { buildStudioKnowledge, filterStudioKnowledge, STUDIO_KNOWLEDGE_LIMITS } from './studio.js'
+export type { StudioKnowledgeFilter, StudioKnowledgeProjection, StudioNote, StudioNoteLink, StudioQuestionRef, WithheldReason } from './studio.js'
