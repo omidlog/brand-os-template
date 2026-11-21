@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import Ajv from 'ajv'
-import { parse } from 'yaml'
+import { isMap, isSeq, parse, parseDocument, stringify } from 'yaml'
 import { checkSvg } from './svg-check.js'
 import type { SvgIssue } from './svg-check.js'
 
@@ -210,4 +210,71 @@ export function checkAssets(repoRoot: string, ids?: string[]): SvgAssetReport[] 
     reports.push({ id: asset.id, path: asset.path, status: asset.status, ok: issues.length === 0, fixable, issues, warnings, fix: fixable ? normalizeCommand(asset.id) : null })
   }
   return reports
+}
+
+/**
+ * Change top-level keys of one manifest asset without reformatting anything else: only the lines of
+ * the changed keys are rewritten (an undefined value deletes the key). The result is parsed again
+ * and must equal the intended record exactly, or nothing is written.
+ */
+export function patchManifestAsset(repoRoot: string, id: string, changes: Record<string, unknown>): void {
+  const file = path.join(repoRoot, 'brand', 'assets', 'asset-manifest.yaml')
+  const text = fs.readFileSync(file, 'utf8')
+  const doc = parseDocument(text)
+  const assets = doc.get('assets')
+  const node = isSeq(assets) ? assets.items.find((item) => isMap(item) && item.get('id') === id) : undefined
+  if (!node || !isMap(node) || !node.range) throw new Error(`No asset ${id} in asset-manifest.yaml`)
+  const intended: Record<string, unknown> = { ...(node.toJSON() as Record<string, unknown>) }
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === undefined) delete intended[key]
+    else intended[key] = value
+  }
+
+  const [start, , end] = node.range
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1
+  const indent = start - lineStart
+  const head = text.slice(0, lineStart)
+  const firstLinePrefix = text.slice(lineStart, start) // "  - " before the first key
+  const body = text.slice(start, end).replace(/\n+$/, '')
+  const tail = text.slice(start + body.length)
+  // Work on whole lines: the "- " marker of the first line becomes spaces and is restored at the end.
+  const lines = `${' '.repeat(indent)}${body}`.split('\n')
+  // Split the item into key blocks: a block starts at a line indented exactly `indent` with "key:".
+  const blocks: Array<{ key: string | null; lines: string[] }> = []
+  for (const line of lines) {
+    const match = new RegExp(`^ {${indent}}([A-Za-z0-9_-]+):(?:\\s|$)`).exec(line)
+    if (match) blocks.push({ key: match[1]!, lines: [line] })
+    else if (blocks.length) blocks.at(-1)!.lines.push(line)
+    else blocks.push({ key: null, lines: [line] })
+  }
+  const render = (key: string, value: unknown): string[] =>
+    stringify({ [key]: value }, { lineWidth: 0 }).replace(/\n$/, '').split('\n').map((line) => `${' '.repeat(indent)}${line}`)
+  for (const [key, value] of Object.entries(changes)) {
+    const index = blocks.findIndex((block) => block.key === key)
+    if (value === undefined) {
+      if (index >= 0) blocks.splice(index, 1)
+    } else if (index >= 0) {
+      // Keep trailing blank lines that belonged to the old block.
+      const old = blocks[index]!.lines
+      let last = old.length - 1
+      while (last > 0 && !old[last]!.trim()) last -= 1
+      const trailing = old.slice(last + 1)
+      blocks[index] = { key, lines: [...render(key, value), ...trailing] }
+    } else {
+      let at = blocks.length
+      while (at > 0 && blocks[at - 1]!.lines.every((line) => !line.trim())) at -= 1
+      blocks.splice(at, 0, { key, lines: render(key, value) })
+    }
+  }
+  const rebuilt = firstLinePrefix + blocks.flatMap((block) => block.lines).join('\n').slice(indent)
+  const next = head + rebuilt + tail
+
+  const check = parseDocument(next)
+  const after = check.get('assets')
+  const item = isSeq(after) ? after.items.find((entry) => isMap(entry) && entry.get('id') === id) : undefined
+  const others = (value: unknown): unknown => (value as { assets: Array<{ id: string }> }).assets.filter((asset) => asset.id !== id)
+  if (check.errors.length > 0 || !isMap(item) || JSON.stringify(item.toJSON()) !== JSON.stringify(intended) || JSON.stringify(others(check.toJSON())) !== JSON.stringify(others(doc.toJSON()))) {
+    throw new Error(`Refusing to write asset-manifest.yaml: the edit of ${id} did not round-trip`)
+  }
+  fs.writeFileSync(file, next)
 }

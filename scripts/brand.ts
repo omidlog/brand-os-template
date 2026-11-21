@@ -626,8 +626,31 @@ if (command === 'init') {
       console.log(reports.length === 0 ? 'No SVG assets in the manifest.' : `${reports.length} SVG asset(s) checked, ${failing} not publishable.`)
     }
     if (reports.some((report) => !report.ok)) process.exit(1)
+  } else if (sub === 'normalize') {
+    const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { id: { type: 'string' }, 'dry-run': { type: 'boolean', default: false }, json: { type: 'boolean', default: false } } })
+    const ids = [...(values.id ? [values.id] : []), ...positionals]
+    if (ids.length === 0) {
+      console.error('Usage: brand:assets normalize <asset.id> [more ids] [--dry-run] [--json]')
+      process.exit(2)
+    }
+    const { normalizeAsset } = await import('@brand-os/asset-catalog/normalize')
+    const reports = []
+    for (const id of ids) reports.push(await normalizeAsset(root, id, { dryRun: values['dry-run'] }))
+    if (values.json) console.log(JSON.stringify({ ok: reports.every((report) => report.ok), assets: reports }, null, 2))
+    else {
+      for (const report of reports) {
+        console.log(`${report.outcome.padEnd(15)} ${report.id}  ${report.reason}`)
+        if (report.original && report.outcome !== 'unchanged') console.log(`                original kept at ${report.original}`)
+        if (report.checksum_before && report.checksum_after && report.checksum_before !== report.checksum_after) console.log(`                sha256 ${report.checksum_before.slice(0, 12)}… -> ${report.checksum_after.slice(0, 12)}…`)
+        if (report.render_check) console.log(`                render check: ${report.render_check.result} (${report.render_check.renderer}${report.render_check.width ? `, ${report.render_check.width}x${report.render_check.height}` : ''})${report.render_check.detail ? ` ${report.render_check.detail}` : ''}`)
+        for (const issue of report.issues ?? []) console.log(`                ${issue.code}${issue.line ? ` line ${issue.line}` : ''}: ${issue.message}`)
+      }
+      if (reports.some((report) => report.approval === 'reset')) console.log('An approval was reset. The owner approves the new file with: npm run brand:assets -- approve --ids <id>')
+    }
+    if (reports.some((report) => !report.ok)) process.exit(1)
   } else {
     console.error('Usage: brand:assets check [--ids <asset.id,…>] [--json]')
+    console.error('       brand:assets normalize <asset.id> [--dry-run] [--json]')
     process.exit(sub ? 1 : 0)
   }
 } else if (command === 'finance') {
