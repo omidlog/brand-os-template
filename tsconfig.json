@@ -20,6 +20,6 @@
       "@brand-os/asset-catalog": ["packages/asset-catalog/src/index.ts"]
     }
   },
-  "include": ["packages/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
+  "include": ["packages/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "apps/studio/**/*.ts"],
   "exclude": ["node_modules", "apps/docs", "**/dist/**"]
 }
