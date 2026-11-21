@@ -417,6 +417,7 @@ if (command === 'init') {
       stage: { type: 'string' },
       'use-case': { type: 'string' },
       angle: { type: 'string' },
+      section: { type: 'string' },
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
@@ -466,6 +467,7 @@ if (command === 'init') {
     get_marketing_plan: () => core.getMarketingPlan(engine, ctx),
     get_business_plan: () => core.getBusinessPlan(engine, ctx),
     get_brand_status: () => core.getBrandStatus(engine, ctx),
+    draft_personal_content: () => core.draftPersonalContent(engine, q || 'professional-bio', ctx, values.section),
   }
   const handler = handlers[tool]
   if (!handler) {

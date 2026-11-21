@@ -122,7 +122,7 @@ export {
   searchMascotAssets,
 } from './query.js'
 export type { MascotFilters, RetrieveKind, RetrieveRequest, RetrievedItem, ToolResult } from './query.js'
-export { MASCOT_FILTER_KEYS } from './query.js'
+export { DRAFT_RULES, draftPersonalContent, MASCOT_FILTER_KEYS } from './query.js'
 export { asciiDigits, isStructuredType, normalizeStructured, parseStructured, STRUCTURED_FORMATS, STRUCTURED_TYPES, structuredFor } from './structured.js'
 export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, VoicePair } from './structured.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
@@ -140,8 +140,13 @@ export {
   ITEM_TAGS,
   MARKETING_PLAN,
   renderDocumentMarkdown,
+  buildEvidenceRegister,
+  buildPersonalDocument,
+  lengthReport,
+  PERSONAL_DOCUMENT_KINDS,
+  PERSONAL_SPECS,
 } from './documents/index.js'
-export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, DocumentSection, DocumentSpec, ItemTag, SectionSpec } from './documents/index.js'
+export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, DocumentSection, DocumentSpec, ItemTag, LengthReport, PersonalDocumentKind, SectionSpec } from './documents/index.js'
 export { evaluateCondition } from './conditions.js'
 export { validateRepo } from './validate-repo.js'
 export { PERSONAL_FACETS, PROPOSAL_STATES, PUBLICATION_REQUIREMENTS } from './types.js'
