@@ -36,6 +36,8 @@ export interface StudioConfig {
   /** Trust the first X-Forwarded-For hop (only behind the single reverse proxy on the same host). */
   trustProxy: boolean
   github: GitHubSettings
+  /** Periodic template check: minutes between runs (0 = off) and whether it opens update pull requests. */
+  templateCheck: { intervalMs: number; autoOpen: boolean }
 }
 
 export class ConfigError extends Error {
@@ -127,6 +129,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): StudioConfig {
   const sessionHours = intIn(env, 'STUDIO_SESSION_HOURS', 12, 1, 168, problems)
   const idleMinutes = intIn(env, 'STUDIO_IDLE_MINUTES', 60, 5, 1440, problems)
   const syncSeconds = intIn(env, 'STUDIO_SYNC_TTL_SECONDS', 300, 15, 86400, problems)
+  const checkMinutes = intIn(env, 'STUDIO_TEMPLATE_CHECK_MINUTES', 360, 0, 10080, problems)
+  if (checkMinutes > 0 && checkMinutes < 15) problems.push('STUDIO_TEMPLATE_CHECK_MINUTES must be 0 (off) or at least 15.')
+  const autoRaw = (optional(env, 'STUDIO_TEMPLATE_AUTO_PR') ?? '0').toLowerCase()
+  if (!['0', '1', 'true', 'false'].includes(autoRaw)) problems.push('STUDIO_TEMPLATE_AUTO_PR must be 0 or 1.')
+  const autoOpen = autoRaw === '1' || autoRaw === 'true'
 
   if (problems.length) throw new ConfigError(problems)
   return {
@@ -144,5 +151,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): StudioConfig {
     secureCookies: originUrl?.protocol === 'https:',
     trustProxy: env.STUDIO_TRUST_PROXY === '1' || env.STUDIO_TRUST_PROXY === 'true',
     github: { readToken, provisionToken, templateOwner, templateRepo, allowedOwners, webhookSecret },
+    templateCheck: { intervalMs: checkMinutes * 60_000, autoOpen },
   }
 }
