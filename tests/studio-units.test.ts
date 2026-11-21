@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { test } from 'node:test'
 import { RateLimiter } from '../apps/studio/src/auth/rate-limit.js'
 import { base32Encode, totpAt, TotpVerifier } from '../apps/studio/src/auth/totp.js'
 import { first, parseCookies, parseForm, safeLocalPath, serializeCookie } from '../apps/studio/src/http.js'
+import { Registry, type BrandRecord } from '../apps/studio/src/registry.js'
 import { catalog, i18n, isLocale, LOCALES, type MessageKey } from '../apps/studio/src/i18n/index.js'
 import { Client, OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET } from './helpers/studio-server.js'
 
-/** Small Studio modules that had no direct tests: the TOTP verifier's results, the rate limiter, HTTP helpers and the message catalogs. */
+/** Small Studio modules that had no direct tests: the TOTP verifier's results, the rate limiter, HTTP helpers, the registry and the message catalogs. */
 
 test('TOTP check tells a reused code apart from a wrong one', () => {
   const secret = base32Encode(Buffer.from('12345678901234567890'))
@@ -83,6 +87,49 @@ test('message catalogs: every locale has every key, the same placeholders, and r
   // Variables are filled in; unknown ones are left visible rather than silently dropped.
   assert.equal(i18n('en').t('login.rateLimited', { minutes: 15 }), 'Too many attempts. Try again in about 15 minutes.')
   assert.match(i18n('en').t('login.rateLimited'), /\{minutes\}/)
+})
+
+test('registry: persists records privately, drops invalid rows on load, returns copies', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-registry-'))
+  try {
+    const registry = new Registry(dir)
+    const record: BrandRecord = {
+      slug: 'acme',
+      display_name: 'Acme',
+      profile: 'business',
+      repo: { owner: 'Owner', name: 'Acme-Brand', id: 7, html_url: 'https://github.com/Owner/Acme-Brand', default_branch: 'main' },
+      source: 'registered',
+      created_at: '2026-01-01T00:00:00Z',
+      created_by: 'owner',
+      provisioning: null,
+    }
+    registry.upsert(record)
+    assert.throws(() => registry.upsert({ ...record, slug: '../etc' }), /invalid brand record/)
+    assert.throws(() => registry.upsert({ ...record, slug: 'other', repo: { ...record.repo, owner: 'bad owner!' } }), /invalid brand record/)
+    // Lookups are exact for slugs and case-insensitive for GitHub names; the id must match too.
+    assert.equal(registry.get('ACME'), null)
+    assert.equal(registry.get('x'.repeat(200)), null)
+    assert.equal(registry.byRepoName('owner', 'acme-brand')?.slug, 'acme')
+    assert.equal(registry.byRepository(7, 'OWNER/ACME-BRAND')?.slug, 'acme')
+    assert.equal(registry.byRepository(8, 'Owner/Acme-Brand'), null)
+    // Callers get copies: changing one does not change the stored record.
+    const copy = registry.get('acme')!
+    copy.display_name = 'Changed'
+    assert.equal(registry.get('acme')?.display_name, 'Acme')
+    // The file is owner-only, and a hand-edited invalid row is dropped on the next load.
+    const file = path.join(dir, 'registry.json')
+    if (process.platform !== 'win32') assert.equal(fs.statSync(file).mode & 0o777, 0o600)
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as { brands: unknown[] }
+    raw.brands.push({ ...record, slug: 'Not A Slug' })
+    fs.writeFileSync(file, JSON.stringify(raw))
+    const reloaded = new Registry(dir)
+    assert.deepEqual(reloaded.list().map((brand) => brand.slug), ['acme'])
+    assert.equal(reloaded.remove('acme'), true)
+    assert.equal(reloaded.remove('acme'), false)
+    assert.deepEqual(new Registry(dir).list(), [])
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('signing in again with an authentication code that was already used says to wait for a new code', async () => {
