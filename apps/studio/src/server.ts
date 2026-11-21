@@ -374,6 +374,10 @@ export function createStudio(deps: StudioDeps): {
       const messages = Object.fromEntries(Object.entries(errors).map(([field, code]) => [field, ctx.i.t(`wizard.error.${code}` as MessageKey)]))
       return wizard(ctx, 422, values, messages, undefined, previous)
     }
+    // A slug or repository another Studio brand already uses keeps its own, clearer message.
+    const bySlug = registry.get(request.slug)
+    const byRepo = registry.byRepoName(request.owner, request.repo)
+    if ((bySlug && bySlug.slug !== previous?.slug) || (byRepo && byRepo.slug !== previous?.slug)) return wizard(ctx, 409, values, {}, ctx.i.t('wizard.error.duplicate'), previous)
     // Check the name before creating anything, so a taken name is fixed here and not on a failed page.
     // If GitHub cannot answer, provisioning still checks the destination itself.
     const name = await withTimeout(provisioning.checkName({ owner: request.owner, repo: request.repo, slug: request.slug, retryOf: previous?.slug }), 10_000)
