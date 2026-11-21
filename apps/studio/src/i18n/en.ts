@@ -263,7 +263,7 @@ export const en = {
   'design.brandColorsEmpty': 'No color has been approved in the interview yet.',
   'design.typography': 'Typography',
   'design.typographyEmpty': 'No font has been approved in the interview yet.',
-  'design.fontNote': 'Studio does not load font files. A specimen uses the font only if it is installed on this device.',
+  'design.fontNote': 'Studio does not load brand font files. A specimen uses the font only if it is installed on this device.',
   'design.logo': 'Logo specification',
   'design.logoEmpty': 'No logo specification has been approved yet.',
   'design.voice': 'Voice',

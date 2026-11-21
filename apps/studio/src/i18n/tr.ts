@@ -262,7 +262,7 @@ export const tr: Messages = {
   'design.brandColorsEmpty': 'Görüşmede henüz hiçbir renk onaylanmadı.',
   'design.typography': 'Tipografi',
   'design.typographyEmpty': 'Görüşmede henüz hiçbir yazı tipi onaylanmadı.',
-  'design.fontNote': 'Studio yazı tipi dosyası yüklemez. Örnek, yazı tipini yalnızca bu cihazda yüklüyse kullanır.',
+  'design.fontNote': 'Studio markanın yazı tipi dosyalarını yüklemez. Örnek, yazı tipini yalnızca bu cihazda yüklüyse kullanır.',
   'design.logo': 'Logo belirtimi',
   'design.logoEmpty': 'Henüz onaylı bir logo belirtimi yok.',
   'design.voice': 'Ses tonu',

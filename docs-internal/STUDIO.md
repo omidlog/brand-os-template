@@ -51,6 +51,15 @@ There is no chat, no Claude or other AI integration, no interview UI, no fact ed
 
 Every brand page shows the branch, short SHA and sync time in the top bar. Data states are distinct: *not yet synced*, *synced*, *stale* (older than the sync TTL; a background refresh starts), *refresh failed* (the last good commit stays visible with the error), and per item *approved*, *draft*, *example*, *missing* and *withheld*. Missing information is never filled with sample data.
 
+## Look and feel
+
+Studio wears the omidataei.com identity, taken from that site's design system: monochrome surfaces with near-black ink, lime (`#d5fe00`) as the only signal colour (active page bar, eyebrows, current wizard step, empty states), a violet focus ring, Rajdhani display over Inter body text, pill buttons with the site's padding/gap hover morph, and 16px cards. The chrome follows the site's admin: an always-dark sidebar with the blueprint grid, a lime glow and the Omid Ataei logo, and a split sign-in page. Dark mode uses the site's footer palette.
+
+- Tokens live in `apps/studio/static/studio.css` as `--studio-*` variables. Brand colours still appear only inside specimens.
+- Fonts are self-hosted WOFF2 subsets in `apps/studio/static/fonts` (Inter, Rajdhani, Vazirmatn for Persian; SIL OFL, see `OFL.txt`). The site's Persian display face (Shams) is licensed to omidataei.com only and is not copied.
+- The logo (`logo-omid-ataei-white.svg`) and the lime key favicon are copies of the site's assets; update them here if the site changes.
+- Layout uses logical properties for RTL; motion respects `prefers-reduced-motion`; a browser test checks WCAG AA text contrast on the main pages in light and dark.
+
 ## Architecture
 
 ```text
@@ -143,12 +152,12 @@ All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-g
 - `tests/studio-provision.test.ts`: creation, personal profile, validation, duplicates, concurrent create, retry, partial-create cleanup, public-repository refusal, missing template, interrupted jobs.
 - `tests/studio-sync.test.ts`: merged-branch projection, edits made outside Studio, stale cache, cross-brand refusal, recreated repositories, concurrent refresh, credential guard.
 - `tests/studio-server.test.ts`: guest isolation, sign-in, the full owner journey, personal and mascot-free brands, forged slugs, no mutation endpoints, CSRF/Origin, wizard errors and GitHub failure with retry, stale and failed sync, webhooks, headers and static-bundle leaks, locales, sessions, configuration.
-- `tests/studio-browser.test.ts`: real headless Chrome over the DevTools protocol (no npm dependency). Owner journey with the progressive wizard and provisioning polling, every page at 1440/1024/390 px without horizontal overflow, static accessibility checks, keyboard (skip link, focus ring, mobile drawer with Escape and focus return), Persian RTL mirroring with LTR code, Turkish LTR, CSP enforcement and no third-party requests. These run inside `npm test` when Chrome is installed (`CHROME_PATH` or the usual paths) and **skip with a message when it is not**. `npm run test:e2e` requires a browser and fails without one. `STUDIO_E2E_SCREENSHOTS=<dir>` saves desktop/tablet/mobile screenshots in English and Persian for visual review.
+- `tests/studio-browser.test.ts`: real headless Chrome over the DevTools protocol (no npm dependency). Owner journey with the progressive wizard and provisioning polling, every page at 1440/1024/390 px without horizontal overflow, static accessibility checks, keyboard (skip link, focus ring, mobile drawer with Escape and focus return), Persian RTL mirroring with LTR code, Turkish LTR, the self-hosted fonts and logo, AA text contrast in light and dark, CSP enforcement and no third-party requests. These run inside `npm test` when Chrome is installed (`CHROME_PATH` or the usual paths) and **skip with a message when it is not**. `npm run test:e2e` requires a browser and fails without one. `STUDIO_E2E_SCREENSHOTS=<dir>` saves desktop/tablet/mobile screenshots in English and Persian for visual review.
 
 ## Known limits
 
 - One owner account. No SSO or multi-user roles.
 - Sessions and rate limits live in memory, so a restart signs the owner out. The registry and sync cache persist in `STUDIO_DATA_DIR`.
 - Interview question text and module guidance inside brand documents are English unless the brand repository has localized them; Studio's own interface is fully localized in en, fa and tr.
-- Font specimens use a family only if it is installed on the viewing device; Studio loads no font files.
+- Font specimens use a family only if it is installed on the viewing device; Studio never loads a brand's font files (it self-hosts only its own interface fonts).
 - Deployment to the VPS (reverse proxy, TLS, process supervision, DNS for `studio.omidataei.com`) is Phase 10 and not part of this change.
