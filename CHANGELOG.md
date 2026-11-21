@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — SVG checker, normalizer and asset approval
+
+Theme: an editor's SVG export should not be silently refused. Brand OS now says what is wrong, fixes what is safe to fix without changing the drawing, and ties asset approval to exact bytes.
+
+### Breaking changes
+
+- `npm run validate` now fails when a present SVG in the asset manifest is not publishable. The message names the problem and, when it is fixable, the command. Run `npm run brand:assets -- check` after a template update.
+- The check is stricter in two places: a prefixed XHTML element such as `<h:script>` is now refused (the regex gate missed it), and a non-SVG namespace or an unknown element is refused unless the normalizer can remove it.
+
+### Added
+
+- `checkSvg`: structured, namespace-aware SVG check with codes, lines and `fixable`. Internal `url(#id)` and gradient `href="#id"` references are allowed. A leading XML declaration is allowed.
+- `npm run brand:assets -- check | normalize <id> | approve --ids <id>`.
+- Normalizer on SVGO 4.1.0 (five plugins, no shape changes), originals kept in `brand/assets-src/`, `derived_from` and `normalizer` in the manifest, a pixel-identical render check (resvg) before an approval is carried.
+- Asset approval of exact bytes (`approved_sha256`), with the owner proof rules of the other approval commands.
+- Studio names the SVG problem and shows the fix command (en/fa/tr).
+- Fixtures from Illustrator, Inkscape and Figma; tests `svg-check`, `svg-assets`, `studio-svg-issues`.
+- devDependencies: `svgo` 4.1.0, `@resvg/resvg-js` 2.6.2.
+
 ## Unreleased — Phase 9: Read-only Brand OS Studio
 
 Theme: one private place to create brands and see their approved state, while all editing stays in Claude Code. Guide: `docs-internal/STUDIO.md`.

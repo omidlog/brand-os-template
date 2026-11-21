@@ -102,6 +102,20 @@ Branch `feat/phase-9-read-only-studio`, stacked on Phase 8. Guide, architecture 
 | VPS deployment | Not started | Phase 10: reverse proxy, TLS, process supervision, DNS for `studio.omidataei.com`. Nothing is deployed. |
 | Live GitHub | Not verified | All GitHub behavior is tested against a fake at the HTTP level. A first real run against GitHub (token permissions, template generation timing) is still owed. |
 
+## SVG checker, normalizer and asset approval
+
+Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Structured checker | Done | `checkSvg` in `packages/asset-catalog/src/svg-check.ts`, no dependencies. Parses the safe XML subset (no DOCTYPE, entities or processing instructions) and applies a namespace-aware element allowlist and an attribute blocklist. Each issue has a code, a line and `fixable`. `url(#id)` and `href="#id"` are allowed only to an element of the right kind in the same file (gradients, clip paths, masks, patterns, filters, markers). `inspectAssetForPublication` requires both this check and the older regex gate, so Studio, the docs build and MCP share one verdict. Fixed on the way: a leading `<?xml …?>` no longer refuses a file; a prefixed XHTML `<h:script>` is now refused. Live text is a warning. Test: `tests/svg-check.test.ts`. |
+| Check at ingest | Done | `npm run brand:assets -- check [--ids] [--json]`, and `npm run validate` (so CI) fails on any present SVG that is not publishable and prints the fix. |
+| Studio messages | Done | The asset card names the problem (en/fa/tr) and, when it is fixable, shows `npm run brand:assets -- normalize <id>`. No fix button; Studio stays read-only. Test: `tests/studio-svg-issues.test.ts`. |
+| Normalizer | Done | `npm run brand:assets -- normalize <id> [--dry-run]`. SVGO 4.1.0 with only removeComments, removeMetadata, removeEditorsNSData, inlineStyles and convertStyleToAttrs. Refused unless geometry attributes are byte-identical and both gates pass on the output. Original kept in `brand/assets-src/` (never served or published, included in backups); manifest records `derived_from` and `normalizer`. Only the changed keys of that asset are rewritten in the manifest. Separate entry `@brand-os/asset-catalog/normalize`, so the Studio bundle has no SVGO or rasterizer. |
+| Approval and normalizing | Done | An approved asset keeps its approval only if old and new files rasterize (resvg 2.6.2, 1024 px) to identical pixels: `approved_sha256`, `approval_carried_from`, `render_check`. Otherwise (or if the rasterizer is unavailable) it goes back to draft with `approval_reset`. |
+| `brand:assets approve` | Done | Owner approval of an asset's exact bytes (`approved_sha256`), with the same proof rules as `brand:tokens:approve`. Replaces approvals recorded by hand. `validate` flags an approved asset whose bytes changed. Test: `tests/svg-assets.test.ts` (Illustrator, Inkscape and Figma fixtures). |
+| Not done | — | `<use>` stays refused, even when it points inside the file. Raster previews generated on the server were not added. Asset publication (`approved_asset_ids`) still has no CLI. The checker filters attributes with a blocklist plus the regex gate; it does not have a full attribute allowlist. |
+
 ## Commands that this remediation expects to pass
 
 `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.
