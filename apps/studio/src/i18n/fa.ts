@@ -280,9 +280,11 @@ export const fa: Messages = {
   'design.specimen': 'The quick brown fox jumps over the lazy dog 0123456789',
 
   'assets.title': 'دارایی‌ها و مسکات',
-  'assets.subtitle': 'فهرست دارایی‌ها از brand/assets. فقط فایل‌های تأییدشده‌ای که از بررسی انتشار عبور می‌کنند پیش‌نمایش دارند.',
+  'assets.subtitle': 'فهرست دارایی‌ها از brand/assets. فایل‌های تأییدشده و پیش‌نویس‌هایی که از بررسی امنیتی عبور می‌کنند پیش‌نمایش دارند؛ پیش‌نویس‌ها علامت‌گذاری شده‌اند و تأیید نشده‌اند. مستندات عمومی فقط دارایی‌های تأییدشده را منتشر می‌کنند.',
   'assets.empty': 'فهرست دارایی‌ها خالی است.',
   'assets.filter': 'فیلتر بر اساس نوع',
+  'assets.draftFlag': 'پیش‌نویس، تأیید نشده',
+  'assets.draftAlt': '{name} (پیش‌نویس، تأیید نشده)',
   'assets.noPreview': 'بدون پیش‌نمایش',
   'assets.reason.not_approved': 'تأیید نشده',
   'assets.reason.not_present': 'فایل در مخزن نیست',
