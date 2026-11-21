@@ -102,6 +102,18 @@ Branch `feat/phase-9-read-only-studio`, stacked on Phase 8. Guide, architecture 
 | VPS deployment | Not started | Phase 10: reverse proxy, TLS, process supervision, DNS for `studio.omidataei.com`. Nothing is deployed. |
 | Live GitHub | Not verified | All GitHub behavior is tested against a fake at the HTTP level. A first real run against GitHub (token permissions, template generation timing) is still owed. |
 
+## Knowledge Inbox (Baalda-inspired)
+
+Branch `feat/knowledge-inbox`. Guide: `docs-internal/KNOWLEDGE.md`. Review: `docs-internal/KNOWLEDGE_LAYER_IMPLEMENTATION_REVIEW.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| A0 Studio filter | Done | `brand/knowledge/**` blocked except `brand/knowledge/shared/*.md`, checked first. |
+| A1 Notes and storage | Done | Local by default in `brand/.private/knowledge`, encrypted restricted notes, stable ids, reader-computed revisions, archive/restore, snapshots, backup coverage. Works with no `brand/knowledge`. |
+| A2 Search and links | Done | fa/tr/en normalization, deterministic ranking, filters, pagination, typed links, backlinks, related, duplicate suggestions. In-process index; no FTS or embeddings. |
+| A3 Safe edits | Done | Required revision, unique anchors, per-note O_EXCL lock, idempotent append; concurrency tested with six processes. |
+| Share to Git | Done | Dry-run preview, fail-closed visibility (origin + GitHub CLI, or owner confirmation naming origin), credential/personal/restricted refusal. Not publication. |
+
 ## Commands that this remediation expects to pass
 
 `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.

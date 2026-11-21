@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — Knowledge Inbox (Baalda-inspired)
+
+Theme: capture messy ideas per brand, find them in fa/tr/en, link them, and turn them into draft proposals without ever bypassing approval. Guide: `docs-internal/KNOWLEDGE.md`.
+
+### Breaking changes
+
+- None. Brands without `brand/knowledge` keep working with zero notes and no flag.
+
+### Security
+
+- Studio's archive filter now blocks every `brand/knowledge/**` path except `brand/knowledge/shared/*.md`, checked before any other rule (it was a blocklist, so committed caches or link files would have reached Studio).
+
+### Added
+
+- `packages/brand-core/src/knowledge/`: note model (`kn_<uuid>`, reader-computed sha256 revision), local-by-default store under `brand/.private/knowledge`, AES-256-GCM restricted notes, revision-checked edits with anchors, per-note locks, snapshots and recovery, idempotent append, archive/restore, fa/tr/en search, links/backlinks/related/duplicates, fail-closed share to Git, doctor and migrate.
+- `npm run brand:knowledge` (`scripts/knowledge.ts`).
+- `brand:backup` now includes `brand/knowledge`.
+- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`.
+
 ## Unreleased — Phase 9: Read-only Brand OS Studio
 
 Theme: one private place to create brands and see their approved state, while all editing stays in Claude Code. Guide: `docs-internal/STUDIO.md`.
