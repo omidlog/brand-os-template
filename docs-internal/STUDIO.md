@@ -4,7 +4,7 @@ Studio (`apps/studio`) is a private, owner-only web app. It has three jobs:
 
 1. **Create** a new brand: one new private GitHub repository from this template, with a safe initial configuration.
 2. **Show** each brand: the approved, source-backed state of its merged default branch.
-3. **Offer template updates**: show **Updates available** when the template moved on, and open (never merge) an update pull request when the owner asks.
+3. **Offer template updates**: show **Updates available** when the template moved on, and open (never merge) an update pull request when the owner asks (or, with `STUDIO_TEMPLATE_AUTO_PR=1`, from the periodic check).
 
 Studio does not edit brands. All ongoing work (interviews, proposals, documents, assets, tokens, commits and pull requests) happens in **Claude Code, inside that brand's own repository**. Approval and publication stay with the owner's trusted local CLI. Phase 8 Personal Brand OS remains fully supported. Studio shows personal brands read-only and does not edit them.
 
@@ -24,7 +24,7 @@ There is no chat, no Claude or other AI integration, no interview UI, no fact ed
 | `POST /brands/<slug>/template-update` | **Open update PR**, Studio's second GitHub write: one commit on a new `template-update/<sha>` branch and one pull request in the brand repository. Never the default branch, never a merge |
 | `POST /webhooks/github` | Marks a brand's cache stale (signed push events only) |
 
-`PUT`, `PATCH` and `DELETE` answer 405. Once a repository exists, the only thing Studio ever writes to it is an update branch and its pull request, and only when the owner presses **Open update PR**.
+`PUT`, `PATCH` and `DELETE` answer 405. Once a repository exists, the only thing Studio ever writes to it is an update branch and its pull request, and only when the owner presses **Open update PR** or, if the owner turned on `STUDIO_TEMPLATE_AUTO_PR=1`, when the periodic template check finds a brand behind.
 
 ## The owner journey
 
@@ -154,7 +154,24 @@ Each brand repository is an independent copy made from the template. When Studio
 - **Idempotent.** An open pull request from a `template-update/` branch is linked instead of opening another; a branch left by an earlier attempt is reused, never moved; concurrent requests for one brand are refused as busy.
 - **Never**: pushing to the default branch, merging, force-moving a branch, writing to a public repository or to a repository outside `STUDIO_ALLOWED_OWNERS`.
 
-The provisioning credential therefore also needs **Pull requests: write** on the allowlisted destinations (Contents: write is already required). Without it, the button reports that the pull request could not be opened. Planned: a periodic job that does the same for every brand. See `docs/template-sync.md`.
+The provisioning credential therefore also needs **Pull requests: write** on the allowlisted destinations (Contents: write is already required). Without it, the button reports that the pull request could not be opened. See `docs/template-sync.md`.
+
+### Periodic template check
+
+`apps/studio/src/template-update-job.ts` runs in the background, started by `main.ts` (never by tests or CLI commands):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `STUDIO_TEMPLATE_CHECK_MINUTES` | `360` | Minutes between runs, ±10 % jitter. `0` turns the job off; otherwise at least 15. The first run is within about 5 minutes of start. |
+| `STUDIO_TEMPLATE_AUTO_PR` | `0` | `0`: check only; the result feeds **Updates available** and the owner opens pull requests by hand. `1`: also open an update pull request for each brand that is behind. |
+
+- Each run reads the template head once through the cached update service (GET only) and compares it with every ready brand's recorded commit from the sync cache.
+- **At most one open update pull request per brand.** A brand whose history already shows an open `template-update/` pull request is only linked. Otherwise the job calls the same `openUpdatePull` as the button, which looks for an open update pull request on GitHub first and links it instead of opening another; a branch left by an earlier attempt is reused. It never writes the default branch and never merges.
+- Only brands in `STUDIO_ALLOWED_OWNERS` can get a pull request; others are reported as `not_allowed`.
+- Errors double the wait (up to a day); a rate limit waits at least an hour and ends the run early. A successful run resets the wait.
+- One run at a time, one brand after another, on an `unref`'d timer: page requests never wait for it. On `SIGTERM`/`SIGINT` the timer is cancelled and a run in progress stops after the brand it is on.
+- Audit: each run appends `{"action":"template_update_check","actor":"periodic-job",...}` with counts (brands, available, opened, linked, failed) to `STUDIO_DATA_DIR/audit.jsonl`; each pull request it opens is a `template_update_pull` entry with the actor `periodic-job`.
+- Without a provisioning credential the job does not start.
 
 ## Tests
 
@@ -164,6 +181,7 @@ All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-g
 - `tests/studio-provision.test.ts`: creation, personal profile, validation, duplicates, concurrent create, retry, partial-create cleanup, public-repository refusal, missing template, interrupted jobs.
 - `tests/studio-sync.test.ts`: merged-branch projection, edits made outside Studio, stale cache, cross-brand refusal, recreated repositories, concurrent refresh, credential guard.
 - `tests/studio-server.test.ts`: guest isolation, sign-in, the full owner journey, personal and mascot-free brands, forged slugs, no mutation endpoints, CSRF/Origin, wizard errors and GitHub failure with retry, stale and failed sync, webhooks, headers and static-bundle leaks, locales, sessions, configuration.
+- `tests/studio-template-update-job.test.ts`: the periodic check with fake timers: check-only default, one pull request per brand with the flag on, linking an open one, refused accounts, jitter, back-off and rate limits, clean stop, configuration.
 - `tests/studio-template-update.test.ts`: the update check (cache, rate-limit back-off), the update pull request (core files only, brand files byte-identical, default branch unmoved, conflicts reported, audit), idempotency, branch reuse, busy and refused brands, and the route (guest, CSRF, Origin, flash, en/fa/tr).
 - `tests/studio-browser.test.ts`: real headless Chrome over the DevTools protocol (no npm dependency). Owner journey with the progressive wizard and provisioning polling, every page at 1440/1024/390 px without horizontal overflow, static accessibility checks, keyboard (skip link, focus ring, mobile drawer with Escape and focus return), Persian RTL mirroring with LTR code, Turkish LTR, the self-hosted fonts and logo, AA text contrast in light and dark, CSP enforcement and no third-party requests, and the template update indicator and **Open update PR** (accessible, RTL, no overflow). These run inside `npm test` when Chrome is installed (`CHROME_PATH` or the usual paths) and **skip with a message when it is not**. `npm run test:e2e` requires a browser and fails without one. `STUDIO_E2E_SCREENSHOTS=<dir>` saves desktop/tablet/mobile screenshots in English and Persian for visual review.
 

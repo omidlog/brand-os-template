@@ -47,7 +47,7 @@ The template repository is private, so a brand repository's own `GITHUB_TOKEN` c
 - **Open update PR** (owner only) does what `template:update --apply` does, through the GitHub API: core files the brand never edited are updated, shared files are merged, brand files are skipped, and files that need a person are listed in the pull request. The result is one commit on a new branch `template-update/<sha>` and one pull request.
 - If an update pull request is already open, Studio links it instead of opening another.
 - Studio **opens** update pull requests and never merges them. This is Studio's second permitted write, after creating a new private repository. It never writes brand files (apart from moving `brand/template-version.json` forward), facts, approvals or the default branch. Every request is recorded in Studio's audit log.
-- Planned: a periodic job that does the same for every brand.
+- **Periodic check.** Studio checks every brand against the template on its own, every 6 hours by default (`STUDIO_TEMPLATE_CHECK_MINUTES`; `0` turns it off). By default it only checks, so the brand list shows **Updates available** without anyone opening the page. Set `STUDIO_TEMPLATE_AUTO_PR=1` and it also opens the update pull request for each brand that is behind. It keeps at most one open update pull request per brand: if one is open, it links it and opens nothing. If GitHub fails or limits requests, it waits longer before trying again. Each run is written to the audit log.
 
 ## Plan
 
@@ -55,7 +55,7 @@ The template repository is private, so a brand repository's own `GITHUB_TOKEN` c
 | --- | --- | --- |
 | 1 | Manifest (`.brand-os/sync.json`), template version record, `template:update` CLI with dry run and apply on a new branch, tests with throwaway git repositories | Done in part 1 |
 | 2 | Studio: record the template commit at creation, **Updates available** indicator, **Open update PR** through the GitHub API (mocked in tests); document the second write | Done |
-| 3 | Studio periodic job: check every brand and open at most one open update PR per brand; skip when one is already open | Planned |
+| 3 | Studio periodic job: check every brand and open at most one open update PR per brand; skip when one is already open. Opening is off unless `STUDIO_TEMPLATE_AUTO_PR=1` | Done |
 | 4 | Versioned migrations for breaking changes (`.brand-os/migrations/<version>`), run by the update and listed in the PR | Planned |
 | 5 | Optional brand-side GitHub Action ("Template update") for owners who add a repository secret that can read the template | Planned |
 | 6 | Fake-brand end-to-end test: create, change template, update PR, merge locally, second update is empty | Planned |
