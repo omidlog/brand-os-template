@@ -4,6 +4,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { assertNoSecrets, buildProjection } from '../apps/studio/src/projection.js'
+import { createHash } from 'node:crypto'
+import { parse, stringify } from 'yaml'
 import { addApprovedAsset, approve, editOutsideStudio, PNG } from './helpers/edits.js'
 import { harness, OWNER, provisioned } from './helpers/studio.js'
 
@@ -66,12 +68,65 @@ test('an edit merged outside Studio appears after refresh with its new SHA, sour
   assert.equal(primary.approved, true)
   assert.match(primary.preview_key ?? '', /^[0-9a-f]{64}$/)
   assert.ok(h.sync.previewFile(req.slug, primary.preview_key!))
+  assert.equal(primary.preview_state, 'approved')
   const draft = projection.assets.find((asset) => asset.id === 'asset.logo.draft')!
-  assert.equal(draft.preview_key, null)
-  assert.equal(draft.unavailable_reason, 'not_approved')
+  assert.equal(draft.approved, false)
+  assert.equal(draft.published, false)
+  assert.equal(draft.preview_state, 'draft', 'the owner previews a draft, labeled as a draft')
+  assert.equal(draft.unavailable_reason, null)
+  assert.ok(h.sync.previewFile(req.slug, draft.preview_key!))
   assert.equal(h.sync.previewFile(req.slug, 'f'.repeat(64)), null)
   assert.equal(h.sync.previewFile(req.slug, '../state.json'), null)
   assert.equal(after.history!.commits[0]?.sha, sha)
+})
+
+const UNSAFE_SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
+const SAFE_SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2"><rect width="2" height="2" fill="#123456"/></svg>')
+
+test('draft assets: previewed for the owner only after the same safety checks; rejected, unsafe or tampered drafts are not', async () => {
+  const h = harness()
+  const req = await provisioned(h)
+  editOutsideStudio(h, req.repo, (_engine, root) => {
+    addApprovedAsset(root, { id: 'asset.mascot.stage-1', name: 'Mascot stage 1', file: 'brand/assets/mascot/stage-1.svg', data: SAFE_SVG, status: 'draft' })
+    addApprovedAsset(root, { id: 'asset.mascot.proposed', name: 'Proposed', file: 'brand/assets/mascot/proposed.png', data: PNG, status: 'proposed' })
+    addApprovedAsset(root, { id: 'asset.mascot.nosum', name: 'No checksum', file: 'brand/assets/mascot/nosum.png', data: Buffer.concat([PNG, Buffer.from([0])]), status: 'draft' })
+    addApprovedAsset(root, { id: 'asset.mascot.unsafe', name: 'Unsafe', file: 'brand/assets/mascot/unsafe.svg', data: UNSAFE_SVG, status: 'draft' })
+    addApprovedAsset(root, { id: 'asset.mascot.tampered', name: 'Tampered', file: 'brand/assets/mascot/tampered.png', data: PNG, status: 'draft' })
+    addApprovedAsset(root, { id: 'asset.mascot.rejected', name: 'Rejected', file: 'brand/assets/mascot/rejected.png', data: PNG, status: 'rejected' })
+    addApprovedAsset(root, { id: 'asset.mascot.escape', name: 'Escape', file: 'brand/assets/../outside.png', data: PNG, status: 'draft' })
+    const file = path.join(root, 'brand/assets/asset-manifest.yaml')
+    const manifest = parse(fs.readFileSync(file, 'utf8')) as { assets: Array<Record<string, unknown>> }
+    for (const asset of manifest.assets) {
+      if (asset.id === 'asset.mascot.nosum') delete asset.checksum_sha256
+      if (asset.id === 'asset.mascot.tampered') asset.checksum_sha256 = 'a'.repeat(64)
+    }
+    fs.writeFileSync(file, stringify(manifest))
+  })
+  const projection = (await h.sync.refresh(req.slug)).projection!
+  const by = (id: string) => projection.assets.find((asset) => asset.id === id)!
+
+  for (const id of ['asset.mascot.stage-1', 'asset.mascot.proposed', 'asset.mascot.nosum']) {
+    const asset = by(id)
+    assert.equal(asset.preview_state, 'draft', id)
+    assert.equal(asset.approved, false, `${id} is never presented as approved`)
+    assert.equal(asset.published, false, `${id} never publishes`)
+    const file = h.sync.previewFile(req.slug, asset.preview_key!)
+    assert.ok(file, id)
+    assert.equal(createHash('sha256').update(fs.readFileSync(file.file)).digest('hex'), asset.preview_key, 'the key is the content hash')
+  }
+  assert.equal(h.sync.previewFile(req.slug, by('asset.mascot.stage-1').preview_key!)?.mime, 'image/svg+xml')
+
+  for (const [id, reason] of [['asset.mascot.unsafe', 'unsafe'], ['asset.mascot.tampered', 'checksum'], ['asset.mascot.rejected', 'not_approved'], ['asset.mascot.escape', 'unsafe']] as const) {
+    const asset = by(id)
+    assert.equal(asset.preview_key, null, id)
+    assert.equal(asset.preview_state, null, id)
+    assert.equal(asset.unavailable_reason, reason, id)
+  }
+  // Nothing unsafe reaches the preview cache.
+  const dir = path.dirname(h.sync.previewFile(req.slug, by('asset.mascot.stage-1').preview_key!)!.file)
+  const keys = projection.assets.flatMap((asset) => (asset.preview_key ? [asset.preview_key] : []))
+  assert.deepEqual(fs.readdirSync(dir).sort(), [...new Set(keys)].sort())
+  for (const name of fs.readdirSync(dir)) assert.equal(fs.readFileSync(path.join(dir, name)).includes('<script'), false)
 })
 
 test('stale cache: a failed refresh keeps the last good projection and reports the error and staleness', async () => {
