@@ -77,7 +77,8 @@ npm run build
 | `npm run example:education` | Education-app fixture in a temp directory |
 | `npm run example:b2b` | Mascot-free B2B fixture in a temp directory |
 | `npm run studio:start` | Start the private read-only Studio on `127.0.0.1:4100` (configuration from the environment, see `apps/studio/.env.example`). |
-| `npm run studio:hash-password`, `npm run studio -- totp-secret\|session-secret\|brands\|register\|unregister` | Owner server commands for Studio: password hash, secrets, and registering an existing private brand repository. |
+| `npm run studio -- bootstrap-owner\|check-config\|brands\|register\|unregister` | Owner server commands for Studio: owner sign-in material (password hash, TOTP key, session secret) as a 0600 env file, configuration check, and registering an existing private brand repository. `npm run studio:hash-password` and `-- totp-secret\|session-secret` remain. |
+| `npm run studio:build` | Bundle Studio for production (`apps/studio/dist`), as the Docker image does. |
 | `npm run test:e2e` | Studio browser tests in headless Chrome (they also run inside `npm test` when Chrome is installed, and skip otherwise). |
 
 Details: `docs-internal/SETUP.md`.
@@ -158,7 +159,7 @@ One private Studio shows every brand at `/brands/<slug>` and creates new ones. I
 3. Edit in Claude Code, approve facts yourself with the local CLI, and merge the pull request.
 4. Refresh Studio: it shows the merged default branch with its commit SHA and sync time, cited documents, tokens, approved assets, history and open pull requests (labelled non-canonical).
 
-Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub write is creating a new repository. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. Deployment to a server is a separate step and not part of this template yet.
+Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub write is creating a new repository. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. The production package for a VPS behind an existing reverse proxy is `infra/production`, with runbooks in `docs-internal/phase-10/`. Nothing is deployed by this repository.
 
 ## Agent instructions
 

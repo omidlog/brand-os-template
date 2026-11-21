@@ -24,4 +24,6 @@ Do not deploy `brand/restricted/`, `brand/interview/answer-ledger.yaml`, or `bra
 
 ## Studio
 
-Brand OS Studio (`apps/studio`) is a Node server, not a static site. Run it behind a TLS reverse proxy on a server you control, bound to `127.0.0.1`, with `STUDIO_PUBLIC_ORIGIN` set to its https origin and TOTP configured. Never host it on a public static host and never deploy the internal docs build in its place. The VPS deployment package (process supervision, proxy, DNS) is a separate phase and not included yet. Configuration: `apps/studio/.env.example`; guide: `docs-internal/STUDIO.md`.
+Brand OS Studio (`apps/studio`) is a Node server, not a static site. Run it behind a TLS reverse proxy on a server you control, reachable only by that proxy, with `STUDIO_PUBLIC_ORIGIN` set to its https origin and TOTP configured. Never host it on a public static host and never deploy the internal docs build in its place.
+
+The production package for the owner's VPS is `infra/production` (Dockerfile, Compose publishing only `172.18.0.1:8083`, the site block for the existing edge Caddy, `.env.example`, smoke test, backup and restore). Runbooks and the launch handoff are in `docs-internal/phase-10/` (`DEPLOY.md`, `GROK_HANDOFF.md`, `OPERATIONS.md`, `DEPLOYMENT_CONTRACT.md`, `ARCHITECTURE.md`, `SECURITY_REVIEW.md`, `CLAUDE_EDITING_WORKFLOW.md`). Nothing is deployed by this repository. Guide: `docs-internal/STUDIO.md`.

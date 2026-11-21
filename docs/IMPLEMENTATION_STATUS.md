@@ -97,10 +97,27 @@ Branch `feat/phase-9-read-only-studio`, stacked on Phase 8. Guide, architecture 
 | Screens | Done | My brands, New brand wizard, provisioning status, Overview, Brand Book, Design System, Assets & Mascot, Business OS, Personal Brand (only when enabled), History & Review (open PRs labelled non-canonical), GitHub & Claude Code handoff, Account & GitHub. |
 | Design and accessibility | Done | `studio.*` design variables, light and dark, responsive (1440/1024/390 px checked in a browser), skip link, focus ring, keyboard drawer, labelled fields, status as text plus icon. |
 | Localization | Done | en, fa (RTL, layout mirroring verified in a browser) and tr catalogs with identical keys and placeholders. Brand content inside documents stays in the language the repository holds. |
-| Server CLI | Done | `npm run studio:hash-password`, `npm run studio -- totp-secret\|session-secret\|brands\|register\|unregister`. Registering an existing repository is server-side only. No automated tests for the CLI wrapper itself; it calls the tested registry, hashing and GitHub client. |
+| Server CLI | Done | `npm run studio:hash-password`, `npm run studio -- totp-secret\|session-secret\|brands\|register\|unregister`. Registering an existing repository is server-side only. Phase 10 prep added `bootstrap-owner` and `check-config` and process-level CLI tests (`tests/studio-cli.test.ts`, `tests/studio-deploy.test.ts`). |
 | Tests | Done | 48 Studio tests in five files with an in-memory GitHub (no network, no real repositories). `tests/studio-browser.test.ts` drives headless Chrome inside `npm test` when Chrome is installed and skips otherwise; `npm run test:e2e` requires it. |
-| VPS deployment | Not started | Phase 10: reverse proxy, TLS, process supervision, DNS for `studio.omidataei.com`. Nothing is deployed. |
+| VPS deployment | Package ready (Phase 10 prep) | See "Phase 10 prep" below. Nothing is deployed. |
 | Live GitHub | Not verified | All GitHub behavior is tested against a fake at the HTTP level. A first real run against GitHub (token permissions, template generation timing) is still owed. |
+
+## Phase 10 prep: VPS deployment package
+
+Branch `feat/phase-10-prep`, stacked on Phase 9. Docs: `docs-internal/phase-10/`. **Nothing is deployed.** No VPS, DNS, Caddy or GitHub change was made, and no real repository was created. The live launch is the operator's (`docs-internal/phase-10/GROK_HANDOFF.md`).
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Auth hardening behind a proxy | Done | Rightmost `X-Forwarded-For` hop, Host allowlist (`421`), health readiness (`503` on an unwritable data dir), keep-alive above the proxy's. Test: `tests/studio-hardening.test.ts`. |
+| Owner bootstrap | Done | `studio bootstrap-owner` (0600 env file, TOTP verified on a terminal) and `studio check-config`. Test: `tests/studio-cli.test.ts` (runs the real CLI). |
+| Production bundle | Done | `npm run studio:build` (esbuild, pinned). The build refuses `brand/`, docs and `.env` inputs. |
+| Image and Compose | Done, not built here | Digest-pinned base, non-root, read-only root, `cap_drop: ALL`, 512 MiB, health check, `restart: unless-stopped`, `./data` volume, published only on `172.18.0.1:8083`. Static checks in `tests/studio-deploy.test.ts`. The image build and container run are in `.github/workflows/studio-image.yml`, which has not run here (no Docker in this environment). |
+| Caddy site block | Done | `infra/production/Caddyfile.studio`. Validated with a real Caddy 2.11.2 without warnings, and the bundle served behind it passes the smoke test. |
+| Smoke test, backup, restore | Done | `infra/production/*.sh`. The smoke test is proven to fail on a leaky server. The restore refuses traversal, links, a bad checksum and a non-empty target. |
+| Browser tests (production shape) | Done | `tests/studio-browser-production.test.ts`: HTTPS through a TLS proxy, `__Host-` cookies, CSRF from same-site and cross-site origins, CORS and framing, foreign Host. |
+| Docs and handoff | Done | Architecture, deployment contract, operations, deploy runbook, Grok handoff, Claude editing workflow, security review. |
+| Live GitHub | Not verified | The template is private. Token type and scopes for template generation are an open owner decision and must be confirmed live with an owner-authorized test repository. |
+| Live VPS | Not started | Operator step after review. |
 
 ## Commands that this remediation expects to pass
 
