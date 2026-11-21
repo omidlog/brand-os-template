@@ -18,6 +18,8 @@ const RELATIVE = [
   'brand/tokens',
   'brand/templates',
   'brand/generated',
+  // Shared knowledge notes. Local, restricted (encrypted) notes and their snapshots are under brand/.private.
+  'brand/knowledge',
   'brand/brand.config.yaml',
   'brand/brand-manifest.json',
   'brand/publication-policy.yaml',

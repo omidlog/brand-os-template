@@ -178,3 +178,4 @@ export type { FinanceBasis, FinanceInputs, FinancePeriod, FinanceReport, Finance
 export { FinanceInputPathError, resolveFinanceInputPath, RESTRICTED_FINANCE_DIR, runFinanceFile } from './finance-input.js'
 export { isMascotLifecycle, MASCOT_LIFECYCLE, migrateMascotCatalog, validateMascotLifecycle } from './mascot-lifecycle.js'
 export type { MascotArtwork, MascotLifecycle, MascotMigration } from './mascot-lifecycle.js'
+export * from './knowledge/index.js'
