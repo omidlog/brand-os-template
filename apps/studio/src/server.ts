@@ -1,7 +1,6 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import path from 'node:path'
 import { verifyPassword } from './auth/password.js'
 import { RateLimiter } from './auth/rate-limit.js'
 import { loginCsrfToken, safeEqual, SessionStore, type Session } from './auth/session.js'
@@ -26,6 +25,7 @@ import {
 import { i18n, isLocale, type I18n, type Locale, type MessageKey } from './i18n/index.js'
 import { validateRequest, type ProvisioningService } from './provision.js'
 import type { BrandRecord, Registry } from './registry.js'
+import { sendStatic, studioAssets } from './static-assets.js'
 import { brandIsReady, type SyncService } from './sync.js'
 import type { SafeHtml } from './views/html.js'
 import type { BrandView, ViewContext } from './views/layout.js'
@@ -75,7 +75,6 @@ interface RequestContext {
   raw: Buffer
 }
 
-const STATIC_DIR = path.resolve(import.meta.dirname, '..', 'static')
 const STATIC_FILES: Record<string, string> = {
   'studio.css': 'text/css; charset=utf-8',
   'studio.js': 'text/javascript; charset=utf-8',
@@ -220,11 +219,8 @@ export function createStudio(deps: StudioDeps): {
     const name = match[1] ?? ''
     const type = STATIC_FILES[name]
     if (!type) return notFound(ctx)
-    ctx.res.statusCode = 200
-    ctx.res.setHeader('Content-Type', type)
-    // Font files never change under the same name; everything else may change on deploy.
-    ctx.res.setHeader('Cache-Control', name.startsWith('fonts/') ? 'public, max-age=604800' : 'public, max-age=300')
-    ctx.res.end(fs.readFileSync(path.join(STATIC_DIR, name)))
+    // Served from memory with an ETag; see static-assets.ts for the cache policy.
+    sendStatic(ctx.req, ctx.res, name, type, studioAssets.get(name), ctx.url.searchParams.get('v'))
   }
 
   function showLogin(ctx: RequestContext, options: { error?: string; status?: number; login?: string; invalid?: 'credentials' | 'totp' } = {}): void {

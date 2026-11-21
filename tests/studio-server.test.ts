@@ -330,7 +330,7 @@ test('security headers, no tokens in any response, and the static bundle carries
       for (const secret of [READ_TOKEN, PROVISION_TOKEN, WEBHOOK_SECRET, s.config.ownerPasswordHash, 'JBSWY3DPEHPK3PXP', s.config.sessionSecret.toString('base64'), 'DECOY']) {
         assert.equal(text.includes(secret), false, `${pathname} leaks ${secret.slice(0, 12)}`)
       }
-      assert.equal(/<script(?![^>]*src="\/static\/studio\.js")/.test(text), false, `${pathname} has no inline script`)
+      assert.equal(/<script(?![^>]*src="\/static\/studio\.js\?v=[A-Za-z0-9_-]+")/.test(text), false, `${pathname} has no inline script`)
       assert.equal(/\sstyle="/.test(text), false, `${pathname} has no inline style`)
       assert.equal(/\son[a-z]+="/.test(text), false, `${pathname} has no inline handlers`)
     }

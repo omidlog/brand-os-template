@@ -59,6 +59,7 @@ Studio wears the omidataei.com identity, taken from that site's design system: m
 
 - Tokens live in `apps/studio/static/studio.css` as `--studio-*` variables. Brand colours still appear only inside specimens.
 - Fonts are self-hosted WOFF2 subsets in `apps/studio/static/fonts` (Inter, Rajdhani, Vazirmatn for Persian; SIL OFL, see `OFL.txt`). The site's Persian display face (Shams) is licensed to omidataei.com only and is not copied.
+- Static files (CSS, script, icons, fonts) are read once into memory by `apps/studio/src/static-assets.ts` and served with an ETag, so a revalidation is a body-less `304`. Pages link CSS and JS as `/static/<name>?v=<content hash>`; only a matching hash is cached for a year (`immutable`). Plain names and old hashes get five minutes, fonts a week. A restart (every deploy) reloads the files; the CSP is unchanged.
 - The logo (`logo-omid-ataei-white.svg`) and the lime key favicon are copies of the site's assets; update them here if the site changes.
 - Layout uses logical properties for RTL; motion respects `prefers-reduced-motion`; a browser test checks WCAG AA text contrast on the main pages in light and dark.
 
@@ -152,6 +153,7 @@ All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-g
 
 - `tests/studio-github.test.ts`: client retries and redaction, tar safety, redirect handling, webhook signatures.
 - `tests/studio-provision.test.ts`: creation, personal profile, validation, duplicates, concurrent create, retry, partial-create cleanup, public-repository refusal, missing template, interrupted jobs.
+- `tests/studio-static.test.ts`: in-memory static files, ETag and `304`, versioned CSS/JS links and the cache policy.
 - `tests/studio-sync.test.ts`: merged-branch projection, edits made outside Studio, stale cache, cross-brand refusal, recreated repositories, concurrent refresh, credential guard.
 - `tests/studio-server.test.ts`: guest isolation, sign-in, the full owner journey, personal and mascot-free brands, forged slugs, no mutation endpoints, CSRF/Origin, wizard errors and GitHub failure with retry, stale and failed sync, webhooks, headers and static-bundle leaks, locales, sessions, configuration.
 - `tests/studio-browser.test.ts`: real headless Chrome over the DevTools protocol (no npm dependency). Owner journey with the progressive wizard and provisioning polling, every page at 1440/1024/390 px without horizontal overflow, static accessibility checks, keyboard (skip link, focus ring, mobile drawer with Escape and focus return), Persian RTL mirroring with LTR code, Turkish LTR, the self-hosted fonts and logo, AA text contrast in light and dark, CSP enforcement and no third-party requests. These run inside `npm test` when Chrome is installed (`CHROME_PATH` or the usual paths) and **skip with a message when it is not**. `npm run test:e2e` requires a browser and fails without one. `STUDIO_E2E_SCREENSHOTS=<dir>` saves desktop/tablet/mobile screenshots in English and Persian for visual review.
