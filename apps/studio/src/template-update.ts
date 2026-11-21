@@ -2,7 +2,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   classifyPath,
+  formatMigrationRuns,
   isWriteAction,
+  migrationFiles,
+  migrationPaths,
+  MIGRATIONS_DIR,
+  parseMigration,
+  pendingMigrations,
+  planMigrations,
   parseSyncManifest,
   planChanges,
   SYNC_MANIFEST_PATH,
@@ -265,18 +272,22 @@ export class TemplateUpdateService {
     if (!fs.existsSync(manifestFile)) throw updateError(`Neither the brand nor the template has ${SYNC_MANIFEST_PATH}.`)
     const manifest = parseSyncManifest(fs.readFileSync(manifestFile, 'utf8'))
 
+    // Versioned migrations new since the brand's commit. parseMigration refuses any path that is not core.
+    const migrations = pendingMigrations(migrationFiles(baseFiles.keys()), migrationFiles(targetFiles.keys())).map((name) =>
+      parseMigration(name, fs.readFileSync(targetFiles.get(`${MIGRATIONS_DIR}/${name}`)!, 'utf8'), manifest),
+    )
+
     // Only core and merge-carefully paths of the brand are extracted; brand-owned content is never read.
-    const needed = new Set(changed.filter((relative) => classifyPath(manifest, relative).kind !== 'brand' && !isSecretLike(relative)))
+    const needed = new Set([...changed, ...migrationPaths(migrations)].filter((relative) => classifyPath(manifest, relative).kind !== 'brand' && !isSecretLike(relative)))
     const brandDir = path.join(work, 'brand')
     extractTarGz(brandArchive, { destRoot: brandDir, include: (p) => needed.has(p) })
     const brandFiles = walk(brandDir)
-    const changes = planChanges({
-      manifest,
-      changed,
-      base: (relative) => readOrNull(baseFiles.get(relative)),
-      theirs: (relative) => readOrNull(targetFiles.get(relative)),
-      local: (relative) => (needed.has(relative) ? readOrNull(brandFiles.get(relative)) : null),
-    })
+    const sources = {
+      base: (relative: string) => readOrNull(baseFiles.get(relative)),
+      theirs: (relative: string) => readOrNull(targetFiles.get(relative)),
+      local: (relative: string) => (needed.has(relative) ? readOrNull(brandFiles.get(relative)) : null),
+    }
+    const { changes, runs } = planMigrations(migrations, planChanges({ manifest, changed, ...sources }), sources)
     let version: string | null = null
     try {
       const pkg = JSON.parse(fs.readFileSync(targetFiles.get('package.json') ?? '', 'utf8')) as { version?: unknown }
@@ -284,11 +295,11 @@ export class TemplateUpdateService {
     } catch {
       version = null
     }
-    const plan: UpdatePlan = { repository: this.template, from, to, version, changes, upToDate: false }
+    const plan: UpdatePlan = { repository: this.template, from, to, version, changes, upToDate: false, migrations: runs }
     const writes = changes.filter((change) => isWriteAction(change.action))
     const conflicts = changes.filter((change) => change.action === 'conflict')
     const branch = `${UPDATE_BRANCH_PREFIX}${to.slice(0, 12)}`
-    note({ branch, written: writes.length, conflicts: conflicts.length })
+    note({ branch, written: writes.length, conflicts: conflicts.length, migrations: runs.map((run) => run.id) })
 
     // A branch left by an earlier attempt for the same template commit is reused, never moved.
     if (!(await gh.getBranchRef(owner, name, branch))) {
@@ -351,6 +362,7 @@ export function pullBody(plan: UpdatePlan, writes: PlannedChange[], conflicts: P
     writes.length ? list(writes) : 'No template files needed changes; only the version record moves forward.',
   ]
   if (conflicts.length) parts.push('', `## Needs a person (${conflicts.length}, not changed)`, list(conflicts, 200, true))
+  if (plan.migrations?.length) parts.push('', `## Migrations (${plan.migrations.length}, in order)`, ...formatMigrationRuns(plan.migrations))
   parts.push('', `Brand-owned paths skipped: ${skipped}.`, '', '## Before merging', '', '1. Check out this branch and run `npm ci`, `npm run brand:migrate` and `npm run ci`.', '2. Resolve the files that need a person, if any (compare with the template).', '3. Merge on GitHub when you are satisfied.')
   return parts.join('\n')
 }
