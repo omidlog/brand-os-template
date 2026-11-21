@@ -10,7 +10,7 @@ import { extractTarGz, studioPathAllowed } from './github/tar.js'
 import { PROVISION_STEPS, type BrandRecord, type CleanupState, type ProvisionRequest, type ProvisionStep, type Registry } from './registry.js'
 
 /**
- * Owner-only provisioning of one new private brand repository. This is Studio's single write path.
+ * Owner-only provisioning of one new private brand repository. This is Studio's first write path; the second is opening template update pull requests (template-update.ts).
  *
  * 1. Validate the request (slug, profile, facets, locales, destination owner allowlist).
  * 2. Check that the template exists and is a template repository.

@@ -604,7 +604,7 @@ export function createStudio(deps: StudioDeps): {
     { method: 'GET', pattern: /^\/brands$/, auth: 'session', handle: brands },
     { method: 'GET', pattern: /^\/brands\/new$/, auth: 'session', handle: newBrandForm },
     { method: 'GET', pattern: /^\/brands\/new\/repo-check\.json$/, auth: 'session', handle: repoCheck },
-    { method: 'POST', pattern: /^\/brands\/new$/, auth: 'session', writes: 'provisions one new private brand repository (the single GitHub write)', handle: createBrand },
+    { method: 'POST', pattern: /^\/brands\/new$/, auth: 'session', writes: 'provisions one new private brand repository (the first of two GitHub writes)', handle: createBrand },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/provisioning$`), auth: 'session', handle: provisioningStatus },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/provisioning\\.json$`), auth: 'session', handle: provisioningJson },
     { method: 'POST', pattern: new RegExp(`^/brands/${SLUG}/provisioning/retry$`), auth: 'session', writes: 'retries a failed provisioning of a new repository', handle: retryProvisioning },

@@ -28,7 +28,7 @@ A command stores an append-only ledger row, updates `brand/instance/draft-facts.
 
 ## Studio
 
-One Studio serves every brand at `/brands/<slug>`. It reads each brand's merged default branch from GitHub through a server-side registry, builds a safe projection with the brand-core functions, and caches it with the commit SHA. Its only write is provisioning a new private repository from this template with the core initializer. Studio never edits a brand; Claude Code does that in the brand repository, and the owner approves with the local CLI. Details and the security model: `docs-internal/STUDIO.md`.
+One Studio serves every brand at `/brands/<slug>`. It reads each brand's merged default branch from GitHub through a server-side registry, builds a safe projection with the brand-core functions, and caches it with the commit SHA. Its only writes are provisioning a new private repository from this template with the core initializer and, when the owner asks, opening (never merging) a template update pull request on a new branch. Studio never edits a brand; Claude Code does that in the brand repository, and the owner approves with the local CLI. Details and the security model: `docs-internal/STUDIO.md`.
 
 ## What is not in this version
 
