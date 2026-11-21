@@ -184,6 +184,8 @@ export {
   defaultUpdateBranch,
   formatUpdatePlan,
   globToRegExp,
+  isWriteAction,
+  planChanges,
   parseSyncManifest,
   planTemplateUpdate,
   readSyncManifest,
@@ -194,4 +196,4 @@ export {
   updateCommitMessage,
   writeTemplateRecord,
 } from './template-sync.js'
-export type { ApplyResult, Classification, PlannedChange, SyncKind, SyncManifest, SyncRule, TemplateRecord, UpdateAction, UpdatePlan } from './template-sync.js'
+export type { ApplyResult, ChangeSources, Classification, PlannedChange, SyncKind, SyncManifest, SyncRule, TemplateRecord, UpdateAction, UpdatePlan } from './template-sync.js'

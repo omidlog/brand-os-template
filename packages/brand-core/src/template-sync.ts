@@ -236,6 +236,58 @@ function templateVersion(templateRoot: string, commit: string): string | null {
   }
 }
 
+export interface ChangeSources {
+  /** The manifest that decides (the target template's, else the brand's). */
+  manifest: SyncManifest
+  /** Paths the template changed between the two commits. */
+  changed: string[]
+  /** File at the starting template commit, or null. */
+  base: (relative: string) => Buffer | null
+  /** File at the target template commit, or null. */
+  theirs: (relative: string) => Buffer | null
+  /** The brand's current file, or null. Only called for core and merge paths, never for brand-owned ones. */
+  local: (relative: string) => Buffer | null
+}
+
+/**
+ * The per-file decision, independent of where the files come from. The CLI reads a local template
+ * clone; Studio reads GitHub archives. Brand-owned paths are classified and skipped before any
+ * brand content is read.
+ */
+export function planChanges(sources: ChangeSources): PlannedChange[] {
+  const { manifest } = sources
+  const changes: PlannedChange[] = []
+  for (const relative of [...new Set(sources.changed)].sort()) {
+    const { kind, matched } = classifyPath(manifest, relative)
+    if (kind === 'brand') {
+      changes.push({ path: relative, kind, matched, action: 'skip', reason: matched ? 'brand-owned' : 'no manifest rule; treated as brand-owned' })
+      continue
+    }
+    const base = sources.base(relative)
+    const theirs = sources.theirs(relative)
+    const local = sources.local(relative)
+    if (same(local, theirs)) {
+      changes.push({ path: relative, kind, matched, action: 'current', reason: 'already matches the template' })
+    } else if (same(local, base)) {
+      if (theirs === null) changes.push({ path: relative, kind, matched, action: 'delete', reason: 'removed from the template' })
+      else changes.push({ path: relative, kind, matched, action: base === null ? 'add' : 'update', reason: base === null ? 'new in the template' : 'changed in the template', content: theirs })
+    } else if (kind === 'merge' && local && base && theirs) {
+      const merged = mergeThreeWay(local, base, theirs)
+      if (merged) changes.push({ path: relative, kind, matched, action: 'merge', reason: 'merged with the brand copy', content: merged })
+      else changes.push({ path: relative, kind, matched, action: 'conflict', reason: 'the brand and the template changed the same lines' })
+    } else {
+      const why = local === null ? 'the brand removed this file' : base === null ? 'the brand already has a different file at this path' : 'the brand edited this file'
+      changes.push({ path: relative, kind, matched, action: 'conflict', reason: `${why}; the template changed it too` })
+    }
+  }
+  return changes
+}
+
+/** Paths an update writes (add, update, merge, delete). */
+export function isWriteAction(action: UpdateAction): boolean {
+  return action === 'add' || action === 'update' || action === 'merge' || action === 'delete'
+}
+
 export function planTemplateUpdate(options: PlanOptions): UpdatePlan {
   const { brandRoot, templateRoot } = options
   const localManifest = readSyncManifest(brandRoot)
@@ -258,31 +310,13 @@ export function planTemplateUpdate(options: PlanOptions): UpdatePlan {
   const changed = git(templateRoot, ['diff', '--name-only', '--no-renames', '-z', from, to])
     .split('\0')
     .filter(Boolean)
-    .sort()
-  const changes: PlannedChange[] = []
-  for (const relative of changed) {
-    const { kind, matched } = classifyPath(manifest, relative)
-    if (kind === 'brand') {
-      changes.push({ path: relative, kind, matched, action: 'skip', reason: matched ? 'brand-owned' : 'no manifest rule; treated as brand-owned' })
-      continue
-    }
-    const base = showFile(templateRoot, from, relative)
-    const theirs = showFile(templateRoot, to, relative)
-    const local = readLocal(brandRoot, relative)
-    if (same(local, theirs)) {
-      changes.push({ path: relative, kind, matched, action: 'current', reason: 'already matches the template' })
-    } else if (same(local, base)) {
-      if (theirs === null) changes.push({ path: relative, kind, matched, action: 'delete', reason: 'removed from the template' })
-      else changes.push({ path: relative, kind, matched, action: base === null ? 'add' : 'update', reason: base === null ? 'new in the template' : 'changed in the template', content: theirs })
-    } else if (kind === 'merge' && local && base && theirs) {
-      const merged = mergeThreeWay(local, base, theirs)
-      if (merged) changes.push({ path: relative, kind, matched, action: 'merge', reason: 'merged with the brand copy', content: merged })
-      else changes.push({ path: relative, kind, matched, action: 'conflict', reason: 'the brand and the template changed the same lines' })
-    } else {
-      const why = local === null ? 'the brand removed this file' : base === null ? 'the brand already has a different file at this path' : 'the brand edited this file'
-      changes.push({ path: relative, kind, matched, action: 'conflict', reason: `${why}; the template changed it too` })
-    }
-  }
+  const changes = planChanges({
+    manifest,
+    changed,
+    base: (relative) => showFile(templateRoot, from, relative),
+    theirs: (relative) => showFile(templateRoot, to, relative),
+    local: (relative) => readLocal(brandRoot, relative),
+  })
   return {
     repository: manifest.template.repository ?? record?.repository ?? null,
     from,
@@ -294,8 +328,6 @@ export function planTemplateUpdate(options: PlanOptions): UpdatePlan {
 }
 
 // Apply ---------------------------------------------------------------------------------------
-
-const WRITES: readonly UpdateAction[] = ['add', 'update', 'delete', 'merge']
 
 export interface ApplyOptions {
   branch?: string
@@ -325,7 +357,7 @@ export function applyTemplateUpdate(brandRoot: string, plan: UpdatePlan, options
 
   const written: string[] = []
   for (const change of plan.changes) {
-    if (!WRITES.includes(change.action)) continue
+    if (!isWriteAction(change.action)) continue
     const file = path.join(brandRoot, change.path)
     if (change.action === 'delete') fs.rmSync(file, { force: true })
     else {
