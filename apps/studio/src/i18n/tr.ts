@@ -89,6 +89,7 @@ export const tr: Messages = {
   'login.totpHint': 'Kimlik doğrulama uygulamanızdaki 6 haneli kod.',
   'login.submit': 'Giriş yap',
   'login.failed': 'Giriş başarısız. Bilgilerinizi kontrol edip tekrar deneyin.',
+  'login.codeUsed': 'Giriş başarısız. Bu doğrulama kodu zaten kullanıldı. Kimlik doğrulama uygulamanızda yeni bir kod belirmesini bekleyin ve tekrar deneyin.',
   'login.rateLimited': 'Çok fazla deneme. Yaklaşık {minutes} dakika sonra tekrar deneyin.',
   'login.expired': 'Giriş formunun süresi doldu. Lütfen tekrar deneyin.',
   'login.signedOut': 'Çıkış yaptınız.',

@@ -253,12 +253,13 @@ export function createStudio(deps: StudioDeps): {
     const loginOk = safeEqual(submitted, config.ownerLogin)
     // Always run the password check so timing does not reveal whether the login name matched.
     const passwordOk = verifyPassword(first(ctx.form.password), config.ownerPasswordHash)
-    const totpOk = totp ? totp.verify(first(ctx.form.totp).trim(), now()) : true
-    if (!(loginOk && passwordOk && totpOk)) {
+    const totpResult = totp ? totp.check(first(ctx.form.totp).trim(), now()) : 'ok'
+    if (!(loginOk && passwordOk && totpResult === 'ok')) {
       loginLimiter.take(ip)
       globalLoginLimiter.take('all')
       log(`login failed from ${ip}`)
-      return showLogin(ctx, { error: ctx.i.t('login.failed'), status: 401, login: submitted.slice(0, 64) })
+      const error = ctx.i.t(totpResult === 'reused' ? 'login.codeUsed' : 'login.failed')
+      return showLogin(ctx, { error, status: 401, login: submitted.slice(0, 64) })
     }
     loginLimiter.reset(ip)
     if (ctx.sessionId) sessions.destroy(ctx.sessionId)

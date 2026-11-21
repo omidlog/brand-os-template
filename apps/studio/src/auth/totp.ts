@@ -47,6 +47,8 @@ export function totpAt(secret: string, timeMs: number, step = 30): string {
   return code.toString().padStart(6, '0')
 }
 
+export type TotpResult = 'ok' | 'invalid' | 'reused'
+
 /** Accepts the current step and one step either side for clock drift. Rejects a code already used in its step. */
 export class TotpVerifier {
   private readonly used = new Map<string, number>()
@@ -54,18 +56,27 @@ export class TotpVerifier {
   constructor(private readonly secret: string) {}
 
   verify(code: string, nowMs: number): boolean {
-    if (!/^\d{6}$/.test(code)) return false
+    return this.check(code, nowMs) === 'ok'
+  }
+
+  /**
+   * Like verify, but tells a reused code apart from a wrong one, so the sign-in page can say
+   * "wait for a new code" instead of a generic failure. A reused code was valid moments ago, so
+   * saying so reveals nothing an observer of that code did not already know.
+   */
+  check(code: string, nowMs: number): TotpResult {
+    if (!/^\d{6}$/.test(code)) return 'invalid'
     for (const drift of [0, -1, 1]) {
       const at = nowMs + drift * 30_000
       const expected = totpAt(this.secret, at)
       if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(code))) {
         const stepId = `${Math.floor(at / 30_000)}:${code}`
-        if (this.used.has(stepId)) return false
+        if (this.used.has(stepId)) return 'reused'
         this.used.set(stepId, nowMs)
         for (const [key, seen] of this.used) if (nowMs - seen > 120_000) this.used.delete(key)
-        return true
+        return 'ok'
       }
     }
-    return false
+    return 'invalid'
   }
 }
