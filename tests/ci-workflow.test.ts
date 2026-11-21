@@ -115,11 +115,11 @@ test('a public-docs brand: CI builds and scans the public docs, with and without
   }
 })
 
-const scripts = (JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts
+const scripts = (JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts as Record<string, string> & { build: string; ci: string }
 
 test('npm run build / ci: every docs build goes through build-docs, which follows publish_docs like CI', () => {
-  for (const name of ['build', 'ci']) assert.doesNotMatch(scripts[name], /--audience public/, `${name} must not force a public build`)
-  for (const name of ['docs:build', 'docs:build:fa', 'build:docs:nomascot']) assert.match(scripts[name], /scripts\/build-docs\.ts/, `${name} uses build-docs`)
+  for (const name of ['build', 'ci']) assert.doesNotMatch(scripts[name] ?? '', /--audience public/, `${name} must not force a public build`)
+  for (const name of ['docs:build', 'docs:build:fa', 'build:docs:nomascot']) assert.match(scripts[name] ?? '', /scripts\/build-docs\.ts/, `${name} uses build-docs`)
   assert.match(scripts.build, /docs:build/)
   assert.match(scripts.ci, /npm run build\b/)
   assert.match(scripts.ci, /build:docs:nomascot/)
@@ -141,7 +141,7 @@ test('npm run build / ci: every docs build goes through build-docs, which follow
     assert.equal(fa.audience, 'public')
     assert.ok(fa.steps.some(isPublic))
     assert.deepEqual(fa.steps.at(-1)?.args.slice(-2), ['--locale', 'fa'])
-    const pubNomascot = docsBuildPlan(pub, { nomascot: true }).steps[0].args.join(' ')
+    const pubNomascot = (docsBuildPlan(pub, { nomascot: true }).steps[0]?.args ?? []).join(' ')
     assert.match(pubNomascot, /--audience public --mascot false --gamification false/)
 
     // The CLI itself: a private brand's nomascot build exits 0 without building anything.
