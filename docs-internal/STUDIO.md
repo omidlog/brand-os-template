@@ -165,7 +165,7 @@ The provisioning credential therefore also needs **Pull requests: write** on the
 | `STUDIO_TEMPLATE_CHECK_MINUTES` | `360` | Minutes between runs, ±10 % jitter. `0` turns the job off; otherwise at least 15. The first run is within about 5 minutes of start. |
 | `STUDIO_TEMPLATE_AUTO_PR` | `0` | `0`: check only; the result feeds **Updates available** and the owner opens pull requests by hand. `1`: also open an update pull request for each brand that is behind. |
 
-- Each run reads the template head once through the cached update service (GET only) and compares it with every ready brand's recorded commit from the sync cache.
+- Each run reads the template head once through the cached update service (GET only) and compares it with every ready brand's recorded commit from the sync cache, re-reading a brand whose cache is stale (read credential, GET only).
 - **At most one open update pull request per brand.** A brand whose history already shows an open `template-update/` pull request is only linked. Otherwise the job calls the same `openUpdatePull` as the button, which looks for an open update pull request on GitHub first and links it instead of opening another; a branch left by an earlier attempt is reused. It never writes the default branch and never merges.
 - Only brands in `STUDIO_ALLOWED_OWNERS` can get a pull request; others are reported as `not_allowed`.
 - Errors double the wait (up to a day); a rate limit waits at least an hour and ends the run early. A successful run resets the wait.

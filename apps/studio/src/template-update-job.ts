@@ -194,7 +194,9 @@ export class TemplateUpdateJob {
         summary.brands.push({ slug: record.slug, state: 'skipped', action: 'none' })
         continue
       }
-      const cached = sync.get(record.slug)
+      let cached = sync.get(record.slug)
+      // A stale cache could hide a merged or closed update pull request; re-read it (read credential, GET only).
+      if (sync.isStale(record.slug, cached.status)) cached = await sync.refresh(record.slug).catch(() => cached)
       const status = updates.status(cached.projection, head, cached.history?.pulls ?? [])
       const check: BrandCheck = { slug: record.slug, state: status.state, action: 'none' }
       summary.brands.push(check)
