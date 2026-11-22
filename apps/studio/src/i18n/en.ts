@@ -281,9 +281,11 @@ export const en = {
   'design.specimen': 'The quick brown fox jumps over the lazy dog 0123456789',
 
   'assets.title': 'Assets & Mascot',
-  'assets.subtitle': 'Asset manifest from brand/assets. Only approved files that pass the publication checks get a preview.',
+  'assets.subtitle': 'Asset manifest from brand/assets. Approved files and drafts that pass the safety checks get a preview; drafts are marked and are not approved. Public docs publish approved assets only.',
   'assets.empty': 'The asset manifest is empty.',
   'assets.filter': 'Filter by kind',
+  'assets.draftFlag': 'Draft, not approved',
+  'assets.draftAlt': '{name} (draft, not approved)',
   'assets.noPreview': 'No preview',
   'assets.reason.not_approved': 'Not approved',
   'assets.reason.not_present': 'File not in the repository',
