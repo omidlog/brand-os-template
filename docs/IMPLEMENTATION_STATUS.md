@@ -153,6 +153,21 @@ Branch `feat/creative-learning`, built on the Knowledge Inbox (PR #9). Guide: `d
 | Remote MCP / CMO agent / campaign metrics | Not started | Backlog; local stdio only. |
 | Performance data | Not started | `performance: not_measured`; no connectors. |
 
+## SEO strategist (Spec Sprint 2)
+
+Branch `feat/seo-strategist`. Guide and reuse map: `docs-internal/SEO_STRATEGIST.md`. Skill: `agent-skills/seo-strategist/`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Research adapter contract | Done | `none` / `live` (opt-in, quote-verified HTTPS) / `replay`; typed failures; per-topic staleness; computed trust; official-host check. Raw research is stored only as Knowledge research notes. |
+| Conditional interview | Done | 18 closed-vocabulary questions (en/fa/tr) with skip reasons; unknown kept; no budget; owner words as Knowledge notes. |
+| Strategist and plan | Done | Archetypes, alternatives, cited and dated decisions, owner decisions, evidence-gap checklist, sources table. Draft only. |
+| Researched and offline cases | Done | 8 official pages recorded live 2026-11-22 (replayed in tests); offline gives `research_unavailable`, provisional, no quotes. |
+| Independent critic | Done | `seo-critic/1`: uncited policy, invented metrics, latest-claims, guarantees, misquotes, edited or stale citations, site work for app-only brands. |
+| Evals (spec §6 a–l) | Done | `evals/cases.yaml`, 15 cases, run by `tests/seo-evals.test.ts`. |
+| Approval, agent feed, Studio | Not started | Sprint 3 / backlog. |
+| Other specialists, CMO, metrics learning | Not started | Out of scope. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.

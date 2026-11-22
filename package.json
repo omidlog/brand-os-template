@@ -64,6 +64,7 @@
     "brand:reset": "tsx scripts/brand.ts reset",
     "brand:knowledge": "tsx scripts/knowledge.ts",
     "brand:creative": "tsx scripts/creative.ts",
+    "brand:seo": "tsx scripts/seo.ts",
     "mcp:serve": "tsx scripts/mcp.ts",
     "studio:start": "tsx apps/studio/src/main.ts",
     "studio": "tsx apps/studio/src/cli.ts",
