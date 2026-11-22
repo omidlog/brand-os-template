@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   buildDashboard,
+  buildStudioKnowledge,
   buildNamedDocument,
   InterviewEngine,
   PERSONAL_DOCUMENT_KINDS,
@@ -11,7 +12,7 @@ import {
   readTemplateRecord,
   rightsBlocker,
 } from '@brand-os/brand-core'
-import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard } from '@brand-os/brand-core'
+import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import type { SvgIssueCode } from '@brand-os/asset-catalog'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
@@ -117,6 +118,12 @@ export interface StudioProjection {
     stages: Array<{ id: string; name: string; status: string }>
   }
   personal: null | { facets: string[]; documents: DocumentKind[] }
+  /**
+   * Shared notes (`brand/knowledge/shared/*.md`) on this commit: unapproved ideas, never facts. Null when the
+   * notes could not be read (the rest of the brand still shows). Absent in caches written before this
+   * field existed; sync rebuilds those.
+   */
+  knowledge?: StudioKnowledgeProjection | null
 }
 
 export class ProjectionError extends Error {
@@ -156,6 +163,17 @@ export interface PreviewFile {
   key: string
   source: string
   mime: string
+}
+
+/** A malformed knowledge folder must not take down the whole brand view. */
+function projectKnowledge(engine: InterviewEngine): StudioKnowledgeProjection | null {
+  try {
+    const knowledge = buildStudioKnowledge(engine)
+    assertNoSecrets(knowledge)
+    return knowledge
+  } catch {
+    return null
+  }
 }
 
 function templateRecord(root: string): StudioProjection['template'] {
@@ -358,6 +376,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     assets,
     mascot,
     personal: personal ? { facets, documents: personalDocs } : null,
+    knowledge: projectKnowledge(engine),
     template: templateRecord(root),
   }
   assertNoSecrets(projection)

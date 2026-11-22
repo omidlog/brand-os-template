@@ -7,6 +7,7 @@ import { teardown } from './helpers/cleanup.js'
 import { approve, editOutsideStudio } from './helpers/edits.js'
 import { OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
+import { newNoteId, serializeNote } from '@brand-os/brand-core'
 
 /**
  * Browser end-to-end tests: a real headless Chrome drives Studio (loopback server, in-memory GitHub,
@@ -411,6 +412,51 @@ test('the browser enforces the CSP: an injected inline script never runs and no 
   assert.ok(page.problems.length > 0 && page.problems.every((problem) => /Content Security Policy|net::ERR|Failed to load/i.test(problem.text)), JSON.stringify(page.problems))
   page.problems.length = 0
   await page.send('Network.disable')
+})
+
+test('Knowledge page: shared notes render without overflow, accessibly and with AA contrast in English and Persian, and never fetch note images', { skip }, async () => {
+  const id = newNoteId()
+  const other = newNoteId()
+  const meta = (noteId: string, title: string, language: string, extra: Record<string, unknown> = {}) => ({
+    schema_version: 1, id: noteId, brand_slug: 'acme-learning', title, kind: 'idea' as const, status: 'inbox' as const, classification: 'internal' as const, language,
+    tags: ['mascot', 'gamification', 'retention'], links: [], question_ids: ['brand.strategy.purpose'], source: { kind: 'owner_note' as const, ref: null },
+    created_at: '2026-11-20T10:00:00.000Z', updated_at: '2026-11-21T10:00:00.000Z', ...extra,
+  })
+  const persian = 'بعد از ۷ روز یادگیری پشت‌سرهم، رتبه‌ی خلبان کاکادو را ارتقا بده. این یک فرضیه است، نه یک قانون تأییدشده.\n' + 'x'.repeat(400) + '\n<img src="https://evil.example/pixel.png"> ![remote](https://evil.example/md.png)'
+  s.github.pushEdit(OWNER, 'acme-learning', (tree) => {
+    tree.set(`brand/knowledge/shared/${id}.md`, Buffer.from(serializeNote({ meta: meta(id, 'ارتقای رتبه‌ی خلبان کاکادو بعد از هفت روز یادگیری پشت‌سرهم', 'fa'), body: persian })))
+    tree.set(`brand/knowledge/shared/${other}.md`, Buffer.from(serializeNote({ meta: meta(other, 'Weekly streak recap', 'en', { status: 'triaged', links: [{ id, relationship: 'supports' }] }), body: `Builds on [[${id}]].` })))
+  })
+  await s.studio.sync.refresh('acme-learning')
+  const origins = new Set<string>()
+  page.on('Network.requestWillBeSent', (params) => origins.add(new URL((params.request as { url: string }).url).origin))
+  await page.send('Network.enable')
+  for (const lang of ['en', 'fa'] as const) {
+    await page.viewport(1440, 900)
+    await page.goto(`${s.url}/brands/acme-learning/knowledge?lang=${lang}`)
+    for (const [width, height, mobile] of [[1440, 900, false], [1024, 768, false], [390, 844, true]] as const) {
+      await page.viewport(width, height, mobile)
+      for (const pathname of ['/knowledge', `/knowledge?note=${id}`, `/knowledge?note=${other}`, '/knowledge?q=kakadu', '/knowledge?tag=mascot']) {
+        await page.goto(`${s.url}/brands/acme-learning${pathname}`)
+        await assertNoOverflow(`${lang} ${pathname} @${width}`)
+        if (width === 1440) {
+          await assertAccessible(`${lang} ${pathname}`)
+          assert.deepEqual(await contrastFailures(), [], `${lang} ${pathname}: text contrast`)
+        }
+      }
+    }
+    await page.viewport(1440, 900)
+    await page.goto(`${s.url}/brands/acme-learning/knowledge?note=${id}`)
+    assert.equal(await page.eval<number>('document.querySelectorAll(".note-body img, .note-body a[href^=\'http\']").length'), 0, 'note markup is text')
+    await capture(`${lang}-knowledge-note`)
+    await page.goto(`${s.url}/brands/acme-learning/knowledge`)
+    await capture(`${lang}-knowledge`)
+    if (lang === 'fa') assert.equal(await page.eval<string>('document.documentElement.dir'), 'rtl')
+  }
+  assert.deepEqual([...origins], [s.url], 'only the Studio origin is contacted; note images are never fetched')
+  await page.send('Network.disable')
+  await page.goto(`${s.url}/brands?lang=en`)
+  assertClean('knowledge pages')
 })
 
 // Runs last: it moves the shared fake template forward, which changes the overview of every later page.

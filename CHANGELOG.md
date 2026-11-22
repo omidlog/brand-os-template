@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased — Knowledge Inbox (Baalda-inspired)
+
+Theme: capture messy ideas per brand, find them in fa/tr/en, link them, and turn them into draft proposals without ever bypassing approval. Guide: `docs-internal/KNOWLEDGE.md`.
+
+### Breaking changes
+
+- None. Brands without `brand/knowledge` keep working with zero notes and no flag.
+
+### Security
+
+- Studio's archive filter now blocks every `brand/knowledge/**` path except `brand/knowledge/shared/*.md`, checked before any other rule (it was a blocklist, so committed caches or link files would have reached Studio).
+
+### Added
+
+- `packages/brand-core/src/knowledge/`: note model (`kn_<uuid>`, reader-computed sha256 revision), local-by-default store under `brand/.private/knowledge`, AES-256-GCM restricted notes, revision-checked edits with anchors, per-note locks, snapshots and recovery, idempotent append, archive/restore, fa/tr/en search, links/backlinks/related/duplicates, fail-closed share to Git, doctor and migrate.
+- `npm run brand:knowledge` (`scripts/knowledge.ts`).
+- `brand:backup` now includes `brand/knowledge`.
+- `brand:knowledge propose` / `provenance`: note → draft proposals over the existing intake, with `knowledge:<id>@<sha256>` provenance, stale detection and a preview of every quotation that would enter tracked interview files.
+- `knowledge-read` agent-token profile and read-only MCP tools `knowledge_list`, `knowledge_search`, `knowledge_read`, `knowledge_backlinks`, `knowledge_suggest_proposal` (shared notes only). Existing profiles unchanged.
+- `agent-skills/knowledge-inbox/SKILL.md`.
+- Studio: read-only **Knowledge** section for merged shared notes (labelled unverified ideas), en/fa/tr, filters, search, detail with backlinks and linked questions. No new write route.
+- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`, `knowledge-proposals`, `knowledge-agent`, `studio-knowledge`; Knowledge page browser checks in `studio-browser`.
+
 ## Unreleased — SVG checker, normalizer and asset approval
 
 Theme: an editor's SVG export should not be silently refused. Brand OS now says what is wrong, fixes what is safe to fix without changing the drawing, and ties asset approval to exact bytes.

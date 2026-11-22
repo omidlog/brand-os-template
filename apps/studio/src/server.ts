@@ -30,6 +30,7 @@ import { brandIsReady, type SyncService } from './sync.js'
 import type { TemplateUpdateService, UpdateStatus } from './template-update.js'
 import type { SafeHtml } from './views/html.js'
 import type { BrandView, ViewContext } from './views/layout.js'
+import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from './views/knowledge.js'
 import * as pages from './views/pages.js'
 
 /**
@@ -90,7 +91,7 @@ const STATIC_FILES: Record<string, string> = {
   'fonts/rajdhani-bold.woff2': 'font/woff2',
   'fonts/vazirmatn-var.woff2': 'font/woff2',
 }
-const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'history', 'handoff'] as const
+const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'history', 'handoff'] as const
 
 export interface RouteInfo {
   method: string
@@ -528,6 +529,15 @@ export function createStudio(deps: StudioDeps): {
         // The section exists only when the Personal Brand OS module is enabled in the repository.
         if (!brand.cached.projection?.personal) return notFound(ctx)
         return render(ctx, 200, pages.personalPage(v, brand, doc, flashValue))
+      case 'knowledge': {
+        // Read only. Query parameters only filter the already safe projection of merged shared notes.
+        const query = parseKnowledgeQuery(ctx.url.searchParams)
+        if (query.note === null) return render(ctx, 200, knowledgePage(v, brand, query, flashValue))
+        const knowledge = brand.cached.projection?.knowledge
+        const note = query.note ? knowledge?.notes.find((item) => item.id === query.note) : undefined
+        if (!knowledge || !note) return notFound(ctx)
+        return render(ctx, 200, knowledgeNotePage(v, brand, note, knowledge, flashValue))
+      }
       case 'history':
         return render(ctx, 200, pages.historyPage(v, brand, flashValue))
       case 'handoff':

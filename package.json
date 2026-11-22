@@ -55,6 +55,7 @@
     "brand:evidence": "tsx scripts/brand.ts evidence",
     "brand:retract": "tsx scripts/brand.ts retract",
     "brand:reset": "tsx scripts/brand.ts reset",
+    "brand:knowledge": "tsx scripts/knowledge.ts",
     "mcp:serve": "tsx scripts/mcp.ts",
     "studio:start": "tsx apps/studio/src/main.ts",
     "studio": "tsx apps/studio/src/cli.ts",

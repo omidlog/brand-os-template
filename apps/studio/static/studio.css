@@ -743,3 +743,26 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
   .sidebar, .topbar, .skip-link, .toast-region { display: none !important; }
   .layout { grid-template-columns: 1fr; }
 }
+
+/* Knowledge (read-only shared notes) */
+.kn-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: var(--studio-space-3); align-items: end; }
+.kn-filters .kn-actions { grid-column: 1 / -1; }
+.kn-group { margin-block: var(--studio-space-5); }
+.note-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--studio-space-4); }
+.note-card { display: grid; gap: var(--studio-space-2); align-content: start; min-width: 0; }
+.note-card-head { display: grid; gap: var(--studio-space-2); }
+.note-title { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.note-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-block-end: var(--studio-space-2); }
+.note-excerpt { margin: 0; color: var(--studio-color-text-secondary); overflow-wrap: anywhere; }
+.note-meta { display: flex; flex-wrap: wrap; gap: var(--studio-space-2); }
+.note-tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.tag-link { overflow-wrap: anywhere; }
+.note-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; unicode-bidi: plaintext; }
+.kn-links, .kn-questions, .kn-withheld { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--studio-space-2); }
+.kn-links li, .kn-questions li, .kn-withheld li { overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .kn-filters { grid-template-columns: minmax(0, 1fr); }
+}
+.kn-section-title { margin-block-end: var(--studio-space-3); }
+.kn-meta code.mono, .kn-withheld code.mono, .kn-questions code.mono, .kn-links code.mono { white-space: normal; overflow-wrap: anywhere; }
+.kn-page-cols > * { min-width: 0; }

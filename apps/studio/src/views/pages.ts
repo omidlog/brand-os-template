@@ -402,7 +402,7 @@ function syncBanners(ctx: ViewContext, view: BrandView, flash: string | null): S
   return join(out)
 }
 
-function brandShell(ctx: ViewContext, view: BrandView, section: BrandSection, title: string, body: SafeHtml, flash: string | null): SafeHtml {
+export function brandShell(ctx: ViewContext, view: BrandView, section: BrandSection, title: string, body: SafeHtml, flash: string | null): SafeHtml {
   const { i } = ctx
   const crumbs: Array<{ label: string; href?: string }> = [{ label: i.t('nav.myBrands'), href: '/brands' }, { label: view.record.display_name, href: `/brands/${view.record.slug}` }]
   if (section !== 'overview') crumbs.push({ label: title })
@@ -412,7 +412,7 @@ function brandShell(ctx: ViewContext, view: BrandView, section: BrandSection, ti
   return shell(ctx, { title: `${title} · ${view.record.display_name}`, crumbs, brand: { view, section }, content: html`${syncBanners(ctx, view, flash)}${content}` })
 }
 
-function brandHeader(ctx: ViewContext, view: BrandView, title: string, subtitle: string): SafeHtml {
+export function brandHeader(ctx: ViewContext, view: BrandView, title: string, subtitle: string): SafeHtml {
   const p = view.cached.projection!
   const { i } = ctx
   return pageHeader({
