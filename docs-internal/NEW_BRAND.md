@@ -9,6 +9,8 @@ npm install
 npm run brand:init -- --name "Your brand" --slug your-brand --industry "TBD" --mascot false --gamification false --publish private --yes
 ```
 
+Optional: `--logo-presence absent|present|in_progress|unknown --identity-intent create|retain|evolve|rebrand|undecided [--change-depth logo_evolution|visual_refresh|strategic_rebrand|undecided]` records an unapproved identity hint (see `docs-internal/IDENTITY_INTAKE.md`). Without these flags nothing extra is written.
+
 English is the default (`--language en --languages en`). To offer the optional Persian (RTL) and Turkish locales, add `--languages en,fa,tr`.
 
 4. Interview:

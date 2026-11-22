@@ -182,6 +182,18 @@ Branch `feat/strategy-feed`. Guide, reuse map and gate: `docs-internal/STRATEGY_
 | Read-only Strategy Feed | Done | `strategy-seo-read` / `strategy-ads-read`; `strategy_list`, `strategy_get` in stdio MCP and `brand:query`; digests, redaction, missing fields, `stale_pin`; access-logged. `tests/strategy-feed.test.ts`. |
 | CMO agent, Strategy Critic, metrics learning, ad execution, remote gateway, Studio views | Not started | Out of scope. |
 
+## Identity intake (Identity Slice A)
+
+Branch `feat/identity-slice-a`. Guide and reuse map: `docs-internal/IDENTITY_INTAKE.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Core intake type, validation, reader | Done | `identity-intake.ts`; contradictions refused; missing or invalid reads as unknown / undecided. `tests/identity-intake.test.ts`. |
+| `brand:init` flags | Done | `--logo-presence`, `--identity-intent`, `--change-depth`; without them init is unchanged. |
+| Studio wizard questions (en/fa/tr) | Done | Profile step; conditional depth; review and Edit and retry mirror the answers; server clears a stale depth. `tests/studio-identity-intake.test.ts`, browser journey. |
+| Privacy | Done | Not in facts, ledger, publication policy, MCP, `brand:query`, dashboard, public projection or Studio brand pages. |
+| Competitor research (Slice B), cross-functional context (Slice C), rebrand audit and logo brief (Slice D) | Not started | Separate PRs. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.

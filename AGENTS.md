@@ -45,6 +45,8 @@ An agent can run the interview as a conversation. Follow `agent-skills/brand-int
 - `npm run brand:propose -- --file batch.json --json` stores extracted proposals as drafts. Each proposal needs a verbatim quotation and a state: `proposed`, `tentative`, or `unresolved` with value `null`.
 - `npm run brand:interview -- --assist --file - --json` runs the built-in extractor. It uses a configured model, or deterministic rules if none is set.
 
+`onboarding.identity` in `brand/brand.config.yaml` (logo today, identity intent, change depth) is an unapproved owner hint from the wizard or `brand:init`, not a brand fact: confirm it with the owner before relying on it, and never treat it as permission to change the logo, name or strategy (`docs-internal/IDENTITY_INTAKE.md`).
+
 All of these produce drafts only. Restricted questions are refused: the owner answers them in the interactive interview. `brand.profile: founder-core` in `brand/brand.config.yaml` narrows the interview to about 40 questions. `brand.profile: personal-brand` interviews a person (see below).
 
 Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Identity intake (Identity Slice A)
+
+### Added
+
+- The Studio new-brand wizard asks three optional questions on the Profile step: logo today, what to do with the identity, and how deep a change (only for refine or rebrand). They are in en, fa and tr, mirrored on the review step and prefilled by Edit and retry. Contradictions such as "no logo" + "keep" are refused.
+- The answers are stored as an unapproved owner hint in `onboarding.identity` of `brand/brand.config.yaml` (`authority: unapproved_owner_intake`). They are never a fact, publication grant or asset, and no MCP, `brand:query`, public docs or Studio brand page shows them. Brands without the block read as unknown / undecided.
+- `brand:init --logo-presence --identity-intent --change-depth`. Without these flags `brand:init` is unchanged. `brand:validate` warns about an invalid block.
+- Guide: `docs-internal/IDENTITY_INTAKE.md`. Tests: `identity-intake`, `studio-identity-intake`, and the browser wizard journey.
+
 ## Unreleased — Strategy records and Strategy Feed (Spec Sprint 3)
 
 ### Added
