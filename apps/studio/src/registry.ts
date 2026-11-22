@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { assertSlug, writeAtomic } from '@brand-os/brand-core'
+import type { IdentityChoice } from '@brand-os/brand-core'
 import { validOwner, validRepoName } from './config.js'
 
 /**
@@ -38,6 +39,12 @@ export interface ProvisionRequest {
   gamification: boolean
   owner: string
   repo: string
+  /**
+   * Logo today, intent and change depth from the wizard: an unapproved owner hint, written to
+   * `onboarding.identity` in brand.config.yaml by the initializer. Absent in requests recorded before
+   * this field existed; those initialize exactly as before, with no intake written.
+   */
+  identity?: IdentityChoice
 }
 
 export interface ProvisioningRecord {

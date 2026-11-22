@@ -1,3 +1,4 @@
+import type { IdentityIntake } from './identity-intake.js'
 import type { LlmConfig } from './llm/provider.js'
 export const STATUSES = [
   'not_started',
@@ -240,6 +241,11 @@ export interface BrandConfig {
   links: Record<string, string | null>
   /** Optional model provider for `brand:interview --assist`. Absent or provider none means no model. */
   llm?: LlmConfig
+  /**
+   * Optional owner onboarding hints (identity-intake.ts). Unapproved routing hints only, never brand
+   * facts. Absent in brands created before Slice A, which reads as unknown / undecided.
+   */
+  onboarding?: { identity?: IdentityIntake }
 }
 
 export interface LedgerFile {

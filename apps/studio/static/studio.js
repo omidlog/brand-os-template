@@ -115,6 +115,7 @@
     var wizard = document.querySelector('[data-wizard]')
     if (wizard) {
       setupNameCheck(wizard)
+      setupIdentity(wizard)
       setupWizard(wizard, !!summary)
     }
 
@@ -228,6 +229,25 @@
     if (region.getAttribute('data-retry-of') && name()) check()
   }
 
+  // Identity questions: the change depth is shown only for "refine" or "rebrand". Hiding it clears
+  // its answer, so a stale hidden value never travels with the form (the server clears it as well).
+  function setupIdentity(form) {
+    var depth = form.querySelector('[data-change-depth]')
+    if (!depth) return
+    function sync() {
+      var intent = form.querySelector('input[name="identity_intent"]:checked')
+      var applies = !!intent && (intent.value === 'evolve' || intent.value === 'rebrand')
+      depth.setAttribute('data-collapsed', applies ? 'false' : 'true')
+      if (!applies) depth.querySelectorAll('input').forEach(function (i) { i.checked = false })
+      else if (!depth.querySelector('input:checked')) {
+        var undecided = depth.querySelector('input[value="undecided"]')
+        if (undecided) undecided.checked = true
+      }
+    }
+    form.querySelectorAll('input[name="identity_intent"]').forEach(function (radio) { radio.addEventListener('change', sync) })
+    sync()
+  }
+
   function setupWizard(form, hasErrors) {
     var steps = Array.prototype.slice.call(form.querySelectorAll('[data-step]'))
     var indicators = Array.prototype.slice.call(form.querySelectorAll('[data-step-indicator]'))
@@ -278,6 +298,14 @@
       set('slug', form.elements.slug.value)
       var profile = form.querySelector('[data-profile-choice]:checked')
       set('profile', profile ? profile.closest('label').querySelector('.choice-title').textContent : '')
+      var label = function (name) {
+        var checked = form.querySelector('input[name="' + name + '"]:checked')
+        return checked ? checked.closest('label').textContent.trim() : ''
+      }
+      set('logo_presence', label('logo_presence'))
+      set('identity_intent', label('identity_intent'))
+      var depthRow = form.querySelector('[data-review-field="change_depth"]')
+      set('change_depth', label('change_depth') || (depthRow ? depthRow.getAttribute('data-not-asked') : ''))
       var locale = form.elements.default_locale
       set('default_locale', locale.options[locale.selectedIndex].textContent)
       set('repo', form.elements.owner.value + '/' + (form.elements.repo.value || form.elements.slug.value))

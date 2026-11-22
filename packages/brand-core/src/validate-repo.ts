@@ -9,6 +9,7 @@ import { validateMascotLifecycle } from './mascot-lifecycle.js'
 import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
+import { readIdentityIntake } from './identity-intake.js'
 import { approvalGrantErrors } from './permissions.js'
 import { canonicalReferenceErrors } from './personal.js'
 import { profileErrors, profileExists } from './profiles.js'
@@ -53,6 +54,8 @@ export function validateRepo(root: string): ValidationReport {
       warnings.push(`brand.config.yaml brand.profile ${config.brand?.profile} has no file in brand/interview/profiles/, so the full question bank is used`)
     }
     errors.push(...llmConfigErrors(config))
+    const identity = readIdentityIntake(config)
+    if (identity.state === 'invalid') warnings.push(`brand.config.yaml onboarding.identity is ignored (${identity.reason}); it reads as unknown / undecided`)
   }
   validateMascot(root, errors)
   errors.push(...validateAssets(root))

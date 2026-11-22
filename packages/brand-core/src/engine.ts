@@ -33,6 +33,7 @@ import type { ImpactReport, InitInput, StepResult } from './engine-types.js'
 import { dispositionFor } from './dispositions.js'
 import { CONFIG_BINDINGS, isPersonalBrand, priorityRank } from './config-bindings.js'
 import { assertSlug, emptySession, personalInit, recordTemplate, syncManifest } from './init.js'
+import { identityIntakeRecord } from './identity-intake.js'
 
 export type { StepResult, ImpactReport, InitInput } from './engine-types.js'
 export { dispositionFor } from './dispositions.js'
@@ -922,6 +923,8 @@ function formatImpact(impact: ImpactReport): string {
 
 export function applyInit(root: string, input: InitInput): BrandConfig {
   assertSlug(input.slug)
+  // Validate the optional identity intake before anything is written, so a contradiction changes nothing.
+  const identity = input.identity ? identityIntakeRecord(input.identity.choice, input.identity.source) : null
   const engine = new InterviewEngine(root)
   const config = engine.config()
   if (config.brand.initialized && !input.reset) {
@@ -951,6 +954,8 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   config.modules.gamification.enabled = input.gamification
   const personal = personalInit(input)
   config.modules.personal = { ...personal, note: config.modules.personal?.note ?? templateConfig().modules.personal?.note ?? '' }
+  // An unapproved owner hint, not a fact: never written to approved-facts.yaml or the ledger.
+  if (identity) config.onboarding = { ...(config.onboarding ?? {}), identity }
   ensureStarterProfiles(root)
   writeYaml(path.join(root, 'brand', 'brand.config.yaml'), config)
   writeYaml(path.join(root, 'brand', 'interview', 'session-state.yaml'), emptySession(input.language))
