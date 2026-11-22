@@ -109,7 +109,7 @@ test('buildStudioCreative keeps only valid, same-brand, safe decisions and withh
   put(`${s.pref.preference_id}.json`, { ...good, quote: 'EXTRA-FIELD-CANARY' })
   put(`${id(1)}.json`, { ...good, decision_id: id(1), brand_slug: 'other-brand', statement: 'OTHER-BRAND-CANARY' })
   put(`${id(2)}.json`, { ...good, decision_id: id(3) })
-  put(`${id(4)}.json`, { ...good, decision_id: id(4), statement: 'token ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' })
+  put(`${id(4)}.json`, { ...good, decision_id: id(4), statement: `token ghp_${'A1b2C3d4E5'.repeat(4)}` })
   put(`${id(5)}.json`, { ...good, decision_id: id(5), state: 'draft', statement: 'DRAFT-CANARY' })
   put(`${id(6)}.json`, '{not json')
   put('README.md', 'README-CANARY')

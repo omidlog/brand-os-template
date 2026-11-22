@@ -145,7 +145,7 @@ test('agentView withholds secret-looking text even from shared notes and labels'
   const s = seeded()
   shareE(s)
   const owner = creativeContext(s.ws, s.engine, { project_id: 'pilito-reel-1' })
-  const secret = 'api_key = sk-live_ABCDEFGHIJKLMNOPQRSTUVWX'
+  const secret = `api_key = sk-live_${'ABCDEFGH'.repeat(3)}`
   const tampered: CreativeContext = JSON.parse(JSON.stringify(owner)) as CreativeContext
   const e = tampered.references.find((ref) => ref.variant_id === 'E')!
   e.reasons[0]!.quote = secret
