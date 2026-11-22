@@ -11,6 +11,11 @@
     "packages/*",
     "apps/*"
   ],
+  "overrides": {
+    "tinypool": "^2.2.0",
+    "serialize-javascript": "^7.1.4",
+    "uuid": "^11.1.1"
+  },
   "scripts": {
     "help": "tsx scripts/help.ts",
     "doctor": "node scripts/doctor.mjs",
