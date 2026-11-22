@@ -25,3 +25,5 @@ export { buildCreativeContext, CONTEXT_NOTICE, creativeContext } from './context
 export { agentView, CREATIVE_AGENT_NOTICE, CREATIVE_AGENT_TOOL, creativeAccess, runCreativeContextTool } from './agent.js'
 export type { AgentCreativeContext, AgentReason, CreativeToolArgs, CreativeToolResult, QuoteWithheld } from './agent.js'
 export type { CitedReason, ContextTarget, CreativeContext, PreferenceItem, ReferenceItem, SourceState } from './context.js'
+export { approveAspects, ASPECT_METHOD, deriveAspects, listAspectProposals, normalizeForAspects, parseAspectChoices, readAspectProposal, rejectAspects, suggestAspects } from './aspects.js'
+export type { SuggestAspectsResult } from './aspects.js'

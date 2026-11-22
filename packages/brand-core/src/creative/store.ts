@@ -52,9 +52,10 @@ export const CREATIVE_DIRS = {
   root: 'brand/.private/creative',
   projects: 'brand/.private/creative/projects',
   preferences: 'brand/.private/creative/preferences',
+  aspects: 'brand/.private/creative/aspect-proposals',
 } as const
 
-function dir(ws: KnowledgeWorkspace, key: keyof typeof CREATIVE_DIRS): string {
+export function creativeDir(ws: KnowledgeWorkspace, key: keyof typeof CREATIVE_DIRS): string {
   return path.join(ws.root, ...CREATIVE_DIRS[key].split('/'))
 }
 
@@ -65,7 +66,7 @@ export function assertOwnerProcess(): void {
   }
 }
 
-function readRecord<T extends { kind: string; brand_slug: string }>(ws: KnowledgeWorkspace, file: string, kind: string): T | null {
+export function readRecord<T extends { kind: string; brand_slug: string }>(ws: KnowledgeWorkspace, file: string, kind: string): T | null {
   if (!dirUsable(ws, path.dirname(file))) return null
   let raw: Buffer | null
   try {
@@ -86,17 +87,17 @@ function readRecord<T extends { kind: string; brand_slug: string }>(ws: Knowledg
   return doc
 }
 
-function writeRecord(ws: KnowledgeWorkspace, file: string, doc: unknown): void {
+export function writeRecord(ws: KnowledgeWorkspace, file: string, doc: unknown): void {
   ensureDir(ws, path.dirname(file))
   writeVaultFile(ws, file, `${JSON.stringify(doc, null, 2)}\n`, true)
 }
 
 function projectFile(ws: KnowledgeWorkspace, id: string): string {
-  return path.join(dir(ws, 'projects'), `${validateProjectId(id)}.json`)
+  return path.join(creativeDir(ws, 'projects'), `${validateProjectId(id)}.json`)
 }
 
 function preferenceFile(ws: KnowledgeWorkspace, id: string): string {
-  return path.join(dir(ws, 'preferences'), `${validatePreferenceId(id)}.json`)
+  return path.join(creativeDir(ws, 'preferences'), `${validatePreferenceId(id)}.json`)
 }
 
 export function readProject(ws: KnowledgeWorkspace, id: string): CreativeProject {
@@ -122,7 +123,7 @@ export function listProjects(ws: KnowledgeWorkspace): CreativeProject[] {
 
 /** listProjects without the owner-process check (see loadProject). */
 export function scanProjects(ws: KnowledgeWorkspace): CreativeProject[] {
-  const folder = dir(ws, 'projects')
+  const folder = creativeDir(ws, 'projects')
   if (!dirUsable(ws, folder)) return []
   const out: CreativeProject[] = []
   for (const name of fs.readdirSync(folder).sort()) {
@@ -158,7 +159,7 @@ export function listPreferences(ws: KnowledgeWorkspace): CreativePreference[] {
 
 /** listPreferences without the owner-process check (see loadProject). */
 export function scanPreferences(ws: KnowledgeWorkspace): CreativePreference[] {
-  const folder = dir(ws, 'preferences')
+  const folder = creativeDir(ws, 'preferences')
   if (!dirUsable(ws, folder)) return []
   const out: CreativePreference[] = []
   for (const name of fs.readdirSync(folder).sort()) {
@@ -177,7 +178,7 @@ function lockName(projectId: string): string {
   return `creative-${projectId}`
 }
 
-function updateProject(ws: KnowledgeWorkspace, id: string, change: (project: CreativeProject) => void): CreativeProject {
+export function updateProject(ws: KnowledgeWorkspace, id: string, change: (project: CreativeProject) => void): CreativeProject {
   return withLock(ws, lockName(validateProjectId(id)), () => {
     const project = readProject(ws, id)
     change(project)

@@ -36,6 +36,11 @@ npm run brand:creative -- context --surface reel --series onboarding      # or -
 # 6. Changed mind: capture the new words, suggest with --supersedes, approve
 npm run brand:knowledge -- capture --title "Changed mind" --text "…" --source-kind owner_note
 npm run brand:creative -- suggest --project pilito-intro-reels --statement "…" --source kn_<new> --supersedes cp_<old>
+# 7. Aspects suggested from the note text (pending until the owner approves)
+npm run brand:creative -- aspects suggest --project pilito-intro-reels [--feedback fb_…]
+npm run brand:creative -- aspects list --project pilito-intro-reels --state pending
+BRAND_OS_APPROVAL_PROOF=… npm run brand:creative -- aspects approve --id ap_… [--only lighting:keep,text_density:avoid]
+npm run brand:creative -- aspects reject --id ap_…
 ```
 
 ## Rules the code enforces
@@ -59,6 +64,24 @@ npm run brand:creative -- suggest --project pilito-intro-reels --statement "…"
 - **Drift is visible.** Edited source → `stale` (both revisions shown). Archived → `archived`, quote withheld. An
   approved preference whose source changed → `needs_review`, not applied. A hand-edited approved record no longer
   matches its approval digest → `invalid_approval`, not applied. Manifest checksum change → asset `changed`.
+
+## Aspect proposals (`aspects`)
+
+`aspects suggest` reads each feedback note's current text and suggests `keep`/`avoid` aspects with a fixed,
+deterministic fa/en/tr lexicon (`packages/brand-core/src/creative/aspects.ts`, method `lexicon-v1`; no model call).
+For example "نورپردازی خوب است ولی متن خیلی زیادی دارد." gives `+lighting -text_density`. A clause with a negative cue
+suggests avoid, else a positive cue suggests keep, else `unclear`.
+
+- A proposal (`brand/.private/creative/aspect-proposals/ap_….json`, 0600) holds ids, the note revision read and the
+  matched lexicon cues. Never note text. It is labelled `machine_suggestion_unverified`.
+- **Never auto-applied.** A `pending` proposal changes nothing: the feedback event, `context` and `creative_context`
+  ignore it. Running `suggest` again for the same note revision adds nothing.
+- `aspects approve` needs the owner approval proof (as `approve`). Without `--only` it applies every suggestion with
+  a clear side; an `unclear` one applies only when `--only aspect:keep|avoid` names the side. The aspects are added
+  to the feedback event and the proposal id is recorded in its `aspect_proposals`. Refused if the note changed since
+  the suggestion (`stale_source`), or if an aspect is already decided the other way.
+- `aspects reject` marks it rejected; nothing is applied. Decided proposals stay on disk for audit.
+- All `aspects` commands refuse under `BRAND_OS_AGENT_TOKEN`.
 
 ## Agent read path: `creative_context` (MCP, `creative-read` profile)
 
@@ -91,15 +114,17 @@ starts `npm run mcp:serve` with it. The local stdio server then answers one extr
 
 `tests/creative-journey.test.ts` (the full owner journey through both CLIs) and `tests/creative-security.test.ts`
 (cross-brand, agent token, knowledge-read MCP, guest/design readers, gitignore, restricted and
-third-party notes, stale/archived/tampered sources, brand-scope refusal, assets, no publish path), plus
+third-party notes, stale/archived/tampered sources, brand-scope refusal, assets, no publish path), `tests/creative-aspects.test.ts`
+(lexicon, pending changes nothing, proof, subset/unclear/reject, stale note, no flip, CLI), plus
 `tests/studio-creative.test.ts` (Studio's archive filter excludes creative records and feedback notes), and
 `tests/creative-agent.test.ts` (`creative_context`: profile and brand refusals, drafts/superseded withheld, local
 note text withheld, shared quote served, secret-looking text withheld, access log, stdio MCP).
 
 ## Known limitations
 
-- Aspects are a closed English vocabulary; the owner (or Claude, with the owner's agreement) chooses them when
-  recording feedback. They are not extracted automatically from the text.
+- Aspects are a closed English vocabulary. `aspects suggest` uses a small keyword lexicon: it misses paraphrases,
+  sarcasm and negation that spans clauses, and may suggest an aspect for an unrelated use of a word. That is why
+  every suggestion waits for the owner.
 - Series scope is `surface + series` only; there is no hierarchy or campaign scope.
 - The agent read path is local stdio MCP only (`creative_context`). There is no remote/HTTP access.
 - No Studio view. No sharing of creative records to Git.

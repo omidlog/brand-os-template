@@ -55,6 +55,7 @@ export const CREATIVE_LIMITS = {
   maxInspirations: 20,
   maxSources: 20,
   maxCounterexamples: 10,
+  maxAspectProposalsPerRun: 100,
   /** Characters of a note body quoted into a retrieval reason. */
   maxQuoteChars: 500,
 } as const
@@ -63,6 +64,8 @@ export const PROJECT_ID = /^[a-z0-9][a-z0-9-]{2,39}$/
 export const VARIANT_ID = /^[A-Z][A-Z0-9]{0,7}$/
 export const SERIES_ID = /^[a-z0-9][a-z0-9-]{1,39}$/
 export const PREFERENCE_ID = /^cp_[0-9a-f-]{36}$/
+export const ASPECT_PROPOSAL_ID = /^ap_[0-9a-f-]{36}$/
+export const FEEDBACK_ID = /^fb_[0-9a-f-]{36}$/
 const ASSET_ID = /^[a-z0-9][a-z0-9_.-]{1,119}$/
 
 /** A Knowledge note as it was when linked. The revision is the sha256 the Knowledge store computes. */
@@ -95,6 +98,43 @@ export interface FeedbackEvent {
   keep: Aspect[]
   avoid: Aspect[]
   recorded_at: string
+  /** Aspect proposals the owner approved into keep/avoid on this event (audit trail). */
+  aspect_proposals?: string[]
+}
+
+export const ASPECT_SIDES = ['keep', 'avoid'] as const
+export type AspectSide = (typeof ASPECT_SIDES)[number]
+export const ASPECT_PROPOSAL_STATES = ['pending', 'approved', 'rejected'] as const
+export type AspectProposalState = (typeof ASPECT_PROPOSAL_STATES)[number]
+
+/**
+ * A machine suggestion of keep/avoid aspects for one feedback event, derived from its note's text by a fixed
+ * lexicon. It holds lexicon cues only, never note text. It changes nothing until the owner approves it.
+ */
+export interface AspectSuggestion {
+  aspect: Aspect
+  /** `unclear`: the aspect is mentioned but the wording does not say keep or avoid; the owner must choose. */
+  side: AspectSide | 'unclear'
+  /** The lexicon entry that matched (a fixed vocabulary string, not the owner's text). */
+  cue: string
+}
+
+export interface AspectProposal {
+  schema_version: number
+  kind: 'creative_aspect_proposal'
+  proposal_id: string
+  brand_slug: string
+  project_id: string
+  feedback_id: string
+  variant_id: string
+  note: NoteRef
+  method: string
+  label: 'machine_suggestion_unverified'
+  suggestions: AspectSuggestion[]
+  state: AspectProposalState
+  applied: Array<{ aspect: Aspect; side: AspectSide }>
+  decided_at: string | null
+  created_at: string
 }
 
 export interface CreativeProject {
@@ -149,6 +189,20 @@ export class CreativeError extends Error {
 
 export function newPreferenceId(): string {
   return `cp_${crypto.randomUUID()}`
+}
+
+export function newAspectProposalId(): string {
+  return `ap_${crypto.randomUUID()}`
+}
+
+export function validateAspectProposalId(value: unknown): string {
+  if (typeof value !== 'string' || !ASPECT_PROPOSAL_ID.test(value)) throw new CreativeError('invalid_input', 'An aspect proposal id looks like ap_<uuid>.')
+  return value
+}
+
+export function validateFeedbackId(value: unknown): string {
+  if (typeof value !== 'string' || !FEEDBACK_ID.test(value)) throw new CreativeError('invalid_input', 'A feedback id looks like fb_<uuid>.')
+  return value
 }
 
 export function newFeedbackId(): string {

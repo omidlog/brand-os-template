@@ -18,7 +18,8 @@ As an MCP agent with a `creative-read` token (not in the checkout), call the rea
 4. **Selection is not approval.** `select` records the owner's choice for this project only. Never describe it as published, approved brand-wide, or best-performing. There is no performance data.
 5. **Suggest, don't decide.** `suggest` a short preference citing the owner's notes (never research notes), with counterexamples. Tell the owner it is a draft and that only they can run `approve` with their approval proof. Default scope is the project. Use `--scope series` only if the owner names it. Brand-wide rules go through `brand:knowledge propose` → `brand:review` → `brand:approve`.
 6. **Changed mind.** Capture the new words as a note, then `suggest --supersedes cp_…`. The old preference stays applied until the owner approves the new one, and it stays on disk for audit.
-7. **Stale sources.** If context shows `stale`, `archived`, `needs_review` or `invalid_approval`, say so and ask the owner. Don't rely on it silently.
+7. **Aspects from the words.** After recording feedback without aspects, you may run `aspects suggest --project <id>` and show the owner the pending suggestions. Only the owner runs `aspects approve` (with their proof) or `aspects reject`. Never present a pending suggestion as the owner's decision.
+8. **Stale sources.** If context shows `stale`, `archived`, `needs_review` or `invalid_approval`, say so and ask the owner. Don't rely on it silently.
 
 ## Never
 Copy note text into statements or descriptions beyond a short label. Link restricted notes. Read another brand's records. Claim a variant performed best. Treat a selection or preference as permission to post, publish or buy ads.
