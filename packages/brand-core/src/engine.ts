@@ -33,6 +33,7 @@ import type {
 import { PERSONAL_FACETS } from './types.js'
 import { templateConfig } from './config.js'
 import { ensureStarterProfiles } from './personal.js'
+import { readSyncManifest, readTemplateRecord, writeTemplateRecord } from './template-sync.js'
 
 export interface StepResult {
   kind: 'recorded' | 'info' | 'exit' | 'error' | 'impact'
@@ -69,6 +70,8 @@ export interface InitInput {
   /** Personal facets, for example founder-executive and consultant-expert. Needs the personal module. */
   facets?: string[]
   reset?: boolean
+  /** The template commit this brand starts from, for template sync. Studio passes the template head. */
+  template?: { repository: string | null; commit: string | null; version: string | null; source: string }
 }
 
 /** Personal module settings for brand:init. Throws on an unknown facet or facets without the module. */
@@ -1091,8 +1094,32 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
     approved_fact_ids: [], approved_page_ids: [], approved_asset_ids: [], approved_token_ids: [],
   })
   syncManifest(root, config)
+  recordTemplate(root, input.template)
   new InterviewEngine(root).rebuildDrafts()
   return config
+}
+
+/** Writes brand/template-version.json. A re-init keeps a known template commit. */
+function recordTemplate(root: string, template: InitInput['template']): void {
+  const recorded_at = new Date().toISOString()
+  if (template) {
+    writeTemplateRecord(root, { ...template, recorded_at })
+    return
+  }
+  const existing = readTemplateRecord(root)
+  let version: string | null = existing?.version ?? null
+  const pkg = path.join(root, 'package.json')
+  if (!version && fs.existsSync(pkg)) {
+    const value = (JSON.parse(fs.readFileSync(pkg, 'utf8')) as { version?: unknown }).version
+    version = typeof value === 'string' ? value : null
+  }
+  writeTemplateRecord(root, {
+    repository: existing?.repository ?? readSyncManifest(root)?.template.repository ?? null,
+    commit: existing?.commit ?? null,
+    version,
+    recorded_at,
+    source: existing?.source ?? 'brand:init',
+  })
 }
 
 export function syncManifest(root: string, config: BrandConfig): void {

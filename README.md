@@ -163,7 +163,7 @@ One private Studio shows every brand at `/brands/<slug>` and creates new ones. I
 3. Edit in Claude Code, approve facts yourself with the local CLI, and merge the pull request.
 4. Refresh Studio: it shows the merged default branch with its commit SHA and sync time, cited documents, tokens, approved assets, history and open pull requests (labelled non-canonical).
 
-Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub write is creating a new repository. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. Deployment to a server is a separate step and not part of this template yet.
+Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub writes are creating a new repository and opening (never merging), when the owner asks or the opt-in periodic check finds a brand behind, a template update pull request on a new branch. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. Deployment to a server is a separate step and not part of this template yet.
 
 ## Agent instructions
 

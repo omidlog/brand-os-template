@@ -191,6 +191,8 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/retry$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/discard$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/refresh$',
+        // Studio's second GitHub write: opens (never merges) a template update pull request.
+        'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/template-update$',
       ],
     )
     for (const route of writes) assert.ok(route.writes, `${route.pattern} documents what it changes`)
@@ -208,11 +210,12 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
       const res = await client.request('POST', pathname, { form: { _csrf: 'x' } })
       assert.equal(res.status, 404, pathname)
     }
-    // No page offers a write form other than sign-out, refresh and (on the wizard) provisioning.
+    // No page offers a write form other than sign-out, refresh, (on the wizard) provisioning and,
+    // only when the template moved on, "Open update PR".
     for (const pathname of ['/brands/acme-learning', '/brands/acme-learning/brand-book', '/brands/acme-learning/design', '/brands/acme-learning/assets', '/brands/acme-learning/business', '/brands/acme-learning/history', '/brands/acme-learning/handoff']) {
       const { text } = await client.page(pathname)
       const actions = [...text.matchAll(/<form[^>]*action="([^"]+)"/g)].map((match) => match[1])
-      assert.ok(actions.every((action) => action === '/logout' || action === '/brands/acme-learning/refresh'), `${pathname}: ${actions.join(', ')}`)
+      assert.ok(actions.every((action) => action === '/logout' || action === '/brands/acme-learning/refresh' || action === '/brands/acme-learning/template-update'), `${pathname}: ${actions.join(', ')}`)
       assert.equal(/<textarea(?![^>]*readonly)/.test(text), false, 'no editable text areas')
       assert.equal(/type="file"/.test(text), false, 'no uploads')
       assert.equal(/contenteditable/i.test(text), false)

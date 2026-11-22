@@ -63,10 +63,10 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 
 ## Brand OS Studio
 
-Studio (`apps/studio`, guide `docs-internal/STUDIO.md`) is a private, read-only viewer. It shows the merged default branch of each brand repository and can create a new private repository from this template. It never edits a brand.
+Studio (`apps/studio`, guide `docs-internal/STUDIO.md`) is a private, read-only viewer. It shows the merged default branch of each brand repository and has exactly two GitHub writes: creating a new private repository from this template, and opening (never merging) a template update pull request on a new `template-update/<sha>` branch in a brand repository. It never edits brand content.
 
 - Make every brand change here, in the brand repository, through the core CLI and the normal branch and pull request flow. Studio shows it after the owner merges and refreshes.
-- Do not add a Studio route, form or API that writes brand facts, documents, assets, approvals, tokens or Git state. The only non-GET routes are sign-in, sign-out, provisioning (create, retry, discard a failed attempt from Studio's registry), refresh and the signed webhook; `tests/studio-server.test.ts` pins that list.
+- Do not add a Studio route, form or API that writes brand facts, documents, assets, approvals, tokens or Git state. The only non-GET routes are sign-in, sign-out, provisioning (create, retry, discard a failed attempt from Studio's registry), refresh, the signed webhook and **Open update PR** (`POST /brands/<slug>/template-update`: core and merge-carefully template files plus `brand/template-version.json`, on a new branch, owner-only, CSRF-protected, audited; never the default branch, never a merge, never another brand file); `tests/studio-server.test.ts` pins that list.
 - Never add chat, an AI model call, agent execution or token issuance to Studio, and never send a GitHub token, raw tree, `.private` or restricted value to the browser.
 - An unmerged pull request is not canonical. Tell the owner whether a change is merged.
 

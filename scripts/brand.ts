@@ -3,10 +3,22 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
-import { applyInit, backupBrand, InterviewEngine, migrateBrand, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
+import { applyInit, backupBrand, InterviewEngine, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
 import type { BatchResult, IntakeReport, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
 
 const [command, ...rest] = process.argv.slice(2)
+
+/** brand:init --template-commit <sha>: the template commit this brand was created from (for template:update). */
+function templateFromFlag(commit: string | undefined) {
+  if (commit === undefined) return undefined
+  if (!/^[0-9a-f]{7,64}$/.test(commit)) {
+    console.error('--template-commit needs a git commit id (hex).')
+    process.exit(1)
+  }
+  const manifest = readSyncManifest(process.cwd())
+  const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as { version?: string }
+  return { repository: manifest?.template.repository ?? null, commit, version: pkg.version ?? null, source: 'brand:init' }
+}
 const root = process.cwd()
 const engine = new InterviewEngine(root)
 
@@ -29,6 +41,7 @@ if (command === 'init') {
       facets: { type: 'string' },
       yes: { type: 'boolean', default: false },
       reset: { type: 'boolean', default: false },
+      'template-commit': { type: 'string' },
     },
   })
   if (!values.name || !values.slug) {
@@ -54,6 +67,7 @@ if (command === 'init') {
     personal: values.personal === undefined ? undefined : values.personal === 'true',
     facets: values.facets ? values.facets.split(',').map((item) => item.trim()).filter(Boolean) : [],
     reset: values.reset === true,
+    template: templateFromFlag(values['template-commit']),
   })
   const personal = config.modules.personal
   console.log(`Initialized ${config.brand.name} (${config.brand.slug}). Profile ${config.brand.profile}. Mascot ${config.modules.mascot.enabled ? 'on' : 'off'}. Personal ${personal?.enabled ? `on${personal.facets.length ? ` (${personal.facets.join(', ')})` : ''}` : 'off'}.`)

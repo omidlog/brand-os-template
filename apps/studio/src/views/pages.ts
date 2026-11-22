@@ -2,6 +2,7 @@ import type { DocumentKind } from '@brand-os/brand-core'
 import type { MessageKey } from '../i18n/index.js'
 import type { ProjectionAsset, ProjectionToken, StudioProjection } from '../projection.js'
 import type { BrandRecord, ProvisionRequest } from '../registry.js'
+import type { UpdateStatus } from '../template-update.js'
 import { cloneCommand, starterPrompt } from '../starter-prompt.js'
 import {
   badge,
@@ -89,7 +90,15 @@ function profileBadge(ctx: ViewContext, profile: 'business' | 'personal-brand'):
   return profile === 'personal-brand' ? badge(ctx.i.t('brands.profilePersonal'), 'accent', 'user') : badge(ctx.i.t('brands.profileBusiness'), 'neutral', 'briefcase')
 }
 
-export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced: Map<string, { sha: string | null; at: string | null }>; discarded?: boolean }): SafeHtml {
+/** Text, icon and colour together; never colour alone. */
+function updateBadge(ctx: ViewContext, status: UpdateStatus | undefined): SafeHtml {
+  if (!status) return html``
+  if (status.pull) return badge(ctx.i.t('update.pullOpen'), 'info', 'pr')
+  if (status.state === 'available') return badge(ctx.i.t('update.available'), 'warning', 'refresh')
+  return html``
+}
+
+export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced: Map<string, { sha: string | null; at: string | null }>; updates?: Map<string, UpdateStatus>; discarded?: boolean }): SafeHtml {
   const { i } = ctx
   const newButton = input.canCreate ? html`<a class="btn btn-primary" href="/brands/new">${icon('plus')}<span>${i.t('nav.newBrand')}</span></a>` : ''
   const content = ctx.brands.length
@@ -100,7 +109,7 @@ export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced
         return html`<li class="brand-card">
           <a class="brand-card-link" href="${href}">
             <div class="brand-card-head">${brandAvatar(record.display_name, 'brand-avatar-lg')}<div><h2 class="brand-card-title" dir="auto">${record.display_name}</h2><p class="brand-card-slug mono" dir="ltr">/brands/${record.slug}</p></div></div>
-            <div class="brand-card-badges">${profileBadge(ctx, record.profile)}${stateBadge(ctx, record)}</div>
+            <div class="brand-card-badges">${profileBadge(ctx, record.profile)}${stateBadge(ctx, record)}${updateBadge(ctx, input.updates?.get(record.slug))}</div>
             <dl class="brand-card-meta">
               <div><dt>${i.t('brands.repository')}</dt><dd class="mono" dir="ltr">${record.repo.owner}/${record.repo.name}</dd></div>
               <div><dt>${i.t('brands.lastCommit')}</dt><dd>${sync?.sha ? html`${code(shortSha(sync.sha))} <span class="muted">${i.relative(sync.at, ctx.now)}</span>` : html`<span class="muted">${i.t('sync.never')}</span>`}</dd></div>
@@ -415,7 +424,56 @@ function brandHeader(ctx: ViewContext, view: BrandView, title: string, subtitle:
 
 const GROUP_KEYS: Record<string, MessageKey> = { brand: 'overview.group.brand', business: 'overview.group.business', personal: 'overview.group.personal', governance: 'overview.group.governance' }
 
-export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | null): SafeHtml {
+export interface UpdatePanel {
+  status: UpdateStatus
+  canOpen: boolean
+  busy: boolean
+  template: string
+  flash: { code: 'opened' | 'exists' | 'current' | 'untracked' | 'not_configured' | 'busy' | 'failed' | 'pending' | 'too_soon'; number: number | null; url: string | null } | null
+}
+
+function updatePanel(ctx: ViewContext, view: BrandView, panel: UpdatePanel): SafeHtml {
+  const { i } = ctx
+  const { status, flash } = panel
+  const from = shortSha(status.from)
+  const to = shortSha(status.to)
+  const flashTone: Tone = flash?.code === 'opened' || flash?.code === 'current' ? 'success' : flash?.code === 'exists' || flash?.code === 'pending' || flash?.code === 'busy' || flash?.code === 'too_soon' ? 'info' : 'danger'
+  const flashBody = flash
+    ? html`${i.t(`update.flash.${flash.code}` as MessageKey, { number: flash.number ?? '' })}${flash.url ? html` ${externalLink(flash.url, i.t('update.viewPull', { number: flash.number ?? '' }), i, 'link-sm')}` : ''}`
+    : null
+  const pullUrl = status.pull ? safeGitHubUrl(status.pull.html_url) : null
+  const stateBadge =
+    status.pull ? badge(i.t('update.pullOpen'), 'info', 'pr')
+    : status.state === 'available' ? badge(i.t('update.available'), 'warning', 'refresh')
+    : status.state === 'current' ? badge(i.t('update.current'), 'success', 'checkCircle')
+    : status.state === 'untracked' ? badge(i.t('update.untracked'), 'neutral', 'info')
+    : badge(i.t('update.unknown'), 'neutral', 'clock')
+  const text =
+    status.pull ? i.t('update.pullBody', { number: status.pull.number })
+    : status.state === 'available' ? i.t('update.availableBody', { from, to })
+    : status.state === 'current' ? i.t('update.currentBody', { to })
+    : status.state === 'untracked' ? i.t('update.untrackedBody')
+    : i.t('update.unknownBody')
+  let action: SafeHtml = html``
+  if (status.pull && pullUrl) action = externalLink(pullUrl, html`${icon('pr')}<span>${i.t('update.viewPull', { number: status.pull.number })}</span>`, i)
+  else if (status.state === 'available' && panel.busy) action = html`<p class="muted small" role="status"><span class="spinner" aria-hidden="true"></span> ${i.t('update.busy')}</p>`
+  else if (status.state === 'available' && panel.canOpen)
+    action = html`<form method="post" action="/brands/${view.record.slug}/template-update" class="inline-form" data-update-form>
+        <input type="hidden" name="_csrf" value="${ctx.csrf ?? ''}">
+        <button type="submit" class="btn btn-primary btn-sm" aria-describedby="update-hint" data-busy-label="${i.t('update.opening')}">${icon('pr')}<span>${i.t('update.open')}</span></button>
+      </form>
+      <p class="muted small" id="update-hint">${i.t('update.openHint')}</p>`
+  else if (status.state === 'available') action = html`<p class="muted small">${i.t('update.cannotOpen')}</p>`
+  return html`<section class="card update-card" id="template-update" aria-labelledby="update-title" data-update-state="${status.pull ? 'pull' : status.state}">
+    <div class="card-head"><h2 class="card-title" id="update-title">${i.t('update.title')}</h2>${stateBadge}</div>
+    ${flashBody ? banner({ tone: flashTone, body: flashBody, live: true }) : ''}
+    <p>${text}</p>
+    <p class="muted small"><span dir="ltr" class="mono">${panel.template}</span></p>
+    ${action}
+  </section>`
+}
+
+export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | null, update?: UpdatePanel): SafeHtml {
   const { i } = ctx
   const p = view.cached.projection
   if (!p) return brandShell(ctx, view, 'overview', i.t('overview.title'), html``, flash)
@@ -436,6 +494,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
     </header>
     ${banner({ tone: 'info', body: html`${i.t('app.readOnlyNote')} <a href="/brands/${view.record.slug}/handoff">${i.t('nav.handoff')}</a>` })}
     ${!p.brand.initialized ? banner({ tone: 'warning', body: i.t('overview.notInitialized') }) : ''}
+    ${update ? updatePanel(ctx, view, update) : ''}
     <section class="stat-grid" aria-label="${i.t('overview.title')}">
       ${statCard({ label: i.t('overview.coverage'), value: i.percent(o.coverage), hint: i.t('overview.coverageHint'), ratio: o.coverage })}
       ${statCard({ label: i.t('overview.approval'), value: i.percent(o.approval), hint: i.t('overview.approvalHint'), ratio: o.approval, tone: 'success' })}
