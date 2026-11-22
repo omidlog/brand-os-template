@@ -1,7 +1,8 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { applyInit, assertSlug, personalInit } from '@brand-os/brand-core'
+import { applyInit, assertSlug, changeDepthApplies, personalInit, validateIdentityChoice } from '@brand-os/brand-core'
+import type { IdentityField, IdentityIntakeError, IdentityIntent } from '@brand-os/brand-core'
 import { parse } from 'yaml'
 import { validOwner, validRepoName } from './config.js'
 import type { GitHubClient, RepoInfo } from './github/client.js'
@@ -38,6 +39,7 @@ export type ValidationCode =
   | 'locale_invalid'
   | 'owner_not_allowed'
   | 'repo_invalid'
+  | IdentityIntakeError
 
 export type StartCode = 'not_configured' | 'duplicate' | 'busy' | 'not_failed' | 'unknown_brand'
 
@@ -112,7 +114,9 @@ export function validateRequest(input: Record<string, unknown>, allowedOwners: s
   if (!validOwner(owner) || !allowedOwners.some((allowed) => allowed.toLowerCase() === owner.toLowerCase())) errors.owner = 'owner_not_allowed'
   const repo = (typeof input.repo === 'string' && input.repo.trim()) || slug
   if (!validRepoName(repo)) errors.repo = 'repo_invalid'
-  if (Object.keys(errors).length) return { request: null, errors }
+  const identity = identityFromInput(input)
+  if (!identity.ok) Object.assign(errors, identity.errors)
+  if (Object.keys(errors).length || !identity.ok) return { request: null, errors }
   return {
     request: {
       name,
@@ -125,9 +129,29 @@ export function validateRequest(input: Record<string, unknown>, allowedOwners: s
       gamification: flag(input.gamification),
       owner: allowedOwners.find((allowed) => allowed.toLowerCase() === owner.toLowerCase()) ?? owner,
       repo,
+      identity: identity.value,
     },
     errors,
   }
+}
+
+/**
+ * The wizard's identity questions: flat form fields, or the `identity` object of a stored request.
+ * A change depth left over from toggling the intent (a hidden field, or a no-JavaScript form where
+ * every field is visible) is cleared when the intent does not take one, so it never overrides the
+ * choice. Everything else goes through the strict core validation, which refuses contradictions.
+ * Missing answers mean unknown / undecided.
+ */
+function identityFromInput(input: Record<string, unknown>): ReturnType<typeof validateIdentityChoice> {
+  const source = input.identity && typeof input.identity === 'object' && !Array.isArray(input.identity) ? (input.identity as Record<string, unknown>) : input
+  const single = (value: unknown): unknown => (Array.isArray(value) ? (value.length === 1 ? value[0] : value) : value)
+  const fields: Partial<Record<IdentityField, unknown>> = {
+    logo_presence: single(source.logo_presence),
+    identity_intent: single(source.identity_intent),
+    change_depth: single(source.change_depth),
+  }
+  if (!(typeof fields.identity_intent === 'string' && changeDepthApplies(fields.identity_intent as IdentityIntent))) fields.change_depth = null
+  return validateIdentityChoice(fields)
 }
 
 class StepError extends Error {
@@ -175,6 +199,8 @@ export function initializeCheckout(root: string, request: ProvisionRequest, temp
     facets: request.facets,
     // The checkout holds only brand/, so the template version is unknown here; the commit is what counts.
     template: template ? { repository: template.repository, commit: template.commit, version: null, source: 'studio' } : undefined,
+    // An unapproved owner hint in brand.config.yaml, never an approved fact. Older requests have none.
+    identity: request.identity ? { choice: request.identity, source: 'studio_owner_wizard' } : undefined,
   })
   const after = hashTree(root)
   const write: InitChanges['write'] = []

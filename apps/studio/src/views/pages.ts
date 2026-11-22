@@ -1,5 +1,6 @@
 import { normalizeCommand, SVG_ISSUE_CODES } from '@brand-os/asset-catalog'
-import type { DocumentKind } from '@brand-os/brand-core'
+import { CHANGE_DEPTHS, IDENTITY_INTENTS, LOGO_PRESENCE } from '@brand-os/brand-core'
+import type { DocumentKind, IdentityField } from '@brand-os/brand-core'
 import type { MessageKey } from '../i18n/index.js'
 import type { ProjectionAsset, ProjectionToken, StudioProjection } from '../projection.js'
 import type { BrandRecord, ProvisionRequest } from '../registry.js'
@@ -143,7 +144,7 @@ export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced
 /* ---------------------------------------------------------------- new brand wizard */
 
 export interface WizardState {
-  values: Partial<Record<keyof ProvisionRequest, unknown>>
+  values: Partial<Record<keyof ProvisionRequest | IdentityField, unknown>>
   errors: Partial<Record<string, string>>
   formError?: string
   owners: string[]
@@ -165,6 +166,17 @@ export function wizardPage(ctx: ViewContext, state: WizardState): SafeHtml {
   const locales = Array.isArray(v.locales) ? (v.locales as string[]) : []
   const facets = Array.isArray(v.facets) ? (v.facets as string[]) : []
   const defaultLocale = typeof v.default_locale === 'string' ? v.default_locale : 'en'
+  const pick = <T extends string>(list: readonly T[], value: unknown, fallback: T | null): T | null => ((list as readonly unknown[]).includes(value) ? (value as T) : fallback)
+  const logoPresence = pick(LOGO_PRESENCE, v.logo_presence, 'unknown')
+  const identityIntent = pick(IDENTITY_INTENTS, v.identity_intent, 'undecided')
+  const changeDepth = pick(CHANGE_DEPTHS, v.change_depth, null)
+  const depthApplies = identityIntent === 'evolve' || identityIntent === 'rebrand'
+  // One radio group. The first radio carries the field id, so the error summary link focuses it.
+  const radios = <T extends string>(field: IdentityField, list: readonly T[], current: T | null, prefix: string): SafeHtml =>
+    html`<div class="check-grid">${list.map(
+      (value, index) =>
+        html`<label class="check"><input type="radio" name="${field}" value="${value}" ${index === 0 ? html`id="${field}"` : ''} ${current === value ? 'checked' : ''} ${state.errors[field] ? html`aria-invalid="true"` : ''}><span>${i.t(`${prefix}.${value}` as MessageKey)}</span></label>`,
+    )}</div>`
   const steps: Array<{ id: string; key: MessageKey }> = [
     { id: 'basics', key: 'wizard.stepBasics' },
     { id: 'profile', key: 'wizard.stepProfile' },
@@ -211,6 +223,24 @@ export function wizardPage(ctx: ViewContext, state: WizardState): SafeHtml {
         <p class="field-hint" id="facets-hint">${i.t('wizard.facetsHint')}</p>
         <div class="check-grid">${FACETS.map((facet) => html`<label class="check"><input type="checkbox" name="facets" value="${facet}" ${facets.includes(facet) ? 'checked' : ''}><span>${i.t(`wizard.facet.${facet}` as MessageKey)}</span></label>`)}</div>
         ${err('facets')}
+      </fieldset>
+      <fieldset class="subfield" data-identity aria-describedby="identity-hint">
+        <legend class="field-label">${i.t('wizard.identity')}</legend>
+        <p class="field-hint" id="identity-hint">${i.t('wizard.identityHint')}</p>
+        <fieldset class="subfield" ${state.errors.logo_presence ? html`aria-describedby="logo_presence-error"` : ''}>
+          <legend class="field-label">${i.t('wizard.logoPresence')}</legend>
+          ${radios('logo_presence', LOGO_PRESENCE, logoPresence, 'wizard.logoPresence')}${err('logo_presence')}
+        </fieldset>
+        <fieldset class="subfield" ${state.errors.identity_intent ? html`aria-describedby="identity_intent-error"` : ''}>
+          <legend class="field-label">${i.t('wizard.identityIntent')}</legend>
+          ${radios('identity_intent', IDENTITY_INTENTS, identityIntent, 'wizard.identityIntent')}${err('identity_intent')}
+        </fieldset>
+        <fieldset class="subfield" data-change-depth data-applies="${depthApplies ? 'true' : 'false'}" aria-describedby="change_depth-hint${state.errors.change_depth ? ' change_depth-error' : ''}">
+          <legend class="field-label">${i.t('wizard.changeDepth')}</legend>
+          <p class="field-hint" id="change_depth-hint">${i.t('wizard.changeDepthHint')}</p>
+          ${radios('change_depth', CHANGE_DEPTHS, depthApplies ? changeDepth : null, 'wizard.changeDepth')}${err('change_depth')}
+        </fieldset>
+        <p class="field-hint">${i.t('wizard.marketLater')}</p>
       </fieldset>
     </fieldset>
     <fieldset class="wizard-step" data-step="languages">
@@ -271,6 +301,9 @@ export function wizardPage(ctx: ViewContext, state: WizardState): SafeHtml {
         <div><dt>${i.t('wizard.name')}</dt><dd data-review-field="name" dir="auto">${String(v.name ?? '')}</dd></div>
         <div><dt>${i.t('wizard.slug')}</dt><dd data-review-field="slug" class="mono" dir="ltr">${String(v.slug ?? '')}</dd></div>
         <div><dt>${i.t('wizard.profile')}</dt><dd data-review-field="profile"></dd></div>
+        <div><dt>${i.t('wizard.logoPresence')}</dt><dd data-review-field="logo_presence">${logoPresence ? i.t(`wizard.logoPresence.${logoPresence}` as MessageKey) : ''}</dd></div>
+        <div><dt>${i.t('wizard.identityIntent')}</dt><dd data-review-field="identity_intent">${identityIntent ? i.t(`wizard.identityIntent.${identityIntent}` as MessageKey) : ''}</dd></div>
+        <div><dt>${i.t('wizard.changeDepth')}</dt><dd data-review-field="change_depth" data-not-asked="${i.t('wizard.changeDepthNotAsked')}">${depthApplies ? i.t(`wizard.changeDepth.${changeDepth ?? 'undecided'}` as MessageKey) : i.t('wizard.changeDepthNotAsked')}</dd></div>
         <div><dt>${i.t('wizard.defaultLocale')}</dt><dd data-review-field="default_locale"></dd></div>
         <div><dt>${i.t('wizard.repo')}</dt><dd data-review-field="repo" class="mono" dir="ltr"></dd></div>
       </dl>

@@ -70,9 +70,11 @@ export function provisioningRoutes(core: StudioCore): ProvisioningRoutes {
     const previous = retryTarget(ctx.url.searchParams.get('retry') ?? '')
     if (previous?.provisioning) {
       const r = previous.provisioning.request
-      return wizard(ctx, 200, { ...r, facets: [...r.facets], locales: [...r.locales] }, {}, undefined, previous)
+      // A request recorded before the identity questions existed prefills unknown / undecided.
+      const identity = r.identity ?? { logo_presence: 'unknown', identity_intent: 'undecided', change_depth: null }
+      return wizard(ctx, 200, { ...r, facets: [...r.facets], locales: [...r.locales], identity: undefined, ...identity }, {}, undefined, previous)
     }
-    await wizard(ctx, 200, { profile: 'business', default_locale: 'en', locales: ['en'], owner: provisioning.allowedOwners[0] }, {})
+    await wizard(ctx, 200, { profile: 'business', default_locale: 'en', locales: ['en'], owner: provisioning.allowedOwners[0], logo_presence: 'unknown', identity_intent: 'undecided', change_depth: null }, {})
   }
 
   /** Read-only: is owner/repo free on GitHub and in Studio? One GET per candidate, never a write. */
@@ -97,6 +99,9 @@ export function provisioningRoutes(core: StudioCore): ProvisioningRoutes {
       gamification: first(form.gamification) === 'on',
       owner: first(form.owner),
       repo: first(form.repo),
+      logo_presence: first(form.logo_presence),
+      identity_intent: first(form.identity_intent),
+      change_depth: first(form.change_depth),
     }
     const retrySlug = first(form.retry_of)
     const previous = retryTarget(retrySlug)
