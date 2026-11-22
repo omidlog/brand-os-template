@@ -70,7 +70,10 @@ Studio wears the omidataei.com identity, taken from that site's design system: m
 
 ```text
 Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100 locally; container behind Caddy on the VPS)
-                                      ├─ server.ts      route table, auth, CSRF, Host allowlist, headers
+                                      ├─ server.ts      route table and dispatcher: auth gate, CSRF, headers
+                                      ├─ routes/        handlers: context (shared helpers), guards (client IP, Host
+                                      │                 allowlist, same origin), auth, account, brands,
+                                      │                 provisioning, system (healthz, static, webhook)
                                       ├─ views/         server-rendered, escaped HTML
                                       ├─ registry.ts    slug -> repository mapping (server-side, data dir)
                                       ├─ sync.ts        merged default branch -> safe projection cache
@@ -145,7 +148,7 @@ Studio runs as one process and keeps its security state in that process's memory
 | State | Where | Effect of a restart |
 | --- | --- | --- |
 | Owner sessions | `apps/studio/src/auth/session.ts` | The owner is signed out and signs in again with password and authenticator code. Absolute expiry (`STUDIO_SESSION_HOURS`, default 12) and idle expiry (`STUDIO_IDLE_MINUTES`, default 60) only apply within one process lifetime. |
-| Rate limits | `apps/studio/src/auth/rate-limit.ts`, created in `server.ts` | Counters start from zero: failed sign-ins (5 per IP and 30 overall per 15 minutes), provisioning (10 per hour), refresh (once per 5 seconds per brand) and the name check (60 per minute). A restart therefore also lifts an active sign-in lockout. |
+| Rate limits | `apps/studio/src/auth/rate-limit.ts`, created in `routes/auth.ts` (sign-in), `routes/provisioning.ts` (provisioning, name check), `routes/brands.ts` (refresh, update PR) and `routes/account.ts` (connection test) | Counters start from zero: failed sign-ins (5 per IP and 30 overall per 15 minutes), provisioning (10 per hour), refresh (once per 5 seconds per brand), the name check (60 per minute), update PRs (6 per 10 minutes) and the account connection test (5 per minute). A restart therefore also lifts an active sign-in lockout. |
 | Used authenticator codes | `TotpVerifier` in `apps/studio/src/auth/totp.ts` | The "each code works once" record is lost. A code seen just before a restart could be accepted once more inside its 30-second step (plus one step of drift) after the restart, still only together with the password. |
 | Webhook delivery ids | `DeliveryLog` in `apps/studio/src/github/webhook.ts` | A recent delivery could be processed again. That only queues one more read-only refresh. |
 
