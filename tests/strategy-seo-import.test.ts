@@ -25,7 +25,9 @@ test('an SEO strategist draft becomes an editable proposal citing the same pinne
   for (const ref of proposal.recommendations.flatMap((rec) => rec.evidence_refs)) assert.match(ref, /^knowledge:kn_[a-z0-9-]+@[0-9a-f]{64}$/)
   // No research quote is copied into the proposal.
   const json = JSON.stringify(imported.proposal)
-  for (const source of plan.sources) for (const excerpt of source.excerpts ?? []) if (excerpt.quote.length > 40) assert.ok(!json.includes(excerpt.quote), 'quote not copied')
+  const quotes = plan.sources.flatMap((source) => source.quotes.map((item) => item.quote)).filter((quote) => quote.length > 30)
+  assert.ok(quotes.length > 0, 'the plan quotes its sources')
+  for (const quote of quotes) assert.ok(!json.includes(quote), 'quote not copied')
 
   const { revision } = proposeRevision(s.ws, { strategy_id: 'seo-from-draft', proposal: imported.proposal })
   assert.deepEqual(revision.content.origin, { kind: 'seo_draft', plan_id: plan.plan_id, strategist: plan.strategist })
