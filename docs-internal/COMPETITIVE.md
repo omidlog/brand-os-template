@@ -107,14 +107,53 @@ The base is `main` at 8bd44db.
 | Changed-source handling | Strategy Feed `evidenceState` (`current | changed | missing` → `needs_review`) | Same vocabulary, made finer (stale, superseded, archived, claim_missing). |
 | Safe files, locks, 0600, symlinks | `knowledge/workspace.ts` | Reused (`safeRead`, `writeVaultFile`, `withLock`, `dirUsable`). |
 | Target market, pricing, positioning, channels, logo | Approved facts and the existing approval flow | Read only (`business.market.geography` by id and revision). Never written. |
-| SEO competitor names | `seo.competitors.named` (owner assumptions) | Untouched and not imported. Slice C may bridge it as a cited supplement. |
+| SEO competitor names | `seo.competitors.named` (owner assumptions) | Untouched in Slice B. Slice C reads it for the SEO supplement and imports it only on the owner's `import-seo-names` command. |
 
 **What is new:** the `competitive_candidate` and `competitive_scope` records, and the read-time landscape. They hold no excerpt and no approved value, so they are not a second source of truth.
+
+## Using the landscape (Identity Slice C)
+
+Code: `competitive/context.ts`, `memos.ts`, `memo-i18n.ts`, `render.ts`, `seo-bridge.ts`. Tests: `tests/competitive-context.test.ts` and the second journey in `tests/competitive-cli.test.ts`.
+
+**One projection.** `getCompetitiveContext(ws, purpose, {capability, market, lang, now})` calls `buildLandscape` and keeps only:
+
+- the purpose's dimensions (`PURPOSE_DIMENSIONS`);
+- candidates in the requested market. A `GLOBAL` or unknown market stays in and is marked as such. Archived and out-of-market candidates are counted, not listed.
+
+It returns:
+
+- the cited observations, each with its ref, ref state, cell and source class, plus `usable` (observed, unverified or hypothesis);
+- conflicts and freshness counts;
+- prices for pricing work, re-checked for comparability on the filtered rows;
+- purpose gaps and `next_research` steps;
+- `source_refs` and a `source_digest`, which changes when any cited source changes state;
+- the prohibited inferences for that purpose (`PURPOSE_PROHIBITED`; pricing adds `price_coordination`);
+- `authorizes: []`.
+
+Its state is `missing`, `candidate_only`, `evidence_insufficient` or `evidence_available`, never an empty list that reads as "no competitors". It runs only in the owner's process.
+
+**Four drafts** (`buildCompetitiveMemo`, `brand:competitive memo --purpose …`). Each reads the same context and cites the owner's approved decisions (`MEMO_FACTS`) by id and revision without copying the value. `business.marketing.budget` is never read. Every draft has:
+
+- `observations` (usable only) and `unresolved` (conflicting, historical, needs_review), which are shown and never used as current;
+- `alternatives`, all with status `hypothesis`, with trade-offs and dependencies;
+- `not_known`;
+- `proposed_edits`, which point to `brand:knowledge propose` → `brand:review` → `brand:approve`;
+- `status: draft` and `authorizes: []`.
+
+| Draft | Specific behaviour |
+| --- | --- |
+| Marketing opportunity memo | Alternatives: differentiate, match with proof, and a channel test when channel use is observed. Never infers spend, conversion, ROAS/CPA, revenue, targeting or effectiveness. |
+| Pricing benchmark memo | Rows are `publicly_advertised`. Each has a `rate_label` (`standard_rate`, `promotional`, `promotion_unknown`, `monthly_rate_billed_annually`, `terms_unknown`), a status (`current`, `historical`, `needs_review`, `conflicting`) and `business_model: unknown`. Rows are never ranked or converted. Value-based, tiered, premium and entry-level are options without a number. `priced_recommendation` is always false, and a missing or stale price gives a warning. |
+| SEO cited supplement | `seo.competitors.named` stays `unverified_owner_assumption`, matched to competitor ids by normalized name. Rankings and keyword gaps are `unverified`. The SEO interview, drafts and `SeoStrategy` schema are untouched. |
+| Visual landscape assessment | Without a current cited visual observation, `visual_comparison: unavailable`, and no palette or motif is assumed. `similarity: not_assessed`, and legal clearance is never claimed. Routes follow the unapproved intake hint: create when there is no logo; retain-and-improve-guidelines, evolve or rebrand when one exists; all four when unknown. |
+
+**SEO bridge.** `brand:competitive import-seo-names [--dry-run]` runs only on command. Each new interview name becomes a `candidate` with source `seo_interview` and no domain, market or evidence. A name that matches an existing candidate is reported and never merged. An `unknown` answer imports nothing.
+
+**Reuse.** The landscape, research store, ref states and price checks are those of Slice B. The digest uses the Strategy Feed's `canonicalJson`/`sha256Hex`. Facts come from `readFacts`, SEO answers from `seo/answers.ts`, and the intake from `readIdentityIntake`. Drafts are printed, not stored, so there is no new record type.
 
 ## Not in this slice
 
 - An interview question such as "who do buyers compare us with". The gap checklist asks it, and the CLI records the answers as candidates.
-- The `CompetitiveContext` purpose projection and its marketing, pricing, SEO and identity consumers (Slice C).
 - The rebrand audit and logo brief (Slice D).
 - Studio views and agent access.
 - Live discovery or search.

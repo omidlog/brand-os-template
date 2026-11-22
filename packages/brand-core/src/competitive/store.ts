@@ -8,6 +8,7 @@ import { dirUsable, safeRead, withLock, writeVaultFile, type KnowledgeWorkspace 
 import { hostOf, type Excerpt } from '../research/model.js'
 import { loadEvidence, type EvidenceItem, type EvidenceSet } from '../research/store.js'
 import {
+  CANDIDATE_SOURCES,
   COMPETITIVE_LIMITS,
   COMPETITIVE_SCHEMA_VERSION,
   CompetitiveError,
@@ -209,7 +210,7 @@ export function addCandidate(ws: KnowledgeWorkspace, input: AddCandidateInput): 
   const relationship = listOf(input.relationship, RELATIONSHIPS, 'relationship')
   const geography = listOf(input.geography, GEOGRAPHIES, 'geography')
   const domain = input.domain ? validateDomain(input.domain) : null
-  const source = oneOf(input.source ?? 'owner_named', ['owner_named', 'research_lead'] as const, 'source')
+  const source = oneOf(input.source ?? 'owner_named', CANDIDATE_SOURCES, 'source')
   return locked(ws, 'competitive-index', () => {
     const existing = scanCandidates(ws).records
     if (existing.length >= COMPETITIVE_LIMITS.maxCandidates) throw new CompetitiveError('refused', `At most ${COMPETITIVE_LIMITS.maxCandidates} candidates per brand.`)

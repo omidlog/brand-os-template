@@ -21,7 +21,8 @@ export const LANDSCAPE_SCHEMA = 'brand-os.competitive-landscape/1'
 export const RELATIONSHIPS = ['direct', 'indirect', 'substitute', 'aspirational_benchmark'] as const
 /** Another dimension, relative to the brand's approved target market. Never a stand-in for the relationship. */
 export const GEOGRAPHIES = ['local', 'regional', 'international'] as const
-export const CANDIDATE_SOURCES = ['owner_named', 'research_lead'] as const
+/** `seo_interview`: imported on the owner's command from seo.competitors.named; still an owner assumption. */
+export const CANDIDATE_SOURCES = ['owner_named', 'research_lead', 'seo_interview'] as const
 /** Stored by the owner. `researched` and `needs_refresh` are computed from the evidence, never stored. */
 export const STORED_STATUSES = ['candidate', 'owner_reviewed', 'disputed', 'archived'] as const
 /** Assessment completeness, not the owner's acceptance of every observation. */
