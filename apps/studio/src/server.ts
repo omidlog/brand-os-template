@@ -5,7 +5,6 @@ import { verifyPassword } from './auth/password.js'
 import { RateLimiter } from './auth/rate-limit.js'
 import { loginCsrfToken, safeEqual, SessionStore } from './auth/session.js'
 import { TotpVerifier } from './auth/totp.js'
-import { isLoopback } from './config.js'
 import { GitHubError } from './github/client.js'
 import { DeliveryLog, parsePush, verifyWebhookSignature } from './github/webhook.js'
 import { BodyTooLarge, first, parseCookies, parseForm, readBody, redirect, safeLocalPath, securityHeaders, sendJson, serializeCookie } from './http.js'
@@ -13,6 +12,7 @@ import { i18n, isLocale, type Locale, type MessageKey } from './i18n/index.js'
 import { validateRequest } from './provision.js'
 import type { BrandRecord } from './registry.js'
 import { createCore, withTimeout, type Handler, type RequestContext, type Route, type RouteInfo, type StudioDeps } from './routes/context.js'
+import { requestGuards } from './routes/guards.js'
 import { sendStatic, studioAssets } from './static-assets.js'
 import { brandIsReady } from './sync.js'
 import type { UpdateStatus } from './template-update.js'
@@ -71,46 +71,7 @@ export function createStudio(deps: StudioDeps): {
   const loginCookie = core.cookies.login
   const langCookie = core.cookies.lang
 
-  /**
-   * The client address for rate limits. Behind the single trusted reverse proxy, the proxy appends the
-   * address it saw as the LAST X-Forwarded-For entry; anything to its left came from the client and
-   * can be forged, so only the rightmost hop is used.
-   */
-  function clientIp(req: IncomingMessage): string {
-    if (config.trustProxy) {
-      const forwarded = req.headers['x-forwarded-for']
-      const value = Array.isArray(forwarded) ? forwarded.join(',') : forwarded
-      const hop = value?.split(',').map((item) => item.trim()).filter(Boolean).pop()
-      if (hop && hop.length <= 64) return hop
-    }
-    return req.socket.remoteAddress ?? 'unknown'
-  }
-
-  /**
-   * Beyond loopback, Studio answers only for its public host (DNS rebinding, stray virtual hosts).
-   * The proxy passes the original Host through. `/healthz` stays reachable for the container check.
-   */
-  const publicHostname = new URL(config.publicOrigin).hostname.toLowerCase()
-  const expectedHostname = isLoopback(publicHostname) ? null : publicHostname
-  function hostAllowed(req: IncomingMessage): boolean {
-    if (expectedHostname === null) return true
-    const header = req.headers.host
-    if (!header || header.length > 300) return false
-    try {
-      // The hostname decides (DNS rebinding uses a foreign name); the port depends on the proxy hop.
-      return new URL(`http://${header}`).hostname === expectedHostname
-    } catch {
-      return false
-    }
-  }
-
-  function sameOrigin(req: IncomingMessage): boolean {
-    const origin = req.headers.origin
-    if (typeof origin === 'string') return origin === config.publicOrigin
-    const site = req.headers['sec-fetch-site']
-    if (typeof site === 'string') return site === 'same-origin' || site === 'none'
-    return true
-  }
+  const { clientIp, hostAllowed, sameOrigin } = requestGuards(config)
 
   async function brandView(ctx: RequestContext, record: BrandRecord): Promise<BrandView> {
     let cached = sync.get(record.slug)
