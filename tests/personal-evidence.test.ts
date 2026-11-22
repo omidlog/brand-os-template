@@ -203,3 +203,46 @@ test('retracting a claim removes it from facts, publication and drafts but keeps
   assert.equal(latestAnswers(engine.ledger().records).get('personal.identity.headline')?.status, 'deprecated')
   assert.ok(engine.ledger().records.some((record) => record.value === 'Award-winning product strategist'), 'history is kept')
 })
+
+test('a retracted required claim is asked again and counts as missing until it is re-answered', () => {
+  const { engine, proof } = brand()
+  const id = 'personal.identity.headline'
+  const module = engine.question(id)?.module
+  const missing = () => engine.statusReport().modules.find((score) => score.module === module)?.requiredUnanswered ?? -1
+  const asked = () => engine.queue(500).some((question) => question.id === id)
+  const before = missing()
+  answer(engine, id, 'Award-winning product strategist')
+  approve(engine, proof, [id])
+  assert.equal(missing(), before - 1)
+  assert.equal(asked(), false)
+
+  assert.equal(engine.approvals().retract(id, proof, 'The award claim was wrong').kind, 'recorded')
+  assert.equal(missing(), before, 'the retracted required question is missing again')
+  assert.equal(asked(), true, 'the interview asks the retracted question again')
+  assert.equal(engine.approvals().approveBatch({ ids: [id] }, proof).approved, 0, 'the empty retraction record cannot be approved')
+  assert.ok(engine.ledger().records.some((record) => record.question_id === id && record.value === 'Award-winning product strategist'), 'history is kept')
+
+  answer(engine, id, 'Product strategist for small teams')
+  assert.equal(missing(), before - 1, 're-answering covers it again')
+  assert.equal(asked(), false)
+  approve(engine, proof, [id])
+  const statuses = engine.ledger().records.filter((record) => record.question_id === id).map((record) => record.status)
+  assert.ok(statuses.includes('deprecated'), 'the retraction stays in the ledger after re-answering')
+})
+
+test('a retracted optional claim is open again without changing required coverage', () => {
+  const { engine, proof } = brand()
+  const id = 'personal.identity.name_forms'
+  assert.equal(engine.question(id)?.required, false)
+  answer(engine, 'personal.identity.public_name', 'Alex Example') // name_forms depends on it
+  const coverage = () => {
+    const report = engine.statusReport()
+    return { required: report.required, missing: report.requiredUnanswered }
+  }
+  const before = coverage()
+  answer(engine, id, 'Alex, A. Example')
+  approve(engine, proof, [id])
+  assert.equal(engine.approvals().retract(id, proof, 'Not used').kind, 'recorded')
+  assert.deepEqual(coverage(), before, 'an optional retraction never counts as a required gap')
+  assert.ok(engine.queue(500).some((question) => question.id === id), 'it can be asked again')
+})

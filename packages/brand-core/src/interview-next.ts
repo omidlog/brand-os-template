@@ -1,4 +1,4 @@
-import { latestAnswers } from './completeness.js'
+import { isOpenAnswer, latestAnswers } from './completeness.js'
 import type { InterviewEngine } from './engine.js'
 import type { Locale } from './i18n.js'
 import { openConflicts, openFollowUps, type IntakeConflict } from './proposal-intake.js'
@@ -127,8 +127,7 @@ export function nextReport(engine: InterviewEngine, opts: { limit?: number; prof
   const contradictions = engine.contradictions().map((item) => ({ id: item.id, severity: item.severity, message: item.message, fields: item.fields }))
   const total = profile ? profile.question_ids.length : engine.questions().length
   const answered = (profile ? profile.question_ids : engine.questions().map((question) => question.id)).filter((id) => {
-    const answer = answers.get(id)
-    return Boolean(answer && answer.status !== 'unanswered')
+    return !isOpenAnswer(answers.get(id))
   }).length
 
   const actions: string[] = []

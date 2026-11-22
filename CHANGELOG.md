@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Engine fixes
+
+### Fixed
+
+- A retracted (`brand:retract`, status `deprecated`) answer no longer counts as answered. Completeness counts a retracted required question as unanswered again, the interview queue and `brand:next` ask it again, and it no longer satisfies `depends_on`. Ledger history of the retracted answer is unchanged. New helper `isOpenAnswer` in `@brand-os/brand-core`. Tests: `brand-core-completeness`, `personal-evidence`.
+
 ## Unreleased — Phase 10 prep: Studio VPS deployment package
 
 Theme: everything the launch operator needs to run the read-only Studio at `studio.omidataei.com` on the owner's VPS, behind the existing edge Caddy. **Nothing is deployed by this change.** Docs: `docs-internal/phase-10/`.

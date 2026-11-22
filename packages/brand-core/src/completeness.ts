@@ -23,6 +23,16 @@ export interface CompletenessReport {
   modules: ModuleScore[]
 }
 
+/**
+ * True when a question still needs an answer: no live record, an `unanswered` record, or a
+ * `deprecated` record left by a retraction. A retracted answer is history, not a fact, so the
+ * question reopens; the earlier records stay in the ledger. `unknown`, `skipped` and
+ * `not_applicable` are real owner answers and do not reopen the question.
+ */
+export function isOpenAnswer(answer: AnswerRecord | undefined): boolean {
+  return !answer || answer.status === 'unanswered' || answer.status === 'deprecated'
+}
+
 function ratio(part: number, whole: number): number {
   if (whole === 0) return 1
   return part / whole
@@ -61,13 +71,13 @@ export function completeness(questions: FieldQuestion[], ctx: ConditionContext, 
     }
     const mandatory = question.required && evaluateCondition(question.required_when, ctx)
     const answer = ctx.answers.get(question.id)
-    const open = !answer || answer.status === 'unanswered'
+    const open = isOpenAnswer(answer)
     if (!mandatory) {
       if (open) score.optionalOpen += 1
       continue
     }
     score.required += 1
-    if (open) score.requiredUnanswered += 1
+    if (!answer || open) score.requiredUnanswered += 1
     else if (answer.status === 'approved') score.requiredApproved += 1
     else if (answer.status === 'draft' || answer.status === 'in_review') score.requiredDraft += 1
     else if (answer.status === 'unknown' || answer.status === 'skipped' || answer.status === 'not_applicable') {

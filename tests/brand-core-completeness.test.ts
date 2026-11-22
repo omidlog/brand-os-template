@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { completeness, latestAnswers } from '../packages/brand-core/src/completeness.js'
+import { completeness, isOpenAnswer, latestAnswers } from '../packages/brand-core/src/completeness.js'
 import type { ConditionContext } from '../packages/brand-core/src/conditions.js'
 import type { AnswerRecord, BrandConfig, FieldQuestion } from '../packages/brand-core/src/types.js'
 
@@ -54,13 +54,47 @@ test('every answer status lands in exactly one bucket', () => {
   assert.equal(report.approval, 1 / 8)
 })
 
-test('a retracted (deprecated) required answer currently counts as covered but not approved', () => {
-  // Pins today's behaviour, which matches the interview engine (it does not ask a retracted question again).
-  // Listed in the quality notes as a follow-up: a retraction should probably reopen the question.
+test('a retracted (deprecated) required answer reopens the question: it is unanswered again, not covered', () => {
+  // brand:retract supersedes the approved record and appends a deprecated one with no value.
+  // The question needs an answer again, so it counts as missing; the old records stay in the ledger.
   const report = completeness([question('brand.core.claim')], ctx(config(), answer('brand.core.claim', 'deprecated', { value: null })))
-  assert.equal(report.requiredUnanswered, 0)
+  assert.equal(report.requiredUnanswered, 1)
   assert.equal(report.requiredApproved, 0)
+  assert.equal(report.coverage, 0)
   assert.equal(report.approval, 0)
+  const [core] = report.modules
+  assert.equal(core?.requiredUnresolved, 0, 'a retraction is not an owner disposition like unknown or skipped')
+  assert.equal(core?.requiredDraft, 0)
+})
+
+test('re-answering a retracted required question makes it covered again', () => {
+  const retracted = answer('brand.core.claim', 'deprecated', { answer_id: 'c2', value: null, superseded_by: 'c3' })
+  const reanswered = answer('brand.core.claim', 'draft', { answer_id: 'c3', value: 'corrected claim' })
+  const original = answer('brand.core.claim', 'approved', { answer_id: 'c1', value: 'wrong claim', superseded_by: 'c2' })
+  const live = latestAnswers([original, retracted, reanswered])
+  assert.equal(live.get('brand.core.claim')?.answer_id, 'c3')
+  const report = completeness([question('brand.core.claim')], { config: config(), answers: live })
+  assert.equal(report.requiredUnanswered, 0)
+  assert.equal(report.coverage, 1)
+  assert.equal(report.modules[0]?.requiredDraft, 1)
+})
+
+test('a retracted optional answer is open again but never changes coverage', () => {
+  const questions = [question('brand.core.a'), question('brand.core.extra', { required: false })]
+  const report = completeness(questions, ctx(config(), answer('brand.core.a', 'approved'), answer('brand.core.extra', 'deprecated', { value: null })))
+  assert.equal(report.required, 1)
+  assert.equal(report.modules[0]?.optionalOpen, 1, 'the retracted optional question is open again')
+  assert.equal(report.coverage, 1)
+  assert.equal(report.approval, 1)
+})
+
+test('isOpenAnswer: only a missing, unanswered or retracted record needs an answer', () => {
+  assert.equal(isOpenAnswer(undefined), true)
+  assert.equal(isOpenAnswer(answer('q', 'unanswered')), true)
+  assert.equal(isOpenAnswer(answer('q', 'deprecated', { value: null })), true)
+  for (const status of ['approved', 'draft', 'in_review', 'unknown', 'skipped', 'not_applicable'] as const) {
+    assert.equal(isOpenAnswer(answer('q', status)), false, status)
+  }
 })
 
 test('optional questions never change coverage; open optional ones are counted separately', () => {

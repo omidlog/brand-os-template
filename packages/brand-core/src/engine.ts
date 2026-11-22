@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { disabledModule, shouldSkip, type ConditionContext } from './conditions.js'
-import { completeness, latestAnswers } from './completeness.js'
+import { completeness, isOpenAnswer, latestAnswers } from './completeness.js'
 import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
 import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
@@ -9,10 +9,9 @@ import { t, normalizeCommand, type Locale } from './i18n.js'
 import { ApprovalService, isPersonalQuestion, normalizeAnswer, type AnswerMeta, type ApprovalStep } from './approval.js'
 import { exportPublic as projectPublic } from './projection.js'
 import { authorize, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
-import { backupBrand, migrateBrand } from './backup.js'
+import { backupBrand } from './backup.js'
 import { completenessScope, loadProfile, type InterviewProfile } from './profiles.js'
 import { privateDataRefusal } from './personal-privacy.js'
-import { personalConfig } from './conditions.js'
 import { extractByRules } from './llm/rules.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
@@ -24,125 +23,20 @@ import type {
   ProposalState,
   LedgerFile,
   PendingProposal,
-  PersonalFacet,
-  PersonalModuleConfig,
   SessionState,
   SourceType,
   Status,
 } from './types.js'
-import { PERSONAL_FACETS } from './types.js'
 import { templateConfig } from './config.js'
 import { ensureStarterProfiles } from './personal.js'
-import { readSyncManifest, readTemplateRecord, writeTemplateRecord } from './template-sync.js'
+import type { ImpactReport, InitInput, StepResult } from './engine-types.js'
+import { dispositionFor } from './dispositions.js'
+import { CONFIG_BINDINGS, isPersonalBrand, priorityRank } from './config-bindings.js'
+import { assertSlug, emptySession, personalInit, recordTemplate, syncManifest } from './init.js'
 
-export interface StepResult {
-  kind: 'recorded' | 'info' | 'exit' | 'error' | 'impact'
-  message: string
-  questionId?: string
-  status?: Status
-  impact?: ImpactReport
-}
-
-export interface ImpactReport {
-  questionId: string
-  previous: { value: AnswerRecord['value']; status: Status } | null
-  proposedPreview: string
-  requiresConfirmation: boolean
-  impactedDocuments: string[]
-  impactedQuestions: string[]
-  approvalsPreserved: boolean
-}
-
-export interface InitInput {
-  name: string
-  slug: string
-  industry: string
-  sector?: string
-  language: string
-  languages: string[]
-  website?: string | null
-  mascot: boolean
-  gamification: boolean
-  publish: 'public' | 'private'
-  profile?: string
-  /** Turn on the Personal Brand OS module. Implied by `profile: personal-brand`. */
-  personal?: boolean
-  /** Personal facets, for example founder-executive and consultant-expert. Needs the personal module. */
-  facets?: string[]
-  reset?: boolean
-  /** The template commit this brand starts from, for template sync. Studio passes the template head. */
-  template?: { repository: string | null; commit: string | null; version: string | null; source: string }
-}
-
-/** Personal module settings for brand:init. Throws on an unknown facet or facets without the module. */
-export function personalInit(input: Pick<InitInput, 'profile' | 'personal' | 'facets'>): PersonalModuleConfig {
-  const enabled = input.personal === true || input.profile === 'personal-brand'
-  const facets = [...new Set((input.facets ?? []).map((item) => item.trim()).filter(Boolean))]
-  const unknown = facets.filter((facet) => !(PERSONAL_FACETS as readonly string[]).includes(facet))
-  if (unknown.length) throw new Error(`Unknown personal facet ${unknown.join(', ')}. Use: ${PERSONAL_FACETS.join(', ')}.`)
-  if (facets.length && !enabled) throw new Error('Facets need the personal module. Use --profile personal-brand or --personal true.')
-  return { enabled, facets: facets as PersonalFacet[] }
-}
-
-function isPersonalBrand(config: BrandConfig): boolean {
-  return config.brand.profile === 'personal-brand' && personalConfig(config).enabled
-}
-
-const CONFIG_BINDINGS: Array<{ id: string; assign: (config: BrandConfig, value: string) => void }> = [
-  {
-    id: 'brand.mascot.enabled',
-    assign: (config, value) => {
-      config.modules.mascot.enabled = value === 'yes'
-    },
-  },
-  {
-    id: 'brand.gamification.enabled',
-    assign: (config, value) => {
-      config.modules.gamification.enabled = value === 'yes'
-    },
-  },
-  {
-    id: 'business.identity.sector',
-    assign: (config, value) => {
-      config.brand.sector = value
-    },
-  },
-  {
-    id: 'personal.identity.public_name',
-    assign: (config, value) => {
-      if (!isPersonalBrand(config)) return
-      config.brand.working_name = value
-      config.brand.working_name_status = 'draft'
-    },
-  },
-  {
-    id: 'business.identity.trade_name',
-    assign: (config, value) => {
-      // A company trade name never renames a personal brand.
-      if (isPersonalBrand(config)) return
-      config.brand.working_name = value
-      config.brand.working_name_status = 'draft'
-    },
-  },
-  {
-    id: 'business.stage.current',
-    assign: (config, value) => {
-      config.brand.stage = value
-    },
-  },
-  {
-    id: 'business.identity.new_or_existing',
-    assign: (config, value) => {
-      config.brand.new_or_existing = value
-    },
-  },
-]
-
-function priorityRank(question: FieldQuestion, sector: string | null): number {
-  const base = { critical: 0, high: 1, medium: 2, low: 3 }[question.priority]
-  if (sector && question.sector_hints.includes(sector)) return base - 0.5
-  return base
-}
+export type { StepResult, ImpactReport, InitInput } from './engine-types.js'
+export { dispositionFor } from './dispositions.js'
+export { assertSlug, emptySession, personalInit, syncManifest, upgradeCore } from './init.js'
 
 export class InterviewEngine {
   private cachedQuestions: FieldQuestion[] | null = null
@@ -211,8 +105,7 @@ export class InterviewEngine {
     return question.depends_on.every((id) => {
       const dependency = byId.get(id)
       if (dependency && shouldSkip(dependency.skip_when, ctx)) return true
-      const answer = ctx.answers.get(id)
-      return Boolean(answer && answer.status !== 'unanswered')
+      return !isOpenAnswer(ctx.answers.get(id))
     })
   }
 
@@ -235,8 +128,8 @@ export class InterviewEngine {
       .filter((question) => {
         if (inProfile && !inProfile.has(question.id)) return false
         if (disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) return false
-        const answer = ctx.answers.get(question.id)
-        if (answer && answer.status !== 'unanswered') return false
+        // A retracted (deprecated) answer reopens the question; see isOpenAnswer.
+        if (!isOpenAnswer(ctx.answers.get(question.id))) return false
         return this.depsSatisfied(question, ctx)
       })
       .sort((a, b) => {
@@ -1013,19 +906,6 @@ export class InterviewEngine {
   }
 }
 
-const DISPOSITIONS: Array<{ words: string[]; status: Status; uncertainty: string }> = [
-  { words: ['unknown', "i don't know", 'idk'], status: 'unknown', uncertainty: 'Owner does not know. No value was invented.' },
-  { words: ['skip'], status: 'skipped', uncertainty: 'Owner skipped. Field stays unresolved.' },
-  { words: ['not relevant', 'n/a', 'na'], status: 'not_applicable', uncertainty: 'Owner marked this question not applicable.' },
-]
-
-/** `unknown`, `skip` and `n/a` (and their fa/tr aliases) mark a disposition. They are never stored as values. */
-export function dispositionFor(raw: string): { status: Status; uncertainty: string } | null {
-  const lower = normalizeCommand(raw).trim().toLowerCase()
-  const match = DISPOSITIONS.find((item) => item.words.includes(lower))
-  return match ? { status: match.status, uncertainty: match.uncertainty } : null
-}
-
 function toStep(step: ApprovalStep): StepResult {
   return { kind: step.kind, message: step.message, questionId: step.questionId, status: step.status }
 }
@@ -1038,12 +918,6 @@ function formatImpact(impact: ImpactReport): string {
     `Linked questions: ${impact.impactedQuestions.join(', ') || 'none'}`,
     impact.requiresConfirmation ? 'Confirmation required before the approved value changes.' : 'No approval is held on this field.',
   ].join('\n')
-}
-
-export function assertSlug(slug: string): void {
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-    throw new Error(`Slug "${slug}" must be lowercase letters, numbers, and single hyphens.`)
-  }
 }
 
 export function applyInit(root: string, input: InitInput): BrandConfig {
@@ -1097,59 +971,4 @@ export function applyInit(root: string, input: InitInput): BrandConfig {
   recordTemplate(root, input.template)
   new InterviewEngine(root).rebuildDrafts()
   return config
-}
-
-/** Writes brand/template-version.json. A re-init keeps a known template commit. */
-function recordTemplate(root: string, template: InitInput['template']): void {
-  const recorded_at = new Date().toISOString()
-  if (template) {
-    writeTemplateRecord(root, { ...template, recorded_at })
-    return
-  }
-  const existing = readTemplateRecord(root)
-  let version: string | null = existing?.version ?? null
-  const pkg = path.join(root, 'package.json')
-  if (!version && fs.existsSync(pkg)) {
-    const value = (JSON.parse(fs.readFileSync(pkg, 'utf8')) as { version?: unknown }).version
-    version = typeof value === 'string' ? value : null
-  }
-  writeTemplateRecord(root, {
-    repository: existing?.repository ?? readSyncManifest(root)?.template.repository ?? null,
-    commit: existing?.commit ?? null,
-    version,
-    recorded_at,
-    source: existing?.source ?? 'brand:init',
-  })
-}
-
-export function syncManifest(root: string, config: BrandConfig): void {
-  const file = path.join(root, 'brand', 'brand-manifest.json')
-  const current = fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>) : {}
-  current.name = config.brand.name
-  current.slug = config.brand.slug
-  current.publish_docs = config.brand.publish_docs
-  current.status = config.brand.status
-  writeAtomic(file, `${JSON.stringify(current, null, 2)}\n`)
-}
-
-export function upgradeCore(root: string): { version: string; preserved: true } {
-  const migrated = migrateBrand(root)
-  return { version: migrated.to, preserved: true }
-}
-
-export function emptySession(locale: string): SessionState {
-  const safe = locale === 'fa' || locale === 'tr' ? locale : 'en'
-  return {
-    session_id: null,
-    status: 'idle',
-    locale: safe,
-    history: [],
-    deferred: [],
-    pending_suggestions: [],
-    cursor_question_id: null,
-    pending_proposals: [],
-    started_at: null,
-    updated_at: null,
-    last_answer_id: null,
-  }
 }
