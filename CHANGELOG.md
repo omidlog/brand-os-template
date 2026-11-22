@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Cross-functional competitive drafts (Identity Slice C)
+
+### Added
+
+- `getCompetitiveContext(ws, purpose, {market, lang})`: one read-only projection of the competitive landscape per purpose (identity, positioning, marketing, pricing, seo, expansion). Marketing, pricing, SEO and identity drafts all read it, so they share competitor ids and cited refs. It returns `missing`, `candidate_only` or `evidence_insufficient` instead of empty lists.
+- `brand:competitive memo --purpose marketing|pricing|seo|identity [--market] [--lang en|fa|tr] [--json]`: a marketing opportunity memo, a pricing benchmark memo, a cited SEO supplement or a visual landscape assessment. Drafts only: conflicts and stale sources are listed as unresolved, prices are never ranked or converted and carry rate labels, options are hypotheses with no number, approved facts are cited by id and revision. Nothing is written.
+- `brand:competitive context --purpose …` and `brand:competitive import-seo-names [--dry-run]`. The import adds SEO interview names as unverified `seo_interview` candidates only when the owner runs it; existing names are reported, never merged.
+- Tests: `competitive-context`, a second `competitive-cli` journey.
+
 ## Unreleased — Competitive landscape (Identity Slice B)
 
 ### Added

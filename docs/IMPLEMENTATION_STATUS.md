@@ -207,7 +207,22 @@ Branch `feat/identity-slice-b`. Guide and reuse map: `docs-internal/COMPETITIVE.
 | Domain verification | Done | Only by a current source fetched from the domain; re-checked on read. |
 | Landscape, matrix and gap checklist (en/fa/tr) | Done | Deterministic; honest `candidate_only` output when research is unavailable; prohibited inferences listed; `authorizes: []`. |
 | `npm run brand:competitive` | Done | scope, add, classify, link, verify-domain, status, list, show, matrix. No network. `tests/competitive-cli.test.ts`. |
-| Interview question for comparison candidates, `CompetitiveContext` consumers, Studio view, agent access | Not started | Slice C/D or later. |
+| Interview question for comparison candidates, Studio view, agent access | Not started | Later slices, only if the owner asks. `CompetitiveContext` and its consumers: see Slice C below. |
+
+## Cross-functional competitive drafts (Identity Slice C)
+
+Branch `feat/identity-slice-c`. Guide: `docs-internal/COMPETITIVE.md` (section "Using the landscape").
+
+| Item | Status | Note |
+| --- | --- | --- |
+| `getCompetitiveContext(ws, purpose, {market, lang})` | Done | Pure projection of the landscape filtered by purpose dimensions and one market; `missing` / `candidate_only` / `evidence_insufficient` / `evidence_available`; source digest; per-purpose prohibited inferences; `authorizes: []`. `tests/competitive-context.test.ts`. |
+| Marketing opportunity memo | Done | Cited observations, unresolved evidence, at least two hypothesis alternatives, what is not known (spend, conversion, ROAS/CPA, revenue, targeting, effectiveness), edits only via propose → review → approve. |
+| Pricing benchmark memo | Done | Advertised prices with rate labels (`promotional`, `monthly_rate_billed_annually`…), status (`historical`, `needs_review`, `conflicting`), never ranked or converted; options are hypotheses with no number; `priced_recommendation: false`. |
+| SEO cited supplement | Done | Maps `seo.competitors.named` to competitor ids as owner assumptions; rankings and keyword gaps `unverified`; SEO drafts and schema untouched. |
+| Visual landscape assessment | Done | Visual comparison `unavailable` without cited visuals; similarity `not_assessed`; retain / evolve / rebrand / create routes guided by the unapproved intake hint. |
+| `brand:competitive context | memo | import-seo-names` | Done | en/fa/tr text; prints only; the SEO bridge runs only on command and never merges. `tests/competitive-cli.test.ts`. |
+| Fact mutation | None | `business.sales.pricing`, `business.marketing.*`, the SEO interview and SEO drafts are asserted unchanged. |
+| Rebrand audit and logo brief | Not started | Slice D. |
 
 ## SVG checker, normalizer and asset approval
 
