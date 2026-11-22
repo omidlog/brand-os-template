@@ -89,7 +89,7 @@ export function issueAgentToken(
   root: string,
   input: { brandId: string; profile: AgentProfile; label: string; now?: Date },
 ): { token: string; record: AgentTokenSummary } {
-  if (!isAgentProfile(input.profile)) throw new Error(`Unknown agent profile. Use one of: internal-read, design, marketing, finance, knowledge-read, creative-read.`)
+  if (!isAgentProfile(input.profile)) throw new Error(`Unknown agent profile. Use one of: internal-read, design, marketing, finance, knowledge-read, creative-read, strategy-seo-read, strategy-ads-read.`)
   const label = input.label.trim()
   if (!label || label.length > 80 || /[\r\n]/.test(label)) throw new Error('A token label of 1-80 characters on one line is required.')
   const doc = readTokenFile(root)

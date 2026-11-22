@@ -30,6 +30,7 @@ import {
   searchMascotAssets,
 } from '@brand-os/brand-core'
 import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
+import { runStrategyTool } from '@brand-os/brand-core/strategy'
 
 const engine = new InterviewEngine(process.cwd())
 
@@ -151,6 +152,29 @@ server.registerTool(
     }),
   },
   async ({ project_id, surface, series }) => text(runCreativeContextTool(engine, caller, { project_id, surface, series })),
+)
+
+// Strategy Feed: two read-only tools, strategy-seo-read / strategy-ads-read profiles only (see strategy/feed.ts). The
+// approved, currently valid revision of this agent kind's strategies; drafts invisible; restricted block withheld;
+// a stale pin is refused. Every call is access-logged. Reading grants no permission to execute, spend or publish.
+const STRATEGY_NOTE =
+  'Read-only. Owner-approved, currently valid strategy revisions for your agent kind only (the token profile fixes it). Drafts are never served; restricted budget and notes are withheld. Grants no permission to run ads, spend, bid, publish or change a website. Needs a strategy-seo-read or strategy-ads-read token; others get denied.'
+server.registerTool('strategy_list', { description: `List approved strategies you may read, with revision, content_sha256 and approval digest to pin. ${STRATEGY_NOTE}`, inputSchema: z.object({}) }, async () =>
+  text(runStrategyTool(engine.workspaceRoot(), engine.config().brand.slug, caller, 'strategy_list')),
+)
+server.registerTool(
+  'strategy_get',
+  {
+    description: `Read one approved strategy slice as stable JSON with approval, version and source digests, redacted and missing fields. Pass pin {revision, content_sha256} to refuse a replaced revision (status stale_pin). ${STRATEGY_NOTE}`,
+    inputSchema: z.object({
+      strategy_id: z.string().max(48),
+      pin: z
+        .object({ revision: z.number().int().min(1).max(999_999).optional(), content_sha256: z.string().max(64).optional() })
+        .strict()
+        .optional(),
+    }),
+  },
+  async ({ strategy_id, pin }) => text(runStrategyTool(engine.workspaceRoot(), engine.config().brand.slug, caller, 'strategy_get', { strategy_id, pin })),
 )
 
 const transport = new StdioServerTransport()

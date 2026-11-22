@@ -433,6 +433,9 @@ if (command === 'init') {
       'use-case': { type: 'string' },
       angle: { type: 'string' },
       section: { type: 'string' },
+      id: { type: 'string' },
+      'pin-revision': { type: 'string' },
+      'pin-sha': { type: 'string' },
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
@@ -483,13 +486,19 @@ if (command === 'init') {
     get_business_plan: () => core.getBusinessPlan(engine, ctx),
     get_brand_status: () => core.getBrandStatus(engine, ctx),
     draft_personal_content: () => core.draftPersonalContent(engine, q || 'professional-bio', ctx, values.section),
+    // Strategy Feed (strategy-seo-read / strategy-ads-read tokens): the same gate as the MCP tools.
+    strategy_list: async () => (await import('@brand-os/brand-core/strategy')).runStrategyTool(root, engine.config().brand.slug, ctx, 'strategy_list'),
+    strategy_get: async () => {
+      const pin = values['pin-revision'] || values['pin-sha'] ? { revision: values['pin-revision'] ? Number(values['pin-revision']) : undefined, content_sha256: values['pin-sha'] } : undefined
+      return (await import('@brand-os/brand-core/strategy')).runStrategyTool(root, engine.config().brand.slug, ctx, 'strategy_get', { strategy_id: values.id, pin })
+    },
   }
   const handler = handlers[tool]
   if (!handler) {
     console.error(`Unknown tool ${tool}. Tools: ${Object.keys(handlers).sort().join(', ')}`)
     process.exit(1)
   }
-  console.log(JSON.stringify(handler(), null, 2))
+  console.log(JSON.stringify(await handler(), null, 2))
 } else if (command === 'agent-token') {
   const [action, ...tokenArgs] = rest
   const { values } = parseArgs({
@@ -498,7 +507,7 @@ if (command === 'init') {
   })
   const core = await import('@brand-os/brand-core')
   if (!['issue', 'list', 'revoke'].includes(action ?? '')) {
-    console.error('Usage: brand:agent-token issue --profile <internal-read|design|marketing|finance|knowledge-read|creative-read> --label <name> | list | revoke --id <agt_…>')
+    console.error('Usage: brand:agent-token issue --profile <internal-read|design|marketing|finance|knowledge-read|creative-read|strategy-seo-read|strategy-ads-read> --label <name> | list | revoke --id <agt_…>')
     console.error('The approval proof is read from BRAND_OS_APPROVAL_PROOF or a hidden prompt. It is never accepted on the command line.')
     process.exit(1)
   }
