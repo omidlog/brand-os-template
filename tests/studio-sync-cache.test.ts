@@ -7,6 +7,8 @@ import type { GitHubClient } from '../apps/studio/src/github/client.js'
 import type { Registry } from '../apps/studio/src/registry.js'
 import { SyncService } from '../apps/studio/src/sync.js'
 import { removeTempDir, tempDir } from './helpers/cleanup.js'
+import { editOutsideStudio } from './helpers/edits.js'
+import { harness, provisioned } from './helpers/studio.js'
 
 function service(t: { after: (fn: () => void) => void }): { sync: SyncService; stateFile: string } {
   const dataDir = tempDir('studio-sync-cache-')
@@ -57,4 +59,26 @@ test('sync.get reuses the parsed state.json until the file is replaced, removed 
   assert.equal(sync.get('acme').status.state, 'never')
   writeAtomic(stateFile, JSON.stringify(state('c'.repeat(40))), { mode: 0o600 })
   assert.equal(sync.get('acme').status.sha, 'c'.repeat(40))
+})
+
+test('a refresh is seen even when the new state.json has the same inode, size and mtime as the cached one', async (t) => {
+  // The temp file of an atomic rename often reuses the inode the previous rename freed, so two
+  // same-size writes inside one coarse mtime tick look unchanged to a stat-based check. Simulate
+  // that collision: every stat of state.json reports the same inode, size and mtime.
+  const h = harness()
+  t.after(() => removeTempDir(h.dataDir))
+  const req = await provisioned(h)
+  const before = h.sync.get(req.slug).status.sha
+  assert.ok(before)
+  const realStat = fs.statSync
+  t.mock.method(fs, 'statSync', ((file: fs.PathLike, options?: fs.StatSyncOptions) => {
+    const stat = realStat(file, options) as fs.Stats
+    if (!String(file).endsWith(`${path.sep}state.json`)) return stat
+    return Object.assign(Object.create(Object.getPrototypeOf(stat) as object) as fs.Stats, stat, { ino: 1, size: 1, mtimeMs: 1 })
+  }) as typeof fs.statSync)
+  assert.equal(h.sync.get(req.slug).status.sha, before)
+  const after = editOutsideStudio(h, req.repo, (_engine, root) => fs.writeFileSync(path.join(root, 'docs-extra.md'), 'x\n'))
+  assert.notEqual(after, before)
+  await h.sync.refresh(req.slug)
+  assert.equal(h.sync.get(req.slug).status.sha, after)
 })

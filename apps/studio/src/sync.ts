@@ -79,8 +79,8 @@ export class SyncService {
 
   /**
    * Every page view (and the brand list, once per brand) reads state.json. The parsed file is kept per
-   * slug and reused while the file's inode, size and mtime are unchanged; state.json is only ever
-   * replaced by an atomic rename, which always changes the inode. Callers must not mutate the result.
+   * slug and reused while the file's inode, size and mtime are unchanged. Studio's own writes go
+   * through writeState, which drops the copy (see there). Callers must not mutate the result.
    */
   private readonly parsed = new Map<string, { key: string; state: StateFile }>()
 
@@ -104,6 +104,17 @@ export class SyncService {
       this.parsed.delete(slug)
       return null
     }
+  }
+
+  /**
+   * Writes state.json and drops the parsed copy. The inode/size/mtime key alone is not enough for
+   * Studio's own writes: the temp file of a rename often reuses the inode the previous rename freed,
+   * and two same-size writes inside one coarse mtime tick then look unchanged.
+   */
+  private writeState(slug: string, next: StateFile): void {
+    fs.mkdirSync(this.dir(slug), { recursive: true, mode: 0o700 })
+    writeAtomic(path.join(this.dir(slug), 'state.json'), JSON.stringify(next), { mode: 0o600 })
+    this.parsed.delete(slug)
   }
 
   get(slug: string): CachedBrand {
@@ -200,8 +211,7 @@ export class SyncService {
       status.last_error = null
       this.dirty.delete(slug)
       const next: StateFile = { schema_version: 1, status, projection, history, previews }
-      fs.mkdirSync(this.dir(slug), { recursive: true, mode: 0o700 })
-      writeAtomic(path.join(this.dir(slug), 'state.json'), JSON.stringify(next), { mode: 0o600 })
+      this.writeState(slug, next)
       return { status, projection, history }
     } catch (error) {
       const code = error instanceof ProjectionError ? error.code : error instanceof GitHubError ? `github_${error.kind}` : 'internal'
@@ -215,8 +225,7 @@ export class SyncService {
         status.state = 'error'
         fs.rmSync(path.join(this.dir(slug), 'previews'), { recursive: true, force: true })
       }
-      fs.mkdirSync(this.dir(slug), { recursive: true, mode: 0o700 })
-      writeAtomic(path.join(this.dir(slug), 'state.json'), JSON.stringify(next), { mode: 0o600 })
+      this.writeState(slug, next)
       this.deps.log?.(`sync failed for ${slug}: ${code}`)
       return { status, projection: next.projection, history: next.history }
     } finally {
