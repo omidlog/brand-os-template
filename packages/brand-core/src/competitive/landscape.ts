@@ -210,7 +210,8 @@ function assessmentOf(record: CompetitorRecord, views: ObservationView[]): Asses
   return views.length ? 'researched' : 'candidate'
 }
 
-function priceComparison(rows: PriceRow[]): { comparison: Landscape['prices']['comparison']; reasons: string[] } {
+/** Comparability of a set of price rows. Also used by the purpose projection on a market-filtered subset. */
+export function priceComparison(rows: PriceRow[]): { comparison: Landscape['prices']['comparison']; reasons: string[] } {
   const current = rows.filter((row) => row.cell === 'observed' || row.cell === 'unverified')
   if (rows.length === 0) return { comparison: 'none', reasons: [] }
   if (rows.length === 1) return { comparison: 'single', reasons: [] }

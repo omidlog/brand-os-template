@@ -126,6 +126,11 @@ export const PROHIBITED_TEXT: Catalog = {
     fa: 'هیچ تبدیل ارز یا محاسبهٔ مالیاتی بدون نرخ و روش تاریخ‌دار و مستند انجام نمی‌شود.',
     tr: 'Tarihli ve kaynaklı bir kur ve yöntem olmadan döviz çevirisi veya vergi hesabı yapılmaz.',
   },
+  price_coordination: {
+    en: 'No price matching or coordination with competitors. This brand sets its prices independently.',
+    fa: 'هیچ تطبیق یا هماهنگی قیمت با رقبا انجام نمی‌شود. این برند قیمت‌هایش را مستقل تعیین می‌کند.',
+    tr: 'Rakiplerle fiyat eşleme veya fiyat koordinasyonu yapılmaz. Bu marka fiyatlarını bağımsız belirler.',
+  },
 }
 
 export function asLang(value: unknown): CompetitiveLang {
