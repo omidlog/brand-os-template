@@ -10,6 +10,10 @@ import {
   classifyCandidate,
   COMPETITIVE_DIRS,
   CompetitiveError,
+  GAP_TEXT,
+  HEADINGS,
+  PROHIBITED_TEXT,
+  REVIEW_REASONS,
   linkEvidence,
   priceSupport,
   readCandidate,
@@ -22,7 +26,6 @@ import {
   type Landscape,
 } from '@brand-os/brand-core/competitive'
 import { liveAdapter, unavailableAdapter } from '@brand-os/brand-core/research'
-import { GAP_TEXT, PROHIBITED_TEXT, REVIEW_REASONS } from '../packages/brand-core/src/competitive/i18n.js'
 import { MESSAGE_QUOTE, NOW, PRICE_QUOTE, PROMO_QUOTE, record, source, VISUAL_QUOTE, wordflightSources } from './helpers/competitive.js'
 import { listTree, useTestKey, workspace } from './helpers/knowledge.js'
 
@@ -359,9 +362,9 @@ test('domain verification needs a source fetched from that domain; two records n
 })
 
 test('gap text, review reasons and prohibited inferences exist in en, fa and tr; the landscape speaks the chosen language', () => {
-  for (const catalog of [GAP_TEXT, PROHIBITED_TEXT, REVIEW_REASONS]) {
+  for (const catalog of [GAP_TEXT, PROHIBITED_TEXT, REVIEW_REASONS, HEADINGS]) {
     for (const [key, text] of Object.entries(catalog)) {
-      for (const lang of ['en', 'fa', 'tr'] as const) assert.ok(text[lang] && text[lang].trim().length > 5, `${key}.${lang}`)
+      for (const lang of ['en', 'fa', 'tr'] as const) assert.ok(text[lang] && text[lang].trim().length > 2, `${key}.${lang}`)
       assert.notEqual(text.fa, text.en, key)
       assert.notEqual(text.tr, text.en, key)
       const en = (text.en.match(/\{\w+\}/g) ?? []).sort()

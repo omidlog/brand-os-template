@@ -7,6 +7,8 @@ import {
   classifyCandidate,
   CompetitiveError,
   DIMENSION_LABELS,
+  fill,
+  HEADINGS,
   linkEvidence,
   readCandidate,
   scanCandidates,
@@ -104,22 +106,23 @@ function print(values: Values, data: unknown, text: () => string): void {
 
 function landscapeText(view: Landscape): string {
   const dim = (d: keyof typeof DIMENSION_LABELS) => DIMENSION_LABELS[d][view.lang]
+  const h = (key: string, vars: Record<string, string> = {}) => fill(HEADINGS[key]![view.lang], vars)
   const lines = [
-    `Competitive landscape for ${view.brand_slug} (${view.state}). Draft, owner-only; authorizes nothing.`,
-    `Research: ${view.research.adapter} ${view.research.state}${view.research.reason ? ` — ${view.research.reason}` : ''}`,
-    `Scope: ${view.scope.purposes.join(', ') || 'not set'}. Target market fact ${view.target_market.fact_id}: ${view.target_market.state}.`,
+    h('title', { name: view.brand_slug, state: view.state }),
+    h('research', { state: `${view.research.adapter} ${view.research.state}`, reason: view.research.reason ? ` — ${view.research.reason}` : '' }),
+    h('scope', { purposes: view.scope.purposes.join(', ') || h('scope_not_set'), fact: view.target_market.fact_id, state: view.target_market.state }),
     '',
   ]
   for (const c of view.candidates) {
-    lines.push(`${c.display_name} [${c.competitor_id}] ${c.assessment}; ${c.relationship.join('/') || 'relationship ?'}; markets ${c.markets.join(',') || '?'}; domain ${c.official_domain ?? c.domain_state}`)
+    lines.push(`${c.display_name} [${c.competitor_id}] ${c.assessment}; ${c.relationship.join('/') || '?'}; ${c.markets.join(',') || '?'}; ${c.official_domain ?? c.domain_state}`)
     for (const cell of view.matrix.filter((m) => m.competitor_id === c.competitor_id && m.state !== 'unknown')) lines.push(`  ${dim(cell.dimension)}: ${cell.state}`)
   }
   if (view.prices.rows.length) {
-    lines.push('', `Public prices (listed, not ranked; no currency conversion): ${view.prices.comparison}${view.prices.reasons.length ? ` — ${view.prices.reasons.join(', ')}` : ''}`)
-    for (const row of view.prices.rows) lines.push(`  ${row.offer_name}: ${row.amount} ${row.currency} ${row.billing_period}/${row.billing_commitment} ${row.market}, observed ${row.observed_at.slice(0, 10)}, ${row.cell}${row.caveats.length ? ` (${row.caveats.join(', ')})` : ''}`)
+    lines.push('', h('prices', { state: view.prices.comparison, reason: view.prices.reasons.length ? ` — ${view.prices.reasons.join(', ')}` : '' }))
+    for (const row of view.prices.rows) lines.push(`  ${row.offer_name}: ${row.amount} ${row.currency} ${row.billing_period}/${row.billing_commitment} ${row.market}, ${h('observed_on', { date: row.observed_at.slice(0, 10) })}, ${row.cell}${row.caveats.length ? ` (${row.caveats.join(', ')})` : ''}`)
   }
-  if (view.gaps.length) lines.push('', 'Gaps:', ...view.gaps.map((g) => `  - ${g.text}`))
-  lines.push('', 'Never inferred:', ...view.prohibited_inferences.map((p) => `  - ${p.text}`))
+  if (view.gaps.length) lines.push('', h('gaps'), ...view.gaps.map((g) => `  - ${g.text}`))
+  lines.push('', h('never'), ...view.prohibited_inferences.map((p) => `  - ${p.text}`))
   return lines.join('\n')
 }
 

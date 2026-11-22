@@ -135,3 +135,15 @@ export function asLang(value: unknown): CompetitiveLang {
 export function fill(template: string, vars: Record<string, string> = {}): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) => vars[key] ?? match)
 }
+
+/** Headings of the human-readable landscape printed by brand:competitive matrix. State values stay stable codes. */
+export const HEADINGS: Catalog = {
+  title: { en: 'Competitive landscape for {name} ({state}). Draft, owner-only; authorizes nothing.', fa: 'چشم‌انداز رقابتی {name} ({state}). پیش‌نویس، فقط برای مالک؛ هیچ مجوزی نمی‌دهد.', tr: '{name} için rekabet görünümü ({state}). Taslak, yalnızca sahibine özel; hiçbir şeye yetki vermez.' },
+  research: { en: 'Research: {state}{reason}', fa: 'پژوهش: {state}{reason}', tr: 'Araştırma: {state}{reason}' },
+  scope: { en: 'Scope: {purposes}. Target market fact {fact}: {state}.', fa: 'دامنه: {purposes}. واقعیت بازار هدف {fact}: {state}.', tr: 'Kapsam: {purposes}. Hedef pazar bilgisi {fact}: {state}.' },
+  scope_not_set: { en: 'not set', fa: 'تعیین نشده', tr: 'belirlenmedi' },
+  prices: { en: 'Public prices (listed, not ranked; no currency conversion): {state}{reason}', fa: 'قیمت‌های عمومی (فهرست‌شده، بدون رتبه‌بندی؛ بدون تبدیل ارز): {state}{reason}', tr: 'Açık fiyatlar (listelenir, sıralanmaz; döviz çevirisi yok): {state}{reason}' },
+  gaps: { en: 'Gaps:', fa: 'شکاف‌ها:', tr: 'Eksikler:' },
+  never: { en: 'Never inferred:', fa: 'هرگز استنباط نمی‌شود:', tr: 'Asla çıkarılmaz:' },
+  observed_on: { en: 'observed {date}', fa: 'مشاهده‌شده در {date}', tr: '{date} tarihinde gözlemlendi' },
+}

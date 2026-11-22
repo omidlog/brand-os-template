@@ -1,5 +1,5 @@
 export * from './model.js'
-export { asLang, COMPETITIVE_LANGS, DIMENSION_LABELS } from './i18n.js'
+export { asLang, COMPETITIVE_LANGS, DIMENSION_LABELS, fill, GAP_TEXT, HEADINGS, PROHIBITED_TEXT, REVIEW_REASONS } from './i18n.js'
 export type { CompetitiveLang } from './i18n.js'
 export { buildLandscape, TARGET_MARKET_FACT } from './landscape.js'
 export type { CandidateView, CellState, Gap, Landscape, LandscapeOptions, MatrixCell, ObservationView, PriceRow, RefState, SourceClass } from './landscape.js'
