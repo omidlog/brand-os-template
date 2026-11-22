@@ -90,7 +90,7 @@ helpers.
 
 - `packages/brand-core/src/creative/{model,store,context,index}.ts`
 - `scripts/creative.ts` (`npm run brand:creative`)
-- `tests/creative-journey.test.ts` (Pilito A–E through the real CLI), `tests/creative-security.test.ts`
+- `tests/creative-journey.test.ts` (Pilito A–E through the real CLI), `tests/creative-security.test.ts`, `tests/studio-creative.test.ts`
 - `agent-skills/creative-memory/SKILL.md`, `docs-internal/CREATIVE_LEARNING.md`
 - Status, changelog and skill-list lines.
 

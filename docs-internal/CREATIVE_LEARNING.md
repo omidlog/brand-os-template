@@ -63,8 +63,9 @@ npm run brand:creative -- suggest --project pilito-intro-reels --statement "…"
 ## Tests
 
 `tests/creative-journey.test.ts` (the full owner journey through both CLIs) and `tests/creative-security.test.ts`
-(cross-brand, agent token, knowledge-read MCP, guest/design readers, gitignore + Studio filter, restricted and
-third-party notes, stale/archived/tampered sources, brand-scope refusal, assets, no publish path).
+(cross-brand, agent token, knowledge-read MCP, guest/design readers, gitignore, restricted and
+third-party notes, stale/archived/tampered sources, brand-scope refusal, assets, no publish path), plus
+`tests/studio-creative.test.ts` (Studio's archive filter excludes creative records and feedback notes).
 
 ## Known limitations
 

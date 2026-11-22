@@ -17,7 +17,6 @@ import {
   selectVariant,
   suggestPreference,
 } from '@brand-os/brand-core/creative'
-import { studioPathAllowed } from '../apps/studio/src/github/tar.js'
 import { addManifestRows, creative, errorCode, pilitoBrand } from './helpers/creative.js'
 import { useTestKey } from './helpers/knowledge.js'
 
@@ -97,12 +96,11 @@ test('agents: creative memory refuses any agent token; knowledge-read MCP tools 
   }
 })
 
-test('local only: creative records and feedback notes are gitignored, excluded from Studio, and absent from Git-visible files', () => {
+test('local only: creative records and feedback notes are gitignored, owner-only and absent from Git-visible files (Studio exclusion: tests/studio-creative.test.ts)', () => {
   const { root, c } = seeded()
   const files = [`brand/.private/creative/projects/pilito-reel-1.json`, c.note.path]
   for (const rel of files) {
     assert.ok(fs.existsSync(path.join(root, rel)), rel)
-    assert.equal(studioPathAllowed(rel), false, `Studio excludes ${rel}`)
     assert.equal((fs.statSync(path.join(root, rel)).mode & 0o077), 0, `${rel} is owner-only`)
   }
   const git = (args: string[]) => spawnSync('git', args, { cwd: root, encoding: 'utf8' })
