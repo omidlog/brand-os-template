@@ -24,11 +24,11 @@ import {
   WITHHELD,
 } from '@brand-os/brand-core'
 import type { CompletionRequest, LlmLimits } from '@brand-os/brand-core'
+import { NODE, tsxArgs } from './helpers/tsx-node.js'
 
 // Every test here uses the local mock provider or a stubbed fetch. Nothing reaches the network.
 process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 const repo = path.resolve(import.meta.dirname, '..')
-const tsx = path.join(repo, 'node_modules/.bin/tsx')
 const FLASHCARD =
   'Our product is a multilingual flashcard app. Initially we are targeting students, but we may launch B2B packages for companies in the future. Pricing is not decided yet.'
 const LIMITS: LlmLimits = { timeoutMs: 2_000, maxInputChars: 12_000, maxOutputTokens: 2_000, maxRequests: 5 }
@@ -407,7 +407,7 @@ test('CLI agent mode: --question in any order, brand:next --json, brand:propose 
   const root = workspace()
   const env: Record<string, string> = {}
   for (const [key, value] of Object.entries(process.env)) if (typeof value === 'string' && !/^(ANTHROPIC_|BRAND_OS_APPROVAL_PROOF|BRAND_OS_AGENT_TOKEN)/.test(key)) env[key] = value
-  const run = (args: string[], input = '') => spawnSync(tsx, [path.join(repo, 'scripts/brand.ts'), ...args], { cwd: root, env, input, encoding: 'utf8', timeout: 60_000 })
+  const run = (args: string[], input = '') => spawnSync(NODE, tsxArgs('scripts/brand.ts', args), { cwd: root, env, input, encoding: 'utf8', timeout: 60_000 })
 
   // Out of order: pricing is far from the current question.
   const answered = run(['interview', '--question', 'business.sales.pricing', '--answer', 'unknown', '--json'])

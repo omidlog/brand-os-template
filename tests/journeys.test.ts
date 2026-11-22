@@ -49,10 +49,10 @@ import type { DocumentModel, InternalDashboard, LlmLimits, RetrievedItem, ToolRe
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import { prepareDocs } from '../scripts/prepare-docs.js'
 import { scanPublicTree } from '../scripts/scan-public.js'
+import { NODE, tsxArgs } from './helpers/tsx-node.js'
 
 process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 const repo = path.resolve(import.meta.dirname, '..')
-const tsx = path.join(repo, 'node_modules/.bin/tsx')
 const LIMITS: LlmLimits = { timeoutMs: 2_000, maxInputChars: 12_000, maxOutputTokens: 2_000, maxRequests: 5 }
 const ARABIC_SCRIPT = /[؀-ۿ]/
 
@@ -76,7 +76,7 @@ function cli(root: string, args: string[], env: Record<string, string> = {}, inp
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === 'string' && key !== 'BRAND_OS_AGENT_TOKEN' && key !== 'BRAND_OS_APPROVAL_PROOF' && key !== 'ANTHROPIC_API_KEY') base[key] = value
   }
-  return spawnSync(tsx, [path.join(repo, 'scripts/brand.ts'), ...args], { cwd: root, env: { ...base, ...env }, input, encoding: 'utf8', timeout: 90_000 })
+  return spawnSync(NODE, tsxArgs('scripts/brand.ts', args), { cwd: root, env: { ...base, ...env }, input, encoding: 'utf8', timeout: 90_000 })
 }
 
 function answer(engine: InterviewEngine, id: string, value: string): void {
