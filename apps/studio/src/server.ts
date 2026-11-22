@@ -1,9 +1,7 @@
-import crypto from 'node:crypto'
 import fs from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { verifyPassword } from './auth/password.js'
 import { RateLimiter } from './auth/rate-limit.js'
-import { loginCsrfToken, safeEqual, SessionStore } from './auth/session.js'
+import { safeEqual, SessionStore } from './auth/session.js'
 import { TotpVerifier } from './auth/totp.js'
 import { GitHubError } from './github/client.js'
 import { DeliveryLog, parsePush, verifyWebhookSignature } from './github/webhook.js'
@@ -11,6 +9,7 @@ import { BodyTooLarge, first, parseCookies, parseForm, readBody, redirect, safeL
 import { i18n, isLocale, type Locale, type MessageKey } from './i18n/index.js'
 import { validateRequest } from './provision.js'
 import type { BrandRecord } from './registry.js'
+import { authRoutes } from './routes/auth.js'
 import { createCore, withTimeout, type Handler, type RequestContext, type Route, type RouteInfo, type StudioDeps } from './routes/context.js'
 import { requestGuards } from './routes/guards.js'
 import { sendStatic, studioAssets } from './static-assets.js'
@@ -57,8 +56,6 @@ export function createStudio(deps: StudioDeps): {
   const totp = config.ownerTotpSecret ? new TotpVerifier(config.ownerTotpSecret) : null
   const core = createCore(deps, sessions, totp)
   const { log, view, render, notFound, brandRecord } = core
-  const loginLimiter = new RateLimiter(5, 15 * 60_000, now)
-  const globalLoginLimiter = new RateLimiter(30, 15 * 60_000, now)
   const provisionLimiter = new RateLimiter(10, 60 * 60_000, now)
   const refreshLimiter = new RateLimiter(1, 5_000, now)
   const testLimiter = new RateLimiter(5, 60_000, now)
@@ -68,7 +65,6 @@ export function createStudio(deps: StudioDeps): {
   const autoRefreshAt = new Map<string, number>()
   let templateCheck: { at: number; state: 'ok' | 'missing' | 'unknown' } | null = null
   const sessionCookie = core.cookies.session
-  const loginCookie = core.cookies.login
   const langCookie = core.cookies.lang
 
   const { clientIp, hostAllowed, sameOrigin } = requestGuards(config)
@@ -112,56 +108,7 @@ export function createStudio(deps: StudioDeps): {
     sendStatic(ctx.req, ctx.res, name, type, studioAssets.get(name), ctx.url.searchParams.get('v'))
   }
 
-  function showLogin(ctx: RequestContext, options: { error?: string; status?: number; login?: string; invalid?: 'credentials' | 'totp' } = {}): void {
-    const nonce = crypto.randomBytes(24).toString('base64url')
-    ctx.res.setHeader('Set-Cookie', serializeCookie(loginCookie, nonce, { secure: config.secureCookies, maxAgeSeconds: 900 }))
-    const next = safeLocalPath(ctx.url.searchParams.get('next') ?? first(ctx.form.next), '/brands')
-    const notice = ctx.url.searchParams.get('signed_out') === '1' ? ctx.i.t('login.signedOut') : undefined
-    render(ctx, options.status ?? 200, pages.loginPage(view(ctx), { csrf: loginCsrfToken(config.sessionSecret, nonce), totp: totp !== null, notice, error: options.error, next, login: options.login, invalid: options.invalid }))
-  }
-
-  const loginForm: Handler = (ctx) => {
-    if (ctx.session) return redirect(ctx.res, '/brands')
-    showLogin(ctx)
-  }
-
-  const login: Handler = (ctx) => {
-    const ip = clientIp(ctx.req)
-    if (loginLimiter.blocked(ip) || globalLoginLimiter.blocked('all')) {
-      return showLogin(ctx, { error: ctx.i.t('login.rateLimited', { minutes: 15 }), status: 429 })
-    }
-    const nonce = parseCookies(ctx.req.headers.cookie)[loginCookie]
-    if (!nonce || !safeEqual(first(ctx.form._csrf), loginCsrfToken(config.sessionSecret, nonce)) || !sameOrigin(ctx.req)) {
-      return showLogin(ctx, { error: ctx.i.t('login.expired'), status: 403 })
-    }
-    const submitted = first(ctx.form.login).trim()
-    const loginOk = safeEqual(submitted, config.ownerLogin)
-    // Always run the password check so timing does not reveal whether the login name matched.
-    const passwordOk = verifyPassword(first(ctx.form.password), config.ownerPasswordHash)
-    const totpResult = totp ? totp.check(first(ctx.form.totp).trim(), now()) : 'ok'
-    if (!(loginOk && passwordOk && totpResult === 'ok')) {
-      loginLimiter.take(ip)
-      globalLoginLimiter.take('all')
-      log(`login failed from ${ip}`)
-      const error = ctx.i.t(totpResult === 'reused' ? 'login.codeUsed' : 'login.failed')
-      return showLogin(ctx, { error, status: 401, login: submitted.slice(0, 64), invalid: totpResult === 'reused' ? 'totp' : 'credentials' })
-    }
-    loginLimiter.reset(ip)
-    if (ctx.sessionId) sessions.destroy(ctx.sessionId)
-    const created = sessions.create(config.ownerLogin)
-    ctx.res.setHeader('Set-Cookie', [
-      serializeCookie(sessionCookie, created.id, { secure: config.secureCookies, maxAgeSeconds: Math.floor(config.sessionTtlMs / 1000) }),
-      serializeCookie(loginCookie, '', { secure: config.secureCookies, maxAgeSeconds: 0 }),
-    ])
-    log('login ok')
-    redirect(ctx.res, safeLocalPath(first(ctx.form.next), '/brands'))
-  }
-
-  const logout: Handler = (ctx) => {
-    sessions.destroy(ctx.sessionId ?? undefined)
-    ctx.res.setHeader('Set-Cookie', serializeCookie(sessionCookie, '', { secure: config.secureCookies, maxAgeSeconds: 0 }))
-    redirect(ctx.res, '/login?signed_out=1')
-  }
+  const { loginForm, login, logout } = authRoutes(core, { clientIp, sameOrigin })
 
   const home: Handler = (ctx) => redirect(ctx.res, '/brands', 302)
 
