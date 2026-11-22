@@ -10,6 +10,8 @@ import {
   COMPETITIVE_DIRS,
   CompetitiveError,
   getCompetitiveContext,
+  importSeoNames,
+  scanCandidates,
   linkEvidence,
   MEMO_HEADINGS,
   MEMO_TITLES,
@@ -284,4 +286,29 @@ test('draft text exists in en, fa and tr with matching placeholders; drafts spea
   const { ws } = seeded()
   const fa = memo(ws, 'pricing', { lang: 'fa' })
   assert.ok([...fa.warnings, ...fa.not_known, ...fa.alternatives.map((a) => ({ text: a.title }))].every((x) => /[؀-ۿ]/.test(x.text)))
+})
+
+test('import-seo-names: only on command, never merges, keeps names as unverified seo_interview candidates', () => {
+  const { root, ws, wf } = seeded()
+  assert.deepEqual(importSeoNames(ws), { results: [], interview: 'not_answered' })
+  recordAnswer(ws, { question_id: 'seo.competitors.named', value: 'unknown' })
+  assert.deepEqual(importSeoNames(ws), { results: [], interview: 'not_answered' }, 'unknown is not a competitor called "unknown"')
+  recordAnswer(ws, { question_id: 'seo.competitors.named', value: ['WORDFLIGHT', 'LexiLoop', 'lexi-loop'] })
+  const interviewFile = path.join(root, 'brand', '.private', 'strategy', 'seo', 'interview.json')
+  const interviewBefore = fs.readFileSync(interviewFile, 'utf8')
+  assert.equal(scanCandidates(ws).records.length, 1, 'recording an SEO answer adds no candidate')
+  const dry = importSeoNames(ws, { dryRun: true })
+  assert.deepEqual(dry.results.map((r) => r.outcome), ['exists', 'would_add', 'exists'])
+  assert.equal(scanCandidates(ws).records.length, 1, 'dry run writes nothing')
+  const run = importSeoNames(ws)
+  assert.deepEqual(run.results.map((r) => r.outcome), ['exists', 'added', 'exists'], 'lexi-loop is the same name: reported, not added')
+  assert.equal(run.results[0]!.competitor_id, wf)
+  const lexi = scanCandidates(ws).records.find((r) => r.display_name === 'LexiLoop')!
+  assert.equal(lexi.source, 'seo_interview')
+  assert.equal(lexi.status, 'candidate')
+  assert.equal(lexi.domain_claim, null)
+  assert.deepEqual(lexi.markets, [])
+  assert.equal(scanCandidates(ws).records.find((r) => r.competitor_id === wf)!.display_name, 'WordFlight', 'existing record untouched')
+  assert.deepEqual(importSeoNames(ws).results.map((r) => r.outcome), ['exists', 'exists', 'exists'], 'idempotent')
+  assert.equal(fs.readFileSync(interviewFile, 'utf8'), interviewBefore, 'the SEO interview is only read')
 })

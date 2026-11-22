@@ -4,12 +4,12 @@ import { readFacts } from '../facts.js'
 import { readYaml } from '../fsutil.js'
 import { readIdentityIntake, type IdentityChoice } from '../identity-intake.js'
 import type { KnowledgeWorkspace } from '../knowledge/workspace.js'
-import { answersOf, readInterview } from '../seo/answers.js'
 import { getCompetitiveContext, type CompetitiveContext, type ContextObservation, type ContextOptions, type ResearchStep } from './context.js'
 import { fill, type CompetitiveLang } from './i18n.js'
 import type { Gap, PriceRow } from './landscape.js'
 import { ALTERNATIVES, DEPENDENCIES, NOT_KNOWN, PROPOSE_EDIT, WARNINGS } from './memo-i18n.js'
 import { nameKey, oneOf, type Purpose } from './model.js'
+import { seoNamedCompetitors } from './seo-bridge.js'
 
 /**
  * The four Slice C drafts. Each one reads the same CompetitiveContext (same competitor ids, same cited refs, same
@@ -242,8 +242,7 @@ function seoMemo(ws: KnowledgeWorkspace, ctx: CompetitiveContext): CompetitiveMe
   let names: string[] = []
   let state: 'read' | 'not_answered' | 'unreadable' = 'read'
   try {
-    const value = answersOf(readInterview(ws))['seo.competitors.named']
-    names = Array.isArray(value) ? value : value ? [value] : []
+    names = seoNamedCompetitors(ws)
     if (!names.length) state = 'not_answered'
   } catch {
     state = 'unreadable'
