@@ -3,81 +3,24 @@ import fs from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { verifyPassword } from './auth/password.js'
 import { RateLimiter } from './auth/rate-limit.js'
-import { loginCsrfToken, safeEqual, SessionStore, type Session } from './auth/session.js'
+import { loginCsrfToken, safeEqual, SessionStore } from './auth/session.js'
 import { TotpVerifier } from './auth/totp.js'
-import { isLoopback, type StudioConfig } from './config.js'
-import type { GitHubClient } from './github/client.js'
+import { isLoopback } from './config.js'
 import { GitHubError } from './github/client.js'
 import { DeliveryLog, parsePush, verifyWebhookSignature } from './github/webhook.js'
-import {
-  BodyTooLarge,
-  first,
-  parseCookies,
-  parseForm,
-  readBody,
-  redirect,
-  safeLocalPath,
-  securityHeaders,
-  sendHtml,
-  sendJson,
-  serializeCookie,
-} from './http.js'
-import { i18n, isLocale, type I18n, type Locale, type MessageKey } from './i18n/index.js'
-import { validateRequest, type ProvisioningService } from './provision.js'
-import type { BrandRecord, Registry } from './registry.js'
+import { BodyTooLarge, first, parseCookies, parseForm, readBody, redirect, safeLocalPath, securityHeaders, sendJson, serializeCookie } from './http.js'
+import { i18n, isLocale, type Locale, type MessageKey } from './i18n/index.js'
+import { validateRequest } from './provision.js'
+import type { BrandRecord } from './registry.js'
+import { createCore, withTimeout, type Handler, type RequestContext, type Route, type RouteInfo, type StudioDeps } from './routes/context.js'
 import { sendStatic, studioAssets } from './static-assets.js'
-import { brandIsReady, type SyncService } from './sync.js'
-import type { TemplateUpdateService, UpdateStatus } from './template-update.js'
-import type { SafeHtml } from './views/html.js'
-import type { BrandView, ViewContext } from './views/layout.js'
+import { brandIsReady } from './sync.js'
+import type { UpdateStatus } from './template-update.js'
+import type { BrandView } from './views/layout.js'
 import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from './views/knowledge.js'
 import * as pages from './views/pages.js'
 
-/**
- * The Studio HTTP application.
- *
- * Read-only by construction: the route table below is the complete list of endpoints. The only
- * non-GET routes are sign-in, sign-out, the owner-only provisioning routes (create, retry, discard a
- * failed attempt from Studio's own registry), the cache refresh, the signed GitHub webhook, and
- * "Open update PR" (Studio's second GitHub write: a new `template-update/<sha>` branch and a pull
- * request in a brand repository; never the default branch, never a merge). None of them writes brand
- * facts, documents or assets. Every brand route resolves the slug through the
- * server-side registry, so a forged slug cannot select a repository.
- */
-export interface StudioDeps {
-  config: StudioConfig
-  registry: Registry
-  sync: SyncService
-  provisioning: ProvisioningService
-  templateUpdates: TemplateUpdateService
-  readClient: GitHubClient
-  provisionClient: GitHubClient
-  now?: () => number
-  log?: (line: string) => void
-}
-
-type Handler = (ctx: RequestContext, match: RegExpMatchArray) => Promise<void> | void
-
-interface Route {
-  method: 'GET' | 'POST'
-  pattern: RegExp
-  auth: 'none' | 'session'
-  /** Why this route may change state. Required for every non-GET route. */
-  writes?: string
-  handle: Handler
-}
-
-interface RequestContext {
-  req: IncomingMessage
-  res: ServerResponse
-  url: URL
-  locale: Locale
-  i: I18n
-  session: Session | null
-  sessionId: string | null
-  form: Record<string, string | string[]>
-  raw: Buffer
-}
+export type { RouteInfo, StudioDeps } from './routes/context.js'
 
 const STATIC_FILES: Record<string, string> = {
   'studio.css': 'text/css; charset=utf-8',
@@ -92,13 +35,17 @@ const STATIC_FILES: Record<string, string> = {
 }
 const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'history', 'handoff'] as const
 
-export interface RouteInfo {
-  method: string
-  pattern: string
-  auth: string
-  writes: string | null
-}
-
+/**
+ * The Studio HTTP application.
+ *
+ * Read-only by construction: the route table below is the complete list of endpoints. The only
+ * non-GET routes are sign-in, sign-out, the owner-only provisioning routes (create, retry, discard a
+ * failed attempt from Studio's own registry), the cache refresh, the signed GitHub webhook, and
+ * "Open update PR" (Studio's second GitHub write: a new `template-update/<sha>` branch and a pull
+ * request in a brand repository; never the default branch, never a merge). None of them writes brand
+ * facts, documents or assets. Every brand route resolves the slug through the
+ * server-side registry, so a forged slug cannot select a repository.
+ */
 export function createStudio(deps: StudioDeps): {
   handle: (req: IncomingMessage, res: ServerResponse) => Promise<void>
   sessions: SessionStore
@@ -106,9 +53,10 @@ export function createStudio(deps: StudioDeps): {
 } {
   const { config, registry, sync, provisioning, templateUpdates } = deps
   const now = deps.now ?? Date.now
-  const log = deps.log ?? (() => undefined)
   const sessions = new SessionStore(config.sessionTtlMs, config.idleTtlMs, now)
   const totp = config.ownerTotpSecret ? new TotpVerifier(config.ownerTotpSecret) : null
+  const core = createCore(deps, sessions, totp)
+  const { log, view, render, notFound, brandRecord } = core
   const loginLimiter = new RateLimiter(5, 15 * 60_000, now)
   const globalLoginLimiter = new RateLimiter(30, 15 * 60_000, now)
   const provisionLimiter = new RateLimiter(10, 60 * 60_000, now)
@@ -119,9 +67,9 @@ export function createStudio(deps: StudioDeps): {
   const deliveries = new DeliveryLog()
   const autoRefreshAt = new Map<string, number>()
   let templateCheck: { at: number; state: 'ok' | 'missing' | 'unknown' } | null = null
-  const sessionCookie = config.secureCookies ? '__Host-studio_session' : 'studio_session'
-  const loginCookie = config.secureCookies ? '__Host-studio_login' : 'studio_login'
-  const langCookie = 'studio_lang'
+  const sessionCookie = core.cookies.session
+  const loginCookie = core.cookies.login
+  const langCookie = core.cookies.lang
 
   /**
    * The client address for rate limits. Behind the single trusted reverse proxy, the proxy appends the
@@ -162,31 +110,6 @@ export function createStudio(deps: StudioDeps): {
     const site = req.headers['sec-fetch-site']
     if (typeof site === 'string') return site === 'same-origin' || site === 'none'
     return true
-  }
-
-  function view(ctx: RequestContext): ViewContext {
-    return {
-      i: ctx.i,
-      path: ctx.url.pathname,
-      csrf: ctx.session?.csrf ?? null,
-      login: ctx.session?.login ?? null,
-      brands: ctx.session ? registry.list().sort((a, b) => a.display_name.localeCompare(b.display_name)) : [],
-      now: now(),
-    }
-  }
-
-  function render(ctx: RequestContext, status: number, page: SafeHtml): void {
-    sendHtml(ctx.res, status, page.value)
-  }
-
-  function notFound(ctx: RequestContext): void {
-    render(ctx, 404, pages.errorPage(view(ctx), 'notFound'))
-  }
-
-  function brandRecord(ctx: RequestContext, slug: string): BrandRecord | null {
-    const record = registry.get(slug)
-    if (!record) notFound(ctx)
-    return record
   }
 
   async function brandView(ctx: RequestContext, record: BrandRecord): Promise<BrandView> {
@@ -350,11 +273,6 @@ export function createStudio(deps: StudioDeps): {
     const result = await withTimeout(provisioning.checkName({ owner: q.get('owner') ?? '', repo: q.get('repo') ?? '', slug: q.get('slug') ?? '', retryOf: q.get('retry_of') ?? '' }), 10_000)
     ctx.res.setHeader('Cache-Control', 'no-store')
     sendJson(ctx.res, 200, result ?? { state: 'unknown' })
-  }
-
-  function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | null> {
-    let timer: NodeJS.Timeout | undefined
-    return Promise.race([work, new Promise<null>((resolve) => (timer = setTimeout(() => resolve(null), ms)))]).finally(() => clearTimeout(timer))
   }
 
   const createBrand: Handler = async (ctx) => {
