@@ -1,3 +1,4 @@
+import { normalizeCommand, SVG_ISSUE_CODES } from '@brand-os/asset-catalog'
 import type { DocumentKind } from '@brand-os/brand-core'
 import type { MessageKey } from '../i18n/index.js'
 import type { ProjectionAsset, ProjectionToken, StudioProjection } from '../projection.js'
@@ -628,6 +629,21 @@ export function designPage(ctx: ViewContext, view: BrandView, flash: string | nu
   return brandShell(ctx, view, 'design', i.t('design.title'), body, flash)
 }
 
+const SVG_ISSUE_CODES_SET: ReadonlySet<string> = new Set(SVG_ISSUE_CODES)
+
+/** The specific reason an SVG was refused, and the core command that fixes it when there is one. */
+function svgIssue(ctx: ViewContext, asset: ProjectionAsset): SafeHtml | string {
+  const detail = asset.unavailable_detail
+  if (!detail || !SVG_ISSUE_CODES_SET.has(detail.code)) return ''
+  const { i } = ctx
+  const where = detail.line ? ` ${i.t('assets.svg.line', { line: i.number(detail.line) })}` : ''
+  return html`<span class="small" data-svg-issue="${detail.code}">${i.t(`assets.svg.${detail.code}` as MessageKey)}${where}</span>${
+    detail.fixable
+      ? html`<span class="muted small">${i.t('assets.svg.fixable')}</span>${code(normalizeCommand(asset.id), 'small')}`
+      : html`<span class="muted small">${i.t('assets.svg.reexport')}</span>`
+  }`
+}
+
 function assetCard(ctx: ViewContext, slug: string, asset: ProjectionAsset): SafeHtml {
   const { i } = ctx
   const status = asset.published ? badge(i.t('assets.status.published'), 'accent', 'globe') : asset.approved ? badge(i.t('assets.status.approved'), 'success', 'checkCircle') : badge(i.t('assets.status.draft'), 'warning', 'clock')
@@ -636,7 +652,7 @@ function assetCard(ctx: ViewContext, slug: string, asset: ProjectionAsset): Safe
       ? asset.preview_state === 'draft'
         ? html`<img src="/brands/${slug}/assets/file/${asset.preview_key}" alt="${i.t('assets.draftAlt', { name: asset.name })}" loading="lazy" decoding="async"><span class="asset-draft-flag">${badge(i.t('assets.draftFlag'), 'warning', 'clock')}</span>`
         : html`<img src="/brands/${slug}/assets/file/${asset.preview_key}" alt="${asset.name}" loading="lazy" decoding="async">`
-      : html`<div class="asset-placeholder">${icon('image')}<span>${i.t('assets.noPreview')}</span><span class="muted small">${asset.unavailable_reason ? i.t(`assets.reason.${asset.unavailable_reason}` as MessageKey) : ''}</span></div>`}</div>
+      : html`<div class="asset-placeholder">${icon('image')}<span>${i.t('assets.noPreview')}</span><span class="muted small">${asset.unavailable_reason ? i.t(`assets.reason.${asset.unavailable_reason}` as MessageKey) : ''}</span>${svgIssue(ctx, asset)}</div>`}</div>
     <div class="asset-body">
       <h3 class="asset-name" dir="auto">${asset.name}</h3>
       <div class="asset-badges">${status}${badge(asset.kind, 'neutral')}</div>

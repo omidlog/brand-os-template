@@ -49,6 +49,8 @@ All of these produce drafts only. Restricted questions are refused: the owner an
 
 Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.
 
+Assets follow the same rule. An agent may run `npm run brand:assets -- check` and `npm run brand:assets -- normalize <id>`; it never runs `npm run brand:assets -- approve`. If normalizing resets an approval, hand the asset id to the owner.
+
 ## Personal brands
 
 When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follow `docs-internal/PERSONAL_BRAND.md`.

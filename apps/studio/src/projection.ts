@@ -13,6 +13,7 @@ import {
 } from '@brand-os/brand-core'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
+import type { SvgIssueCode } from '@brand-os/asset-catalog'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import { parse } from 'yaml'
 
@@ -68,6 +69,8 @@ export interface ProjectionAsset {
   preview_state: 'approved' | 'draft' | null
   mime: string | null
   unavailable_reason: 'not_approved' | 'not_present' | 'unsafe' | 'checksum' | 'unsupported_type' | null
+  /** For a refused SVG: the issue to show first (a non-fixable one if any). Absent in older caches. */
+  unavailable_detail?: { code: SvgIssueCode; line: number | null; fixable: boolean } | null
 }
 
 export interface StudioProjection {
@@ -244,6 +247,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     const mime = PREVIEW_MIME[ext] ?? null
     let preview_key: string | null = null
     let unavailable_reason: ProjectionAsset['unavailable_reason'] = null
+    let unavailable_detail: ProjectionAsset['unavailable_detail'] = null
     const checksum = typeof asset.checksum_sha256 === 'string' && /^[0-9a-f]{64}$/.test(asset.checksum_sha256) ? asset.checksum_sha256 : null
     const draft = !approved && !NO_PREVIEW_STATUSES.has(status)
     if (!approved && !draft) unavailable_reason = 'not_approved'
@@ -254,7 +258,13 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
       if (inspected.ok) {
         preview_key = checksum ?? createHash('sha256').update(fs.readFileSync(inspected.realPath)).digest('hex')
         previews.push({ key: preview_key, source: inspected.realPath, mime })
-      } else unavailable_reason = inspected.reason === 'missing' ? 'not_present' : inspected.reason === 'checksum' ? 'checksum' : 'unsafe'
+      } else {
+        unavailable_reason = inspected.reason === 'missing' ? 'not_present' : inspected.reason === 'checksum' ? 'checksum' : 'unsafe'
+        const issues = inspected.issues ?? []
+        const first = issues.find((issue) => !issue.fixable) ?? issues[0]
+        // Only the code, line and whether the core CLI can fix it. All issues are fixable or none is shown as fixable.
+        if (first) unavailable_detail = { code: first.code, line: first.line, fixable: issues.every((issue) => issue.fixable) }
+      }
     }
     const tags = Array.isArray(asset.tags) ? asset.tags.filter((tag): tag is string => typeof tag === 'string') : []
     const kind = asset.path.split('/')[2] ?? tags[0] ?? 'asset'
@@ -274,6 +284,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
         preview_state: preview_key ? (approved ? 'approved' : 'draft') : null,
         mime: preview_key ? mime : null,
         unavailable_reason,
+        unavailable_detail,
       },
     ]
   })

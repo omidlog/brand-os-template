@@ -23,7 +23,7 @@ Public builds are **deny-by-default**. An approval status is not a grant to publ
 - `npm run docs:start` is an **internal** preview and is not intended for public hosting.
 - Public `tokens.json` and `tokens.css` are generated only from allowed, approved, hash-matching color tokens; the internal design token source is unchanged.
 - Never upload the entire repository, raw interview ledger, `brand/.private`, or an internal Docusaurus build to a public host.
-- SVGs are conservatively rejected if active or embedded content is detected. For untrusted uploads, add a maintained XML-aware sanitizer before production usage.
+- SVGs must pass two gates: the XML allowlist in `packages/asset-catalog/src/svg-check.ts` (namespace-aware elements, no event handlers, styles or external references; `url(#id)`/`href="#id"` only to the right kind of element in the same file) and the older text-level regex gate. Run `npm run brand:assets -- check` to see why a file is refused. `npm run brand:assets -- normalize <id>` fixes editor exports whose only problems are simple CSS, comments, metadata or editor data; SVGO is used only to rewrite, never as the security gate, and the original stays in `brand/assets-src/`, which is never published. Both gates still apply to every file, including uploads you do not trust.
 - Run the public build, scanner and adversarial integration tests in CI, then inspect the complete output artifact before deployment.
 
 ## Studio
