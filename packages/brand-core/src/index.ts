@@ -1,4 +1,16 @@
 export { templateConfig } from './config.js'
+export {
+  CHANGE_DEPTHS,
+  changeDepthApplies,
+  DEFAULT_IDENTITY_CHOICE,
+  IDENTITY_INTAKE_SOURCES,
+  IDENTITY_INTENTS,
+  identityIntakeRecord,
+  LOGO_PRESENCE,
+  readIdentityIntake,
+  validateIdentityChoice,
+} from './identity-intake.js'
+export type { ChangeDepth, IdentityChoice, IdentityField, IdentityIntake, IdentityIntakeError, IdentityIntakeRead, IdentityIntakeSource, IdentityIntent, LogoPresence } from './identity-intake.js'
 export { allModules, allQuestions, moduleById } from './content/index.js'
 export { buildMascotCatalog, CANONICAL_ANGLES, CORE_MOTIONS, EXAMPLE_STAGES, catalogCounts } from './content/mascot-catalog.js'
 export { InterviewEngine, applyInit, dispositionFor, emptySession, assertSlug, upgradeCore, syncManifest, personalInit } from './engine.js'

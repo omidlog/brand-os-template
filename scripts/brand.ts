@@ -43,6 +43,10 @@ if (command === 'init') {
       yes: { type: 'boolean', default: false },
       reset: { type: 'boolean', default: false },
       'template-commit': { type: 'string' },
+      // Optional identity intake: an unapproved owner hint, never an approved fact. Without these flags nothing is written.
+      'logo-presence': { type: 'string' },
+      'identity-intent': { type: 'string' },
+      'change-depth': { type: 'string' },
     },
   })
   if (!values.name || !values.slug) {
@@ -69,9 +73,15 @@ if (command === 'init') {
     facets: values.facets ? values.facets.split(',').map((item) => item.trim()).filter(Boolean) : [],
     reset: values.reset === true,
     template: templateFromFlag(values['template-commit']),
+    identity:
+      values['logo-presence'] !== undefined || values['identity-intent'] !== undefined || values['change-depth'] !== undefined
+        ? { choice: { logo_presence: values['logo-presence'], identity_intent: values['identity-intent'], change_depth: values['change-depth'] }, source: 'brand_init' }
+        : undefined,
   })
   const personal = config.modules.personal
   console.log(`Initialized ${config.brand.name} (${config.brand.slug}). Profile ${config.brand.profile}. Mascot ${config.modules.mascot.enabled ? 'on' : 'off'}. Personal ${personal?.enabled ? `on${personal.facets.length ? ` (${personal.facets.join(', ')})` : ''}` : 'off'}.`)
+  const identity = config.onboarding?.identity
+  if (identity) console.log(`Identity intake (unapproved owner hint, not a brand fact): logo ${identity.logo_presence}, intent ${identity.identity_intent}${identity.change_depth ? `, depth ${identity.change_depth}` : ''}.`)
   console.log(engine.statusText())
 } else if (command === 'interview' || command === 'resume') {
   const { values } = parseArgs({
