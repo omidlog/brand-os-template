@@ -68,8 +68,8 @@ Studio wears the omidataei.com identity, taken from that site's design system: m
 ## Architecture
 
 ```text
-Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100, Node)
-                                      ├─ server.ts      route table, auth, CSRF, headers
+Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100 locally; container behind Caddy on the VPS)
+                                      ├─ server.ts      route table, auth, CSRF, Host allowlist, headers
                                       ├─ views/         server-rendered, escaped HTML
                                       ├─ registry.ts    slug -> repository mapping (server-side, data dir)
                                       ├─ sync.ts        merged default branch -> safe projection cache
@@ -87,7 +87,8 @@ Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100, Node)
 
 ## Security model
 
-- Owner sign-in: scrypt password hash, TOTP (required whenever Studio is reachable beyond loopback), a login nonce, per-IP and global rate limits, generic failure messages.
+- Owner sign-in: scrypt password hash, TOTP (required whenever Studio is reachable beyond loopback), a login nonce, per-IP and global rate limits, generic failure messages. Behind the proxy (`STUDIO_TRUST_PROXY=1`) the client IP is the rightmost `X-Forwarded-For` entry, the one the proxy appended.
+- Beyond loopback, Studio answers only for the hostname of `STUDIO_PUBLIC_ORIGIN` (`421` otherwise). `/healthz` is exempt and returns `503` when the data directory is not writable.
 - Sessions: random ids held server-side, HttpOnly, `SameSite=Strict`, `Secure` and `__Host-` prefix on https, absolute and idle expiry, destroyed on sign-out.
 - Every authenticated POST checks the CSRF token and `Origin`. Only form-encoded bodies are accepted.
 - Guests receive a redirect or 401 for every route, identical for real and forged slugs, so brands cannot be enumerated.
@@ -100,15 +101,14 @@ Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100, Node)
 ## Running Studio locally
 
 ```bash
-npm run studio:hash-password          # prompts for the owner password, prints a scrypt hash
-npm run studio -- session-secret      # prints 32 random bytes (base64)
-npm run studio -- totp-secret         # optional on loopback; add it to your authenticator app
-cp apps/studio/.env.example .env      # fill in the values; .env is git-ignored
-set -a; . ./.env; set +a
+cp apps/studio/.env.example .env      # fill in the non-owner values; .env is git-ignored
+npm run studio -- bootstrap-owner --login <you> --out owner.env   # password, TOTP key, session secret (mode 0600)
+set -a; . ./.env; . ./owner.env; set +a
+npm run studio -- check-config        # validates like the server; prints settings, never values
 npm run studio:start                  # http://127.0.0.1:4100
 ```
 
-`apps/studio/.env.example` documents every variable. Without a read credential, brand pages cannot sync. Without a provisioning credential and `STUDIO_ALLOWED_OWNERS`, the wizard is shown as not configured and nothing can be created.
+The single-purpose commands `npm run studio:hash-password`, `npm run studio -- session-secret` and `npm run studio -- totp-secret` still exist. `apps/studio/.env.example` documents every variable for local use. The production layout (container, Caddy, `/opt/brand-os-studio`) is in `docs-internal/phase-10/`. Without a read credential, brand pages cannot sync. Without a provisioning credential and `STUDIO_ALLOWED_OWNERS`, the wizard is shown as not configured and nothing can be created.
 
 ### GitHub credentials
 
@@ -182,6 +182,10 @@ All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-g
 - `tests/studio-provision.test.ts`: creation, personal profile, validation, duplicates, concurrent create, retry, partial-create cleanup, public-repository refusal, missing template, interrupted jobs.
 - `tests/studio-sync.test.ts`: merged-branch projection, edits made outside Studio, stale cache, cross-brand refusal, recreated repositories, concurrent refresh, credential guard.
 - `tests/studio-server.test.ts`: guest isolation, sign-in, the full owner journey, personal and mascot-free brands, forged slugs, no mutation endpoints, CSRF/Origin, wizard errors and GitHub failure with retry, stale and failed sync, webhooks, headers and static-bundle leaks, locales, sessions, configuration.
+- `tests/studio-hardening.test.ts`: behind-the-proxy behavior (Secure `__Host-` cookies, HSTS, downgraded Origin, Host allowlist, forged `X-Forwarded-For`), health readiness, session idle and absolute expiry, listener limits.
+- `tests/studio-cli.test.ts`: `bootstrap-owner` (0600 file, verifiable hash, no overwrite, no argv password, enrollment on stderr only) and `check-config` (no secret values printed).
+- `tests/studio-deploy.test.ts`: the Phase 10 package (Dockerfile, Compose, Caddy block, env template, scripts), the production bundle passing `smoke-test.sh`, the smoke test failing on a leaky server, the backup and restore drill. Set `CADDY_BIN` to also validate the Caddy block with a real Caddy.
+- `tests/studio-browser-production.test.ts`: headless Chrome over HTTPS through a TLS proxy. Covers Secure HttpOnly `__Host-` cookies, CSRF from same-site and cross-site origins, CORS and framing blocks, and a foreign Host.
 - `tests/studio-template-update-job.test.ts`: the periodic check with fake timers: check-only default, one pull request per brand with the flag on, linking an open one, refused accounts, jitter, back-off and rate limits, clean stop, configuration.
 - `tests/studio-template-update.test.ts`: the update check (cache, rate-limit back-off), the update pull request (core files only, brand files byte-identical, default branch unmoved, conflicts reported, audit), idempotency, branch reuse, busy and refused brands, and the route (guest, CSRF, Origin, flash, en/fa/tr).
 - `tests/studio-browser.test.ts`: real headless Chrome over the DevTools protocol (no npm dependency). Owner journey with the progressive wizard and provisioning polling, every page at 1440/1024/390 px without horizontal overflow, static accessibility checks, keyboard (skip link, focus ring, mobile drawer with Escape and focus return), Persian RTL mirroring with LTR code, Turkish LTR, the self-hosted fonts and logo, AA text contrast in light and dark, CSP enforcement and no third-party requests, and the template update indicator and **Open update PR** (accessible, RTL, no overflow). These are part of the Studio suite (`npm run test:studio`, `npm run test:full`, `npm run ci`), not of `npm test`, which is the brand suite. They run when Chrome is installed (`CHROME_PATH` or the usual paths) and **skip with a message when it is not**. In CI they run only in the template repository (the `studio` job of `validate.yml`, on `ubuntu-latest`, which ships Google Chrome; no Playwright); brand repositories never run the Studio or browser suite. `npm run test:e2e` requires a browser and fails without one. `STUDIO_E2E_SCREENSHOTS=<dir>` saves desktop/tablet/mobile screenshots in English and Persian for visual review.
@@ -192,4 +196,4 @@ All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-g
 - Sessions and rate limits live in memory, so a restart signs the owner out. The registry and sync cache persist in `STUDIO_DATA_DIR`.
 - Interview question text and module guidance inside brand documents are English unless the brand repository has localized them; Studio's own interface is fully localized in en, fa and tr.
 - Font specimens use a family only if it is installed on the viewing device; Studio never loads a brand's font files (it self-hosts only its own interface fonts).
-- Deployment to the VPS (reverse proxy, TLS, process supervision, DNS for `studio.omidataei.com`) is Phase 10 and not part of this change.
+- The VPS deployment package (image, Compose, Caddy block, runbooks, Grok handoff) is in `infra/production` and `docs-internal/phase-10/`. It has not been deployed; the live launch is a separate operator step.

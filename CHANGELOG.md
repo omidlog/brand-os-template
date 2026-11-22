@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased — Phase 10 prep: Studio VPS deployment package
+
+Theme: everything the launch operator needs to run the read-only Studio at `studio.omidataei.com` on the owner's VPS, behind the existing edge Caddy. **Nothing is deployed by this change.** Docs: `docs-internal/phase-10/`.
+
+### Breaking changes
+
+- None for brand repositories, the CLI, MCP or the docs build.
+- Studio: with `STUDIO_TRUST_PROXY=1`, rate limits now use the rightmost `X-Forwarded-For` entry instead of the leftmost. Beyond loopback, requests for any hostname other than the public origin's get `421`.
+
+### Added
+
+- `infra/production`: Dockerfile (digest-pinned, multi-stage, non-root), Compose for `/opt/brand-os-studio` (only `172.18.0.1:8083`, read-only, 512 MiB, health check), `.env.example`, `Caddyfile.studio`, `smoke-test.sh`, `backup.sh`, `restore.sh`; root `.dockerignore` allowlist.
+- `npm run studio:build` (esbuild bundle); `studio bootstrap-owner` and `studio check-config`.
+- `/healthz` reports `503` when the data directory is not writable. The HTTP listener uses a 65 s keep-alive and a 16 KiB header limit.
+- Tests: `studio-hardening`, `studio-cli`, `studio-deploy`, `studio-browser-production`; CI workflow `studio-image.yml` (image build, Compose run, smoke test, restore drill).
+- Docs: `docs-internal/phase-10/` (architecture, deployment contract, operations, deploy runbook, Grok handoff, Claude editing workflow, security review).
+
+### Fixed
+
+- Studio registry: `studio register` and `unregister` run next to a live server (for example via `docker compose exec`) used to be invisible to the server until restart, and the server's next save, such as a new brand, overwrote them. The registry now reloads the file whenever it changed on disk.
+
+### Not included
+
+- The live launch (VPS, Caddy reload, TLS, owner enrollment, GitHub tokens, test repository). See `GROK_HANDOFF.md`.
+
 ## Unreleased — Creative Learning MVP (Sprint 1)
 
 Theme: auditable memory of the owner's design choices, built on the Knowledge Inbox. Guide: `docs-internal/CREATIVE_LEARNING.md`.
