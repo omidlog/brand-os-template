@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { disabledModule, shouldSkip, type ConditionContext } from './conditions.js'
-import { completeness, latestAnswers } from './completeness.js'
+import { completeness, isOpenAnswer, latestAnswers } from './completeness.js'
 import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
 import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
@@ -211,8 +211,7 @@ export class InterviewEngine {
     return question.depends_on.every((id) => {
       const dependency = byId.get(id)
       if (dependency && shouldSkip(dependency.skip_when, ctx)) return true
-      const answer = ctx.answers.get(id)
-      return Boolean(answer && answer.status !== 'unanswered')
+      return !isOpenAnswer(ctx.answers.get(id))
     })
   }
 
@@ -235,8 +234,8 @@ export class InterviewEngine {
       .filter((question) => {
         if (inProfile && !inProfile.has(question.id)) return false
         if (disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) return false
-        const answer = ctx.answers.get(question.id)
-        if (answer && answer.status !== 'unanswered') return false
+        // A retracted (deprecated) answer reopens the question; see isOpenAnswer.
+        if (!isOpenAnswer(ctx.answers.get(question.id))) return false
         return this.depsSatisfied(question, ctx)
       })
       .sort((a, b) => {
