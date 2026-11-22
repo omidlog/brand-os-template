@@ -195,7 +195,8 @@ test('brand:init CLI: no flags behaves as before; flags record a hint; a contrad
 
   const bad = workspace()
   const third = cli(bad, ['init', '--name', 'Bad', '--slug', 'bad', '--yes', '--logo-presence', 'absent', '--identity-intent', 'retain'])
-  assert.notEqual(third.status, 0)
-  assert.match(third.stderr, /retain_without_logo/)
+  assert.equal(third.status, 2)
+  assert.match(third.stderr, /Identity intake refused \(identity_intent: retain_without_logo\)\. Nothing was written\./)
+  assert.doesNotMatch(third.stderr, /\bat applyInit\b/, 'a plain message, not a stack trace')
   assert.notEqual(config(bad).brand.initialized, true)
 })

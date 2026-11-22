@@ -4,7 +4,7 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
-import { applyInit, backupBrand, InterviewEngine, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
+import { applyInit, backupBrand, CHANGE_DEPTHS, IDENTITY_INTENTS, InterviewEngine, LOGO_PRESENCE, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand, validateIdentityChoice } from '@brand-os/brand-core'
 import type { BatchResult, IntakeReport, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
 
 const [command, ...rest] = process.argv.slice(2)
@@ -57,6 +57,16 @@ if (command === 'init') {
     console.error('Refusing to reset interview state without --yes.')
     process.exit(1)
   }
+  const identityFlags = values['logo-presence'] !== undefined || values['identity-intent'] !== undefined || values['change-depth'] !== undefined
+  const identityChoice = { logo_presence: values['logo-presence'], identity_intent: values['identity-intent'], change_depth: values['change-depth'] }
+  if (identityFlags) {
+    const checked = validateIdentityChoice(identityChoice)
+    if (!checked.ok) {
+      console.error(`Identity intake refused (${Object.entries(checked.errors).map(([field, code]) => `${field}: ${code}`).join(', ')}). Nothing was written.`)
+      console.error(`--logo-presence ${LOGO_PRESENCE.join('|')}; --identity-intent ${IDENTITY_INTENTS.join('|')}; --change-depth ${CHANGE_DEPTHS.join('|')} (only with evolve or rebrand). "absent" cannot be kept, "present" is not created anew, and a logo evolution needs a logo.`)
+      process.exit(2)
+    }
+  }
   const config = applyInit(root, {
     name: values.name,
     slug: values.slug,
@@ -73,10 +83,7 @@ if (command === 'init') {
     facets: values.facets ? values.facets.split(',').map((item) => item.trim()).filter(Boolean) : [],
     reset: values.reset === true,
     template: templateFromFlag(values['template-commit']),
-    identity:
-      values['logo-presence'] !== undefined || values['identity-intent'] !== undefined || values['change-depth'] !== undefined
-        ? { choice: { logo_presence: values['logo-presence'], identity_intent: values['identity-intent'], change_depth: values['change-depth'] }, source: 'brand_init' }
-        : undefined,
+    identity: identityFlags ? { choice: identityChoice, source: 'brand_init' } : undefined,
   })
   const personal = config.modules.personal
   console.log(`Initialized ${config.brand.name} (${config.brand.slug}). Profile ${config.brand.profile}. Mascot ${config.modules.mascot.enabled ? 'on' : 'off'}. Personal ${personal?.enabled ? `on${personal.facets.length ? ` (${personal.facets.join(', ')})` : ''}` : 'off'}.`)
