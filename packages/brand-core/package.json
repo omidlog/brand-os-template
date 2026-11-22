@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./creative": "./src/creative/index.ts",
     "./research": "./src/research/index.ts",
-    "./seo": "./src/seo/index.ts"
+    "./seo": "./src/seo/index.ts",
+    "./strategy": "./src/strategy/index.ts"
   }
 }

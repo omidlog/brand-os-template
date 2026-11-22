@@ -19,6 +19,7 @@
       "@brand-os/brand-core/creative": ["packages/brand-core/src/creative/index.ts"],
       "@brand-os/brand-core/research": ["packages/brand-core/src/research/index.ts"],
       "@brand-os/brand-core/seo": ["packages/brand-core/src/seo/index.ts"],
+      "@brand-os/brand-core/strategy": ["packages/brand-core/src/strategy/index.ts"],
       "@brand-os/design-tokens": ["packages/design-tokens/src/index.ts"],
       "@brand-os/asset-catalog": ["packages/asset-catalog/src/index.ts"],
       "@brand-os/asset-catalog/normalize": ["packages/asset-catalog/src/normalize.ts"]

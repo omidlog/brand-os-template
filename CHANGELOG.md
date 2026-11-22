@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Strategy records and Strategy Feed (Spec Sprint 3)
+
+### Added
+
+- `npm run brand:strategy`: propose (`--file` or `--from-seo`), list, show, review (field diff, sources, blockers), approve (owner proof plus `--expect-sha`), reject, withdraw. Revisions are immutable under `brand/.private/strategy/records/` (gitignored) and cite approved facts and `knowledge:kn_…@sha256` research notes only.
+- Agent-token profiles `strategy-seo-read` and `strategy-ads-read`, and the read-only `strategy_list` / `strategy_get` tools in the stdio MCP and `brand:query`. Only the approved, currently valid revision is served, as stable JSON with content, approval, source and feed digests. Restricted fields and the other kind's recommendations are listed under `redacted`. A stale pin is refused. Reading grants no permission to execute, spend or publish.
+- Tests: `strategy-store`, `strategy-seo-import`, `strategy-cli`, `strategy-feed`. `audit` pins the two new tool names.
+
 ## Unreleased — Engine fixes
 
 ### Fixed

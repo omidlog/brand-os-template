@@ -165,8 +165,22 @@ Branch `feat/seo-strategist`. Guide and reuse map: `docs-internal/SEO_STRATEGIST
 | Researched and offline cases | Done | 8 official pages recorded live 2026-11-22 (replayed in tests); offline gives `research_unavailable`, provisional, no quotes. |
 | Independent critic | Done | `seo-critic/1`: uncited policy, invented metrics, latest-claims, guarantees, misquotes, edited or stale citations, site work for app-only brands. |
 | Evals (spec §6 a–l) | Done | `evals/cases.yaml`, 15 cases, run by `tests/seo-evals.test.ts`. |
-| Approval, agent feed, Studio | Not started | Sprint 3 / backlog. |
+| Approval, agent feed | Done (Sprint 3) | See "Strategy records and Strategy Feed" below. |
+| Studio strategy views | Not started | Backlog. |
 | Other specialists, CMO, metrics learning | Not started | Out of scope. |
+
+## Strategy records and Strategy Feed (Spec Sprint 3)
+
+Branch `feat/strategy-feed`. Guide, reuse map and gate: `docs-internal/STRATEGY_FEED.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Typed StrategyRecord / StrategyRevision | Done | Immutable revisions with a canonical `content_sha256`; approved facts pinned to `revision_hash`; research as `knowledge:kn_…@sha256`; restricted block owner-only. `tests/strategy-store.test.ts`. |
+| Human review and approval | Done | Field diff against the superseded revision, source states, blockers; owner proof plus `--expect-sha`; HMAC-sealed approval; reject; withdraw (no silent restore); supersession. `tests/strategy-cli.test.ts`. |
+| Dates and source changes | Done | `not_yet_valid`, `review_due`, `expired`, `needs_review`, `integrity_failed` computed on read. |
+| SEO draft import | Done | `propose --from-seo` re-runs the Sprint 2 critic; citations kept, quotes not copied. `tests/strategy-seo-import.test.ts`. |
+| Read-only Strategy Feed | Done | `strategy-seo-read` / `strategy-ads-read`; `strategy_list`, `strategy_get` in stdio MCP and `brand:query`; digests, redaction, missing fields, `stale_pin`; access-logged. `tests/strategy-feed.test.ts`. |
+| CMO agent, Strategy Critic, metrics learning, ad execution, remote gateway, Studio views | Not started | Out of scope. |
 
 ## SVG checker, normalizer and asset approval
 
