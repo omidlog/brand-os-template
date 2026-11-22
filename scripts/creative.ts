@@ -36,7 +36,7 @@ import {
 
 const HELP = `brand:creative <command> [options]
 
-  project   --id <project> --title <t> --surface reel|post|carousel|story --series <name> [--lang fa]
+  project   --id <project> --title <t> --surface reel|post|carousel|story|logo --series <name> [--lang fa]
             [--inspiration kn_…[:own|licensed|unknown]]…
   variant   --project <project> --variant <A> --asset <manifest-asset-id|missing> [--describe <short label>]
   feedback  --project <project> --variant <A> (--text <owner words> | --file <path|-> | --note kn_…)
