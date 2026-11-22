@@ -374,7 +374,18 @@ const PROPOSAL_KEYS = [
   'assumptions',
   'open_questions',
   'restricted',
+  'origin',
 ] as const
+
+function originOf(value: unknown, fallback: StrategyOrigin): StrategyOrigin {
+  if (value === undefined || value === null) return fallback
+  const o = objectOf(value, 'origin', ['kind', 'plan_id', 'strategist'])
+  if (o.kind === 'manual') return { kind: 'manual' }
+  if (o.kind === 'seo_draft' && typeof o.plan_id === 'string' && /^[a-z0-9][a-z0-9_-]{0,79}$/.test(o.plan_id) && typeof o.strategist === 'string' && /^[a-z0-9-]{1,40}\/\d{1,3}$/.test(o.strategist)) {
+    return { kind: 'seo_draft', plan_id: o.plan_id, strategist: o.strategist }
+  }
+  throw new StrategyError('invalid_input', 'origin must be {kind: manual} or {kind: seo_draft, plan_id, strategist}.')
+}
 
 function evidenceInput(value: unknown, field: string): string {
   if (typeof value === 'string' && (/^kn_[a-z0-9][a-z0-9-]{2,63}$/.test(value) || parseKnowledgeRef(value))) return value
@@ -474,7 +485,7 @@ export function parseProposal(raw: unknown, origin: StrategyOrigin = { kind: 'ma
     assumptions: textList(doc.assumptions, 'assumptions'),
     open_questions: textList(doc.open_questions, 'open_questions'),
     restricted,
-    origin,
+    origin: originOf(doc.origin, origin),
   }
   if (proposal.valid_until <= proposal.valid_from) throw new StrategyError('invalid_input', 'valid_until must be after valid_from.')
   if (proposal.review_due_at > proposal.valid_until) throw new StrategyError('invalid_input', 'review_due_at must not be after valid_until.')

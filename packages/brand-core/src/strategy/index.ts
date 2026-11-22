@@ -24,3 +24,5 @@ export {
   withdrawRevision,
 } from './store.js'
 export type { DiffEntry, Evaluation, ProposeResult, RefReport, RefState, ReviewReport, StrategySummary } from './store.js'
+export { proposalFromSeoDraft } from './seo-import.js'
+export type { SeoImport } from './seo-import.js'
