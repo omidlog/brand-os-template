@@ -6,6 +6,10 @@ import { validOwner, validRepoName } from './config.js'
 /**
  * The server-side brand-to-repository mapping. This file, not a URL or a query parameter, decides
  * which repository a slug reads. Only the provisioning service and the owner's server CLI add rows.
+ *
+ * The server and the CLI (`studio register`, run with `docker compose exec` next to the live server)
+ * are separate processes sharing this file. Every read and write first reloads the file if it changed
+ * on disk (atomic writes replace the inode), so neither process acts on, or overwrites, a stale copy.
  */
 export type ProvisioningState = 'running' | 'ready' | 'failed'
 export type CleanupState = 'not_needed' | 'done' | 'required'
@@ -67,6 +71,7 @@ interface RegistryFile {
 export class Registry {
   private readonly file: string
   private data: RegistryFile
+  private loadedStamp = ''
 
   constructor(dataDir: string) {
     fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 })
@@ -74,7 +79,22 @@ export class Registry {
     this.data = this.load()
   }
 
+  private stamp(): string {
+    try {
+      const stat = fs.statSync(this.file)
+      return `${stat.ino}:${stat.size}:${stat.mtimeMs}`
+    } catch {
+      return 'missing'
+    }
+  }
+
+  /** Reloads when another process (the server CLI) has written the file since this copy was read. */
+  private fresh(): void {
+    if (this.stamp() !== this.loadedStamp) this.data = this.load()
+  }
+
   private load(): RegistryFile {
+    this.loadedStamp = this.stamp()
     if (!fs.existsSync(this.file)) return { schema_version: 1, brands: [] }
     const raw = JSON.parse(fs.readFileSync(this.file, 'utf8')) as Partial<RegistryFile>
     const brands = Array.isArray(raw.brands) ? raw.brands.filter((brand) => Registry.valid(brand)) : []
@@ -92,20 +112,24 @@ export class Registry {
 
   private save(): void {
     writeAtomic(this.file, `${JSON.stringify(this.data, null, 2)}\n`, { mode: 0o600 })
+    this.loadedStamp = this.stamp()
   }
 
   list(): BrandRecord[] {
+    this.fresh()
     return this.data.brands.map((brand) => structuredClone(brand))
   }
 
   /** Exact slug lookup. Anything that is not a valid registered slug returns null. */
   get(slug: string): BrandRecord | null {
     if (typeof slug !== 'string' || slug.length > 100) return null
+    this.fresh()
     const found = this.data.brands.find((brand) => brand.slug === slug)
     return found ? structuredClone(found) : null
   }
 
   byRepository(id: number, fullName: string): BrandRecord | null {
+    this.fresh()
     const found = this.data.brands.find(
       (brand) => brand.repo.id === id && `${brand.repo.owner}/${brand.repo.name}`.toLowerCase() === fullName.toLowerCase(),
     )
@@ -113,12 +137,14 @@ export class Registry {
   }
 
   byRepoName(owner: string, name: string): BrandRecord | null {
+    this.fresh()
     const found = this.data.brands.find((brand) => brand.repo.owner.toLowerCase() === owner.toLowerCase() && brand.repo.name.toLowerCase() === name.toLowerCase())
     return found ? structuredClone(found) : null
   }
 
   upsert(record: BrandRecord): void {
     if (!Registry.valid(record)) throw new Error('Refusing to store an invalid brand record.')
+    this.fresh()
     const index = this.data.brands.findIndex((brand) => brand.slug === record.slug)
     if (index === -1) this.data.brands.push(structuredClone(record))
     else this.data.brands[index] = structuredClone(record)
@@ -126,6 +152,7 @@ export class Registry {
   }
 
   remove(slug: string): boolean {
+    this.fresh()
     const before = this.data.brands.length
     this.data.brands = this.data.brands.filter((brand) => brand.slug !== slug)
     if (this.data.brands.length === before) return false

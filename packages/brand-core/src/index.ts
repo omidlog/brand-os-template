@@ -126,6 +126,8 @@ export { DRAFT_RULES, draftPersonalContent, MASCOT_FILTER_KEYS } from './query.j
 export { asciiDigits, isStructuredType, normalizeStructured, parseStructured, STRUCTURED_FORMATS, STRUCTURED_TYPES, structuredFor } from './structured.js'
 export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, VoicePair } from './structured.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
+export { approveAssets } from './asset-approval.js'
+export type { AssetApprovalOutcome, AssetApprovalResult } from './asset-approval.js'
 export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCES } from './token-generate.js'
 export type { GeneratedTokenResult, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult } from './token-generate.js'
 export {
@@ -178,3 +180,25 @@ export type { FinanceBasis, FinanceInputs, FinancePeriod, FinanceReport, Finance
 export { FinanceInputPathError, resolveFinanceInputPath, RESTRICTED_FINANCE_DIR, runFinanceFile } from './finance-input.js'
 export { isMascotLifecycle, MASCOT_LIFECYCLE, migrateMascotCatalog, validateMascotLifecycle } from './mascot-lifecycle.js'
 export type { MascotArtwork, MascotLifecycle, MascotMigration } from './mascot-lifecycle.js'
+export * from './knowledge/index.js'
+export {
+  applyTemplateUpdate,
+  classifyPath,
+  defaultUpdateBranch,
+  formatUpdatePlan,
+  globToRegExp,
+  isWriteAction,
+  planChanges,
+  parseSyncManifest,
+  planTemplateUpdate,
+  readSyncManifest,
+  readTemplateRecord,
+  SYNC_MANIFEST_PATH,
+  TEMPLATE_RECORD_PATH,
+  templateRecordText,
+  updateCommitMessage,
+  writeTemplateRecord,
+} from './template-sync.js'
+export { formatMigrationRuns, migrationFiles, migrationPaths, MIGRATIONS_DIR, parseMigration, pendingMigrations, planMigrations } from './template-migrations.js'
+export type { DeleteOperation, Migration, MigrationOperation, MigrationRun, MigrationSources } from './template-migrations.js'
+export type { ApplyResult, ChangeSources, Classification, PlannedChange, SyncKind, SyncManifest, SyncRule, TemplateRecord, UpdateAction, UpdatePlan } from './template-sync.js'

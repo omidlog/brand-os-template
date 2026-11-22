@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import http from 'node:http'
+import path from 'node:path'
 import { test } from 'node:test'
 import { SessionStore } from '../apps/studio/src/auth/session.js'
 import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { createHttpServer, SERVER_TIMEOUTS } from '../apps/studio/src/listen.js'
-import { OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
+import { Registry } from '../apps/studio/src/registry.js'
+import { templateTree } from './helpers/fake-github.js'
+import { Client, OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
+import { OWNER } from './helpers/studio.js'
 
 /**
  * Phase 10 hardening: Studio as it runs in production, behind one TLS-terminating reverse proxy
@@ -216,4 +220,43 @@ test('the HTTP listener keeps upstream connections open longer than the proxy po
   })
   assert.equal(status, 431)
   await new Promise<void>((resolve) => server.close(() => resolve()))
+})
+
+test('a brand registered by the server CLI next to the live server is seen at once and never overwritten by a later provisioning', async () => {
+  const s = await startStudio()
+  try {
+    const client = new Client(s.url)
+    await client.login()
+    // What `docker compose exec studio node dist/cli.mjs register ...` does: a second process, same file.
+    const cli = new Registry(s.config.dataDir)
+    s.github.addRepo(OWNER, 'existing-brand', templateTree(), { private: true })
+    const existing = s.github.repo(OWNER, 'existing-brand')!
+    cli.upsert({
+      slug: 'existing-brand',
+      display_name: 'Existing Brand',
+      profile: 'business',
+      repo: { owner: OWNER, name: 'existing-brand', id: existing.id, html_url: `https://github.com/${OWNER}/existing-brand`, default_branch: 'main' },
+      source: 'registered',
+      created_at: new Date().toISOString(),
+      created_by: 'server-cli',
+      provisioning: null,
+    })
+    assert.match((await client.page('/brands')).text, /Existing Brand/, 'the live server sees the CLI registration without a restart')
+
+    // The server then provisions a new brand: its save must keep the CLI's row.
+    const csrf = await client.csrf('/brands/new')
+    const created = await client.request('POST', '/brands/new', { form: { _csrf: csrf, name: 'Acme Learning', slug: 'acme-learning', profile: 'business', default_locale: 'en', locales: ['en'], owner: OWNER, repo: 'acme-learning' } })
+    assert.equal(created.status, 303)
+    await s.studio.provisioning.settled()
+    await s.studio.sync.settled()
+    const onDisk = JSON.parse(fs.readFileSync(path.join(s.config.dataDir, 'registry.json'), 'utf8')) as { brands: Array<{ slug: string }> }
+    assert.deepEqual(onDisk.brands.map((brand) => brand.slug).sort(), ['acme-learning', 'existing-brand'])
+
+    // And an unregister from the CLI takes effect in the live server.
+    assert.equal(new Registry(s.config.dataDir).remove('existing-brand'), true)
+    assert.equal((await client.get('/brands/existing-brand')).status, 404)
+    assert.equal(s.studio.registry.get('acme-learning')?.slug, 'acme-learning')
+  } finally {
+    await s.close()
+  }
 })

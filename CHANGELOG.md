@@ -1,5 +1,86 @@
 # Changelog
 
+## Unreleased — Phase 10 prep: Studio VPS deployment package
+
+Theme: everything the launch operator needs to run the read-only Studio at `studio.omidataei.com` on the owner's VPS, behind the existing edge Caddy. **Nothing is deployed by this change.** Docs: `docs-internal/phase-10/`.
+
+### Breaking changes
+
+- None for brand repositories, the CLI, MCP or the docs build.
+- Studio: with `STUDIO_TRUST_PROXY=1`, rate limits now use the rightmost `X-Forwarded-For` entry instead of the leftmost. Beyond loopback, requests for any hostname other than the public origin's get `421`.
+
+### Added
+
+- `infra/production`: Dockerfile (digest-pinned, multi-stage, non-root), Compose for `/opt/brand-os-studio` (only `172.18.0.1:8083`, read-only, 512 MiB, health check), `.env.example`, `Caddyfile.studio`, `smoke-test.sh`, `backup.sh`, `restore.sh`; root `.dockerignore` allowlist.
+- `npm run studio:build` (esbuild bundle); `studio bootstrap-owner` and `studio check-config`.
+- `/healthz` reports `503` when the data directory is not writable. The HTTP listener uses a 65 s keep-alive and a 16 KiB header limit.
+- Tests: `studio-hardening`, `studio-cli`, `studio-deploy`, `studio-browser-production`; CI workflow `studio-image.yml` (image build, Compose run, smoke test, restore drill).
+- Docs: `docs-internal/phase-10/` (architecture, deployment contract, operations, deploy runbook, Grok handoff, Claude editing workflow, security review).
+
+### Fixed
+
+- Studio registry: `studio register` and `unregister` run next to a live server (for example via `docker compose exec`) used to be invisible to the server until restart, and the server's next save, such as a new brand, overwrote them. The registry now reloads the file whenever it changed on disk.
+
+### Not included
+
+- The live launch (VPS, Caddy reload, TLS, owner enrollment, GitHub tokens, test repository). See `GROK_HANDOFF.md`.
+
+## Unreleased — Creative Learning MVP (Sprint 1)
+
+Theme: auditable memory of the owner's design choices, built on the Knowledge Inbox. Guide: `docs-internal/CREATIVE_LEARNING.md`.
+
+### Added
+
+- `packages/brand-core/src/creative/` (subpath export `@brand-os/brand-core/creative`): projects, variants, feedback links, selection, scoped preferences with owner approval and supersession, and next-session context with `knowledge:kn_…@<sha256>` provenance.
+- `npm run brand:creative` (`scripts/creative.ts`).
+- `agent-skills/creative-memory/SKILL.md`.
+
+### Security
+
+- Owner-only: refused under `BRAND_OS_AGENT_TOKEN`; records in gitignored `brand/.private/creative`; restricted notes cannot be linked; brand-wide approval refused; approved facts, ledger and publication state are never written.
+
+## Unreleased — Knowledge Inbox (Baalda-inspired)
+
+Theme: capture messy ideas per brand, find them in fa/tr/en, link them, and turn them into draft proposals without ever bypassing approval. Guide: `docs-internal/KNOWLEDGE.md`.
+
+### Breaking changes
+
+- None. Brands without `brand/knowledge` keep working with zero notes and no flag.
+
+### Security
+
+- Studio's archive filter now blocks every `brand/knowledge/**` path except `brand/knowledge/shared/*.md`, checked before any other rule (it was a blocklist, so committed caches or link files would have reached Studio).
+
+### Added
+
+- `packages/brand-core/src/knowledge/`: note model (`kn_<uuid>`, reader-computed sha256 revision), local-by-default store under `brand/.private/knowledge`, AES-256-GCM restricted notes, revision-checked edits with anchors, per-note locks, snapshots and recovery, idempotent append, archive/restore, fa/tr/en search, links/backlinks/related/duplicates, fail-closed share to Git, doctor and migrate.
+- `npm run brand:knowledge` (`scripts/knowledge.ts`).
+- `brand:backup` now includes `brand/knowledge`.
+- `brand:knowledge propose` / `provenance`: note → draft proposals over the existing intake, with `knowledge:<id>@<sha256>` provenance, stale detection and a preview of every quotation that would enter tracked interview files.
+- `knowledge-read` agent-token profile and read-only MCP tools `knowledge_list`, `knowledge_search`, `knowledge_read`, `knowledge_backlinks`, `knowledge_suggest_proposal` (shared notes only). Existing profiles unchanged.
+- `agent-skills/knowledge-inbox/SKILL.md`.
+- Studio: read-only **Knowledge** section for merged shared notes (labelled unverified ideas), en/fa/tr, filters, search, detail with backlinks and linked questions. No new write route.
+- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`, `knowledge-proposals`, `knowledge-agent`, `studio-knowledge`; Knowledge page browser checks in `studio-browser`.
+
+## Unreleased — SVG checker, normalizer and asset approval
+
+Theme: an editor's SVG export should not be silently refused. Brand OS now says what is wrong, fixes what is safe to fix without changing the drawing, and ties asset approval to exact bytes.
+
+### Breaking changes
+
+- `npm run validate` now fails when a present SVG in the asset manifest is not publishable. The message names the problem and, when it is fixable, the command. Run `npm run brand:assets -- check` after a template update.
+- The check is stricter in two places: a prefixed XHTML element such as `<h:script>` is now refused (the regex gate missed it), and a non-SVG namespace or an unknown element is refused unless the normalizer can remove it.
+
+### Added
+
+- `checkSvg`: structured, namespace-aware SVG check with codes, lines and `fixable`. Internal `url(#id)` and gradient `href="#id"` references are allowed. A leading XML declaration is allowed.
+- `npm run brand:assets -- check | normalize <id> | approve --ids <id>`.
+- Normalizer on SVGO 4.1.0 (five plugins, no shape changes), originals kept in `brand/assets-src/`, `derived_from` and `normalizer` in the manifest, a pixel-identical render check (resvg) before an approval is carried.
+- Asset approval of exact bytes (`approved_sha256`), with the owner proof rules of the other approval commands.
+- Studio names the SVG problem and shows the fix command (en/fa/tr).
+- Fixtures from Illustrator, Inkscape and Figma; tests `svg-check`, `svg-assets`, `studio-svg-issues`.
+- devDependencies: `svgo` 4.1.0, `@resvg/resvg-js` 2.6.2.
+
 ## Unreleased — Phase 9: Read-only Brand OS Studio
 
 Theme: one private place to create brands and see their approved state, while all editing stays in Claude Code. Guide: `docs-internal/STUDIO.md`.
