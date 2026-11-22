@@ -53,6 +53,7 @@ All profiles are read-only and never get restricted values.
 | `marketing` | brand modules plus company, customer, product, sales, marketing, and growth |
 | `finance` | business modules and governance status |
 | `knowledge-read` | approved facts in every module, plus the read-only `knowledge_*` tools over shared notes (`brand/knowledge/shared`), labelled unapproved ideas. Never local or restricted notes. Issue with `brand:agent-token issue --profile knowledge-read`. |
+| `creative-read` | approved facts as `design`, plus the read-only `creative_context` tool: owner-approved scoped creative preferences and the owner's cited reasons for selected, rejected and partly kept variants (`docs-internal/CREATIVE_LEARNING.md`). Drafts and superseded preferences are only counted. Verbatim feedback is quoted only from shared notes; local note text is withheld. Issue with `brand:agent-token issue --profile creative-read`. |
 
 Restricted fields (finance figures, budgets, partner shares, board details) come back as `value: null, withheld: true` for every profile. Agents can never approve, publish, or write.
 

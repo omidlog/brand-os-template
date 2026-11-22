@@ -12,6 +12,7 @@ import {
   readTemplateRecord,
   rightsBlocker,
 } from '@brand-os/brand-core'
+import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import type { SvgIssueCode } from '@brand-os/asset-catalog'
@@ -124,6 +125,11 @@ export interface StudioProjection {
    * field existed; sync rebuilds those.
    */
   knowledge?: StudioKnowledgeProjection | null
+  /**
+   * Creative decisions the owner shared (`brand/creative/shared/cp_*.json`) on this commit. Null when they could
+   * not be read. Absent in caches written before this field existed; sync rebuilds those.
+   */
+  creative?: StudioCreativeProjection | null
 }
 
 export class ProjectionError extends Error {
@@ -171,6 +177,17 @@ function projectKnowledge(engine: InterviewEngine): StudioKnowledgeProjection | 
     const knowledge = buildStudioKnowledge(engine)
     assertNoSecrets(knowledge)
     return knowledge
+  } catch {
+    return null
+  }
+}
+
+/** Shared creative decisions; a malformed folder must not take down the brand view either. */
+function projectCreative(root: string, slug: string): StudioCreativeProjection | null {
+  try {
+    const creative = buildStudioCreative(root, slug)
+    assertNoSecrets(creative)
+    return creative
   } catch {
     return null
   }
@@ -377,6 +394,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     mascot,
     personal: personal ? { facets, documents: personalDocs } : null,
     knowledge: projectKnowledge(engine),
+    creative: projectCreative(root, engine.config().brand.slug),
     template: templateRecord(root),
   }
   assertNoSecrets(projection)

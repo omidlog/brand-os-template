@@ -6,7 +6,12 @@ import { stdin as input, stdout as output } from 'node:process'
 import { AGENT_TOKEN_ENV, InterviewEngine, KnowledgeError, openWorkspace, type KnowledgeWorkspace } from '@brand-os/brand-core'
 import {
   addVariant,
+  approveAspects,
   approvePreference,
+  listAspectProposals,
+  parseAspectChoices,
+  rejectAspects,
+  suggestAspects,
   assertOwnerProcess,
   createProject,
   CreativeError,
@@ -16,6 +21,7 @@ import {
   readProject,
   recordFeedback,
   selectVariant,
+  shareDecision,
   suggestPreference,
   type CreativeContext,
 } from '@brand-os/brand-core/creative'
@@ -41,14 +47,24 @@ const HELP = `brand:creative <command> [options]
             [--counterexample B | --counterexample other-project/B]… [--supersedes cp_…]     draft only
   approve   --id cp_… [--scope project|series]    owner proof: BRAND_OS_APPROVAL_PROOF or hidden prompt
   preferences                                       every preference with its state
+  share     --id cp_… [--dry-run]   copy an approved decision's summary to brand/creative/shared (you commit it)
   show      --project <project>
   list
   context   (--project <project> | --surface reel --series <name>)   next-session context with provenance
 
+  aspects suggest --project <project> [--feedback fb_…]   keep/avoid aspects suggested from the note text (pending)
+  aspects list    [--project <project>] [--state pending|approved|rejected]
+  aspects approve --id ap_… [--only aspect[:keep|avoid],…]   owner proof; applies to the feedback event
+  aspects reject  --id ap_…                                  nothing is applied
+  Suggestions never apply on their own: retrieval and agents ignore them until the owner approves.
+
 Aspects: camera_angle, lighting, text_density, tone, typography, layout, color, mascot_pose, mascot_anatomy, hook,
 cta, duration, pacing, music. Add --json for machine-readable output. Refused while ${AGENT_TOKEN_ENV} is set.`
 
-const [command, ...rest] = process.argv.slice(2)
+const [command, ...argv] = process.argv.slice(2)
+// `aspects <sub>` takes one positional subcommand; every other command takes options only.
+const sub = command === 'aspects' ? argv[0] : undefined
+const rest = command === 'aspects' ? argv.slice(1) : argv
 const root = process.cwd()
 
 const OPTIONS = {
@@ -76,6 +92,10 @@ const OPTIONS = {
   counterexample: { type: 'string', multiple: true },
   supersedes: { type: 'string' },
   scope: { type: 'string' },
+  feedback: { type: 'string' },
+  only: { type: 'string' },
+  state: { type: 'string' },
+  'dry-run': { type: 'boolean', default: false },
 } as const
 
 type Values = ReturnType<typeof parseArgs<{ args: string[]; options: typeof OPTIONS; allowPositionals: false; strict: true }>>['values']
@@ -239,6 +259,19 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       )
       return
     }
+    case 'share': {
+      const result = shareDecision(ws, { preference_id: need(values, 'id'), dryRun: values['dry-run'] })
+      print(values, { ok: true, ...result }, () =>
+        [
+          `${result.written ? 'Wrote' : 'Would write'} ${result.path}:`,
+          `  ${result.decision.state}  ${result.decision.statement}  (${result.decision.scope.label})`,
+          `  sources ${result.decision.sources.join(', ')}`,
+          ...result.refreshed.map((rel) => `${result.written ? 'Refreshed' : 'Would refresh'} ${rel} (superseded).`),
+          'Only this summary is shared: no note text. Nothing was committed. Review it, commit it on a branch and merge the pull request; Studio shows it after a refresh.',
+        ].join('\n'),
+      )
+      return
+    }
     case 'preferences': {
       const items = listPreferences(ws)
       print(values, { ok: true, items }, () => (items.length ? items.map((p) => `${p.preference_id}  ${p.state.padEnd(10)} ${p.statement}${p.superseded_by ? `  → superseded by ${p.superseded_by}` : ''}${p.supersedes ? `  (supersedes ${p.supersedes})` : ''}`).join('\n') : 'No preferences.'))
@@ -266,8 +299,50 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       print(values, { ok: true, context: ctx }, () => contextText(ctx))
       return
     }
+    case 'aspects': {
+      await runAspects(ws, values)
+      return
+    }
     default:
       usage(command ? `Unknown command ${command}.` : 'No command given.')
+  }
+}
+
+async function runAspects(ws: KnowledgeWorkspace, values: Values): Promise<void> {
+  switch (sub) {
+    case 'suggest': {
+      const result = suggestAspects(ws, { project_id: need(values, 'project'), feedback_id: values.feedback })
+      print(values, { ok: true, ...result }, () =>
+        [
+          ...result.created.map((p) => `Pending ${p.proposal_id}  ${p.variant_id}  ${p.suggestions.map((s) => `${s.side === 'keep' ? '+' : s.side === 'avoid' ? '-' : '?'}${s.aspect} (“${s.cue}”)`).join(' ')}`),
+          ...result.skipped.map((item) => `Skipped ${item.feedback_id}: ${item.reason}`),
+          result.created.length ? 'Machine suggestions, unverified. Nothing is applied until the owner runs: npm run brand:creative -- aspects approve --id ap_…' : 'No new suggestions.',
+        ].join('\n'),
+      )
+      return
+    }
+    case 'list': {
+      const items = listAspectProposals(ws, { project_id: values.project, state: values.state })
+      print(values, { ok: true, items }, () =>
+        items.length
+          ? items.map((p) => `${p.proposal_id}  ${p.state.padEnd(8)} ${p.project_id}/${p.variant_id}  ${p.suggestions.map((s) => `${s.side === 'keep' ? '+' : s.side === 'avoid' ? '-' : '?'}${s.aspect}`).join(' ')}${p.applied.length ? `  applied ${p.applied.map((a) => `${a.aspect}:${a.side}`).join(',')}` : ''}`).join('\n')
+          : 'No aspect proposals.',
+      )
+      return
+    }
+    case 'approve': {
+      const proof = await ownerProof()
+      const result = approveAspects(ws, { proposal_id: need(values, 'id'), proof, only: values.only ? parseAspectChoices(values.only) : undefined })
+      print(values, { ok: true, ...result }, () => `Approved ${result.proposal.proposal_id}: ${result.proposal.applied.map((a) => `${a.aspect}:${a.side}`).join(', ')} on ${result.proposal.project_id}/${result.proposal.variant_id} (feedback ${result.feedback.feedback_id}).`)
+      return
+    }
+    case 'reject': {
+      const proposal = rejectAspects(ws, { proposal_id: need(values, 'id') })
+      print(values, { ok: true, proposal }, () => `Rejected ${proposal.proposal_id}. Nothing was applied.`)
+      return
+    }
+    default:
+      usage(sub ? `Unknown aspects command ${sub}.` : 'aspects needs suggest, list, approve or reject.')
   }
 }
 

@@ -29,6 +29,7 @@ import {
   searchBrandDocs,
   searchMascotAssets,
 } from '@brand-os/brand-core'
+import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
 
 const engine = new InterviewEngine(process.cwd())
 
@@ -134,6 +135,22 @@ server.registerTool(
   'knowledge_suggest_proposal',
   { description: `Preview only: existing question ids a shared note may inform, with the source ref to cite. Writes nothing; the owner stores drafts with brand:knowledge propose. ${KNOWLEDGE_NOTE}`, inputSchema: z.object({ id: z.string().max(80) }) },
   async ({ id }) => text(runKnowledgeTool(engine, caller, 'knowledge_suggest_proposal', { id })),
+)
+
+// Creative memory: one read-only tool, creative-read profile only (see creative/agent.ts). Approved preferences and
+// cited reasons; drafts withheld; local note text withheld. Every call is access-logged.
+server.registerTool(
+  'creative_context',
+  {
+    description:
+      'Read-only creative context for new design work: the owner-approved scoped creative preferences that apply, and the owner’s cited reasons for selected, rejected and partly kept variants of in-scope projects, with knowledge:kn_…@sha256 provenance. Give project_id, or surface and series. Drafts are withheld; selected is not a performance result; nothing here authorizes publishing, posting or ads. Needs a creative-read token; others get denied.',
+    inputSchema: z.object({
+      project_id: z.string().max(40).optional(),
+      surface: z.enum(SURFACES).optional(),
+      series: z.string().max(40).optional(),
+    }),
+  },
+  async ({ project_id, surface, series }) => text(runCreativeContextTool(engine, caller, { project_id, surface, series })),
 )
 
 const transport = new StdioServerTransport()

@@ -52,9 +52,10 @@ export const CREATIVE_DIRS = {
   root: 'brand/.private/creative',
   projects: 'brand/.private/creative/projects',
   preferences: 'brand/.private/creative/preferences',
+  aspects: 'brand/.private/creative/aspect-proposals',
 } as const
 
-function dir(ws: KnowledgeWorkspace, key: keyof typeof CREATIVE_DIRS): string {
+export function creativeDir(ws: KnowledgeWorkspace, key: keyof typeof CREATIVE_DIRS): string {
   return path.join(ws.root, ...CREATIVE_DIRS[key].split('/'))
 }
 
@@ -65,7 +66,7 @@ export function assertOwnerProcess(): void {
   }
 }
 
-function readRecord<T extends { kind: string; brand_slug: string }>(ws: KnowledgeWorkspace, file: string, kind: string): T | null {
+export function readRecord<T extends { kind: string; brand_slug: string }>(ws: KnowledgeWorkspace, file: string, kind: string): T | null {
   if (!dirUsable(ws, path.dirname(file))) return null
   let raw: Buffer | null
   try {
@@ -86,21 +87,29 @@ function readRecord<T extends { kind: string; brand_slug: string }>(ws: Knowledg
   return doc
 }
 
-function writeRecord(ws: KnowledgeWorkspace, file: string, doc: unknown): void {
+export function writeRecord(ws: KnowledgeWorkspace, file: string, doc: unknown): void {
   ensureDir(ws, path.dirname(file))
   writeVaultFile(ws, file, `${JSON.stringify(doc, null, 2)}\n`, true)
 }
 
 function projectFile(ws: KnowledgeWorkspace, id: string): string {
-  return path.join(dir(ws, 'projects'), `${validateProjectId(id)}.json`)
+  return path.join(creativeDir(ws, 'projects'), `${validateProjectId(id)}.json`)
 }
 
 function preferenceFile(ws: KnowledgeWorkspace, id: string): string {
-  return path.join(dir(ws, 'preferences'), `${validatePreferenceId(id)}.json`)
+  return path.join(creativeDir(ws, 'preferences'), `${validatePreferenceId(id)}.json`)
 }
 
 export function readProject(ws: KnowledgeWorkspace, id: string): CreativeProject {
   assertOwnerProcess()
+  return loadProject(ws, id)
+}
+
+/**
+ * Reads without the owner-process check. Only for callers that authorized the reader themselves (the
+ * creative-read agent tool in agent.ts). Never export a write built on these.
+ */
+export function loadProject(ws: KnowledgeWorkspace, id: string): CreativeProject {
   const doc = readRecord<CreativeProject>(ws, projectFile(ws, id), 'creative_project')
   if (!doc) throw new CreativeError('not_found', `No creative project ${id} in this brand.`)
   if (doc.project_id !== id) throw new CreativeError('invalid_record', `The file for ${id} carries another project id.`)
@@ -109,14 +118,19 @@ export function readProject(ws: KnowledgeWorkspace, id: string): CreativeProject
 
 export function listProjects(ws: KnowledgeWorkspace): CreativeProject[] {
   assertOwnerProcess()
-  const folder = dir(ws, 'projects')
+  return scanProjects(ws)
+}
+
+/** listProjects without the owner-process check (see loadProject). */
+export function scanProjects(ws: KnowledgeWorkspace): CreativeProject[] {
+  const folder = creativeDir(ws, 'projects')
   if (!dirUsable(ws, folder)) return []
   const out: CreativeProject[] = []
   for (const name of fs.readdirSync(folder).sort()) {
     const match = /^([a-z0-9][a-z0-9-]{2,39})\.json$/.exec(name)
     if (!match) continue
     try {
-      out.push(readProject(ws, match[1]!))
+      out.push(loadProject(ws, match[1]!))
     } catch (error) {
       // Another brand's file, a symlink or a corrupt record is skipped, never partially read.
       if (!(error instanceof CreativeError)) throw error
@@ -127,6 +141,11 @@ export function listProjects(ws: KnowledgeWorkspace): CreativeProject[] {
 
 export function readPreference(ws: KnowledgeWorkspace, id: string): CreativePreference {
   assertOwnerProcess()
+  return loadPreference(ws, id)
+}
+
+/** readPreference without the owner-process check (see loadProject). */
+export function loadPreference(ws: KnowledgeWorkspace, id: string): CreativePreference {
   const doc = readRecord<CreativePreference>(ws, preferenceFile(ws, id), 'creative_preference')
   if (!doc) throw new CreativeError('not_found', `No creative preference ${id} in this brand.`)
   if (doc.preference_id !== id) throw new CreativeError('invalid_record', `The file for ${id} carries another preference id.`)
@@ -135,14 +154,19 @@ export function readPreference(ws: KnowledgeWorkspace, id: string): CreativePref
 
 export function listPreferences(ws: KnowledgeWorkspace): CreativePreference[] {
   assertOwnerProcess()
-  const folder = dir(ws, 'preferences')
+  return scanPreferences(ws)
+}
+
+/** listPreferences without the owner-process check (see loadProject). */
+export function scanPreferences(ws: KnowledgeWorkspace): CreativePreference[] {
+  const folder = creativeDir(ws, 'preferences')
   if (!dirUsable(ws, folder)) return []
   const out: CreativePreference[] = []
   for (const name of fs.readdirSync(folder).sort()) {
     const match = /^(cp_[0-9a-f-]{36})\.json$/.exec(name)
     if (!match) continue
     try {
-      out.push(readPreference(ws, match[1]!))
+      out.push(loadPreference(ws, match[1]!))
     } catch (error) {
       if (!(error instanceof CreativeError)) throw error
     }
@@ -154,7 +178,7 @@ function lockName(projectId: string): string {
   return `creative-${projectId}`
 }
 
-function updateProject(ws: KnowledgeWorkspace, id: string, change: (project: CreativeProject) => void): CreativeProject {
+export function updateProject(ws: KnowledgeWorkspace, id: string, change: (project: CreativeProject) => void): CreativeProject {
   return withLock(ws, lockName(validateProjectId(id)), () => {
     const project = readProject(ws, id)
     change(project)
