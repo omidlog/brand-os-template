@@ -104,7 +104,7 @@ Theme: one private place to create brands and see their approved state, while al
 
 ## Unreleased — Phase 8: Personal Brand OS
 
-Theme: one engine for people as well as companies. A personal brand is an optional module with combinable facets, explicit relationships to organizations, evidence and rights for public claims, and ten source-backed deliverables. Guide: `docs-internal/PERSONAL_BRAND.md`. Review: `docs-internal/PHASE_8_PERSONAL_BRAND_REVIEW.md`.
+Theme: one engine for people as well as companies. A personal brand is an optional module with combinable facets, explicit relationships to organizations, evidence and rights for public claims, and ten source-backed deliverables. Guide: `docs-internal/PERSONAL_BRAND.md`. Review: `docs-internal/archive/PHASE_8_PERSONAL_BRAND_REVIEW.md`.
 
 ### Breaking changes
 
@@ -153,7 +153,7 @@ Theme: approved brand truth that agents can actually use. Scoped agent access, a
 - Fix: backups now include `brand/migrations.yaml` and `brand/engine.lock`, so restoring a backup also undoes a half-written migration.
 - Fix: documents show an approved restricted fact as approved and withheld, not as missing.
 - English-first sweep: help text lists `en|fa|tr`, module guidance no longer names Persian first, and the spec's language requirement and sample question are English-first with fa/tr as labelled locale data.
-- `docs-internal/CLAUDE_FINAL_REVIEW.md`: what changed, what was not done and why, tests run, unverified areas, required credentials, remaining risks, and scores.
+- `docs-internal/archive/CLAUDE_FINAL_REVIEW.md`: what changed, what was not done and why, tests run, unverified areas, required credentials, remaining risks, and scores.
 - README: English-first quickstart, change and approval workflow, agent access, languages and locales.
 
 ### Earlier phases
@@ -165,7 +165,7 @@ Theme: approved brand truth that agents can actually use. Scoped agent access, a
 - Fix: fact, ledger, policy, private store, and draft writes are atomic (temp file, fsync, rename).
 - Fix: restore validates every path before writing anything.
 - `brand:query --include-unapproved` now says it is ignored.
-- Audit: `docs-internal/CLAUDE_INDEPENDENT_AUDIT.md`.
+- Audit: `docs-internal/archive/CLAUDE_INDEPENDENT_AUDIT.md`.
 - Agent access: `brand:agent-token issue|list|revoke` (needs the owner proof from env or a hidden prompt). Tokens are hashed at rest, bound to one brand, and mapped to a read-only profile: `internal-read`, `design`, `marketing`, or `finance`.
 - `mcp:serve` and `brand:query` resolve `BRAND_OS_AGENT_TOKEN` once at startup. They fail closed on an unknown, revoked, or other-brand token.
 - New MCP tool `brand_retrieve`. The 17 existing tools now share its retrieval path. Results carry brand id, classification, approval state, revision, source path, and missing ids.

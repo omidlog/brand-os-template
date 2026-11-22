@@ -29,6 +29,8 @@ For a person rather than a company, use `--profile personal-brand` and pick face
 
 `brand:init` defaults to `--language en --languages en` and `--publish private`. Add locales with `--languages en,fa,tr` (see below). Scripts do not load `.env`; keep `BRAND_OS_DATA_KEY` in your shell or secret manager. Run `npm run brand:doctor` whenever something looks wrong; it never prints secret values.
 
+`npm run help` lists the main scripts in groups, with one plain-English line each.
+
 ## Commands
 
 ```bash
@@ -87,6 +89,8 @@ npm run build
 CI (`.github/workflows/validate.yml`, copied into every brand repository): runs on pull requests, pushes to `main` and by hand; a newer push cancels the older run. A change made only of brand content (`brand/`, `docs/`, `docs-internal/`, `assets/`, top-level `*.md`, `llms*.txt`) takes the fast path (about 2 minutes: lint, tokens, docs prep, typecheck, validate, docs builds) and skips the test suite. Only the template runs the Studio suite and builds the Studio image. A brand with `publish_docs: private` never gets a public docs build. Every job and test step has a timeout.
 
 Details: `docs-internal/SETUP.md`.
+
+Before you commit: `npm run ci` runs lint, typecheck, validate, tests and both docs builds (Node 22 or newer). The docs build rewrites tracked generated files (`apps/docs/generated/features.json`, `apps/docs/src/data/catalog.json`, `apps/docs/src/data/status.json`) and may delete `llms.txt` and `llms-full.txt`. Unless your change is meant to regenerate them, restore them with `git checkout -- apps/docs/generated apps/docs/src/data llms.txt llms-full.txt`. `npm run test` gives every test a deadline and cleans its own temp directory, so a hung server fails the run instead of blocking it.
 
 ## Mark this repository as a template
 

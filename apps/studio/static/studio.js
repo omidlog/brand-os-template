@@ -41,22 +41,29 @@
     var sidebar = document.getElementById('sidebar')
     var openButton = document.querySelector('[data-drawer-open]')
     var backdrop = document.querySelector('.drawer-backdrop')
+    // While the drawer is open the page behind it is inert, so Tab cannot leave the drawer.
+    var behind = document.querySelector('.main-col')
     function closeDrawer() {
       if (!sidebar || !sidebar.classList.contains('is-open')) return
       sidebar.classList.remove('is-open')
       if (backdrop) backdrop.hidden = true
+      if (behind) behind.inert = false
       if (openButton) { openButton.setAttribute('aria-expanded', 'false'); openButton.focus() }
     }
     if (sidebar && openButton) {
       openButton.addEventListener('click', function () {
         sidebar.classList.add('is-open')
         if (backdrop) backdrop.hidden = false
+        if (behind) behind.inert = true
         openButton.setAttribute('aria-expanded', 'true')
         var first = sidebar.querySelector('a, button')
         if (first) first.focus()
       })
       document.querySelectorAll('[data-drawer-close]').forEach(function (el) { el.addEventListener('click', closeDrawer) })
       document.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeDrawer() })
+      // Widening the window past the drawer breakpoint closes it, so the page never stays inert.
+      var wide = matchMedia('(min-width: 961px)')
+      if (wide.addEventListener) wide.addEventListener('change', function (event) { if (event.matches) closeDrawer() })
     }
 
     // Copy buttons.

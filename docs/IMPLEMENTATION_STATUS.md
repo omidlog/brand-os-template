@@ -1,6 +1,6 @@
 # Implementation status
 
-Updated for 0.2.0 (2026-11-20). “Fixed” or “Done” means a test or a build exercises the behavior. “Partial” means a real subset works and the gap is named. The final review with scores is `docs-internal/CLAUDE_FINAL_REVIEW.md`.
+Updated for 0.2.0 (2026-11-20). “Fixed” or “Done” means a test or a build exercises the behavior. “Partial” means a real subset works and the gap is named. The final review with scores is `docs-internal/archive/CLAUDE_FINAL_REVIEW.md`.
 
 ## Audit findings
 
@@ -34,7 +34,7 @@ Updated for 0.2.0 (2026-11-20). “Fixed” or “Done” means a test or a buil
 
 ## v0.2 (phases 1–7)
 
-Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AUDIT.md`.
+Findings and the invariant checklist are in `docs-internal/archive/CLAUDE_INDEPENDENT_AUDIT.md`.
 
 | ID | Status | Note |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ Findings and the invariant checklist are in `docs-internal/CLAUDE_INDEPENDENT_AU
 
 ## Phase 8: Personal Brand OS
 
-Branch `feat/phase-8-personal-brand-os`. Entry gate: `docs-internal/POST_V02_PREFLIGHT.md`. Review, acceptance evidence and gaps: `docs-internal/PHASE_8_PERSONAL_BRAND_REVIEW.md`. Guide: `docs-internal/PERSONAL_BRAND.md`.
+Branch `feat/phase-8-personal-brand-os`. Entry gate: `docs-internal/archive/POST_V02_PREFLIGHT.md`. Review, acceptance evidence and gaps: `docs-internal/archive/PHASE_8_PERSONAL_BRAND_REVIEW.md`. Guide: `docs-internal/PERSONAL_BRAND.md`.
 
 | Item | Status | Note |
 | --- | --- | --- |
@@ -170,7 +170,7 @@ Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for exampl
 
 ## Second remediation contract
 
-`docs-internal/REMEDIATION_TRACEABILITY.md` is the ticket record. Public export is a new allowlist. Approved facts stay approved when someone passes `confirm=true`. `include_unapproved` does not grant access. A private brand cannot be built as public. Asset publication rejects symlinks, traversal, active SVG, and checksum mismatches. Backup, restore, migrate, and reset are separate commands. Journeys A, B, and C have automated end-to-end tests (see above).
+`docs-internal/archive/REMEDIATION_TRACEABILITY.md` is the ticket record. Public export is a new allowlist. Approved facts stay approved when someone passes `confirm=true`. `include_unapproved` does not grant access. A private brand cannot be built as public. Asset publication rejects symlinks, traversal, active SVG, and checksum mismatches. Backup, restore, migrate, and reset are separate commands. Journeys A, B, and C have automated end-to-end tests (see above).
 
 `authorize()` gates submit, approval, publication, reveal, export, and the MCP tools. `include_unapproved` is not an MCP parameter. Backups and restricted values use `BRAND_OS_DATA_KEY` and fail closed when it is absent. Fact files migrate to canonical schema 2. Each module compiles a cited page that leaves missing sections missing. Figma import returns `not_configured` without credentials and does not overwrite tokens.
 

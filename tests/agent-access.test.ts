@@ -31,10 +31,9 @@ import {
 } from '@brand-os/brand-core'
 import type { AuthContext, RetrievedItem, RetrieveRequest } from '@brand-os/brand-core'
 import { scanPublicTree } from '../scripts/scan-public.js'
+import { NODE, tsxArgs } from './helpers/tsx-node.js'
 
 process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
-const repo = path.resolve(import.meta.dirname, '..')
-const tsx = path.join(repo, 'node_modules/.bin/tsx')
 
 type Classification = 'public' | 'internal' | 'restricted'
 
@@ -333,14 +332,14 @@ test('the MCP server resolves its token once at startup and ignores token argume
 
   const revoked = token(root, 'design')
   revokeAgentToken(root, revoked.id)
-  const refused = spawnSync(tsx, [path.join(repo, 'scripts/mcp.ts')], { cwd: root, env: childEnv({ BRAND_OS_AGENT_TOKEN: revoked.token }), input: '', encoding: 'utf8', timeout: 60_000 })
+  const refused = spawnSync(NODE, tsxArgs('scripts/mcp.ts'), { cwd: root, env: childEnv({ BRAND_OS_AGENT_TOKEN: revoked.token }), input: '', encoding: 'utf8', timeout: 60_000 })
   assert.equal(refused.status, 1)
   assert.match(refused.stderr, /revoked/)
   assert.equal(refused.stderr.includes(revoked.token), false)
 
   const connect = async (env: Record<string, string>) => {
     const client = new Client({ name: 'brand-os-agent-test', version: '0.0.1' })
-    await client.connect(new StdioClientTransport({ command: tsx, args: [path.join(repo, 'scripts/mcp.ts')], cwd: root, env, stderr: 'pipe' }))
+    await client.connect(new StdioClientTransport({ command: NODE, args: tsxArgs('scripts/mcp.ts'), cwd: root, env, stderr: 'pipe' }))
     return client
   }
   const read = (result: unknown) => JSON.parse(((result as { content: Array<{ text: string }> }).content[0]?.text) ?? '{}') as { status: string; data: { items: RetrievedItem[] } }
@@ -374,7 +373,7 @@ test('the MCP server resolves its token once at startup and ignores token argume
 test('brand:query uses the same token resolution and agent-token management needs the proof', () => {
   const { root } = privateBrand()
   const run = (args: string[], env: Record<string, string> = {}, input = '') =>
-    spawnSync(tsx, [path.join(repo, 'scripts/brand.ts'), ...args], { cwd: root, env: childEnv(env), input, encoding: 'utf8', timeout: 60_000 })
+    spawnSync(NODE, tsxArgs('scripts/brand.ts', args), { cwd: root, env: childEnv(env), input, encoding: 'utf8', timeout: 60_000 })
 
   const denied = run(['agent-token', 'issue', '--profile', 'internal-read', '--label', 'cli'], { BRAND_OS_APPROVAL_PROOF: 'wrong-proof' })
   assert.equal(denied.status, 1)

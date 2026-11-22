@@ -1,6 +1,6 @@
 # Phase 8 review: Personal Brand OS
 
-Branch `feat/phase-8-personal-brand-os`, from `main` at `3c98e00` (v0.2.0). Entry gate: `docs-internal/POST_V02_PREFLIGHT.md` (GO for Phase 8). Date: 2026-11-21. Written by Claude Code. Owner review is still required before merge.
+Branch `feat/phase-8-personal-brand-os`, from `main` at `3c98e00` (v0.2.0). Entry gate: `docs-internal/archive/POST_V02_PREFLIGHT.md` (GO for Phase 8). Date: 2026-11-21. Written by Claude Code. Owner review is still required before merge.
 
 User guide: `docs-internal/PERSONAL_BRAND.md`.
 

@@ -90,6 +90,7 @@ export const en = {
   'login.totpHint': 'The 6-digit code from your authenticator app.',
   'login.submit': 'Sign in',
   'login.failed': 'Sign-in failed. Check your details and try again.',
+  'login.codeUsed': 'Sign-in failed. That authentication code was already used. Wait for a new code in your authenticator app, then try again.',
   'login.rateLimited': 'Too many attempts. Try again in about {minutes} minutes.',
   'login.expired': 'The sign-in form expired. Please try again.',
   'login.signedOut': 'You have signed out.',

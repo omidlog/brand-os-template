@@ -62,6 +62,7 @@ Studio wears the omidataei.com identity, taken from that site's design system: m
 
 - Tokens live in `apps/studio/static/studio.css` as `--studio-*` variables. Brand colours still appear only inside specimens.
 - Fonts are self-hosted WOFF2 subsets in `apps/studio/static/fonts` (Inter, Rajdhani, Vazirmatn for Persian; SIL OFL, see `OFL.txt`). The site's Persian display face (Shams) is licensed to omidataei.com only and is not copied.
+- Static files (CSS, script, icons, fonts) are read once into memory by `apps/studio/src/static-assets.ts` and served with an ETag, so a revalidation is a body-less `304`. Pages link CSS and JS as `/static/<name>?v=<content hash>`; only a matching hash is cached for a year (`immutable`). Plain names and old hashes get five minutes, fonts a week. A restart (every deploy) reloads the files; the CSP is unchanged.
 - The logo (`logo-omid-ataei-white.svg`) and the lime key favicon are copies of the site's assets; update them here if the site changes.
 - Layout uses logical properties for RTL; motion respects `prefers-reduced-motion`; a browser test checks WCAG AA text contrast on the main pages in light and dark.
 
@@ -87,7 +88,7 @@ Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100 locally;
 
 ## Security model
 
-- Owner sign-in: scrypt password hash, TOTP (required whenever Studio is reachable beyond loopback), a login nonce, per-IP and global rate limits, generic failure messages. Behind the proxy (`STUDIO_TRUST_PROXY=1`) the client IP is the rightmost `X-Forwarded-For` entry, the one the proxy appended.
+- Owner sign-in: scrypt password hash, TOTP (required whenever Studio is reachable beyond loopback), a login nonce, per-IP and global rate limits, generic failure messages. Each authenticator code works once; signing in again with a code that was already used says so and asks you to wait for a new code (the attempt still counts against the rate limit). Behind the proxy (`STUDIO_TRUST_PROXY=1`) the client IP is the rightmost `X-Forwarded-For` entry, the one the proxy appended.
 - Beyond loopback, Studio answers only for the hostname of `STUDIO_PUBLIC_ORIGIN` (`421` otherwise). `/healthz` is exempt and returns `503` when the data directory is not writable.
 - Sessions: random ids held server-side, HttpOnly, `SameSite=Strict`, `Secure` and `__Host-` prefix on https, absolute and idle expiry, destroyed on sign-out.
 - Every authenticated POST checks the CSRF token and `Origin`. Only form-encoded bodies are accepted.
@@ -137,6 +138,26 @@ The repository must be private and reachable with the read credential, and its `
 
 Add a repository or organization webhook for push events to `https://<studio-origin>/webhooks/github` with content type `application/json` and the secret in `STUDIO_GITHUB_WEBHOOK_SECRET`.
 
+### What a restart clears (in-memory state)
+
+Studio runs as one process and keeps its security state in that process's memory, not on disk. Every restart (a deploy, a crash, a host reboot) clears it:
+
+| State | Where | Effect of a restart |
+| --- | --- | --- |
+| Owner sessions | `apps/studio/src/auth/session.ts` | The owner is signed out and signs in again with password and authenticator code. Absolute expiry (`STUDIO_SESSION_HOURS`, default 12) and idle expiry (`STUDIO_IDLE_MINUTES`, default 60) only apply within one process lifetime. |
+| Rate limits | `apps/studio/src/auth/rate-limit.ts`, created in `server.ts` | Counters start from zero: failed sign-ins (5 per IP and 30 overall per 15 minutes), provisioning (10 per hour), refresh (once per 5 seconds per brand) and the name check (60 per minute). A restart therefore also lifts an active sign-in lockout. |
+| Used authenticator codes | `TotpVerifier` in `apps/studio/src/auth/totp.ts` | The "each code works once" record is lost. A code seen just before a restart could be accepted once more inside its 30-second step (plus one step of drift) after the restart, still only together with the password. |
+| Webhook delivery ids | `DeliveryLog` in `apps/studio/src/github/webhook.ts` | A recent delivery could be processed again. That only queues one more read-only refresh. |
+
+The brand registry, the sync cache and provisioning records are files in `STUDIO_DATA_DIR` and survive restarts.
+
+What this means for an operator:
+
+- Run exactly one Studio process per data directory. Two processes (or a load balancer over several) would each keep separate sessions and separate rate limits, which multiplies the sign-in attempts allowed.
+- Do not restart Studio in a loop, for example from a health check that restarts on every failure: each restart resets the sign-in limits. Use a supervisor with back-off.
+- After a restart, everyone signs in again. That is expected, not a fault.
+- Persisting sessions and limits (for example in a small file or database in `STUDIO_DATA_DIR`) is a possible later change; it is not built.
+
 ## Private repository access for Claude Code
 
 A repository URL is not permission. Claude Code can read a private brand repository only if you give it access, for example:
@@ -180,6 +201,7 @@ All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-g
 
 - `tests/studio-github.test.ts`: client retries and redaction, tar safety, redirect handling, webhook signatures.
 - `tests/studio-provision.test.ts`: creation, personal profile, validation, duplicates, concurrent create, retry, partial-create cleanup, public-repository refusal, missing template, interrupted jobs.
+- `tests/studio-static.test.ts`: in-memory static files, ETag and `304`, versioned CSS/JS links and the cache policy.
 - `tests/studio-sync.test.ts`: merged-branch projection, edits made outside Studio, stale cache, cross-brand refusal, recreated repositories, concurrent refresh, credential guard.
 - `tests/studio-server.test.ts`: guest isolation, sign-in, the full owner journey, personal and mascot-free brands, forged slugs, no mutation endpoints, CSRF/Origin, wizard errors and GitHub failure with retry, stale and failed sync, webhooks, headers and static-bundle leaks, locales, sessions, configuration.
 - `tests/studio-hardening.test.ts`: behind-the-proxy behavior (Secure `__Host-` cookies, HSTS, downgraded Origin, Host allowlist, forged `X-Forwarded-For`), health readiness, session idle and absolute expiry, listener limits.

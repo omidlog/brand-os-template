@@ -132,7 +132,7 @@ None of these is a 10. A 7 means the area is solid for local, single-owner use, 
 
 | # | Deliverable | Where |
 |---|---|---|
-| 1 | Independent architectural audit | `docs-internal/CLAUDE_INDEPENDENT_AUDIT.md` |
+| 1 | Independent architectural audit | `docs-internal/archive/CLAUDE_INDEPENDENT_AUDIT.md` |
 | 2 | Prioritized implementation plan | Audit §9 and the phase table above |
 | 3 | Working code changes | Commits on `feat/brand-os-v0.2` (`git log main..HEAD`) |
 | 4 | Added or updated tests | 19 test files, 131 tests |

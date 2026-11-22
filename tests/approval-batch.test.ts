@@ -21,10 +21,10 @@ import {
 } from '@brand-os/brand-core'
 import type { FieldQuestion, RetrievedItem } from '@brand-os/brand-core'
 import { writeYaml } from '../packages/brand-core/src/fsutil.js'
+import { NODE, tsxArgs } from './helpers/tsx-node.js'
 
 process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 const repo = path.resolve(import.meta.dirname, '..')
-const tsx = path.join(repo, 'node_modules/.bin/tsx')
 const SLUG = 'batch-brand'
 
 const PURPOSE = 'brand.strategy.purpose'
@@ -72,7 +72,7 @@ function cli(root: string, args: string[], env: Record<string, string> = {}, inp
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value === 'string' && key !== 'BRAND_OS_AGENT_TOKEN' && key !== 'BRAND_OS_APPROVAL_PROOF') base[key] = value
   }
-  return spawnSync(tsx, [path.join(repo, 'scripts/brand.ts'), ...args], { cwd: root, env: { ...base, ...env }, input, encoding: 'utf8', timeout: 60_000 })
+  return spawnSync(NODE, tsxArgs('scripts/brand.ts', args), { cwd: root, env: { ...base, ...env }, input, encoding: 'utf8', timeout: 60_000 })
 }
 
 // --- review queue --------------------------------------------------------------------------

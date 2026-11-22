@@ -1,6 +1,7 @@
 import type { I18n, MessageKey } from '../i18n/index.js'
 import { LOCALES } from '../i18n/index.js'
 import type { BrandRecord } from '../registry.js'
+import { studioAssets } from '../static-assets.js'
 import type { CachedBrand } from '../sync.js'
 import { badge, code, shortSha } from './components.js'
 import { html, type SafeHtml } from './html.js'
@@ -83,7 +84,7 @@ function sidebar(ctx: ViewContext, brand?: { view: BrandView; section: BrandSect
       <a class="product" href="/brands">${productLogo()}<span class="product-name"><span class="signal-dot" aria-hidden="true"></span>${i.t('app.name')}</span></a>
       <button type="button" class="icon-btn sidebar-close" data-drawer-close aria-label="${i.t('nav.closeMenu')}">${icon('close')}</button>
     </div>
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="${i.t('nav.myBrands')}">
       <div class="nav-group">
         <div class="nav-group-head">
           <a class="nav-link ${brandsLink ? 'is-active' : ''}" href="/brands" ${brandsLink ? html`aria-current="page"` : ''}>${icon('layers')}<span>${i.t('nav.myBrands')}</span></a>
@@ -181,8 +182,8 @@ function documentShell(ctx: ViewContext, title: string, body: SafeHtml, extraHea
 <title>${title} · ${ctx.i.t('app.name')}</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/static/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/static/studio.css">
-<script src="/static/studio.js" defer></script>
+<link rel="stylesheet" href="${studioAssets.url('studio.css')}">
+<script src="${studioAssets.url('studio.js')}" defer></script>
 ${extraHead}
 </head>
 ${body}

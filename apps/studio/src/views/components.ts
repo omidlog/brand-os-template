@@ -163,7 +163,7 @@ function sectionBadge(i: I18n, status: DocumentSection['status']): SafeHtml {
 export function documentItem(i: I18n, item: DocumentItem): SafeHtml {
   return html`<article class="doc-item doc-item-${item.tag}">
     <header class="doc-item-head">
-      <h4 class="doc-item-label" dir="auto">${item.label}</h4>
+      <h3 class="doc-item-label" dir="auto">${item.label}</h3>
       <div class="doc-item-badges">${tagBadge(i, item.tag)}${verificationBadge(i, item.verification)}</div>
     </header>
     ${itemValue(i, item)}
@@ -191,7 +191,7 @@ export function documentView(i: I18n, model: DocumentModel, idPrefix: string): S
       ${model.sections.map(
         (section) => html`<section class="doc-section" id="${idPrefix}-${section.id}" aria-labelledby="${idPrefix}-${section.id}-title">
           <header class="doc-section-head">
-            <h3 id="${idPrefix}-${section.id}-title" dir="auto">${section.title}</h3>
+            <h2 id="${idPrefix}-${section.id}-title" dir="auto">${section.title}</h2>
             ${sectionBadge(i, section.status)}
           </header>
           ${section.purpose ? html`<p class="doc-section-purpose" dir="auto">${section.purpose}</p>` : ''}

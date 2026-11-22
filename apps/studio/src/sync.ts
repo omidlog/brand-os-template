@@ -77,20 +77,50 @@ export class SyncService {
     return path.join(this.cacheRoot(), slug)
   }
 
+  /**
+   * Every page view (and the brand list, once per brand) reads state.json. The parsed file is kept per
+   * slug and reused while the file's inode, size and mtime are unchanged. Studio's own writes go
+   * through writeState, which drops the copy (see there). Callers must not mutate the result.
+   */
+  private readonly parsed = new Map<string, { key: string; state: StateFile }>()
+
   private readState(slug: string): StateFile | null {
     const file = path.join(this.dir(slug), 'state.json')
-    if (!fs.existsSync(file)) return null
+    let stat: fs.Stats
     try {
-      return JSON.parse(fs.readFileSync(file, 'utf8')) as StateFile
+      stat = fs.statSync(file)
     } catch {
+      this.parsed.delete(slug)
       return null
     }
+    const key = `${stat.ino}:${stat.size}:${stat.mtimeMs}`
+    const hit = this.parsed.get(slug)
+    if (hit?.key === key) return hit.state
+    try {
+      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as StateFile
+      this.parsed.set(slug, { key, state })
+      return state
+    } catch {
+      this.parsed.delete(slug)
+      return null
+    }
+  }
+
+  /**
+   * Writes state.json and drops the parsed copy. The inode/size/mtime key alone is not enough for
+   * Studio's own writes: the temp file of a rename often reuses the inode the previous rename freed,
+   * and two same-size writes inside one coarse mtime tick then look unchanged.
+   */
+  private writeState(slug: string, next: StateFile): void {
+    fs.mkdirSync(this.dir(slug), { recursive: true, mode: 0o700 })
+    writeAtomic(path.join(this.dir(slug), 'state.json'), JSON.stringify(next), { mode: 0o600 })
+    this.parsed.delete(slug)
   }
 
   get(slug: string): CachedBrand {
     const state = this.readState(slug)
     if (!state) return { status: { ...EMPTY }, projection: null, history: null }
-    return { status: state.status, projection: state.projection, history: state.history }
+    return { status: { ...state.status }, projection: state.projection, history: state.history }
   }
 
   /** Stale when the last check is older than the TTL, when a refresh failed, or when a webhook said the branch moved. */
@@ -182,8 +212,7 @@ export class SyncService {
       status.last_error = null
       this.dirty.delete(slug)
       const next: StateFile = { schema_version: 1, status, projection, history, previews }
-      fs.mkdirSync(this.dir(slug), { recursive: true, mode: 0o700 })
-      writeAtomic(path.join(this.dir(slug), 'state.json'), JSON.stringify(next), { mode: 0o600 })
+      this.writeState(slug, next)
       return { status, projection, history }
     } catch (error) {
       const code = error instanceof ProjectionError ? error.code : error instanceof GitHubError ? `github_${error.kind}` : 'internal'
@@ -197,8 +226,7 @@ export class SyncService {
         status.state = 'error'
         fs.rmSync(path.join(this.dir(slug), 'previews'), { recursive: true, force: true })
       }
-      fs.mkdirSync(this.dir(slug), { recursive: true, mode: 0o700 })
-      writeAtomic(path.join(this.dir(slug), 'state.json'), JSON.stringify(next), { mode: 0o600 })
+      this.writeState(slug, next)
       this.deps.log?.(`sync failed for ${slug}: ${code}`)
       return { status, projection: next.projection, history: next.history }
     } finally {
