@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "help": "tsx scripts/help.ts",
+    "doctor": "node scripts/doctor.mjs",
     "materialize": "tsx scripts/materialize.ts",
     "tokens:build": "tsx packages/design-tokens/src/cli.ts",
     "prepare:docs": "tsx scripts/prepare-docs.ts",

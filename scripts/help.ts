@@ -15,6 +15,7 @@ export const SCRIPT_GROUPS: ScriptGroup[] = [
   {
     title: 'Check everything',
     scripts: [
+      ['doctor', 'Check Node, the install and common setup mistakes, with a fix for each. Start here when something will not run.'],
       ['ci', 'Run lint, typecheck, validate, tests and both docs builds. Run this before a pull request.'],
       ['lint', 'Check code style with ESLint.'],
       ['typecheck', 'Check TypeScript types without building.'],
