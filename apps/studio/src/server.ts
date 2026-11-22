@@ -1,13 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { RateLimiter } from './auth/rate-limit.js'
 import { safeEqual, SessionStore } from './auth/session.js'
 import { TotpVerifier } from './auth/totp.js'
-import { GitHubError } from './github/client.js'
 import { BodyTooLarge, first, parseCookies, parseForm, readBody, redirect, securityHeaders, sendJson, serializeCookie } from './http.js'
 import { i18n, isLocale, type Locale } from './i18n/index.js'
+import { accountRoutes } from './routes/account.js'
 import { authRoutes } from './routes/auth.js'
 import { BRAND_SECTIONS, brandRoutes } from './routes/brands.js'
-import { createCore, type Handler, type RequestContext, type Route, type RouteInfo, type StudioDeps } from './routes/context.js'
+import { createCore, type RequestContext, type Route, type RouteInfo, type StudioDeps } from './routes/context.js'
 import { requestGuards } from './routes/guards.js'
 import { provisioningRoutes } from './routes/provisioning.js'
 import { systemRoutes } from './routes/system.js'
@@ -31,13 +30,12 @@ export function createStudio(deps: StudioDeps): {
   sessions: SessionStore
   routes: RouteInfo[]
 } {
-  const { config, provisioning } = deps
+  const { config } = deps
   const now = deps.now ?? Date.now
   const sessions = new SessionStore(config.sessionTtlMs, config.idleTtlMs, now)
   const totp = config.ownerTotpSecret ? new TotpVerifier(config.ownerTotpSecret) : null
   const core = createCore(deps, sessions, totp)
   const { log, view, render, notFound } = core
-  const testLimiter = new RateLimiter(5, 60_000, now)
   const sessionCookie = core.cookies.session
   const langCookie = core.cookies.lang
 
@@ -53,34 +51,7 @@ export function createStudio(deps: StudioDeps): {
 
   const { newBrandForm, repoCheck, createBrand, provisioningStatus, provisioningJson, retryProvisioning, discardForm, discardProvisioning } = provisioningRoutes(core)
 
-  const account: Handler = async (ctx) => {
-    let test: pages.AccountState['test'] = null
-    if (ctx.url.searchParams.get('test') === '1' && testLimiter.take('owner').ok) {
-      test = { read: null, provision: null, error: null }
-      try {
-        if (deps.readClient.configured) test.read = (await deps.readClient.viewer()).login
-        if (deps.provisionClient.configured) test.provision = (await deps.provisionClient.viewer()).login
-        if (!deps.readClient.configured && !deps.provisionClient.configured) test.error = ctx.i.t('common.notConfigured')
-      } catch (error) {
-        test.error = error instanceof GitHubError ? error.message : 'GitHub could not be reached.'
-      }
-    }
-    const session = ctx.session!
-    render(
-      ctx,
-      200,
-      pages.accountPage(view(ctx), {
-        mfa: totp !== null,
-        sessionEndsAt: new Date(session.createdAt + config.sessionTtlMs).toISOString(),
-        readConfigured: deps.readClient.configured,
-        provisionConfigured: provisioning.configured,
-        template: `${config.github.templateOwner}/${config.github.templateRepo}`,
-        allowedOwners: config.github.allowedOwners,
-        webhookConfigured: config.github.webhookSecret !== null,
-        test,
-      }),
-    )
-  }
+  const { account } = accountRoutes(core)
 
   const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)'
   const routes: Route[] = [
