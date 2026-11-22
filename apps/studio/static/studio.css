@@ -290,6 +290,13 @@ code.mono { background: var(--studio-color-bg-subtle); border: 1px solid var(--s
 .breadcrumbs a { color: var(--studio-color-text-secondary); }
 .breadcrumbs [aria-current] { color: var(--studio-color-text-primary); }
 .crumb-sep { color: var(--studio-color-text-tertiary); width: 14px; height: 14px; }
+/* The breadcrumb list clips overflow (for the ellipsis), which would cut off the shared 3px-offset
+   focus ring. Draw it inside the link instead. Same for the horizontal table scroller. */
+.breadcrumbs a:focus-visible { outline-offset: -2px; border-radius: var(--studio-radius-sm); }
+.breadcrumbs a:hover { color: var(--studio-color-text-primary); }
+.table-wrap:focus-visible { outline-offset: -2px; border-radius: var(--studio-radius-sm); }
+/* Asset filter chips had no hover feedback. */
+.chip:hover:not([aria-pressed="true"]) { border-color: var(--studio-color-text-primary); color: var(--studio-color-text-primary); }
 .topbar-actions { display: flex; align-items: center; gap: var(--studio-space-2); }
 .readonly-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--studio-radius-pill); border: 1px dashed var(--studio-color-border-strong); color: var(--studio-color-text-secondary); font: var(--studio-type-overline); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
 .readonly-chip .icon { width: 14px; height: 14px; vertical-align: 0; }
@@ -523,8 +530,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .empty-state { display: grid; justify-items: center; text-align: center; gap: var(--studio-space-3); padding: var(--studio-space-8) var(--studio-space-5); background: var(--studio-color-bg-surface); border: 1px dashed var(--studio-color-border-strong); border-radius: var(--studio-radius-xl); }
 .empty-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #f4ffb8, var(--studio-color-signal)); color: var(--studio-color-signal-on); box-shadow: 0 14px 16px rgb(18 18 18 / 0.12); }
 .empty-icon .icon { width: 22px; height: 22px; }
-.empty-title { font: var(--studio-type-heading); }
-.empty-body { max-width: 480px; color: var(--studio-color-text-secondary); }
+.empty-title { font: var(--studio-type-heading); text-wrap: balance; }
+.empty-body { max-width: 480px; color: var(--studio-color-text-secondary); text-wrap: pretty; }
+.empty-state > :last-child:not(.empty-body) { margin-block-start: var(--studio-space-2); }
 
 /* ------------------------------------------------------------ tables and lists */
 .table-wrap { overflow-x: auto; }

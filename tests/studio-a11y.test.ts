@@ -120,3 +120,13 @@ test('every page in every locale: one skip link to a focusable main, one h1, lab
     }
   })
 })
+
+test('studio.css: links and scrollers inside an overflow-clipping container draw their focus ring inside', () => {
+  // `.breadcrumbs ol` clips overflow for the ellipsis; the shared ring (offset 3px) would be cut off.
+  assert.match(CSS, /\.breadcrumbs ol \{[^}]*overflow: hidden/)
+  for (const selector of ['.breadcrumbs a:focus-visible', '.table-wrap:focus-visible']) {
+    const rule = CSS.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] ?? ''
+    assert.match(rule, /outline-offset: -\d+px/, `${selector} uses an inset focus ring`)
+  }
+  assert.match(CSS, /\.chip:hover:not\(\[aria-pressed="true"\]\) \{/, 'filter chips have a hover state')
+})
