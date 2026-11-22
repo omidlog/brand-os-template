@@ -25,6 +25,11 @@ test('provisioning creates one private repository from the template and commits 
   assert.equal(cfg.modules.mascot!.enabled, false)
   assert.equal(JSON.parse(tree.get('brand/brand-manifest.json')!.toString()).slug, 'acme-learning')
   assert.deepEqual(parse(tree.get('brand/instance/approved-facts.yaml')!.toString()).facts, {}, 'no brand facts are invented')
+  // The template commit the brand starts from, for template:update.
+  const templateRecord = JSON.parse(tree.get('brand/template-version.json')!.toString()) as { commit: string; repository: string; source: string }
+  assert.equal(templateRecord.commit, h.github.repo(TEMPLATE.owner, TEMPLATE.repo)!.head)
+  assert.equal(templateRecord.repository, `${TEMPLATE.owner}/${TEMPLATE.repo}`)
+  assert.equal(templateRecord.source, 'studio')
   // Exactly one commit on top of the template commit, touching brand/ only.
   const record = h.registry.get(req.slug)!
   assert.equal(record.provisioning?.state, 'ready')

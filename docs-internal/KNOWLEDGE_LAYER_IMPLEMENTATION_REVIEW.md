@@ -132,7 +132,7 @@ existing "no mutation endpoints" Studio test passes unchanged: the list of non-G
 
 ## 6. Walkthrough: from an idea to a draft (stops at the owner gate)
 
-In a brand checkout (the test suite runs this end to end in `knowledge-proposals` "Gate B" and `knowledge-studio`):
+In a brand checkout (the test suite runs this end to end in `knowledge-proposals` "Gate B" and `studio-knowledge`):
 
 ```bash
 # 1. Capture in Persian (local, untracked)
@@ -177,7 +177,7 @@ then reviews PR #9. Do this after template sync (PR #8) merges so the code reach
 ## 8. Independent self-review: failure modes checked
 
 1. **Committed caches or READMEs under `brand/knowledge` reach Studio.** Fixed in A0 (knowledge paths decided first).
-   `studio-github` and `knowledge-studio` push `.cache`, `README.md`, nested and `brand/Knowledge/` files and assert
+   `studio-github` and `studio-knowledge` push `.cache`, `README.md`, nested and `brand/Knowledge/` files and assert
    none reaches the page or `state.json`.
 2. **A hand-committed shared note with a token, another brand's slug or a restricted classification is shown.** The
    projection withholds it by path and reason; a canary test checks the token text appears nowhere.

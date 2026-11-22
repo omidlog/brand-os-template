@@ -646,6 +646,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .asset-card { display: grid; grid-template-rows: auto 1fr; background: var(--studio-color-bg-surface); border: 1px solid var(--studio-color-border-subtle); border-radius: var(--studio-radius-lg); overflow: hidden; box-shadow: var(--studio-shadow-sm); }
 .asset-preview { aspect-ratio: 4 / 3; display: grid; place-items: center; background: repeating-conic-gradient(var(--studio-color-bg-subtle) 0% 25%, var(--studio-color-bg-surface) 0% 50%) 50% / 20px 20px; border-block-end: 1px solid var(--studio-color-border-subtle); }
 .asset-preview img { max-width: 80%; max-height: 80%; object-fit: contain; }
+/* A draft preview: dashed frame and a flag at the inline start (mirrors in RTL); the text says it too. */
+.asset-preview-draft { position: relative; outline: 2px dashed var(--studio-color-border-strong, currentColor); outline-offset: -6px; }
+.asset-draft-flag { position: absolute; inset-block-start: var(--studio-space-2); inset-inline-start: var(--studio-space-2); }
 .asset-placeholder { display: grid; justify-items: center; gap: 4px; color: var(--studio-color-text-tertiary); font: var(--studio-type-label); text-align: center; padding: var(--studio-space-3); background: var(--studio-color-bg-surface); border-radius: var(--studio-radius-md); }
 .asset-placeholder .icon { width: 24px; height: 24px; }
 .asset-body { display: grid; gap: var(--studio-space-2); padding: var(--studio-space-4); align-content: start; }

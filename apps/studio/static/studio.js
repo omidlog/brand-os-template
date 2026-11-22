@@ -75,8 +75,8 @@
       })
     })
 
-    // Refresh buttons show a busy state while the server fetches GitHub.
-    document.querySelectorAll('[data-refresh-form]').forEach(function (form) {
+    // Refresh and "Open update PR" show a busy state (and cannot be sent twice) while the server talks to GitHub.
+    document.querySelectorAll('[data-refresh-form], [data-update-form]').forEach(function (form) {
       form.addEventListener('submit', function () {
         var button = form.querySelector('button')
         if (!button) return
