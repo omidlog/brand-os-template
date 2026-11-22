@@ -1,8 +1,8 @@
 # SEO strategist (Spec Sprint 2)
 
-One research-backed specialist: organic search, with AI discovery (GEO) where the owner wants it and current evidence supports it. It produces a **draft** plan for owner review, checked by an independent critic. It approves nothing, edits no website, publishes nothing and spends nothing. Approval and agent hand-off are Sprint 3 and are not built.
+One research-backed specialist: organic search, with AI discovery (GEO) where the owner wants it and current evidence supports it. It produces a **draft** plan for owner review, checked by an independent critic. It approves nothing, edits no website, publishes nothing and spends nothing. Approval and agent hand-off are a separate step: `brand:strategy propose --from-seo` (see `docs-internal/STRATEGY_FEED.md`).
 
-Not built: ASO, paid, social, content, CRM or B2B specialists, a CMO agent or Strategy Critic product, campaign-metrics learning, the Strategy Feed, and Studio views. The skill is `agent-skills/seo-strategist/SKILL.md`.
+Not built: ASO, paid, social, content, CRM or B2B specialists, a CMO agent or Strategy Critic product, campaign-metrics learning, and Studio views. The skill is `agent-skills/seo-strategist/SKILL.md`.
 
 ## Reuse map: one knowledge substrate
 
