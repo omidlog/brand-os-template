@@ -12,7 +12,6 @@ import { authorize, guestContext, operatorContext, verifiedHumanContext } from '
 import { backupBrand, migrateBrand } from './backup.js'
 import { completenessScope, loadProfile, type InterviewProfile } from './profiles.js'
 import { privateDataRefusal } from './personal-privacy.js'
-import { personalConfig } from './conditions.js'
 import { extractByRules } from './llm/rules.js'
 import { approvalProofMatches, PrivateStore } from './private-store.js'
 import type {
@@ -36,6 +35,7 @@ import { ensureStarterProfiles } from './personal.js'
 import { readSyncManifest, readTemplateRecord, writeTemplateRecord } from './template-sync.js'
 import type { ImpactReport, InitInput, StepResult } from './engine-types.js'
 import { dispositionFor } from './dispositions.js'
+import { CONFIG_BINDINGS, isPersonalBrand, priorityRank } from './config-bindings.js'
 
 export type { StepResult, ImpactReport, InitInput } from './engine-types.js'
 export { dispositionFor } from './dispositions.js'
@@ -48,66 +48,6 @@ export function personalInit(input: Pick<InitInput, 'profile' | 'personal' | 'fa
   if (unknown.length) throw new Error(`Unknown personal facet ${unknown.join(', ')}. Use: ${PERSONAL_FACETS.join(', ')}.`)
   if (facets.length && !enabled) throw new Error('Facets need the personal module. Use --profile personal-brand or --personal true.')
   return { enabled, facets: facets as PersonalFacet[] }
-}
-
-function isPersonalBrand(config: BrandConfig): boolean {
-  return config.brand.profile === 'personal-brand' && personalConfig(config).enabled
-}
-
-const CONFIG_BINDINGS: Array<{ id: string; assign: (config: BrandConfig, value: string) => void }> = [
-  {
-    id: 'brand.mascot.enabled',
-    assign: (config, value) => {
-      config.modules.mascot.enabled = value === 'yes'
-    },
-  },
-  {
-    id: 'brand.gamification.enabled',
-    assign: (config, value) => {
-      config.modules.gamification.enabled = value === 'yes'
-    },
-  },
-  {
-    id: 'business.identity.sector',
-    assign: (config, value) => {
-      config.brand.sector = value
-    },
-  },
-  {
-    id: 'personal.identity.public_name',
-    assign: (config, value) => {
-      if (!isPersonalBrand(config)) return
-      config.brand.working_name = value
-      config.brand.working_name_status = 'draft'
-    },
-  },
-  {
-    id: 'business.identity.trade_name',
-    assign: (config, value) => {
-      // A company trade name never renames a personal brand.
-      if (isPersonalBrand(config)) return
-      config.brand.working_name = value
-      config.brand.working_name_status = 'draft'
-    },
-  },
-  {
-    id: 'business.stage.current',
-    assign: (config, value) => {
-      config.brand.stage = value
-    },
-  },
-  {
-    id: 'business.identity.new_or_existing',
-    assign: (config, value) => {
-      config.brand.new_or_existing = value
-    },
-  },
-]
-
-function priorityRank(question: FieldQuestion, sector: string | null): number {
-  const base = { critical: 0, high: 1, medium: 2, low: 3 }[question.priority]
-  if (sector && question.sector_hints.includes(sector)) return base - 0.5
-  return base
 }
 
 export class InterviewEngine {
