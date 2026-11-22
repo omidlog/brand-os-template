@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
@@ -375,4 +376,16 @@ test('gap text, review reasons and prohibited inferences exist in en, fa and tr;
   assert.ok(fa.gaps.some((g) => g.text.includes('WordFlight')))
   const tr = land(ws, NOW, 'tr')
   assert.ok(tr.gaps.some((g) => /bilinmiyor|doğrulanmadı/.test(g.text)))
+})
+
+test('dossiers stay private: the folder is gitignored in a brand repo, and no agent tool names it', () => {
+  const { root, ws } = workspace({ slug: 'pilito', now: () => NOW })
+  const wf = addCandidate(ws, { display_name: 'WordFlight', markets: 'US' })
+  const file = path.join(COMPETITIVE_DIRS.candidates, `${wf.competitor_id}.json`)
+  assert.ok(fs.existsSync(path.join(root, file)))
+  execFileSync('git', ['init', '-q'], { cwd: root })
+  assert.equal(execFileSync('git', ['check-ignore', file], { cwd: root, encoding: 'utf8' }).trim(), file)
+  const mcp = fs.readFileSync(path.resolve(import.meta.dirname, '..', 'scripts', 'mcp.ts'), 'utf8')
+  const query = fs.readFileSync(path.resolve(import.meta.dirname, '..', 'packages', 'brand-core', 'src', 'query.ts'), 'utf8')
+  assert.ok(!/competitive/i.test(mcp) && !/competitive/i.test(query), 'no MCP or brand:query path reads competitor dossiers (tests/audit.test.ts pins the tool list)')
 })
