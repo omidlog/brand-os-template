@@ -135,7 +135,9 @@ function sameExcerpts(a: Excerpt[], b: Excerpt[]): boolean {
 export function recordSource(ws: KnowledgeWorkspace, raw: ResearchSource): RecordResult {
   assertOwnerProcess()
   let source = validateSource(raw)
-  const blocked = safetyBlocksSharing(safetyReport(source.excerpts.map((item) => `${item.claim}\n${item.quote}`).join('\n')))
+  // Published third-party text is not the brand's restricted data, so only credentials and personal data block it.
+  const report = safetyReport(source.excerpts.map((item) => `${item.claim}\n${item.quote}`).join('\n'))
+  const blocked = safetyBlocksSharing({ ...report, restricted_passages: 0 })
   if (blocked.length) throw new ResearchError('refused', `An excerpt looks like it contains ${blocked.join('; ')}. Nothing was recorded.`)
   const previous = loadEvidence(ws).items.filter((item) => item.source.url === source.url && item.usable)
   const latest = previous[0] ?? null

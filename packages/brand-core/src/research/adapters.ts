@@ -99,7 +99,8 @@ export function liveAdapter(opts: { fetchImpl?: FetchLike; enabled?: boolean; to
       let finalUrl: string
       let contentType: string
       try {
-        const response = await fetchImpl(url, { signal: AbortSignal.timeout(RESEARCH_LIMITS.fetchTimeoutMs), redirect: 'follow', headers: { accept: 'text/html,text/plain' } })
+        // Without accept-language some documentation hosts serve a random locale, and every quote would fail.
+        const response = await fetchImpl(url, { signal: AbortSignal.timeout(RESEARCH_LIMITS.fetchTimeoutMs), redirect: 'follow', headers: { accept: 'text/html,text/plain', 'accept-language': request.language ?? 'en' } })
         if (!response.ok) return { ok: false, state: 'fetch_failed', url, reason: `HTTP ${response.status}` }
         finalUrl = validateUrl(response.url || url, 'final_url')
         contentType = response.headers.get('content-type') ?? ''
@@ -206,4 +207,37 @@ export function selectAdapter(opts: { bundle?: ResearchBundle | null; env?: Node
   const env = opts.env ?? process.env
   if (env[NETWORK_ENV] === 'on') return liveAdapter({ enabled: true, fetchImpl: opts.fetchImpl })
   return unavailableAdapter()
+}
+
+/** A capture request file: `{ "requests": [RetrieveRequest…] }`. Quotes are what the recorder expects to find. */
+export function parseRequests(raw: unknown): RetrieveRequest[] {
+  const list = (raw as { requests?: unknown } | null)?.requests
+  if (!Array.isArray(list) || list.length === 0 || list.length > 100) throw new ResearchError('invalid_input', 'A request file needs "requests": a list of 1 to 100 sources to retrieve.')
+  return list.map((item, index) => {
+    if (!item || typeof item !== 'object') throw new ResearchError('invalid_input', `requests[${index}] must be an object.`)
+    const req = item as Record<string, unknown>
+    if (!Array.isArray(req.excerpts) || req.excerpts.length === 0) throw new ResearchError('invalid_input', `requests[${index}] needs excerpts to verify.`)
+    return {
+      url: validateUrl(req.url),
+      publisher: String(req.publisher ?? ''),
+      source_type: req.source_type as SourceType,
+      tier: req.tier as SourceTier | undefined,
+      topic: req.topic as ResearchTopic,
+      language: typeof req.language === 'string' ? req.language : null,
+      query: typeof req.query === 'string' ? req.query : null,
+      excerpts: req.excerpts.map(validateExcerpt),
+    }
+  })
+}
+
+/** Retrieves each request with one adapter. Failures stay failures; nothing is filled in. */
+export async function retrieveAll(adapter: ResearchAdapter, requests: RetrieveRequest[], now?: Date): Promise<RetrieveOutcome[]> {
+  const out: RetrieveOutcome[] = []
+  for (const request of requests) out.push(await adapter.retrieve(request, now))
+  return out
+}
+
+/** A bundle of successfully retrieved sources, for replay in tests or offline sessions. */
+export function toBundle(sources: ResearchSource[], recordedWith: string, now: Date, note: string | null = null): ResearchBundle {
+  return parseBundle({ schema: BUNDLE_SCHEMA, recorded_with: recordedWith, recorded_at: now.toISOString(), note, sources })
 }
