@@ -18,7 +18,7 @@ export interface ViewContext {
   now: number
 }
 
-export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'history' | 'handoff'
+export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'creative' | 'history' | 'handoff'
 
 export interface BrandView {
   record: BrandRecord
@@ -35,6 +35,7 @@ const SECTIONS: Array<{ id: BrandSection; key: MessageKey; icon: IconName; path:
   { id: 'business', key: 'nav.business', icon: 'briefcase', path: '/business' },
   { id: 'personal', key: 'nav.personal', icon: 'user', path: '/personal' },
   { id: 'knowledge', key: 'nav.knowledge', icon: 'idea', path: '/knowledge' },
+  { id: 'creative', key: 'nav.creative', icon: 'sparkle', path: '/creative' },
   { id: 'history', key: 'nav.history', icon: 'history', path: '/history' },
   { id: 'handoff', key: 'nav.handoff', icon: 'handoff', path: '/handoff' },
 ]
@@ -45,6 +46,8 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'personal') return projection?.brand.modules.personal === true
     // No flag: the page is listed once the merged branch has shared notes (or files Studio withheld).
     if (section.id === 'knowledge') return Boolean(projection?.knowledge && (projection.knowledge.total > 0 || projection.knowledge.withheld.length > 0))
+    // Listed once the merged branch has shared creative decisions (or files Studio withheld).
+    if (section.id === 'creative') return Boolean(projection?.creative && (projection.creative.total > 0 || projection.creative.withheld.length > 0))
     return true
   })
 }

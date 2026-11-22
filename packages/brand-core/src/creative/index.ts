@@ -27,3 +27,5 @@ export type { AgentCreativeContext, AgentReason, CreativeToolArgs, CreativeToolR
 export type { CitedReason, ContextTarget, CreativeContext, PreferenceItem, ReferenceItem, SourceState } from './context.js'
 export { approveAspects, ASPECT_METHOD, deriveAspects, listAspectProposals, normalizeForAspects, parseAspectChoices, readAspectProposal, rejectAspects, suggestAspects } from './aspects.js'
 export type { SuggestAspectsResult } from './aspects.js'
+export { buildStudioCreative, SHARED_DECISIONS_DIR, shareDecision, STUDIO_CREATIVE_LIMITS, validSharedDecision } from './share.js'
+export type { SharedDecision, StudioCreativeProjection, WithheldDecisionReason } from './share.js'

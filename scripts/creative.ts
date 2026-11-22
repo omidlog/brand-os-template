@@ -21,6 +21,7 @@ import {
   readProject,
   recordFeedback,
   selectVariant,
+  shareDecision,
   suggestPreference,
   type CreativeContext,
 } from '@brand-os/brand-core/creative'
@@ -46,6 +47,7 @@ const HELP = `brand:creative <command> [options]
             [--counterexample B | --counterexample other-project/B]… [--supersedes cp_…]     draft only
   approve   --id cp_… [--scope project|series]    owner proof: BRAND_OS_APPROVAL_PROOF or hidden prompt
   preferences                                       every preference with its state
+  share     --id cp_… [--dry-run]   copy an approved decision's summary to brand/creative/shared (you commit it)
   show      --project <project>
   list
   context   (--project <project> | --surface reel --series <name>)   next-session context with provenance
@@ -93,6 +95,7 @@ const OPTIONS = {
   feedback: { type: 'string' },
   only: { type: 'string' },
   state: { type: 'string' },
+  'dry-run': { type: 'boolean', default: false },
 } as const
 
 type Values = ReturnType<typeof parseArgs<{ args: string[]; options: typeof OPTIONS; allowPositionals: false; strict: true }>>['values']
@@ -253,6 +256,19 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       const result = approvePreference(ws, { preference_id: need(values, 'id'), proof, scope: values.scope })
       print(values, { ok: true, approved: result.approved, superseded: result.superseded }, () =>
         [`Approved ${result.approved.preference_id} for ${result.approved.scope.level === 'project' ? `project ${result.approved.scope.project_id}` : `series ${result.approved.scope.series} (${result.approved.scope.surface})`}.`, result.superseded ? `Superseded ${result.superseded.preference_id} (kept on disk for audit).` : ''].filter(Boolean).join('\n'),
+      )
+      return
+    }
+    case 'share': {
+      const result = shareDecision(ws, { preference_id: need(values, 'id'), dryRun: values['dry-run'] })
+      print(values, { ok: true, ...result }, () =>
+        [
+          `${result.written ? 'Wrote' : 'Would write'} ${result.path}:`,
+          `  ${result.decision.state}  ${result.decision.statement}  (${result.decision.scope.label})`,
+          `  sources ${result.decision.sources.join(', ')}`,
+          ...result.refreshed.map((rel) => `${result.written ? 'Refreshed' : 'Would refresh'} ${rel} (superseded).`),
+          'Only this summary is shared: no note text. Nothing was committed. Review it, commit it on a branch and merge the pull request; Studio shows it after a refresh.',
+        ].join('\n'),
       )
       return
     }

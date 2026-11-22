@@ -30,6 +30,7 @@ import { brandIsReady, type SyncService } from './sync.js'
 import type { TemplateUpdateService, UpdateStatus } from './template-update.js'
 import type { SafeHtml } from './views/html.js'
 import type { BrandView, ViewContext } from './views/layout.js'
+import { creativePage } from './views/creative.js'
 import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from './views/knowledge.js'
 import * as pages from './views/pages.js'
 
@@ -90,7 +91,7 @@ const STATIC_FILES: Record<string, string> = {
   'fonts/rajdhani-bold.woff2': 'font/woff2',
   'fonts/vazirmatn-var.woff2': 'font/woff2',
 }
-const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'history', 'handoff'] as const
+const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'creative', 'history', 'handoff'] as const
 
 export interface RouteInfo {
   method: string
@@ -535,6 +536,9 @@ export function createStudio(deps: StudioDeps): {
         if (!knowledge || !note) return notFound(ctx)
         return render(ctx, 200, knowledgeNotePage(v, brand, note, knowledge, flashValue))
       }
+      case 'creative':
+        // Read only: decisions the owner shared and merged. No query parameter changes anything.
+        return render(ctx, 200, creativePage(v, brand, flashValue))
       case 'history':
         return render(ctx, 200, pages.historyPage(v, brand, flashValue))
       case 'handoff':

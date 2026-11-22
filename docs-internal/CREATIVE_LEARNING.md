@@ -83,6 +83,16 @@ suggests avoid, else a positive cue suggests keep, else `unclear`.
 - `aspects reject` marks it rejected; nothing is applied. Decided proposals stay on disk for audit.
 - All `aspects` commands refuse under `BRAND_OS_AGENT_TOKEN`.
 
+## Sharing a decision to Studio (`share`)
+
+`npm run brand:creative -- share --id cp_… --dry-run` previews, and without `--dry-run` writes, a small summary of one
+**approved** (or superseded) preference to `brand/creative/shared/cp_….json`: statement, context, scope, approval date,
+supersession links, `knowledge:kn_…@<sha256>` source ids and counterexample ids. No note text, no local path. Drafts
+and preferences whose approval digest no longer matches are refused; so is secret-looking text. Sharing a decision
+that supersedes an already shared one refreshes the old file to `superseded`. Nothing is committed: the owner reviews
+the file, commits it on a branch and merges the pull request. Studio's read-only **Creative decisions** page then shows
+it after a refresh. To unshare, delete the file in a pull request.
+
 ## Agent read path: `creative_context` (MCP, `creative-read` profile)
 
 The owner issues a token with `npm run brand:agent-token -- issue --profile creative-read --label "design agent"` and
@@ -116,7 +126,9 @@ starts `npm run mcp:serve` with it. The local stdio server then answers one extr
 (cross-brand, agent token, knowledge-read MCP, guest/design readers, gitignore, restricted and
 third-party notes, stale/archived/tampered sources, brand-scope refusal, assets, no publish path), `tests/creative-aspects.test.ts`
 (lexicon, pending changes nothing, proof, subset/unclear/reject, stale note, no flip, CLI), plus
-`tests/studio-creative.test.ts` (Studio's archive filter excludes creative records and feedback notes), and
+`tests/studio-creative.test.ts` (Studio's archive filter excludes creative records and feedback notes; the read-only
+Creative decisions page; cache rebuild), and
+`tests/creative-share.test.ts` (share rules, superseded refresh, Studio projection withholding),
 `tests/creative-agent.test.ts` (`creative_context`: profile and brand refusals, drafts/superseded withheld, local
 note text withheld, shared quote served, secret-looking text withheld, access log, stdio MCP).
 
@@ -127,7 +139,8 @@ note text withheld, shared quote served, secret-looking text withheld, access lo
   every suggestion waits for the owner.
 - Series scope is `surface + series` only; there is no hierarchy or campaign scope.
 - The agent read path is local stdio MCP only (`creative_context`). There is no remote/HTTP access.
-- No Studio view. No sharing of creative records to Git.
+- Studio shows only shared decisions (preferences). Projects, variants, feedback and selections are not shared.
+  A shared file is a snapshot: re-run `share` after a later supersession that you did not share yourself.
 - Concurrency: projects are updated under a per-project lock; preference approval under one lock. Suggest does not
   lock (it only creates a new file).
 - Inspiration rights (`own|licensed|unknown`) are the owner's statement, not verified licensing.

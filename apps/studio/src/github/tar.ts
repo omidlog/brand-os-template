@@ -156,8 +156,20 @@ export function studioKnowledgePathAllowed(relative: string): boolean {
   return SHARED_NOTE.test(relative)
 }
 
+/**
+ * `brand/creative/` may only contribute decisions the owner explicitly shared with `brand:creative share`:
+ * `brand/creative/shared/cp_<uuid>.json`, one level deep. Creative projects, feedback and drafts live under
+ * `brand/.private/creative` and are excluded above; anything else committed under `brand/creative/` stays out.
+ */
+const SHARED_DECISION = /^brand\/creative\/shared\/cp_[0-9a-f-]{36}\.json$/
+
+export function studioCreativePathAllowed(relative: string): boolean {
+  return SHARED_DECISION.test(relative)
+}
+
 export function studioPathAllowed(relative: string): boolean {
   if (!relative.startsWith('brand/')) return false
+  if (relative.toLowerCase().startsWith('brand/creative/') || relative.toLowerCase() === 'brand/creative') return studioCreativePathAllowed(relative)
   // Checked first: nothing below may re-admit a knowledge path.
   if (relative.toLowerCase().startsWith('brand/knowledge/') || relative.toLowerCase() === 'brand/knowledge') return studioKnowledgePathAllowed(relative)
   if (EXCLUDED_PREFIXES.some((prefix) => relative.startsWith(prefix))) return false

@@ -25,6 +25,21 @@ Theme: everything the launch operator needs to run the read-only Studio at `stud
 
 - The live launch (VPS, Caddy reload, TLS, owner enrollment, GitHub tokens, test repository). See `GROK_HANDOFF.md`.
 
+## Unreleased — Creative Learning Sprint 2 (agent read path, aspect proposals, Studio decisions)
+
+Guide: `docs-internal/CREATIVE_LEARNING.md`.
+
+### Added
+
+- `creative-read` agent-token profile and the read-only `creative_context` MCP tool (local stdio): approved scoped creative preferences and cited selection/rejection reasons. Drafts and superseded preferences are only counted; verbatim feedback only from shared notes. One access-log line per call.
+- `brand:creative aspects suggest|list|approve|reject`: keep/avoid aspects suggested from feedback text by a deterministic fa/en/tr lexicon. Pending until the owner approves with the approval proof; never auto-applied.
+- `brand:creative share --id cp_… [--dry-run]`: writes a derived summary of an approved decision to `brand/creative/shared/` for the owner to commit.
+- Studio: read-only **Creative decisions** page for merged shared decisions (en/fa/tr).
+
+### Security
+
+- Existing tokens gain nothing; every other profile, guests and other brands are denied `creative_context`. Local note text, drafts, proposals and secret-looking text never reach agents or Studio. Studio admits only `brand/creative/shared/cp_<uuid>.json` under `brand/creative/`.
+
 ## Unreleased — Creative Learning MVP (Sprint 1)
 
 Theme: auditable memory of the owner's design choices, built on the Knowledge Inbox. Guide: `docs-internal/CREATIVE_LEARNING.md`.

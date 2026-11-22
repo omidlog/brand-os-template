@@ -147,7 +147,10 @@ Branch `feat/creative-learning`, built on the Knowledge Inbox (PR #9). Guide: `d
 | Feedback as Knowledge notes | Done | Verbatim text stored once, as a local Knowledge note; records hold `kn_…` + revision and closed-vocabulary aspects. |
 | Scoped preferences | Done | Draft → owner approval with the existing proof; project or series scope; brand scope refused (routed to `propose`/`approve`); supersession keeps history. |
 | Next-session context | Done | Approved facts (design reader), applied preferences, cited selected/rejected/kept references from in-scope projects, provenance and source state. |
-| Agent / MCP / Studio access | Not started | Owner CLI only; refuses under an agent token. |
+| Agent / MCP access | Done (Sprint 2) | `creative-read` profile, read-only `creative_context` on local stdio MCP; approved items only, local note text withheld, access-logged. `tests/creative-agent.test.ts`. |
+| Aspect proposals | Done (Sprint 2) | Deterministic fa/en/tr lexicon; pending until owner approval with proof; `aspects approve/reject`. `tests/creative-aspects.test.ts`. |
+| Studio view | Done (Sprint 2) | Read-only Creative decisions page for decisions shared with `brand:creative share` and merged. `tests/creative-share.test.ts`, `tests/studio-creative.test.ts`. |
+| Remote MCP / CMO agent / campaign metrics | Not started | Backlog; local stdio only. |
 | Performance data | Not started | `performance: not_measured`; no connectors. |
 
 ## SVG checker, normalizer and asset approval
