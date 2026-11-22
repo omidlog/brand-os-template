@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Competitive landscape (Identity Slice B)
+
+### Added
+
+- `npm run brand:competitive`: an owner-only, per-brand competitor index in `brand/.private/competitive`. Owner-named businesses become unverified `candidate` records (`cmp_<uuid>`) with relationship (direct, indirect, substitute, aspirational benchmark) and geography (local, regional, international) as separate dimensions.
+- Observations cite Knowledge research notes (recorded with `brand:seo research capture|replay`, topic `market_observation`) as `{note_id, revision, claim_key, observed_at}`. No quote is copied. A public price is accepted only when the cited quote shows the amount, currency and stated terms.
+- `brand:competitive matrix` builds a deterministic landscape: matrix cells (`observed`, `unverified`, `hypothesis`, `historical`, `conflicting`, `needs_review`, `unknown`), prices listed but never ranked or converted, an en/fa/tr gap checklist and the inferences it never supports. Changed, stale, superseded or archived sources visibly degrade. No network, no brand-fact writes, refused under an agent token.
+- Guide: `docs-internal/COMPETITIVE.md`. Tests: `competitive`, `competitive-cli`.
+
 ## Unreleased — Identity intake (Identity Slice A)
 
 ### Added

@@ -1,0 +1,120 @@
+# Competitive landscape (Identity Slice B)
+
+A per-brand competitor **index** that strategy work can cite. It is not a notebook, a price database or an approval path. Every third-party excerpt lives exactly once, in a Knowledge research note. The index holds ids, owner-set classifications, short labels and references to those notes.
+
+Core: `packages/brand-core/src/competitive/` (`@brand-os/brand-core/competitive`). CLI: `npm run brand:competitive`. Tests: `tests/competitive.test.ts`, `tests/competitive-cli.test.ts`.
+
+## Owner workflow
+
+1. **Record sources** with the existing research CLI. Use topic `market_observation`, one verbatim excerpt per claim, and a dotted `claim_key`:
+   - `npm run brand:seo -- research capture --request req.json` (live HTTPS; needs `BRAND_OS_RESEARCH_NETWORK=on`; every quote is checked on the fetched page), or
+   - `npm run brand:seo -- research replay --bundle bundle.json` (no network; original dates kept).
+
+   Each source becomes one Knowledge research note. A re-capture of a changed page supersedes the old note; history is kept.
+2. **Scope** what the research is for: `brand:competitive scope --purposes identity,pricing`. Purposes: `identity`, `positioning`, `marketing`, `pricing`, `seo`, `expansion`. The scope only narrows the gap checklist.
+3. **Add candidates**: `brand:competitive add --name "WordFlight" --relationship direct --geography international --markets US --domain wordflight-app.com`. A name is a `candidate`. A typed domain is a claim, not an official domain.
+4. **Cite evidence**: `brand:competitive link --id cmp_… --note knowledge:kn_…@<sha> --claim wordflight.pricing.pro --dimension public_price --label "Pro on own pricing page" --offer Pro --amount 12 --currency USD --market US --period month --commitment annual --tax excluded --promotion none_observed`.
+5. **Verify the domain**: `brand:competitive verify-domain --id cmp_… --note kn_… --claim …`, using a source that was fetched from that domain.
+6. **Read**: `brand:competitive matrix [--lang en|fa|tr] [--json]`, `list`, `show --id cmp_…`.
+7. **Record progress or exclusions**: `brand:competitive status --id cmp_… --status owner_reviewed|disputed|archived --reason "…"`.
+
+Every command is refused while `BRAND_OS_AGENT_TOKEN` is set. None of them uses the network.
+
+## Records
+
+`brand/.private/competitive/` (gitignored, mode 0600, atomic writes, per-record lock, no symlinks, other brands' files skipped):
+
+- `scope.json`: `{kind: competitive_scope, purposes[]}`.
+- `candidates/cmp_<uuid>.json`, with these fields:
+  - `display_name`; `name_key`, used only to warn about duplicates;
+  - `relationship[]` (`direct | indirect | substitute | aspirational_benchmark`);
+  - `geographic_relevance[]` (`local | regional | international`, relative to the approved `business.market.geography`);
+  - `markets[]` (ISO alpha-2 or `GLOBAL`), `source`, `status`, `status_reason`;
+  - `domain_claim`, `domain_evidence`, `distinct_from[]`;
+  - `observations[]`.
+- An observation has these fields:
+  - `dimension`;
+  - `statement_kind` (`observed_claim | inference`);
+  - a label of at most 200 characters;
+  - `evidence: {note_id, revision, claim_key, observed_at}`. `observed_at` is copied from the note's `retrieved_at`.
+  - For `public_price` only: price terms such as amount, currency, period, commitment, market, tax, promotion and feature scope.
+
+**Stored status** is `candidate | owner_reviewed | disputed | archived`. **Assessment** is computed on read: `candidate | researched | owner_reviewed | needs_refresh | disputed | archived`. It describes how complete the assessment is. It is not the owner's acceptance of each observation.
+
+## Rules the code enforces
+
+| Rule | Where |
+| --- | --- |
+| **A cited note must:** be a research note of this brand with topic `market_observation`, not archived and not superseded; match a pinned revision if one is given; and hold a supporting excerpt for the `claim_key`. Ordinary, restricted and other-brand notes are refused. | `store.ts resolveEvidence` |
+| **A public price must be supported by the quote.** The amount must appear in it (Persian and Arabic digits, both decimal conventions). The currency must be named or shown by its sign. A stated period, commitment or tax basis needs a cue in the quote; otherwise use `unknown`. Quote text that reads like a promotion cannot be recorded as `none_observed`. | `model.ts priceSupport` |
+| **Hypotheses stay hypotheses.** `strength_hypothesis` and `weakness_hypothesis` must be inferences. A price is never an inference. | `linkEvidence` |
+| **Same-name candidates are handled carefully.** A second candidate with the same normalized name is refused unless the owner names the existing one and gives a reason, and their markets are disjoint (an unknown market counts as overlapping). Two records claiming one domain are refused. Records are never merged automatically. | `addCandidate`, `verifyDomain` |
+| **A domain is "official" only while verified.** The source fetched from it must stay current; this is re-checked on every read. | `landscape.ts domainState` |
+| **Domains are names, never fetched.** URLs, paths, IP addresses, localhost and private-use suffixes are refused. | `validateDomain` |
+
+## Reading the landscape
+
+`buildLandscape(ws, {capability, lang, now})` is pure and deterministic for the same records, notes, clock and capability. It writes nothing and fetches nothing.
+
+- **Ref state.** It reuses the research store (`loadEvidence`, `evidenceFor`) and the Strategy Feed's ref vocabulary. The states are `current | stale | changed | superseded | archived | missing | claim_missing`.
+- **Cell state:**
+  - `observed`: current, fresh, quotes verified, no conflict;
+  - `unverified`: the quotes were not checked against fetched bytes;
+  - `hypothesis`;
+  - `historical`: stale, so it is history and not current;
+  - `conflicting`: a contradicting excerpt with the same claim key, or two current prices for the same offer and terms that disagree; both are kept;
+  - `needs_review`;
+  - `unknown`.
+- **Prices** are listed by competitor name, never ranked (`ranked: false`) and never converted (`currency_conversion: 'none'`). Their comparability is `none | single | not_comparable | terms_match`, with reasons such as `different_currencies`, `tax_unknown`, `promotional_price`, `monthly_rate_billed_annually` and `historical`.
+- **Source class** says who is speaking, relative to the competitor: `competitor_own_page | platform_documentation | independent_reporting | analyst_inference | owner_statement | first_party_data`. A company's own page supports only what it claims.
+- **Gaps** are an en/fa/tr checklist:
+  - research unavailable (with the adapter's reason);
+  - scope not set;
+  - target market not approved;
+  - no candidates;
+  - relationship unknown;
+  - identity unverified;
+  - a dimension unknown within the scope;
+  - evidence needing review;
+  - conflicts;
+  - prices not comparable;
+  - SEO needs search evidence.
+- **Overall state:** `no_candidates | candidate_only | evidence_insufficient | evidence_available`. An empty matrix never implies that there are no competitors.
+- **`prohibited_inferences`** lists, in en/fa/tr, what the landscape never supports:
+  - ad performance;
+  - private commercial terms;
+  - search rankings;
+  - legal clearance;
+  - brand decisions;
+  - currency conversion.
+- `authorizes` is always `[]`. The target market is cited by fact id and revision. Its value is not copied.
+
+## Privacy
+
+- Owner-only, local and gitignored.
+- No MCP tool, `brand:query` path, Studio page, public projection or docs build reads `brand/.private/competitive`. `tests/audit.test.ts` pins the MCP tool list.
+- A `knowledge-read` or any other agent token is refused by the owner-process check.
+
+## Reuse map
+
+The base is `main` at 8bd44db.
+
+| Concern | Existing owner | Slice B |
+| --- | --- | --- |
+| Third-party excerpts, provenance, revisions, archive, supersession | Knowledge Inbox research notes via `research/store.ts recordSource` | Reused as the only quote store. The index stores `{note_id, revision, claim_key, observed_at}`. |
+| Retrieval and capability (`live | replay | unavailable`) | `research/adapters.ts`, `brand:seo research` | Reused unchanged. `matrix` reports `selectAdapter().capability()` and never fetches. |
+| Trust, staleness by topic, conflicts | `research/model.ts trustOf / stalenessOf`, `research/store.ts loadEvidence / evidenceFor` | Reused. The `market_observation` limit (90 days) drives `historical`. |
+| Changed-source handling | Strategy Feed `evidenceState` (`current | changed | missing` → `needs_review`) | Same vocabulary, made finer (stale, superseded, archived, claim_missing). |
+| Safe files, locks, 0600, symlinks | `knowledge/workspace.ts` | Reused (`safeRead`, `writeVaultFile`, `withLock`, `dirUsable`). |
+| Target market, pricing, positioning, channels, logo | Approved facts and the existing approval flow | Read only (`business.market.geography` by id and revision). Never written. |
+| SEO competitor names | `seo.competitors.named` (owner assumptions) | Untouched and not imported. Slice C may bridge it as a cited supplement. |
+
+**What is new:** the `competitive_candidate` and `competitive_scope` records, and the read-time landscape. They hold no excerpt and no approved value, so they are not a second source of truth.
+
+## Not in this slice
+
+- An interview question such as "who do buyers compare us with". The gap checklist asks it, and the CLI records the answers as candidates.
+- The `CompetitiveContext` purpose projection and its marketing, pricing, SEO and identity consumers (Slice C).
+- The rebrand audit and logo brief (Slice D).
+- Studio views and agent access.
+- Live discovery or search.

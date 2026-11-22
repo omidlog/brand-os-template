@@ -8,7 +8,7 @@ The new-brand wizard and `brand:init` can record three answers about the brand's
 | `identity_intent` | `create`, `retain`, `evolve`, `rebrand`, `undecided` | Wizard labels: create new / keep / refine / rebrand / undecided. |
 | `change_depth` | `logo_evolution`, `visual_refresh`, `strategic_rebrand`, `undecided`, or `null` | Only for `evolve` and `rebrand`; otherwise `null`. |
 
-These answers are **an unapproved owner hint**. They route later work, such as the strategy interview and the logo or rebrand brief (Identity Slices B to D, not built yet). They are not a brand fact, a trademark statement, a publication grant or permission to change `brand.logo.*`, the name, the strategy or an approved asset. The existing logo system and asset manifest stay canonical.
+These answers are **an unapproved owner hint**. They route later work, such as the strategy interview and the logo or rebrand brief (Identity Slices C and D, not built yet; the Slice B competitor index is in `docs-internal/COMPETITIVE.md`). They are not a brand fact, a trademark statement, a publication grant or permission to change `brand.logo.*`, the name, the strategy or an approved asset. The existing logo system and asset manifest stay canonical.
 
 ## Where it is stored
 

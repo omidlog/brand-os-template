@@ -192,7 +192,22 @@ Branch `feat/identity-slice-a`. Guide and reuse map: `docs-internal/IDENTITY_INT
 | `brand:init` flags | Done | `--logo-presence`, `--identity-intent`, `--change-depth`; without them init is unchanged. |
 | Studio wizard questions (en/fa/tr) | Done | Profile step; conditional depth; review and Edit and retry mirror the answers; server clears a stale depth. `tests/studio-identity-intake.test.ts`, browser journey. |
 | Privacy | Done | Not in facts, ledger, publication policy, MCP, `brand:query`, dashboard, public projection or Studio brand pages. |
-| Competitor research (Slice B), cross-functional context (Slice C), rebrand audit and logo brief (Slice D) | Not started | Separate PRs. |
+| Competitor research (Slice B) | Done | See the next section. |
+| Cross-functional context (Slice C), rebrand audit and logo brief (Slice D) | Not started | Separate PRs. |
+
+## Competitive landscape (Identity Slice B)
+
+Branch `feat/identity-slice-b`. Guide and reuse map: `docs-internal/COMPETITIVE.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Candidate index (`cmp_<uuid>`) | Done | `brand/.private/competitive`, owner-only; relationship and geography separate; same-name candidates kept apart only with a reason and disjoint markets; never merged. `tests/competitive.test.ts`. |
+| Evidence refs on Knowledge research notes | Done | `{note_id, revision, claim_key, observed_at}`; no quote stored; changed, stale, superseded and archived notes degrade to `needs_review` / `historical`. |
+| Public price observations | Done | Quote must show amount, currency and every stated term; promotions cannot pass as standard; listed, never ranked or converted. |
+| Domain verification | Done | Only by a current source fetched from the domain; re-checked on read. |
+| Landscape, matrix and gap checklist (en/fa/tr) | Done | Deterministic; honest `candidate_only` output when research is unavailable; prohibited inferences listed; `authorizes: []`. |
+| `npm run brand:competitive` | Done | scope, add, classify, link, verify-domain, status, list, show, matrix. No network. `tests/competitive-cli.test.ts`. |
+| Interview question for comparison candidates, `CompetitiveContext` consumers, Studio view, agent access | Not started | Slice C/D or later. |
 
 ## SVG checker, normalizer and asset approval
 
