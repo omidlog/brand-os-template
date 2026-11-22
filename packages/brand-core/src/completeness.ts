@@ -77,7 +77,7 @@ export function completeness(questions: FieldQuestion[], ctx: ConditionContext, 
       continue
     }
     score.required += 1
-    if (open) score.requiredUnanswered += 1
+    if (!answer || open) score.requiredUnanswered += 1
     else if (answer.status === 'approved') score.requiredApproved += 1
     else if (answer.status === 'draft' || answer.status === 'in_review') score.requiredDraft += 1
     else if (answer.status === 'unknown' || answer.status === 'skipped' || answer.status === 'not_applicable') {
