@@ -35,8 +35,10 @@ import { templateConfig } from './config.js'
 import { ensureStarterProfiles } from './personal.js'
 import { readSyncManifest, readTemplateRecord, writeTemplateRecord } from './template-sync.js'
 import type { ImpactReport, InitInput, StepResult } from './engine-types.js'
+import { dispositionFor } from './dispositions.js'
 
 export type { StepResult, ImpactReport, InitInput } from './engine-types.js'
+export { dispositionFor } from './dispositions.js'
 
 /** Personal module settings for brand:init. Throws on an unknown facet or facets without the module. */
 export function personalInit(input: Pick<InitInput, 'profile' | 'personal' | 'facets'>): PersonalModuleConfig {
@@ -975,19 +977,6 @@ export class InterviewEngine {
       writeAtomic(file, renderDraftFile(file, blocks))
     }
   }
-}
-
-const DISPOSITIONS: Array<{ words: string[]; status: Status; uncertainty: string }> = [
-  { words: ['unknown', "i don't know", 'idk'], status: 'unknown', uncertainty: 'Owner does not know. No value was invented.' },
-  { words: ['skip'], status: 'skipped', uncertainty: 'Owner skipped. Field stays unresolved.' },
-  { words: ['not relevant', 'n/a', 'na'], status: 'not_applicable', uncertainty: 'Owner marked this question not applicable.' },
-]
-
-/** `unknown`, `skip` and `n/a` (and their fa/tr aliases) mark a disposition. They are never stored as values. */
-export function dispositionFor(raw: string): { status: Status; uncertainty: string } | null {
-  const lower = normalizeCommand(raw).trim().toLowerCase()
-  const match = DISPOSITIONS.find((item) => item.words.includes(lower))
-  return match ? { status: match.status, uncertainty: match.uncertainty } : null
 }
 
 function toStep(step: ApprovalStep): StepResult {
