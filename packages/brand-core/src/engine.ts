@@ -34,45 +34,9 @@ import { PERSONAL_FACETS } from './types.js'
 import { templateConfig } from './config.js'
 import { ensureStarterProfiles } from './personal.js'
 import { readSyncManifest, readTemplateRecord, writeTemplateRecord } from './template-sync.js'
+import type { ImpactReport, InitInput, StepResult } from './engine-types.js'
 
-export interface StepResult {
-  kind: 'recorded' | 'info' | 'exit' | 'error' | 'impact'
-  message: string
-  questionId?: string
-  status?: Status
-  impact?: ImpactReport
-}
-
-export interface ImpactReport {
-  questionId: string
-  previous: { value: AnswerRecord['value']; status: Status } | null
-  proposedPreview: string
-  requiresConfirmation: boolean
-  impactedDocuments: string[]
-  impactedQuestions: string[]
-  approvalsPreserved: boolean
-}
-
-export interface InitInput {
-  name: string
-  slug: string
-  industry: string
-  sector?: string
-  language: string
-  languages: string[]
-  website?: string | null
-  mascot: boolean
-  gamification: boolean
-  publish: 'public' | 'private'
-  profile?: string
-  /** Turn on the Personal Brand OS module. Implied by `profile: personal-brand`. */
-  personal?: boolean
-  /** Personal facets, for example founder-executive and consultant-expert. Needs the personal module. */
-  facets?: string[]
-  reset?: boolean
-  /** The template commit this brand starts from, for template sync. Studio passes the template head. */
-  template?: { repository: string | null; commit: string | null; version: string | null; source: string }
-}
+export type { StepResult, ImpactReport, InitInput } from './engine-types.js'
 
 /** Personal module settings for brand:init. Throws on an unknown facet or facets without the module. */
 export function personalInit(input: Pick<InitInput, 'profile' | 'personal' | 'facets'>): PersonalModuleConfig {
