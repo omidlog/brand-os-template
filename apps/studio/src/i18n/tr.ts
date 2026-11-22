@@ -280,9 +280,11 @@ export const tr: Messages = {
   'design.specimen': 'The quick brown fox jumps over the lazy dog 0123456789',
 
   'assets.title': 'Varlıklar ve Maskot',
-  'assets.subtitle': 'brand/assets içindeki varlık listesi. Yalnızca yayın denetimlerinden geçen onaylı dosyaların önizlemesi vardır.',
+  'assets.subtitle': 'brand/assets içindeki varlık listesi. Güvenlik denetimlerinden geçen onaylı dosyaların ve taslakların önizlemesi vardır; taslaklar işaretlidir ve onaylı değildir. Herkese açık belgeler yalnızca onaylı varlıkları yayımlar.',
   'assets.empty': 'Varlık listesi boş.',
   'assets.filter': 'Türe göre filtrele',
+  'assets.draftFlag': 'Taslak, onaylı değil',
+  'assets.draftAlt': '{name} (taslak, onaylı değil)',
   'assets.noPreview': 'Önizleme yok',
   'assets.reason.not_approved': 'Onaylı değil',
   'assets.reason.not_present': 'Dosya depoda yok',

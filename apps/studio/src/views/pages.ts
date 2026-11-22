@@ -632,8 +632,10 @@ function assetCard(ctx: ViewContext, slug: string, asset: ProjectionAsset): Safe
   const { i } = ctx
   const status = asset.published ? badge(i.t('assets.status.published'), 'accent', 'globe') : asset.approved ? badge(i.t('assets.status.approved'), 'success', 'checkCircle') : badge(i.t('assets.status.draft'), 'warning', 'clock')
   return html`<li class="asset-card" data-kind="${asset.kind}">
-    <div class="asset-preview">${asset.preview_key
-      ? html`<img src="/brands/${slug}/assets/file/${asset.preview_key}" alt="${asset.name}" loading="lazy" decoding="async">`
+    <div class="asset-preview${asset.preview_state === 'draft' ? ' asset-preview-draft' : ''}">${asset.preview_key
+      ? asset.preview_state === 'draft'
+        ? html`<img src="/brands/${slug}/assets/file/${asset.preview_key}" alt="${i.t('assets.draftAlt', { name: asset.name })}" loading="lazy" decoding="async"><span class="asset-draft-flag">${badge(i.t('assets.draftFlag'), 'warning', 'clock')}</span>`
+        : html`<img src="/brands/${slug}/assets/file/${asset.preview_key}" alt="${asset.name}" loading="lazy" decoding="async">`
       : html`<div class="asset-placeholder">${icon('image')}<span>${i.t('assets.noPreview')}</span><span class="muted small">${asset.unavailable_reason ? i.t(`assets.reason.${asset.unavailable_reason}` as MessageKey) : ''}</span></div>`}</div>
     <div class="asset-body">
       <h3 class="asset-name" dir="auto">${asset.name}</h3>
