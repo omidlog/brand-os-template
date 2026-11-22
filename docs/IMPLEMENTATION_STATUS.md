@@ -13,7 +13,7 @@ Updated for 0.2.0 (2026-11-20). “Fixed” or “Done” means a test or a buil
 | P1-1 | Partial | Free-form answers become quoted draft proposals (`note:`, `brand:propose`, `brand:interview --assist`) and are never approved. An Anthropic adapter exists but is off unless configured with a key, and its live behavior is not tested (tests use a mock and a stubbed fetch). A browser interview UI is not built. |
 | P1-2 | Fixed | Token, mascot, component, social, and search tools read the brand files and approved records. |
 | P1-3 | Fixed | `--actor owner` cannot approve. Approval requires the human proof in `brand/.private/approval-secret`. |
-| P1-4 | Partial | `upgradeCore` / `brand:migrate` bump `brand/engine.lock`, migrate fact files and mascot statuses, and leave answers, approved facts, config and module prose byte-identical (Journey B). Pulling new template files into an existing brand repository is manual; the engine is not published to npm. |
+| P1-4 | Partial | `upgradeCore` / `brand:migrate` bump `brand/engine.lock`, migrate fact files and mascot statuses, and leave answers, approved facts, config and module prose byte-identical (Journey B). `npm run template:update` (see `docs/template-sync.md`) applies template core files to a brand repository on a new branch from a local template clone, using `.brand-os/sync.json` and the commit recorded in `brand/template-version.json`; brand files are never touched. Studio shows **Updates available** and opens (never merges) an update pull request on a new branch through the GitHub API (fake GitHub in tests; not yet run against real GitHub). A periodic Studio job checks every brand (check only by default; with `STUDIO_TEMPLATE_AUTO_PR=1` it keeps at most one open update pull request per brand). Versioned migrations (`.brand-os/migrations/`, ordered, core files only, `delete` only so far) run in both `template:update` and Studio's update pull request and are listed there. Brand repositories that do not use Studio can turn on the optional **Template update** GitHub Action (`.github/workflows/template-update.yml`, off until the `BRAND_OS_TEMPLATE_TOKEN` secret exists; keeps one update pull request open, never merges). `tests/template-sync-e2e.test.ts` runs create, template change, update pull request, merge and an empty second update against local git repositories and a fake GitHub. Template sync is complete in code and tests; none of it has run against real GitHub yet. |
 | P1-5 | Fixed | `brand:init` writes the brand name and slug into `brand-manifest.json`. |
 | P1-6 | Fixed | Stage validation checks unique ids and contiguous order. Six stages are only the example file. |
 | P1-7 | Fixed | A disabled mascot omits module docs and emits an empty catalog JSON, so state ids are not in the data bundle. |
@@ -98,7 +98,7 @@ Branch `feat/phase-9-read-only-studio`, stacked on Phase 8. Guide, architecture 
 | Design and accessibility | Done | `studio.*` design variables, light and dark, responsive (1440/1024/390 px checked in a browser), skip link, focus ring, keyboard drawer, labelled fields, status as text plus icon. |
 | Localization | Done | en, fa (RTL, layout mirroring verified in a browser) and tr catalogs with identical keys and placeholders. Brand content inside documents stays in the language the repository holds. |
 | Server CLI | Done | `npm run studio:hash-password`, `npm run studio -- totp-secret\|session-secret\|brands\|register\|unregister`. Registering an existing repository is server-side only. No automated tests for the CLI wrapper itself; it calls the tested registry, hashing and GitHub client. |
-| Tests | Done | 48 Studio tests in five files with an in-memory GitHub (no network, no real repositories). `tests/studio-browser.test.ts` drives headless Chrome inside `npm test` when Chrome is installed and skips otherwise; `npm run test:e2e` requires it. |
+| Tests | Done | 48 Studio tests in five files with an in-memory GitHub (no network, no real repositories). All Studio tests are named `tests/studio-*.test.ts` and form the Studio suite (`npm run test:studio`, part of `npm run test:full` and `npm run ci`); `npm test` is the brand suite only. `tests/studio-browser.test.ts` drives headless Chrome when it is installed and skips otherwise; `npm run test:e2e` requires it. CI runs the Studio suite only in the template repository (its own `studio` job); brand repositories never run it. |
 | VPS deployment | Not started | Phase 10: reverse proxy, TLS, process supervision, DNS for `studio.omidataei.com`. Nothing is deployed. |
 | Live GitHub | Not verified | All GitHub behavior is tested against a fake at the HTTP level. A first real run against GitHub (token permissions, template generation timing) is still owed. |
 
@@ -118,7 +118,7 @@ Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for exampl
 
 ## Commands that this remediation expects to pass
 
-`npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.
+`npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test` (brand suite; `npm run test:full` adds the Studio suite), `npm run build`, and `npm run build:docs:nomascot`.
 
 ## Second remediation contract
 

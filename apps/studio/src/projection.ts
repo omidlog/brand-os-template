@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
@@ -7,6 +8,7 @@ import {
   PERSONAL_DOCUMENT_KINDS,
   readFacts,
   readPublicationPolicy,
+  readTemplateRecord,
   rightsBlocker,
 } from '@brand-os/brand-core'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard } from '@brand-os/brand-core'
@@ -43,6 +45,9 @@ export interface ProjectionToken {
   example: boolean
 }
 
+/** Asset statuses that never get a preview: the file was turned down or taken out of use. */
+const NO_PREVIEW_STATUSES = new Set(['rejected', 'retired', 'revoked', 'deprecated', 'archived', 'withdrawn', 'retracted'])
+
 export interface ProjectionAsset {
   id: string
   name: string
@@ -54,8 +59,14 @@ export interface ProjectionAsset {
   restrictions: string | null
   approved: boolean
   published: boolean
-  /** Key of the cached preview file (its SHA-256). Null when there is no approved, safe, readable file. */
+  /** Key of the cached preview file (its SHA-256). Null when there is no safe, readable file to preview. */
   preview_key: string | null
+  /**
+   * What the preview shows: an approved file, or a draft (not yet approved) one that only the owner
+   * sees in Studio, always badged as a draft. Null without a preview. Publication is unaffected:
+   * public docs still publish approved assets only.
+   */
+  preview_state: 'approved' | 'draft' | null
   mime: string | null
   unavailable_reason: 'not_approved' | 'not_present' | 'unsafe' | 'checksum' | 'unsupported_type' | null
   /** For a refused SVG: the issue to show first (a non-fixable one if any). Absent in older caches. */
@@ -64,6 +75,8 @@ export interface ProjectionAsset {
 
 export interface StudioProjection {
   schema_version: 1
+  /** The template commit recorded in brand/template-version.json; null when the brand has no record. Absent in caches built before template sync. */
+  template?: { commit: string | null; repository: string | null } | null
   brand: {
     name: string
     name_status: string
@@ -145,6 +158,17 @@ export interface PreviewFile {
   mime: string
 }
 
+function templateRecord(root: string): StudioProjection['template'] {
+  try {
+    const record = readTemplateRecord(root)
+    if (!record) return null
+    const repository = record.repository && /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/.test(record.repository) ? record.repository : null
+    return { commit: record.commit, repository }
+  } catch {
+    return null
+  }
+}
+
 export function buildProjection(root: string, expectedSlug: string): { projection: StudioProjection; previews: PreviewFile[] } {
   if (!fs.existsSync(path.join(root, 'brand', 'brand.config.yaml'))) throw new ProjectionError('not_brand_os', 'The repository has no brand/brand.config.yaml.')
   const engine = new InterviewEngine(root)
@@ -208,7 +232,10 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     }
   })
 
-  // Assets: only approved files that pass the core publication inspection get a preview.
+  // Assets: approved files and drafts (not yet approved) get a preview when they pass the core
+  // publication inspection. A draft preview is owner-only and always labeled as a draft; rejected or
+  // retired files get none. A draft without a manifest checksum is keyed by its content hash, but a
+  // wrong checksum is still refused.
   const manifest = readYaml<{ assets?: Array<Record<string, unknown>> }>(root, 'brand/assets/asset-manifest.yaml', {})
   const previews: PreviewFile[] = []
   const assets: ProjectionAsset[] = (manifest.assets ?? []).slice(0, 2000).flatMap((asset) => {
@@ -222,14 +249,15 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     let unavailable_reason: ProjectionAsset['unavailable_reason'] = null
     let unavailable_detail: ProjectionAsset['unavailable_detail'] = null
     const checksum = typeof asset.checksum_sha256 === 'string' && /^[0-9a-f]{64}$/.test(asset.checksum_sha256) ? asset.checksum_sha256 : null
-    if (!approved) unavailable_reason = 'not_approved'
+    const draft = !approved && !NO_PREVIEW_STATUSES.has(status)
+    if (!approved && !draft) unavailable_reason = 'not_approved'
     else if (!mime) unavailable_reason = 'unsupported_type'
-    else if (!checksum) unavailable_reason = 'checksum'
+    else if (!checksum && approved) unavailable_reason = 'checksum'
     else {
       const inspected = inspectAssetForPublication(root, asset.path, checksum)
       if (inspected.ok) {
-        preview_key = checksum
-        previews.push({ key: checksum, source: inspected.realPath, mime })
+        preview_key = checksum ?? createHash('sha256').update(fs.readFileSync(inspected.realPath)).digest('hex')
+        previews.push({ key: preview_key, source: inspected.realPath, mime })
       } else {
         unavailable_reason = inspected.reason === 'missing' ? 'not_present' : inspected.reason === 'checksum' ? 'checksum' : 'unsafe'
         const issues = inspected.issues ?? []
@@ -253,6 +281,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
         approved,
         published,
         preview_key,
+        preview_state: preview_key ? (approved ? 'approved' : 'draft') : null,
         mime: preview_key ? mime : null,
         unavailable_reason,
         unavailable_detail,
@@ -329,6 +358,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     assets,
     mascot,
     personal: personal ? { facets, documents: personalDocs } : null,
+    template: templateRecord(root),
   }
   assertNoSecrets(projection)
   return { projection, previews }

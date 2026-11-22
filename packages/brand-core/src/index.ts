@@ -180,3 +180,24 @@ export type { FinanceBasis, FinanceInputs, FinancePeriod, FinanceReport, Finance
 export { FinanceInputPathError, resolveFinanceInputPath, RESTRICTED_FINANCE_DIR, runFinanceFile } from './finance-input.js'
 export { isMascotLifecycle, MASCOT_LIFECYCLE, migrateMascotCatalog, validateMascotLifecycle } from './mascot-lifecycle.js'
 export type { MascotArtwork, MascotLifecycle, MascotMigration } from './mascot-lifecycle.js'
+export {
+  applyTemplateUpdate,
+  classifyPath,
+  defaultUpdateBranch,
+  formatUpdatePlan,
+  globToRegExp,
+  isWriteAction,
+  planChanges,
+  parseSyncManifest,
+  planTemplateUpdate,
+  readSyncManifest,
+  readTemplateRecord,
+  SYNC_MANIFEST_PATH,
+  TEMPLATE_RECORD_PATH,
+  templateRecordText,
+  updateCommitMessage,
+  writeTemplateRecord,
+} from './template-sync.js'
+export { formatMigrationRuns, migrationFiles, migrationPaths, MIGRATIONS_DIR, parseMigration, pendingMigrations, planMigrations } from './template-migrations.js'
+export type { DeleteOperation, Migration, MigrationOperation, MigrationRun, MigrationSources } from './template-migrations.js'
+export type { ApplyResult, ChangeSources, Classification, PlannedChange, SyncKind, SyncManifest, SyncRule, TemplateRecord, UpdateAction, UpdatePlan } from './template-sync.js'

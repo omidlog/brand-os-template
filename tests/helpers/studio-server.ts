@@ -48,6 +48,7 @@ export async function startStudio(overrides: Partial<StudioConfig> = {}, githubO
     sessionTtlMs: 3600_000,
     idleTtlMs: 1800_000,
     syncTtlMs: 300_000,
+    templateCheck: { intervalMs: 0, autoOpen: false },
     secureCookies: false,
     trustProxy: false,
     ...overrides,
