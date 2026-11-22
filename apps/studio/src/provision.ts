@@ -10,7 +10,7 @@ import { extractTarGz, studioPathAllowed } from './github/tar.js'
 import { PROVISION_STEPS, type BrandRecord, type CleanupState, type ProvisionRequest, type ProvisionStep, type Registry } from './registry.js'
 
 /**
- * Owner-only provisioning of one new private brand repository. This is Studio's single write path.
+ * Owner-only provisioning of one new private brand repository. This is Studio's first write path; the second is opening template update pull requests (template-update.ts).
  *
  * 1. Validate the request (slug, profile, facets, locales, destination owner allowlist).
  * 2. Check that the template exists and is a template repository.
@@ -40,6 +40,20 @@ export type ValidationCode =
   | 'repo_invalid'
 
 export type StartCode = 'not_configured' | 'duplicate' | 'busy' | 'not_failed' | 'unknown_brand'
+
+/** The result of the wizard's read-only "is this repository name free?" check. */
+export type NameCheck =
+  | { state: 'free' }
+  | { state: 'taken'; where: 'studio' | 'github'; suggestion: string | null }
+  | { state: 'invalid' }
+  | { state: 'unknown' }
+
+/** Alternatives offered when a name is taken: <base>-brand, then <base>-brand-2 … -5. */
+export function nameSuggestions(base: string, taken: string): string[] {
+  const root = `${base}-brand`
+  const out = [root, ...[2, 3, 4, 5].map((n) => `${root}-${n}`)]
+  return out.filter((name) => validRepoName(name) && name.toLowerCase() !== taken.toLowerCase())
+}
 
 export interface ProvisionDeps {
   registry: Registry
@@ -145,7 +159,7 @@ export interface InitChanges {
 }
 
 /** Runs the core initializer on an extracted checkout and returns the file changes. */
-export function initializeCheckout(root: string, request: ProvisionRequest): InitChanges {
+export function initializeCheckout(root: string, request: ProvisionRequest, template?: { repository: string; commit: string | null }): InitChanges {
   const before = hashTree(root)
   applyInit(root, {
     name: request.name,
@@ -159,6 +173,8 @@ export function initializeCheckout(root: string, request: ProvisionRequest): Ini
     profile: request.profile === 'personal-brand' ? 'personal-brand' : 'universal',
     personal: request.profile === 'personal-brand',
     facets: request.facets,
+    // The checkout holds only brand/, so the template version is unknown here; the commit is what counts.
+    template: template ? { repository: template.repository, commit: template.commit, version: null, source: 'studio' } : undefined,
   })
   const after = hashTree(root)
   const write: InitChanges['write'] = []
@@ -221,34 +237,121 @@ export class ProvisioningService {
     await Promise.allSettled(jobs.filter(Boolean) as Promise<void>[])
   }
 
-  start(request: ProvisionRequest, actor: string): { ok: true } | { ok: false; code: StartCode } {
-    if (!this.configured) return { ok: false, code: 'not_configured' }
-    if (this.lockKeys(request).some((key) => this.inflight.has(key))) return { ok: false, code: 'busy' }
-    if (this.deps.registry.get(request.slug) || this.deps.registry.byRepoName(request.owner, request.repo)) return { ok: false, code: 'duplicate' }
+  private newRecord(request: ProvisionRequest, actor: string, previous: BrandRecord | null): BrandRecord {
     const at = this.now().toISOString()
-    const record: BrandRecord = {
+    // Same destination as the failed attempt: keep the repository id Studio recorded, so a retry can
+    // resume against a repository it created itself, and keep the cleanup state.
+    const sameRepo = previous !== null && previous.repo.owner.toLowerCase() === request.owner.toLowerCase() && previous.repo.name.toLowerCase() === request.repo.toLowerCase()
+    return {
       slug: request.slug,
       display_name: request.name,
       profile: request.profile,
-      repo: { owner: request.owner, name: request.repo, id: null, html_url: '', default_branch: 'main' },
+      repo: sameRepo ? { ...previous.repo } : { owner: request.owner, name: request.repo, id: null, html_url: '', default_branch: 'main' },
       source: 'provisioned',
-      created_at: at,
+      created_at: previous?.created_at ?? at,
       created_by: actor,
       provisioning: {
         state: 'running',
-        attempts: 1,
+        attempts: (previous?.provisioning?.attempts ?? 0) + 1,
         started_at: at,
         finished_at: null,
         steps: PROVISION_STEPS.map((id) => ({ id, status: 'pending' as const })),
         error: null,
-        cleanup: 'not_needed',
+        cleanup: sameRepo ? (previous.provisioning?.cleanup ?? 'not_needed') : 'not_needed',
         request,
         initial_commit: null,
       },
     }
-    this.deps.registry.upsert(record)
+  }
+
+  start(request: ProvisionRequest, actor: string): { ok: true } | { ok: false; code: StartCode } {
+    if (!this.configured) return { ok: false, code: 'not_configured' }
+    if (this.lockKeys(request).some((key) => this.inflight.has(key))) return { ok: false, code: 'busy' }
+    if (this.deps.registry.get(request.slug) || this.deps.registry.byRepoName(request.owner, request.repo)) return { ok: false, code: 'duplicate' }
+    this.deps.registry.upsert(this.newRecord(request, actor, null))
     this.launch(request)
     return { ok: true }
+  }
+
+  /** The failed provisioning record for this slug, or why there is none. Never calls GitHub. */
+  failedRecord(slug: string): { ok: true; record: BrandRecord } | { ok: false; code: StartCode } {
+    const record = this.deps.registry.get(slug)
+    if (!record?.provisioning) return { ok: false, code: 'unknown_brand' }
+    if (record.provisioning.state !== 'failed') return { ok: false, code: 'not_failed' }
+    if (this.lockKeys(record.provisioning.request).some((key) => this.inflight.has(key))) return { ok: false, code: 'busy' }
+    return { ok: true, record }
+  }
+
+  /**
+   * "Edit and retry": replaces the failed attempt `previousSlug` with an edited request (a new slug,
+   * owner or repository name is allowed) and starts provisioning again. The failed record is replaced
+   * in Studio's registry only; nothing on GitHub is deleted.
+   */
+  editAndRetry(previousSlug: string, request: ProvisionRequest, actor: string): { ok: true } | { ok: false; code: StartCode } {
+    if (!this.configured) return { ok: false, code: 'not_configured' }
+    const failed = this.failedRecord(previousSlug)
+    if (!failed.ok) return failed
+    const previous = failed.record
+    if (this.lockKeys(request).some((key) => this.inflight.has(key))) return { ok: false, code: 'busy' }
+    const bySlug = this.deps.registry.get(request.slug)
+    const byRepo = this.deps.registry.byRepoName(request.owner, request.repo)
+    if ((bySlug && bySlug.slug !== previous.slug) || (byRepo && byRepo.slug !== previous.slug)) return { ok: false, code: 'duplicate' }
+    const record = this.newRecord(request, actor, previous)
+    if (previous.slug !== request.slug) this.deps.registry.remove(previous.slug)
+    this.deps.registry.upsert(record)
+    this.deps.log?.(`provisioning edited and retried: ${previous.slug} -> ${request.slug}`)
+    this.launch(request)
+    return { ok: true }
+  }
+
+  /**
+   * "Discard this attempt": removes a failed provisioning record from Studio's own registry. It never
+   * calls GitHub and never deletes a repository; a repository that needs cleanup stays for the owner.
+   */
+  discardFailed(slug: string): { ok: true; record: BrandRecord } | { ok: false; code: StartCode } {
+    const failed = this.failedRecord(slug)
+    if (!failed.ok) return failed
+    this.deps.registry.remove(slug)
+    this.deps.log?.(`failed provisioning discarded: ${slug}`)
+    return failed
+  }
+
+  /**
+   * Read-only check that owner/repo is free, before the wizard submits. Only allowlisted owners and
+   * valid names are looked up (Studio is not a lookup service for arbitrary repositories), with a
+   * single GET per candidate. `retryOf` is the failed attempt being edited: its own record and the
+   * repository Studio recorded for it do not count as taken.
+   */
+  async checkName(input: { owner: string; repo: string; slug?: string; retryOf?: string }): Promise<NameCheck> {
+    const owner = this.deps.allowedOwners.find((allowed) => allowed.toLowerCase() === input.owner.trim().toLowerCase())
+    const repo = input.repo.trim()
+    if (!owner || !validRepoName(repo)) return { state: 'invalid' }
+    if (!this.configured) return { state: 'unknown' }
+    const previous = input.retryOf ? this.deps.registry.get(input.retryOf) : null
+    const ownId = previous?.provisioning?.state === 'failed' ? previous.repo.id : null
+    const inStudio = (name: string): boolean => {
+      const found = this.deps.registry.byRepoName(owner, name)
+      return found !== null && found.slug !== previous?.slug
+    }
+    const onGitHub = async (name: string): Promise<boolean> => {
+      const existing = await this.deps.github.getRepo(owner, name)
+      return existing !== null && (ownId === null || existing.id !== ownId)
+    }
+    const suggest = async (): Promise<string | null> => {
+      const slug = (input.slug ?? '').trim()
+      const base = (slug && validRepoName(slug) ? slug : repo).replace(/-brand(?:-\d+)?$/, '')
+      for (const candidate of nameSuggestions(base, repo)) {
+        if (!inStudio(candidate) && !(await onGitHub(candidate))) return candidate
+      }
+      return null
+    }
+    try {
+      if (inStudio(repo)) return { state: 'taken', where: 'studio', suggestion: await suggest() }
+      if (await onGitHub(repo)) return { state: 'taken', where: 'github', suggestion: await suggest() }
+      return { state: 'free' }
+    } catch {
+      return { state: 'unknown' }
+    }
   }
 
   retry(slug: string): { ok: true } | { ok: false; code: StartCode } {
@@ -316,10 +419,17 @@ export class ProvisioningService {
         const { errors } = validateRequest({ ...request }, this.deps.allowedOwners)
         if (Object.keys(errors).length) throw new StepError('invalid_request', 'The request is no longer valid.')
       })
-      await this.step(slug, 'check_template', async () => {
+      const templateCommit = await this.step(slug, 'check_template', async () => {
         const template = await github.getRepo(templateOwner, templateRepo)
         if (!template) throw new StepError('template_unavailable', 'The Brand OS template repository is not reachable with the provisioning access.')
         if (!template.is_template) throw new StepError('template_unavailable', 'The configured template repository is not marked as a GitHub template.')
+        // Recorded in brand/template-version.json so template:update knows where this brand starts.
+        // Best effort: a brand without a recorded commit can still be updated with --base.
+        try {
+          return (await github.getBranchHead(templateOwner, templateRepo, template.default_branch)).sha
+        } catch {
+          return null
+        }
       })
       const known = this.deps.registry.get(slug)?.repo.id ?? null
       let repo = await this.step(slug, 'check_destination', async () => {
@@ -374,7 +484,7 @@ export class ProvisioningService {
         const config = readConfig(checkout)
         if (!config) throw new StepError('template_invalid', 'The template content has no brand/brand.config.yaml.')
         if (config.initialized === true && config.slug === request.slug) return null
-        return initializeCheckout(checkout, request)
+        return initializeCheckout(checkout, request, { repository: `${templateOwner}/${templateRepo}`, commit: templateCommit })
       })
       let commit = head.sha
       if (!changes) {

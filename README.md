@@ -79,7 +79,12 @@ npm run build
 | `npm run studio:start` | Start the private read-only Studio on `127.0.0.1:4100` (configuration from the environment, see `apps/studio/.env.example`). |
 | `npm run studio -- bootstrap-owner\|check-config\|brands\|register\|unregister` | Owner server commands for Studio: owner sign-in material (password hash, TOTP key, session secret) as a 0600 env file, configuration check, and registering an existing private brand repository. `npm run studio:hash-password` and `-- totp-secret\|session-secret` remain. |
 | `npm run studio:build` | Bundle Studio for production (`apps/studio/dist`), as the Docker image does. |
-| `npm run test:e2e` | Studio browser tests in headless Chrome (they also run inside `npm test` when Chrome is installed, and skip otherwise). |
+| `npm run test` | Brand suite: every `tests/*.test.ts` except `tests/studio-*` (what a brand repository's CI runs). |
+| `npm run test:studio` | Studio suite: `tests/studio-*.test.ts` (server, sync, provisioning, headless Chrome; browser tests skip without Chrome). Template CI only. |
+| `npm run test:full` | Both suites (`npm run ci` uses it). |
+| `npm run test:e2e` | Studio browser tests in headless Chrome; fails when Chrome is missing. |
+
+CI (`.github/workflows/validate.yml`, copied into every brand repository): runs on pull requests, pushes to `main` and by hand; a newer push cancels the older run. A change made only of brand content (`brand/`, `docs/`, `docs-internal/`, `assets/`, top-level `*.md`, `llms*.txt`) takes the fast path (about 2 minutes: lint, tokens, docs prep, typecheck, validate, docs builds) and skips the test suite. Only the template runs the Studio suite and builds the Studio image. A brand with `publish_docs: private` never gets a public docs build. Every job and test step has a timeout.
 
 Details: `docs-internal/SETUP.md`.
 
@@ -144,11 +149,15 @@ Official brand sentences are never auto-translated. See `docs-internal/LOCALIZAT
 
 ## Docs
 
-`npm run build` prepares a public site only when `publish_docs` is `public`. The EXAMPLE template is public because it holds no confidential facts. `brand:init` defaults to private, and a public build of a private brand stops. The public site carries approved and published facts only; the `/dashboard` page there is a stub with no brand data. `npm run docs:start` is the internal preview with drafts, the internal Brand Book and the review dashboard; do not deploy it. `build/fa` is right to left. Search is local and currently English-only. Restricted values stay in `brand/.private` and are omitted from every build. `npx tsx scripts/scan-public.ts apps/docs/build` checks a built site for canaries, private files and raw tokens. See `docs-internal/DEPLOYMENT.md`.
+`npm run build` (and `npm run ci`) prepares a public site only when `publish_docs` is `public`, like CI; for a private brand it skips the public build and the no-mascot variant and compiles the internal docs instead (`scripts/build-docs.ts`). The EXAMPLE template is public because it holds no confidential facts. `brand:init` defaults to private, and a public build of a private brand stops. The public site carries approved and published facts only; the `/dashboard` page there is a stub with no brand data. `npm run docs:start` is the internal preview with drafts, the internal Brand Book and the review dashboard; do not deploy it. `build/fa` is right to left. Search is local and currently English-only. Restricted values stay in `brand/.private` and are omitted from every build. `npx tsx scripts/scan-public.ts apps/docs/build` checks a built site for canaries, private files and raw tokens. See `docs-internal/DEPLOYMENT.md`.
 
 ## Tokens and assets
 
 Answer the structured color, type-scale and logo-size questions, approve them, then run `npm run brand:tokens:generate`. Generated drafts in `brand/tokens/generated/` override the EXAMPLE base values with the same id and stay drafts until `brand:tokens:approve` and `brand:tokens:publish`. You can still edit `brand/tokens/*.json` by hand, then `npm run tokens:build`. Outputs are CSS variables and TypeScript. The palette is EXAMPLE and the contrast pairs in the template pass WCAG AA for the listed combinations. The SVG files under `brand/assets` are placeholders. The mascot turnaround is missing on purpose.
+
+## Knowledge Inbox
+
+Throw messy ideas into the brand with `npm run brand:knowledge -- capture` (local and untracked by default), find them later in Persian, Turkish or English (`search`), link them, and turn part of one into **draft** proposals with verbatim quotations (`propose`, preview first). A note is never a brand fact: drafts still go through `brand:review`, `brand:approve` and `brand:publish`. `share` moves a safe note into `brand/knowledge/shared/` in this private repository, where Studio shows it read-only after merge. Restricted notes are encrypted. Guide: `docs-internal/KNOWLEDGE.md`; Claude Code skill: `agent-skills/knowledge-inbox/SKILL.md`.
 
 ## Studio
 
@@ -157,9 +166,9 @@ One private Studio shows every brand at `/brands/<slug>` and creates new ones. I
 1. Sign in (password and authenticator code), choose **New brand**, and enter name, slug, profile (business or personal brand), languages, optional mascot and gamification, and the GitHub destination. Studio creates one **private** repository from this template with the same initializer as `brand:init`, and shows progress, errors and retry.
 2. Copy the repository URL or the **Claude Code starter prompt** and open a new Claude Code session. Claude Code needs its own GitHub access to the private repository (a clone or an authorized GitHub connection); a link is not permission.
 3. Edit in Claude Code, approve facts yourself with the local CLI, and merge the pull request.
-4. Refresh Studio: it shows the merged default branch with its commit SHA and sync time, cited documents, tokens, approved assets, history and open pull requests (labelled non-canonical).
+4. Refresh Studio: it shows the merged default branch with its commit SHA and sync time, cited documents, tokens, approved assets, shared knowledge notes (labelled unverified ideas), history and open pull requests (labelled non-canonical).
 
-Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub write is creating a new repository. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. The production package for a VPS behind an existing reverse proxy is `infra/production`, with runbooks in `docs-internal/phase-10/`. Nothing is deployed by this repository.
+Studio has no chat, no AI, no edit or approval controls, no uploads and no Git actions. Its only GitHub writes are creating a new repository and opening (never merging), when the owner asks or the opt-in periodic check finds a brand behind, a template update pull request on a new branch. Phase 8 personal brands are shown read-only. Setup, GitHub permissions, security model and tests: `docs-internal/STUDIO.md`. The production package for a VPS behind an existing reverse proxy is `infra/production`, with runbooks in `docs-internal/phase-10/`. Nothing is deployed by this repository.
 
 ## Agent instructions
 

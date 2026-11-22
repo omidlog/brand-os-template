@@ -27,17 +27,21 @@ import { i18n, isLocale, type I18n, type Locale, type MessageKey } from './i18n/
 import { validateRequest, type ProvisioningService } from './provision.js'
 import type { BrandRecord, Registry } from './registry.js'
 import { brandIsReady, type SyncService } from './sync.js'
+import type { TemplateUpdateService, UpdateStatus } from './template-update.js'
 import type { SafeHtml } from './views/html.js'
 import type { BrandView, ViewContext } from './views/layout.js'
+import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from './views/knowledge.js'
 import * as pages from './views/pages.js'
 
 /**
  * The Studio HTTP application.
  *
  * Read-only by construction: the route table below is the complete list of endpoints. The only
- * non-GET routes are sign-in, sign-out, the owner-only provisioning pair (create, retry), the cache
- * refresh, and the signed GitHub webhook. None of them writes brand facts, documents, assets or
- * commits to an existing brand repository. Every brand route resolves the slug through the
+ * non-GET routes are sign-in, sign-out, the owner-only provisioning routes (create, retry, discard a
+ * failed attempt from Studio's own registry), the cache refresh, the signed GitHub webhook, and
+ * "Open update PR" (Studio's second GitHub write: a new `template-update/<sha>` branch and a pull
+ * request in a brand repository; never the default branch, never a merge). None of them writes brand
+ * facts, documents or assets. Every brand route resolves the slug through the
  * server-side registry, so a forged slug cannot select a repository.
  */
 export interface StudioDeps {
@@ -45,6 +49,7 @@ export interface StudioDeps {
   registry: Registry
   sync: SyncService
   provisioning: ProvisioningService
+  templateUpdates: TemplateUpdateService
   readClient: GitHubClient
   provisionClient: GitHubClient
   now?: () => number
@@ -79,8 +84,14 @@ const STATIC_FILES: Record<string, string> = {
   'studio.css': 'text/css; charset=utf-8',
   'studio.js': 'text/javascript; charset=utf-8',
   'favicon.svg': 'image/svg+xml',
+  'logo-omid-ataei-white.svg': 'image/svg+xml',
+  'fonts/inter-var.woff2': 'font/woff2',
+  'fonts/rajdhani-medium.woff2': 'font/woff2',
+  'fonts/rajdhani-semibold.woff2': 'font/woff2',
+  'fonts/rajdhani-bold.woff2': 'font/woff2',
+  'fonts/vazirmatn-var.woff2': 'font/woff2',
 }
-const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'history', 'handoff'] as const
+const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'history', 'handoff'] as const
 
 export interface RouteInfo {
   method: string
@@ -94,7 +105,7 @@ export function createStudio(deps: StudioDeps): {
   sessions: SessionStore
   routes: RouteInfo[]
 } {
-  const { config, registry, sync, provisioning } = deps
+  const { config, registry, sync, provisioning, templateUpdates } = deps
   const now = deps.now ?? Date.now
   const log = deps.log ?? (() => undefined)
   const sessions = new SessionStore(config.sessionTtlMs, config.idleTtlMs, now)
@@ -104,6 +115,8 @@ export function createStudio(deps: StudioDeps): {
   const provisionLimiter = new RateLimiter(10, 60 * 60_000, now)
   const refreshLimiter = new RateLimiter(1, 5_000, now)
   const testLimiter = new RateLimiter(5, 60_000, now)
+  const nameCheckLimiter = new RateLimiter(60, 60_000, now)
+  const updateLimiter = new RateLimiter(6, 10 * 60_000, now)
   const deliveries = new DeliveryLog()
   const autoRefreshAt = new Map<string, number>()
   let templateCheck: { at: number; state: 'ok' | 'missing' | 'unknown' } | null = null
@@ -214,7 +227,8 @@ export function createStudio(deps: StudioDeps): {
     if (!type) return notFound(ctx)
     ctx.res.statusCode = 200
     ctx.res.setHeader('Content-Type', type)
-    ctx.res.setHeader('Cache-Control', 'public, max-age=300')
+    // Font files never change under the same name; everything else may change on deploy.
+    ctx.res.setHeader('Cache-Control', name.startsWith('fonts/') ? 'public, max-age=604800' : 'public, max-age=300')
     ctx.res.end(fs.readFileSync(path.join(STATIC_DIR, name)))
   }
 
@@ -272,11 +286,16 @@ export function createStudio(deps: StudioDeps): {
 
   const brands: Handler = (ctx) => {
     const synced = new Map<string, { sha: string | null; at: string | null }>()
+    const updates = new Map<string, UpdateStatus>()
+    // Never waits for GitHub: the cached template head, refreshed in the background when due.
+    const head = templateUpdates.peekHead()
     for (const record of registry.list()) {
-      const status = sync.get(record.slug).status
+      const cached = sync.get(record.slug)
+      const status = cached.status
       synced.set(record.slug, { sha: status.sha, at: status.committed_at ?? status.synced_at })
+      if (brandIsReady(record) && cached.projection) updates.set(record.slug, templateUpdates.status(cached.projection, head, cached.history?.pulls ?? []))
     }
-    render(ctx, 200, pages.brandsPage(view(ctx), { canCreate: provisioning.configured, synced }))
+    render(ctx, 200, pages.brandsPage(view(ctx), { canCreate: provisioning.configured, synced, updates, discarded: ctx.url.searchParams.get('discarded') === '1' }))
   }
 
   async function checkTemplate(): Promise<'ok' | 'missing' | 'unknown'> {
@@ -293,7 +312,14 @@ export function createStudio(deps: StudioDeps): {
     return state
   }
 
-  async function wizard(ctx: RequestContext, status: number, values: pages.WizardState['values'], errors: Record<string, string>, formError?: string): Promise<void> {
+  /** The failed attempt an "Edit and retry" form edits, if it is still a failed attempt. */
+  function retryTarget(slug: string): BrandRecord | null {
+    if (!slug) return null
+    const found = provisioning.failedRecord(slug)
+    return found.ok ? found.record : null
+  }
+
+  async function wizard(ctx: RequestContext, status: number, values: pages.WizardState['values'], errors: Record<string, string>, formError?: string, retryOf: BrandRecord | null = null): Promise<void> {
     render(
       ctx,
       status,
@@ -301,6 +327,7 @@ export function createStudio(deps: StudioDeps): {
         values,
         errors,
         formError,
+        retryOf: retryOf ? { slug: retryOf.slug, repo: `${retryOf.repo.owner}/${retryOf.repo.name}`, repoMayRemain: retryOf.provisioning?.cleanup === 'required' } : null,
         owners: provisioning.allowedOwners,
         template: `${config.github.templateOwner}/${config.github.templateRepo}`,
         templateState: await checkTemplate(),
@@ -310,7 +337,27 @@ export function createStudio(deps: StudioDeps): {
   }
 
   const newBrandForm: Handler = async (ctx) => {
+    // "Edit and retry" from a failed provisioning page: the previous answers, ready to change.
+    const previous = retryTarget(ctx.url.searchParams.get('retry') ?? '')
+    if (previous?.provisioning) {
+      const r = previous.provisioning.request
+      return wizard(ctx, 200, { ...r, facets: [...r.facets], locales: [...r.locales] }, {}, undefined, previous)
+    }
     await wizard(ctx, 200, { profile: 'business', default_locale: 'en', locales: ['en'], owner: provisioning.allowedOwners[0] }, {})
+  }
+
+  /** Read-only: is owner/repo free on GitHub and in Studio? One GET per candidate, never a write. */
+  const repoCheck: Handler = async (ctx) => {
+    if (!nameCheckLimiter.take('owner').ok) return sendJson(ctx.res, 429, { state: 'unknown' })
+    const q = ctx.url.searchParams
+    const result = await withTimeout(provisioning.checkName({ owner: q.get('owner') ?? '', repo: q.get('repo') ?? '', slug: q.get('slug') ?? '', retryOf: q.get('retry_of') ?? '' }), 10_000)
+    ctx.res.setHeader('Cache-Control', 'no-store')
+    sendJson(ctx.res, 200, result ?? { state: 'unknown' })
+  }
+
+  function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | null> {
+    let timer: NodeJS.Timeout | undefined
+    return Promise.race([work, new Promise<null>((resolve) => (timer = setTimeout(() => resolve(null), ms)))]).finally(() => clearTimeout(timer))
   }
 
   const createBrand: Handler = async (ctx) => {
@@ -327,15 +374,31 @@ export function createStudio(deps: StudioDeps): {
       owner: first(form.owner),
       repo: first(form.repo),
     }
-    if (!provisioning.configured) return wizard(ctx, 409, values, {}, ctx.i.t('wizard.error.not_configured'))
+    const retrySlug = first(form.retry_of)
+    const previous = retryTarget(retrySlug)
+    if (!provisioning.configured) return wizard(ctx, 409, values, {}, ctx.i.t('wizard.error.not_configured'), previous)
+    // The failed attempt was retried, discarded or finished meanwhile: say so instead of guessing.
+    if (retrySlug && !previous) return wizard(ctx, 409, values, {}, ctx.i.t('wizard.error.retry_gone'))
     const { request, errors } = validateRequest(values as Record<string, unknown>, provisioning.allowedOwners)
     if (!request) {
       const messages = Object.fromEntries(Object.entries(errors).map(([field, code]) => [field, ctx.i.t(`wizard.error.${code}` as MessageKey)]))
-      return wizard(ctx, 422, values, messages)
+      return wizard(ctx, 422, values, messages, undefined, previous)
     }
-    if (!provisionLimiter.take('owner').ok) return wizard(ctx, 429, values, {}, ctx.i.t('wizard.error.rate_limited'))
-    const started = provisioning.start(request, ctx.session?.login ?? 'owner')
-    if (!started.ok) return wizard(ctx, 409, values, {}, ctx.i.t(`wizard.error.${started.code === 'duplicate' || started.code === 'busy' || started.code === 'not_configured' ? started.code : 'duplicate'}` as MessageKey))
+    // A slug or repository another Studio brand already uses keeps its own, clearer message.
+    const bySlug = registry.get(request.slug)
+    const byRepo = registry.byRepoName(request.owner, request.repo)
+    if ((bySlug && bySlug.slug !== previous?.slug) || (byRepo && byRepo.slug !== previous?.slug)) return wizard(ctx, 409, values, {}, ctx.i.t('wizard.error.duplicate'), previous)
+    // Check the name before creating anything, so a taken name is fixed here and not on a failed page.
+    // If GitHub cannot answer, provisioning still checks the destination itself.
+    const name = await withTimeout(provisioning.checkName({ owner: request.owner, repo: request.repo, slug: request.slug, retryOf: previous?.slug }), 10_000)
+    if (name?.state === 'taken') {
+      const message = name.suggestion ? ctx.i.t('wizard.error.repo_taken_suggest', { repo: request.repo, suggestion: name.suggestion }) : ctx.i.t('wizard.error.repo_taken', { repo: request.repo })
+      return wizard(ctx, 409, { ...values, repo: request.repo }, { repo: message }, undefined, previous)
+    }
+    if (!provisionLimiter.take('owner').ok) return wizard(ctx, 429, values, {}, ctx.i.t('wizard.error.rate_limited'), previous)
+    const actor = ctx.session?.login ?? 'owner'
+    const started = previous ? provisioning.editAndRetry(previous.slug, request, actor) : provisioning.start(request, actor)
+    if (!started.ok) return wizard(ctx, 409, values, {}, ctx.i.t(`wizard.error.${started.code === 'duplicate' || started.code === 'busy' || started.code === 'not_configured' ? started.code : 'duplicate'}` as MessageKey), previous)
     log(`provisioning started for ${request.slug}`)
     redirect(ctx.res, `/brands/${request.slug}/provisioning`)
   }
@@ -362,6 +425,23 @@ export function createStudio(deps: StudioDeps): {
     redirect(ctx.res, `/brands/${record.slug}/provisioning`)
   }
 
+  const discardForm: Handler = (ctx, match) => {
+    const record = brandRecord(ctx, match[1] ?? '')
+    if (!record) return
+    if (record.provisioning?.state !== 'failed') return redirect(ctx.res, `/brands/${record.slug}/provisioning`)
+    render(ctx, 200, pages.discardPage(view(ctx), record))
+  }
+
+  /** Removes only Studio's record of a failed attempt. Never calls GitHub. */
+  const discardProvisioning: Handler = (ctx, match) => {
+    const record = brandRecord(ctx, match[1] ?? '')
+    if (!record) return
+    const result = provisioning.discardFailed(record.slug)
+    if (!result.ok) return redirect(ctx.res, `/brands/${record.slug}/provisioning`)
+    log(`discarded failed provisioning for ${record.slug}`)
+    redirect(ctx.res, '/brands?discarded=1')
+  }
+
   const refresh: Handler = async (ctx, match) => {
     const record = brandRecord(ctx, match[1] ?? '')
     if (!record) return
@@ -372,6 +452,33 @@ export function createStudio(deps: StudioDeps): {
     const result = await Promise.race([sync.refresh(record.slug), new Promise<null>((resolve) => setTimeout(() => resolve(null), 30_000))])
     const ok = result !== null && result.status.last_error === null
     redirect(ctx.res, `${target}?sync=${ok ? 'synced' : 'failed'}`)
+  }
+
+  function updateFlash(ctx: RequestContext, record: BrandRecord): pages.UpdatePanel['flash'] {
+    const code = ctx.url.searchParams.get('update')
+    const allowed = ['opened', 'exists', 'current', 'untracked', 'not_configured', 'busy', 'failed', 'pending', 'too_soon'] as const
+    if (!allowed.includes(code as (typeof allowed)[number])) return null
+    const number = Number(ctx.url.searchParams.get('pr') ?? '')
+    const url = Number.isInteger(number) && number > 0 && number < 1e7 ? `https://github.com/${record.repo.owner}/${record.repo.name}/pull/${number}` : null
+    return { code: code as (typeof allowed)[number], number: url ? number : null, url }
+  }
+
+  /** Studio's second GitHub write: opens (never merges) one template update pull request. */
+  const openUpdatePull: Handler = async (ctx, match) => {
+    const record = brandRecord(ctx, match[1] ?? '')
+    if (!record) return
+    const back = `/brands/${record.slug}`
+    if (!brandIsReady(record)) return redirect(ctx.res, `${back}/provisioning`)
+    if (!updateLimiter.take('owner').ok) return redirect(ctx.res, `${back}?update=too_soon#template-update`)
+    const actor = ctx.session?.login ?? 'owner'
+    const result = await withTimeout(templateUpdates.openUpdatePull(record.slug, actor), 90_000)
+    if (!result) return redirect(ctx.res, `${back}?update=pending#template-update`)
+    if (result.ok && (result.code === 'opened' || result.code === 'exists')) {
+      // The brand's open pull requests changed; the next view re-reads them.
+      sync.markDirty(record.slug)
+      return redirect(ctx.res, `${back}?update=${result.code}&pr=${result.pull.number}#template-update`)
+    }
+    redirect(ctx.res, `${back}?update=${result.code}#template-update`)
   }
 
   const assetFile: Handler = (ctx, match) => {
@@ -398,8 +505,18 @@ export function createStudio(deps: StudioDeps): {
     const doc = ctx.url.searchParams.get('doc')
     const v = view(ctx)
     switch (section) {
-      case 'overview':
-        return render(ctx, 200, pages.overviewPage(v, brand, flashValue))
+      case 'overview': {
+        // Waits briefly for a due template check; a slow or failing GitHub only makes the state "unknown".
+        const head = (await withTimeout(templateUpdates.templateHead(), 3_000)) ?? templateUpdates.peekHead()
+        const update: pages.UpdatePanel = {
+          status: templateUpdates.status(brand.cached.projection, head, brand.cached.history?.pulls ?? []),
+          canOpen: templateUpdates.canOpen(record),
+          busy: templateUpdates.isBusy(record.slug),
+          template: templateUpdates.template,
+          flash: updateFlash(ctx, record),
+        }
+        return render(ctx, 200, pages.overviewPage(v, brand, flashValue, update))
+      }
       case 'brand-book':
         return render(ctx, 200, pages.brandBookPage(v, brand, flashValue))
       case 'design':
@@ -412,6 +529,15 @@ export function createStudio(deps: StudioDeps): {
         // The section exists only when the Personal Brand OS module is enabled in the repository.
         if (!brand.cached.projection?.personal) return notFound(ctx)
         return render(ctx, 200, pages.personalPage(v, brand, doc, flashValue))
+      case 'knowledge': {
+        // Read only. Query parameters only filter the already safe projection of merged shared notes.
+        const query = parseKnowledgeQuery(ctx.url.searchParams)
+        if (query.note === null) return render(ctx, 200, knowledgePage(v, brand, query, flashValue))
+        const knowledge = brand.cached.projection?.knowledge
+        const note = query.note ? knowledge?.notes.find((item) => item.id === query.note) : undefined
+        if (!knowledge || !note) return notFound(ctx)
+        return render(ctx, 200, knowledgeNotePage(v, brand, note, knowledge, flashValue))
+      }
       case 'history':
         return render(ctx, 200, pages.historyPage(v, brand, flashValue))
       case 'handoff':
@@ -478,7 +604,7 @@ export function createStudio(deps: StudioDeps): {
   const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)'
   const routes: Route[] = [
     { method: 'GET', pattern: /^\/healthz$/, auth: 'none', handle: health },
-    { method: 'GET', pattern: /^\/static\/([a-z0-9.-]+)$/, auth: 'none', handle: staticFile },
+    { method: 'GET', pattern: /^\/static\/((?:fonts\/)?[a-z0-9.-]+)$/, auth: 'none', handle: staticFile },
     { method: 'GET', pattern: /^\/login$/, auth: 'none', handle: loginForm },
     { method: 'POST', pattern: /^\/login$/, auth: 'none', writes: 'creates an owner session', handle: login },
     { method: 'POST', pattern: /^\/logout$/, auth: 'session', writes: 'ends the owner session', handle: logout },
@@ -487,11 +613,21 @@ export function createStudio(deps: StudioDeps): {
     { method: 'GET', pattern: /^\/account$/, auth: 'session', handle: account },
     { method: 'GET', pattern: /^\/brands$/, auth: 'session', handle: brands },
     { method: 'GET', pattern: /^\/brands\/new$/, auth: 'session', handle: newBrandForm },
-    { method: 'POST', pattern: /^\/brands\/new$/, auth: 'session', writes: 'provisions one new private brand repository (the single GitHub write)', handle: createBrand },
+    { method: 'GET', pattern: /^\/brands\/new\/repo-check\.json$/, auth: 'session', handle: repoCheck },
+    { method: 'POST', pattern: /^\/brands\/new$/, auth: 'session', writes: 'provisions one new private brand repository (the first of two GitHub writes)', handle: createBrand },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/provisioning$`), auth: 'session', handle: provisioningStatus },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/provisioning\\.json$`), auth: 'session', handle: provisioningJson },
     { method: 'POST', pattern: new RegExp(`^/brands/${SLUG}/provisioning/retry$`), auth: 'session', writes: 'retries a failed provisioning of a new repository', handle: retryProvisioning },
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/provisioning/discard$`), auth: 'session', handle: discardForm },
+    { method: 'POST', pattern: new RegExp(`^/brands/${SLUG}/provisioning/discard$`), auth: 'session', writes: "removes a failed provisioning attempt from Studio's registry (never calls GitHub)", handle: discardProvisioning },
     { method: 'POST', pattern: new RegExp(`^/brands/${SLUG}/refresh$`), auth: 'session', writes: 'refreshes the Studio read cache from GitHub', handle: refresh },
+    {
+      method: 'POST',
+      pattern: new RegExp(`^/brands/${SLUG}/template-update$`),
+      auth: 'session',
+      writes: 'opens one template update pull request on a new template-update/<sha> branch in the brand repository (never the default branch, never a merge)',
+      handle: openUpdatePull,
+    },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}(?:/(${BRAND_SECTIONS.join('|')}))?$`), auth: 'session', handle: brandPage },
   ]

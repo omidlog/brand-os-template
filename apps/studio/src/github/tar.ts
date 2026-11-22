@@ -20,6 +20,8 @@ export interface ExtractOptions {
 
 export interface ExtractReport {
   files: string[]
+  /** Extracted files whose archive mode has an execute bit (written 0644 on disk regardless). */
+  executables: string[]
   skipped: Array<{ path: string; reason: string }>
 }
 
@@ -76,7 +78,7 @@ export function extractTarGz(archive: Buffer, options: ExtractOptions): ExtractR
   }
   const root = path.resolve(options.destRoot)
   fs.mkdirSync(root, { recursive: true })
-  const report: ExtractReport = { files: [], skipped: [] }
+  const report: ExtractReport = { files: [], executables: [], skipped: [] }
   let offset = 0
   let total = 0
   let pendingPath: string | null = null
@@ -130,6 +132,7 @@ export function extractTarGz(archive: Buffer, options: ExtractOptions): ExtractR
     // `wx` refuses to follow anything that already exists at the target, including a planted symlink.
     fs.writeFileSync(target, data, { mode: 0o644, flag: 'wx' })
     report.files.push(relative)
+    if ((octal(header, 100, 8) & 0o111) !== 0) report.executables.push(relative)
   }
   return report
 }
@@ -141,8 +144,22 @@ export function extractTarGz(archive: Buffer, options: ExtractOptions): ExtractR
 const EXCLUDED_PREFIXES = ['brand/.private/', 'brand/restricted/', 'brand/exports/', 'brand/generated/artifacts/']
 const EXCLUDED_NAMES = new Set(['approval-secret', 'agent-tokens.json', 'access-log.jsonl', 'store.json'])
 
+/**
+ * `brand/knowledge/` holds the owner's notes. Only explicitly shared notes, one level deep under
+ * `brand/knowledge/shared/` and named `*.md`, may reach Studio. Caches, link registries, READMEs and any
+ * other file there stay out even if committed. The check is case-insensitive so `brand/Knowledge/` on a
+ * case-insensitive checkout cannot slip past it.
+ */
+const SHARED_NOTE = /^brand\/knowledge\/shared\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}\.md$/
+
+export function studioKnowledgePathAllowed(relative: string): boolean {
+  return SHARED_NOTE.test(relative)
+}
+
 export function studioPathAllowed(relative: string): boolean {
   if (!relative.startsWith('brand/')) return false
+  // Checked first: nothing below may re-admit a knowledge path.
+  if (relative.toLowerCase().startsWith('brand/knowledge/') || relative.toLowerCase() === 'brand/knowledge') return studioKnowledgePathAllowed(relative)
   if (EXCLUDED_PREFIXES.some((prefix) => relative.startsWith(prefix))) return false
   const base = relative.split('/').pop() ?? ''
   if (base === '.env' || base.startsWith('.env.')) return false

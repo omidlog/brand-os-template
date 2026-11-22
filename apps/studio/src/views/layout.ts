@@ -17,7 +17,7 @@ export interface ViewContext {
   now: number
 }
 
-export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'history' | 'handoff'
+export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'history' | 'handoff'
 
 export interface BrandView {
   record: BrandRecord
@@ -33,6 +33,7 @@ const SECTIONS: Array<{ id: BrandSection; key: MessageKey; icon: IconName; path:
   { id: 'assets', key: 'nav.assets', icon: 'image', path: '/assets' },
   { id: 'business', key: 'nav.business', icon: 'briefcase', path: '/business' },
   { id: 'personal', key: 'nav.personal', icon: 'user', path: '/personal' },
+  { id: 'knowledge', key: 'nav.knowledge', icon: 'idea', path: '/knowledge' },
   { id: 'history', key: 'nav.history', icon: 'history', path: '/history' },
   { id: 'handoff', key: 'nav.handoff', icon: 'handoff', path: '/handoff' },
 ]
@@ -41,6 +42,8 @@ export function brandSections(view: BrandView): typeof SECTIONS {
   const projection = view.cached.projection
   return SECTIONS.filter((section) => {
     if (section.id === 'personal') return projection?.brand.modules.personal === true
+    // No flag: the page is listed once the merged branch has shared notes (or files Studio withheld).
+    if (section.id === 'knowledge') return Boolean(projection?.knowledge && (projection.knowledge.total > 0 || projection.knowledge.withheld.length > 0))
     return true
   })
 }
@@ -52,6 +55,14 @@ function initials(name: string): string {
 
 export function brandAvatar(name: string, className = ''): SafeHtml {
   return html`<span class="brand-avatar ${className}" aria-hidden="true">${initials(name)}</span>`
+}
+
+/**
+ * The omidataei.com logo. Studio's chrome (sidebar, sign-in brand panel) is always dark, as on the
+ * site's own admin, so only the white artwork is needed. The file is static and same-origin.
+ */
+function productLogo(): SafeHtml {
+  return html`<img class="product-logo" src="/static/logo-omid-ataei-white.svg" alt="Omid Ataei" width="159" height="33">`
 }
 
 function langLinks(ctx: ViewContext): SafeHtml {
@@ -69,7 +80,7 @@ function sidebar(ctx: ViewContext, brand?: { view: BrandView; section: BrandSect
   const brandsLink = ctx.path === '/brands'
   return html`<aside class="sidebar" id="sidebar" aria-label="${i.t('nav.primary')}">
     <div class="sidebar-head">
-      <a class="product" href="/brands">${icon('logo', 'product-mark')}<span class="product-name">${i.t('app.name')}</span></a>
+      <a class="product" href="/brands">${productLogo()}<span class="product-name"><span class="signal-dot" aria-hidden="true"></span>${i.t('app.name')}</span></a>
       <button type="button" class="icon-btn sidebar-close" data-drawer-close aria-label="${i.t('nav.closeMenu')}">${icon('close')}</button>
     </div>
     <nav class="sidebar-nav">
@@ -169,6 +180,7 @@ function documentShell(ctx: ViewContext, title: string, body: SafeHtml, extraHea
 <meta name="robots" content="noindex, nofollow">
 <title>${title} · ${ctx.i.t('app.name')}</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/static/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/studio.css">
 <script src="/static/studio.js" defer></script>
 ${extraHead}
@@ -209,11 +221,20 @@ export function plainShell(ctx: ViewContext, title: string, content: SafeHtml): 
     title,
     html`<body class="plain">
 <a class="skip-link" href="#main">${ctx.i.t('nav.skip')}</a>
-<main id="main" class="plain-main" tabindex="-1">
-  <div class="plain-brand">${icon('logo', 'product-mark')}<span class="product-name">${ctx.i.t('app.name')}</span></div>
-  ${content}
-  ${langLinks(ctx)}
-</main>
+<div class="plain-layout">
+  <div class="plain-aside">
+    <span class="grid-texture" aria-hidden="true"></span>
+    <span class="signal-glow" aria-hidden="true"></span>
+    <div class="plain-brand">${productLogo()}<span class="product-name"><span class="signal-dot" aria-hidden="true"></span>${ctx.i.t('app.name')}</span></div>
+    <p class="plain-tagline"><span class="eyebrow-bar" aria-hidden="true"></span><span>${ctx.i.t('app.readOnlyNote')}</span></p>
+    <span class="hatch-band" aria-hidden="true"></span>
+  </div>
+  <main id="main" class="plain-main" tabindex="-1">
+    <span class="dot-texture" aria-hidden="true"></span>
+    ${content}
+    ${langLinks(ctx)}
+  </main>
+</div>
 </body>`,
   )
 }

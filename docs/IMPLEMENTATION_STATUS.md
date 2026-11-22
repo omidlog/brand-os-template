@@ -13,7 +13,7 @@ Updated for 0.2.0 (2026-11-20). “Fixed” or “Done” means a test or a buil
 | P1-1 | Partial | Free-form answers become quoted draft proposals (`note:`, `brand:propose`, `brand:interview --assist`) and are never approved. An Anthropic adapter exists but is off unless configured with a key, and its live behavior is not tested (tests use a mock and a stubbed fetch). A browser interview UI is not built. |
 | P1-2 | Fixed | Token, mascot, component, social, and search tools read the brand files and approved records. |
 | P1-3 | Fixed | `--actor owner` cannot approve. Approval requires the human proof in `brand/.private/approval-secret`. |
-| P1-4 | Partial | `upgradeCore` / `brand:migrate` bump `brand/engine.lock`, migrate fact files and mascot statuses, and leave answers, approved facts, config and module prose byte-identical (Journey B). Pulling new template files into an existing brand repository is manual; the engine is not published to npm. |
+| P1-4 | Partial | `upgradeCore` / `brand:migrate` bump `brand/engine.lock`, migrate fact files and mascot statuses, and leave answers, approved facts, config and module prose byte-identical (Journey B). `npm run template:update` (see `docs/template-sync.md`) applies template core files to a brand repository on a new branch from a local template clone, using `.brand-os/sync.json` and the commit recorded in `brand/template-version.json`; brand files are never touched. Studio shows **Updates available** and opens (never merges) an update pull request on a new branch through the GitHub API (fake GitHub in tests; not yet run against real GitHub). A periodic Studio job checks every brand (check only by default; with `STUDIO_TEMPLATE_AUTO_PR=1` it keeps at most one open update pull request per brand). Versioned migrations (`.brand-os/migrations/`, ordered, core files only, `delete` only so far) run in both `template:update` and Studio's update pull request and are listed there. Brand repositories that do not use Studio can turn on the optional **Template update** GitHub Action (`.github/workflows/template-update.yml`, off until the `BRAND_OS_TEMPLATE_TOKEN` secret exists; keeps one update pull request open, never merges). `tests/template-sync-e2e.test.ts` runs create, template change, update pull request, merge and an empty second update against local git repositories and a fake GitHub. Template sync is complete in code and tests; none of it has run against real GitHub yet. |
 | P1-5 | Fixed | `brand:init` writes the brand name and slug into `brand-manifest.json`. |
 | P1-6 | Fixed | Stage validation checks unique ids and contiguous order. Six stages are only the example file. |
 | P1-7 | Fixed | A disabled mascot omits module docs and emits an empty catalog JSON, so state ids are not in the data bundle. |
@@ -91,14 +91,14 @@ Branch `feat/phase-9-read-only-studio`, stacked on Phase 8. Guide, architecture 
 | --- | --- | --- |
 | Product contract | Done | One Studio, routes `/brands/<slug>`. Viewer plus repository provisioner. No chat, AI, interview UI, edit or approval controls, uploads, Git actions, token issuance or terminal. The complete non-GET route list is pinned by a test. |
 | Owner authentication | Done | scrypt password, TOTP (required beyond loopback), login nonce, rate limits, server-side sessions with HttpOnly SameSite=Strict cookies, CSRF and Origin on every authenticated POST, strict CSP and security headers. One owner account; sessions are in memory. |
-| Repository provisioning | Done | The single write: private repository from the template, core `applyInit` on a temporary checkout, one fast-forward commit, privacy verification, duplicate and concurrency refusal, retries, partial-create cleanup or a recorded cleanup-required state, resume after restart. Separate provisioning credential scoped to allowlisted destinations and the configured template. |
+| Repository provisioning | Done | The single write: private repository from the template, core `applyInit` on a temporary checkout, one fast-forward commit, privacy verification, duplicate and concurrency refusal, retries, partial-create cleanup or a recorded cleanup-required state, resume after restart. A failed attempt offers Retry, Edit and retry (prefilled wizard) and Discard (Studio registry only, never GitHub); the wizard checks the repository name is free before creating and suggests `<slug>-brand`, `-2` …. Separate provisioning credential scoped to allowlisted destinations and the configured template. |
 | Read path | Done | Merged default branch only, safe tar extraction of `brand/` without `.private` or `restricted`, projection from the brand-core functions, credential guard, cached SHA and times, stale and failed states that keep the last good commit, slug and repository-id checks against cross-brand content. |
 | Refresh | Done | Manual refresh, refresh on view after the TTL, signed push webhook with replay protection. |
 | Screens | Done | My brands, New brand wizard, provisioning status, Overview, Brand Book, Design System, Assets & Mascot, Business OS, Personal Brand (only when enabled), History & Review (open PRs labelled non-canonical), GitHub & Claude Code handoff, Account & GitHub. |
 | Design and accessibility | Done | `studio.*` design variables, light and dark, responsive (1440/1024/390 px checked in a browser), skip link, focus ring, keyboard drawer, labelled fields, status as text plus icon. |
 | Localization | Done | en, fa (RTL, layout mirroring verified in a browser) and tr catalogs with identical keys and placeholders. Brand content inside documents stays in the language the repository holds. |
 | Server CLI | Done | `npm run studio:hash-password`, `npm run studio -- totp-secret\|session-secret\|brands\|register\|unregister`. Registering an existing repository is server-side only. Phase 10 prep added `bootstrap-owner` and `check-config` and process-level CLI tests (`tests/studio-cli.test.ts`, `tests/studio-deploy.test.ts`). |
-| Tests | Done | 48 Studio tests in five files with an in-memory GitHub (no network, no real repositories). `tests/studio-browser.test.ts` drives headless Chrome inside `npm test` when Chrome is installed and skips otherwise; `npm run test:e2e` requires it. |
+| Tests | Done | 48 Studio tests in five files with an in-memory GitHub (no network, no real repositories). All Studio tests are named `tests/studio-*.test.ts` and form the Studio suite (`npm run test:studio`, part of `npm run test:full` and `npm run ci`); `npm test` is the brand suite only. `tests/studio-browser.test.ts` drives headless Chrome when it is installed and skips otherwise; `npm run test:e2e` requires it. Phase 10 prep added `tests/studio-hardening`, `studio-cli`, `studio-deploy` and `studio-browser-production`. CI runs the Studio suite only in the template repository (its own `studio` job); brand repositories never run it. |
 | VPS deployment | Package ready (Phase 10 prep) | See "Phase 10 prep" below. Nothing is deployed. |
 | Live GitHub | Not verified | All GitHub behavior is tested against a fake at the HTTP level. A first real run against GitHub (token permissions, template generation timing) is still owed. |
 
@@ -120,9 +120,53 @@ Branch `feat/phase-10-prep`, stacked on Phase 9. Docs: `docs-internal/phase-10/`
 | Live GitHub | Not verified | The template is private. Token type and scopes for template generation are an open owner decision and must be confirmed live with an owner-authorized test repository. |
 | Live VPS | Not started | Operator step after review. |
 
+## Knowledge Inbox (Baalda-inspired)
+
+Branch `feat/knowledge-inbox`. Guide: `docs-internal/KNOWLEDGE.md`. Review: `docs-internal/KNOWLEDGE_LAYER_IMPLEMENTATION_REVIEW.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| A0 Studio filter | Done | `brand/knowledge/**` blocked except `brand/knowledge/shared/*.md`, checked first. |
+| A1 Notes and storage | Done | Local by default in `brand/.private/knowledge`, encrypted restricted notes, stable ids, reader-computed revisions, archive/restore, snapshots, backup coverage. Works with no `brand/knowledge`. |
+| A2 Search and links | Done | fa/tr/en normalization, deterministic ranking, filters, pagination, typed links, backlinks, related, duplicate suggestions. In-process index; no FTS or embeddings. |
+| A3 Safe edits | Done | Required revision, unique anchors, per-note O_EXCL lock, idempotent append; concurrency tested with six processes. |
+| Share to Git | Done | Dry-run preview, fail-closed visibility (origin + GitHub CLI, or owner confirmation naming origin), credential/personal/restricted refusal. Not publication. |
+| B1 Proposal bridge | Done | Existing intake reused; preview by default; revision-checked apply; third-party notes preview-only; 50,000-character limit; ledger-quote leak shown. Gate B tested end to end. |
+| B2 Agent access | Done | CLI and skill for Claude Code; `knowledge-read` profile and five read-only MCP tools over shared notes. No MCP writes. |
+| C1 Studio Knowledge page | Done | GET-only section for merged shared notes; core projection withholds unsafe files by reason; en/fa/tr; filters, search, detail, backlinks, linked questions. No new non-GET route. HTTP tests with an in-memory GitHub. |
+| C2 Studio browser checks | Done | Real headless Chrome: no overflow at three widths in English and Persian, accessible names, AA contrast, no remote fetch of note images. Not yet checked against a deployed Studio or live GitHub. |
+| Performance | Baseline | 1,000 and 10,000 synthetic notes measured (`docs-internal/KNOWLEDGE.md`). No gate. |
+
+## Creative Learning MVP (Sprint 1)
+
+Branch `feat/creative-learning`, built on the Knowledge Inbox (PR #9). Guide: `docs-internal/CREATIVE_LEARNING.md`. Reuse map: `docs-internal/CREATIVE_LEARNING_REUSE_MAP.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Projects, variants, selection | Done | Local records under `brand/.private/creative`; assets are manifest ids or `missing`; selection means owner choice for one project only. |
+| Feedback as Knowledge notes | Done | Verbatim text stored once, as a local Knowledge note; records hold `kn_…` + revision and closed-vocabulary aspects. |
+| Scoped preferences | Done | Draft → owner approval with the existing proof; project or series scope; brand scope refused (routed to `propose`/`approve`); supersession keeps history. |
+| Next-session context | Done | Approved facts (design reader), applied preferences, cited selected/rejected/kept references from in-scope projects, provenance and source state. |
+| Agent / MCP / Studio access | Not started | Owner CLI only; refuses under an agent token. |
+| Performance data | Not started | `performance: not_measured`; no connectors. |
+
+## SVG checker, normalizer and asset approval
+
+Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Structured checker | Done | `checkSvg` in `packages/asset-catalog/src/svg-check.ts`, no dependencies. Parses the safe XML subset (no DOCTYPE, entities or processing instructions) and applies a namespace-aware element allowlist and an attribute blocklist. Each issue has a code, a line and `fixable`. `url(#id)` and `href="#id"` are allowed only to an element of the right kind in the same file (gradients, clip paths, masks, patterns, filters, markers). `inspectAssetForPublication` requires both this check and the older regex gate, so Studio, the docs build and MCP share one verdict. Fixed on the way: a leading `<?xml …?>` no longer refuses a file; a prefixed XHTML `<h:script>` is now refused. Live text is a warning. Test: `tests/svg-check.test.ts`. |
+| Check at ingest | Done | `npm run brand:assets -- check [--ids] [--json]`, and `npm run validate` (so CI) fails on any present SVG that is not publishable and prints the fix. |
+| Studio messages | Done | The asset card names the problem (en/fa/tr) and, when it is fixable, shows `npm run brand:assets -- normalize <id>`. No fix button; Studio stays read-only. Test: `tests/studio-svg-issues.test.ts`. |
+| Normalizer | Done | `npm run brand:assets -- normalize <id> [--dry-run]`. SVGO 4.1.0 with only removeComments, removeMetadata, removeEditorsNSData, inlineStyles and convertStyleToAttrs. Then a UTF-8 (or encoding-less) `<?xml …?>` declaration is dropped, because older checkers refuse any `<?`; this way a normalized file is accepted by brands before they take the template update. Refused unless geometry attributes are byte-identical and both gates pass on the output. Original kept in `brand/assets-src/` (never served or published, included in backups); manifest records `derived_from` and `normalizer`. Only the changed keys of that asset are rewritten in the manifest. Separate entry `@brand-os/asset-catalog/normalize`, so the Studio bundle has no SVGO or rasterizer. |
+| Approval and normalizing | Done | An approved asset keeps its approval only if old and new files rasterize (resvg 2.6.2, 1024 px) to identical pixels: `approved_sha256`, `approval_carried_from`, `render_check`. Otherwise (or if the rasterizer is unavailable) it goes back to draft with `approval_reset`. |
+| `brand:assets approve` | Done | Owner approval of an asset's exact bytes (`approved_sha256`), with the same proof rules as `brand:tokens:approve`. Replaces approvals recorded by hand. `validate` flags an approved asset whose bytes changed. Test: `tests/svg-assets.test.ts` (Illustrator, Inkscape and Figma fixtures). |
+| Not done | — | `<use>` stays refused, even when it points inside the file. Raster previews generated on the server were not added. Asset publication (`approved_asset_ids`) still has no CLI. The checker filters attributes with a blocklist plus the regex gate; it does not have a full attribute allowlist. |
+
 ## Commands that this remediation expects to pass
 
-`npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test`, `npm run build`, and `npm run build:docs:nomascot`.
+`npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test` (brand suite; `npm run test:full` adds the Studio suite), `npm run build`, and `npm run build:docs:nomascot`.
 
 ## Second remediation contract
 

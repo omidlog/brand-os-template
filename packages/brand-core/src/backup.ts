@@ -15,9 +15,13 @@ const RELATIVE = [
   'brand/business-os',
   'brand/mascot',
   'brand/assets',
+  // Originals of normalized SVGs. Never served, but the manifest's derived_from points at them.
+  'brand/assets-src',
   'brand/tokens',
   'brand/templates',
   'brand/generated',
+  // Shared knowledge notes. Local, restricted (encrypted) notes and their snapshots are under brand/.private.
+  'brand/knowledge',
   'brand/brand.config.yaml',
   'brand/brand-manifest.json',
   'brand/publication-policy.yaml',

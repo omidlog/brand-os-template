@@ -19,8 +19,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: studio-image-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   image:
+    # The Studio image is built from the template only; brand repositories never build or test Studio.
+    if: github.repository == 'omidlog/brand-os-template'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

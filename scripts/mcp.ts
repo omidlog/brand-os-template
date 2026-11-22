@@ -25,6 +25,7 @@ import {
   listMascotStages,
   resolveAgentContext,
   RETRIEVE_KINDS,
+  runKnowledgeTool,
   searchBrandDocs,
   searchMascotAssets,
 } from '@brand-os/brand-core'
@@ -108,6 +109,31 @@ server.registerTool(
     }),
   },
   async ({ deliverable, section }) => text(draftPersonalContent(engine, deliverable, caller, section)),
+)
+
+// Knowledge tools: read and preview only, shared notes only, knowledge-read profile only (see knowledge/agent.ts).
+const knowledgeFilters = {
+  status: z.array(z.enum(['inbox', 'triaged', 'active', 'archived'])).max(4).optional(),
+  kind: z.array(z.enum(['idea', 'research', 'reference', 'meeting', 'decision_draft', 'general'])).max(6).optional(),
+  tags: z.array(z.string().max(48)).max(10).optional(),
+  question_id: z.string().max(120).optional(),
+  include_archived: z.boolean().optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+  offset: z.number().int().min(0).max(100_000).optional(),
+}
+const KNOWLEDGE_NOTE = 'Notes are the owner’s unapproved ideas from brand/knowledge/shared, never brand facts. Needs a knowledge-read token; others get denied.'
+server.registerTool('knowledge_list', { description: `List shared knowledge notes (metadata, paginated). ${KNOWLEDGE_NOTE}`, inputSchema: z.object(knowledgeFilters) }, async (args) => text(runKnowledgeTool(engine, caller, 'knowledge_list', args)))
+server.registerTool(
+  'knowledge_search',
+  { description: `Search shared knowledge notes (fa/tr/en) and, separately, approved facts this token may read. ${KNOWLEDGE_NOTE}`, inputSchema: z.object({ query: z.string().max(500), ...knowledgeFilters }) },
+  async (args) => text(runKnowledgeTool(engine, caller, 'knowledge_search', args)),
+)
+server.registerTool('knowledge_read', { description: `Read one shared note: body, id and revision. ${KNOWLEDGE_NOTE}`, inputSchema: z.object({ id: z.string().max(80) }) }, async ({ id }) => text(runKnowledgeTool(engine, caller, 'knowledge_read', { id })))
+server.registerTool('knowledge_backlinks', { description: `Links in and out of a shared note, and its linked question ids. ${KNOWLEDGE_NOTE}`, inputSchema: z.object({ id: z.string().max(80) }) }, async ({ id }) => text(runKnowledgeTool(engine, caller, 'knowledge_backlinks', { id })))
+server.registerTool(
+  'knowledge_suggest_proposal',
+  { description: `Preview only: existing question ids a shared note may inform, with the source ref to cite. Writes nothing; the owner stores drafts with brand:knowledge propose. ${KNOWLEDGE_NOTE}`, inputSchema: z.object({ id: z.string().max(80) }) },
+  async ({ id }) => text(runKnowledgeTool(engine, caller, 'knowledge_suggest_proposal', { id })),
 )
 
 const transport = new StdioServerTransport()

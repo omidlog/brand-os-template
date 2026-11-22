@@ -1,12 +1,26 @@
 name: validate
 
+# Branches are checked through their pull request, so a commit is never validated twice.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# A new push to the same pull request (or branch) cancels the run that is still going.
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # A brand-content change takes about 2 minutes, a code change under 10; never let a stuck step
+    # burn the 6-hour default.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,17 +28,68 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Brand content only (brand/, docs/, docs-internal/, assets/, top-level *.md, llms*.txt) takes
+      # the fast path and skips the test suite. Anything else, or an unknown base, counts as code.
+      - name: change scope
+        id: scope
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$'; then
+            git fetch --no-tags --depth=1 origin "$BASE" || true
+          fi
+          npx tsx scripts/ci-scope.ts "$BASE" HEAD
+      # A private brand (brand.publish_docs: private, the default for brands Studio creates) never
+      # gets a public docs build: prepare-docs refuses one. The public steps below run only for
+      # public brands; prepare:docs itself picks the internal audience for a private brand.
+      - name: docs audience
+        id: docs
+        run: npx tsx scripts/docs-audience.ts
       - run: npm run lint
       - run: npm run tokens:build
       - run: npm run prepare:docs
       - run: npm run typecheck
       - run: npm run validate
-      - run: npm run test
-      - run: npm run build -w @brand-os/docs
-      - run: npx tsx scripts/scan-public.ts apps/docs/build
-      - run: npm run build:docs:nomascot
-      - run: npx tsx scripts/scan-public.ts apps/docs/build
+      - name: brand tests
+        if: steps.scope.outputs.code == 'true'
+        run: npm run test
+        timeout-minutes: 10
+      - name: public docs build and scan
+        if: steps.docs.outputs.publish == 'public'
+        run: |
+          npm run build -w @brand-os/docs
+          npx tsx scripts/scan-public.ts apps/docs/build
+          npm run build:docs:nomascot
+          npx tsx scripts/scan-public.ts apps/docs/build
       # The internal audience (drafts, internal Brand Book, review dashboard) must compile too.
       # It is never deployed and is not scanned as public.
       - name: internal docs build compiles
         run: npx tsx scripts/prepare-docs.ts --audience internal && npm run build -w @brand-os/docs
+
+  # Studio runs on the VPS from the template, so only the template tests it. Brand repositories
+  # never run the Studio or browser suite. It runs next to verify, not after it.
+  studio:
+    if: github.repository == 'omidlog/brand-os-template'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: change scope
+        id: scope
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$'; then
+            git fetch --no-tags --depth=1 origin "$BASE" || true
+          fi
+          npx tsx scripts/ci-scope.ts "$BASE" HEAD
+      # No Playwright: ubuntu-latest ships Google Chrome, which the browser tests drive directly.
+      - name: studio tests
+        if: steps.scope.outputs.code == 'true'
+        run: npm run test:studio
+        timeout-minutes: 12

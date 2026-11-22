@@ -1,9 +1,10 @@
 # Brand OS Studio
 
-Studio (`apps/studio`) is a private, owner-only web app. It has two jobs:
+Studio (`apps/studio`) is a private, owner-only web app. It has three jobs:
 
 1. **Create** a new brand: one new private GitHub repository from this template, with a safe initial configuration.
 2. **Show** each brand: the approved, source-backed state of its merged default branch.
+3. **Offer template updates**: show **Updates available** when the template moved on, and open (never merge) an update pull request when the owner asks (or, with `STUDIO_TEMPLATE_AUTO_PR=1`, from the periodic check).
 
 Studio does not edit brands. All ongoing work (interviews, proposals, documents, assets, tokens, commits and pull requests) happens in **Claude Code, inside that brand's own repository**. Approval and publication stay with the owner's trusted local CLI. Phase 8 Personal Brand OS remains fully supported. Studio shows personal brands read-only and does not edit them.
 
@@ -11,23 +12,26 @@ One Studio serves every brand, at routes `/brands/<slug>` (for example `https://
 
 ## What Studio will never do
 
-There is no chat, no Claude or other AI integration, no interview UI, no fact edit or save form, no approve or publish button, no upload, no commit, push, merge or revert UI, no agent-token issuance and no terminal. A test (`tests/studio-server.test.ts`, "no mutation endpoints") pins the complete list of non-GET routes and fails if one is added.
+There is no chat, no Claude or other AI integration, no interview UI, no fact edit or save form, no approve or publish button, no upload, no commit, push, merge or revert UI (the update pull request is a branch plus a pull request that a person merges on GitHub), no agent-token issuance and no terminal. A test (`tests/studio-server.test.ts`, "no mutation endpoints") pins the complete list of non-GET routes and fails if one is added.
 
 | Non-GET route | What it changes |
 | --- | --- |
 | `POST /login`, `POST /logout` | The owner session |
-| `POST /brands/new` | Provisions one new private repository (the single GitHub write) |
+| `POST /brands/new` | Provisions one new private repository (the first GitHub write) |
 | `POST /brands/<slug>/provisioning/retry` | Retries a failed provisioning of that new repository |
+| `POST /brands/<slug>/provisioning/discard` | Removes a failed attempt from Studio's own registry. Never calls GitHub |
 | `POST /brands/<slug>/refresh` | Re-reads GitHub into Studio's read cache |
+| `POST /brands/<slug>/template-update` | **Open update PR**, Studio's second GitHub write: one commit on a new `template-update/<sha>` branch and one pull request in the brand repository. Never the default branch, never a merge |
 | `POST /webhooks/github` | Marks a brand's cache stale (signed push events only) |
 
-`PUT`, `PATCH` and `DELETE` answer 405. Once a repository exists, Studio never writes to it again.
+`PUT`, `PATCH` and `DELETE` answer 405. Once a repository exists, the only thing Studio ever writes to it is an update branch and its pull request, and only when the owner presses **Open update PR** or, if the owner turned on `STUDIO_TEMPLATE_AUTO_PR=1`, when the periodic template check finds a brand behind.
 
 ## The owner journey
 
 1. Sign in (password and authenticator code).
 2. **New brand**: name, URL slug, profile (business/startup or personal brand with facets), languages, optional mascot and gamification, and the GitHub account or organization to create the repository in. Review, then **Create private repository**.
-3. Studio shows each provisioning step live. On success: **Copy repository URL**, **Copy starter prompt**, **View brand**.
+   Before anything is created, the wizard checks that `owner/name` is free (one read-only GET with the provisioning credential, only for allowlisted owners). If it is taken, the wizard says so in a polite live region and offers `<slug>-brand` (then `-2`, `-3` …) as a button. Without JavaScript the server runs the same check on submit and shows the suggestion as a field error.
+3. Studio shows each provisioning step live. On success: **Copy repository URL**, **Copy starter prompt**, **View brand**. On failure: **Retry** (same answers), **Edit and retry** (the wizard prefilled with the previous answers; change the repository name, account or slug, and the failed attempt is replaced) and **Discard this attempt** (after a confirmation page, removes only Studio's record; nothing on GitHub is changed or deleted, and a repository that still needs cleanup is named so you can remove it yourself).
 4. Open a **new Claude Code session** and paste the starter prompt (or open your local clone). See [Private repository access for Claude Code](#private-repository-access-for-claude-code).
 5. Claude Code reads `AGENTS.md`, `CLAUDE.md`, `README.md` and `brand/brand.config.yaml`, interviews you, edits the brand through the core CLI, validates, and prepares a branch and pull request when you ask. You approve facts yourself with the local CLI, never by pasting a secret into chat.
 6. Merge the pull request on GitHub.
@@ -37,19 +41,29 @@ There is no chat, no Claude or other AI integration, no interview UI, no fact ed
 
 | Screen | Shows |
 | --- | --- |
-| My brands | Every registered brand with profile, repository, last synced commit. Create action and empty state. |
+| My brands | Every registered brand with profile, repository, last synced commit, and **Updates available** / **Update PR open** badges. Create action and empty state. |
 | New brand | The five-step wizard (works without JavaScript as one form; the server validates everything). |
-| Overview | Coverage and approval, required questions still unanswered, review queue size, coverage by area, next unanswered questions (read-only), recent merged changes, enabled modules. |
+| Overview | Template updates (state, recorded and latest template commit, **Open update PR** or a link to the open update pull request), coverage and approval, required questions still unanswered, review queue size, coverage by area, next unanswered questions (read-only), recent merged changes, enabled modules. |
 | Brand Book | The cited brand book from the core document model: approved, assumption, recommendation and missing items with sources. Restricted values are withheld. |
 | Design System | Approved colors, all colors as swatches with draft/example/approved state, type specimens, logo specification, every token with its approval state. No pickers. |
-| Assets & Mascot | Asset cards with checksum, license, visibility and approval. Previews only for approved images whose bytes match the manifest checksum and pass the core publication check (active SVG is refused). Mascot states without artwork say so. The mascot section disappears when the module is off. |
+| Assets & Mascot | Asset cards with checksum, license, visibility and approval. Previews for approved images whose bytes match the manifest checksum and pass the core publication check (active SVG is refused). Draft (not yet approved) images get an owner-only preview after the same check, with a dashed frame, a visible "Draft, not approved" flag (en/fa/tr, placed at the inline start so it mirrors in RTL) and alt text that says so; a wrong checksum still refuses it, and a draft without a checksum is keyed by its content hash. Rejected, retired or revoked files get no preview. A draft preview never makes an asset approved or published: public docs still publish approved assets only. A refused SVG shows the specific problem and line and, when the core normalizer can fix it, the command to run in the brand repository (`npm run brand:assets -- normalize <id>`). There is no fix button. Mascot states without artwork say so. The mascot section disappears when the module is off. |
 | Business OS | Business documents from the core document model. |
 | Personal Brand | Only when `modules.personal.enabled` is true: the ten Phase 8 deliverables with verified / owner-stated / unverified labels. |
+| Knowledge | Only when the merged commit has shared notes (`brand/knowledge/shared/*.md`): unverified ideas with filters, search, detail, backlinks and linked questions. Labelled *Not an approved brand fact*. Local and restricted notes never reach Studio. See `docs-internal/KNOWLEDGE.md`. |
 | History & Review | Latest merged commits, open pull requests (labelled non-canonical), fact review states, open contradictions. |
 | GitHub & Claude Code | Repository URL, starter prompt, clone command, "Private repository access required", Open on GitHub. |
 | Account & GitHub | MFA state, session expiry, which GitHub credentials are configured (never their values), template, allowed destinations, webhook state, a connection test. |
 
 Every brand page shows the branch, short SHA and sync time in the top bar. Data states are distinct: *not yet synced*, *synced*, *stale* (older than the sync TTL; a background refresh starts), *refresh failed* (the last good commit stays visible with the error), and per item *approved*, *draft*, *example*, *missing* and *withheld*. Missing information is never filled with sample data.
+
+## Look and feel
+
+Studio wears the omidataei.com identity, taken from that site's design system: monochrome surfaces with near-black ink, lime (`#d5fe00`) as the only signal colour (active page bar, eyebrows, current wizard step, empty states), a violet focus ring, Rajdhani display over Inter body text, pill buttons with the site's padding/gap hover morph, and 16px cards. The chrome follows the site's admin: an always-dark sidebar with the blueprint grid, a lime glow and the Omid Ataei logo, and a split sign-in page. Dark mode uses the site's footer palette.
+
+- Tokens live in `apps/studio/static/studio.css` as `--studio-*` variables. Brand colours still appear only inside specimens.
+- Fonts are self-hosted WOFF2 subsets in `apps/studio/static/fonts` (Inter, Rajdhani, Vazirmatn for Persian; SIL OFL, see `OFL.txt`). The site's Persian display face (Shams) is licensed to omidataei.com only and is not copied.
+- The logo (`logo-omid-ataei-white.svg`) and the lime key favicon are copies of the site's assets; update them here if the site changes.
+- Layout uses logical properties for RTL; motion respects `prefers-reduced-motion`; a browser test checks WCAG AA text contrast on the main pages in light and dark.
 
 ## Architecture
 
@@ -60,11 +74,12 @@ Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100 locally;
                                       ├─ registry.ts    slug -> repository mapping (server-side, data dir)
                                       ├─ sync.ts        merged default branch -> safe projection cache
                                       ├─ projection.ts  core functions at the internal audience + credential guard
-                                      ├─ provision.ts   the single write path
+                                      ├─ provision.ts   write 1: create a repository
+                                      ├─ template-update.ts  write 2: update branch + pull request (never merges)
                                       └─ github/        REST client, safe tar extraction, webhook verification
 ```
 
-- **Reading.** For a registered brand, Studio reads the head of the default branch, downloads that commit's archive with the read credential, and extracts only allowlisted files under `brand/` (never `brand/.private`, `brand/restricted`, exports or `.env`; symlinks, links, traversal and oversized archives are refused). It then runs the existing `@brand-os/brand-core` functions (dashboard, document model, token hashes, asset inspection) on that temporary copy and stores only the resulting projection, the SHA and times. A guard refuses any projection that looks like a credential.
+- **Reading.** For a registered brand, Studio reads the head of the default branch, downloads that commit's archive with the read credential, and extracts only allowlisted files under `brand/` (never `brand/.private`, `brand/restricted`, exports or `.env`; under `brand/knowledge` only `shared/*.md`, checked first; symlinks, links, traversal and oversized archives are refused). It then runs the existing `@brand-os/brand-core` functions (dashboard, document model, token hashes, asset inspection) on that temporary copy and stores only the resulting projection, the SHA and times. A guard refuses any projection that looks like a credential.
 - **Source of truth.** Git. Studio's view is the last successfully fetched merged default-branch commit. It never reads local ignored files, so it cannot show `.private` values or decrypted restricted facts; those appear as withheld.
 - **Brand selection.** A slug only resolves through the server-side registry. A repository is accepted only if its `brand.slug` matches and its GitHub repository id is the one recorded at registration, so a deleted and recreated repository with the same name, or one whose config claims another slug, is refused.
 - **Provisioning.** Template check, duplicate refusal (registry and GitHub), private generation from the template, wait for GitHub to copy it, then the core `applyInit` (the same initializer as `brand:init`) on a temporary checkout and one fast-forward commit with the safe initial config and manifest. A repository GitHub reports as public is deleted and never registered. A failure after creation deletes the partial repository when permitted, or records that cleanup is required; retry resumes. Per-slug and per-repository locks refuse concurrent creates. No approval secret, data key or agent token is ever created in the repository; those are initialized only in an authorized local workspace.
@@ -78,7 +93,7 @@ Browser ──HTTPS──> reverse proxy ──> Studio (127.0.0.1:4100 locally;
 - Every authenticated POST checks the CSRF token and `Origin`. Only form-encoded bodies are accepted.
 - Guests receive a redirect or 401 for every route, identical for real and forged slugs, so brands cannot be enumerated.
 - Headers: strict CSP (`default-src 'none'`, scripts and styles from self only, no inline script, style or handler), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: same-origin`, COOP/CORP, `noindex`, HSTS on https. The browser tests confirm an injected inline script never runs.
-- All repository text is escaped. Asset previews are served only for approved, checksum-matching images that pass the core publication check (symlinks, traversal and active SVG are refused), each with its own sandboxing CSP.
+- All repository text is escaped. Asset previews are served only for approved or draft images that pass the core publication check (symlinks, traversal and active SVG are refused; a manifest checksum must match when present, and is required for approved files), always as `<img>`, each with its own sandboxing CSP.
 - The browser never receives a GitHub token, raw tree, `.private` value or restricted value. The static bundle (`apps/studio/static`) is plain CSS and a small script with no data; a test scans it for secrets and brand data.
 - Two separate GitHub credentials: a read credential for brand repositories and a provisioning credential used only by the wizard and scoped to the allowlisted destinations and the configured template.
 - Studio binds to `127.0.0.1` by default. Configuration fails closed and error messages never echo a secret.
@@ -102,7 +117,7 @@ Use fine-grained tokens or a GitHub App installation, limited to the accounts an
 | Credential | Variable | Permissions |
 | --- | --- | --- |
 | Read | `STUDIO_GITHUB_READ_TOKEN` | Contents: read, Metadata: read, Pull requests: read, on brand repositories |
-| Provision | `STUDIO_GITHUB_PROVISION_TOKEN` | Administration: write (create from template; delete a partial repository), Contents: write, on the allowlisted destination; read access to the template |
+| Provision | `STUDIO_GITHUB_PROVISION_TOKEN` | Administration: write (create from template; delete a partial repository), Contents: write and Pull requests: write (update pull requests), on the allowlisted destination; read access to the template |
 
 The template repository must be marked as a template on GitHub (see README, "Mark this repository as a template"). If the provisioning credential cannot delete repositories, a failed creation is recorded as *cleanup required* and Studio tells you which repository to remove.
 
@@ -133,7 +148,31 @@ The starter prompt tells Claude Code to stop and ask for access rather than gues
 
 ## Template updates
 
-Each brand repository is an independent copy made from the template at creation time. Engine improvements to the template do not flow into existing brand repositories automatically. To upgrade a brand, merge or cherry-pick the template changes into its repository in Claude Code and run `npm run brand:migrate` there, then merge as usual; Studio shows the result after refresh.
+Each brand repository is an independent copy made from the template. When Studio creates a brand it records the template head commit in `brand/template-version.json`; the sync projection reads that record.
+
+- **Updates available.** Studio reads the template's default-branch head with GET requests (provisioning credential, which can read the private template), caches it for 10 minutes and compares it with each brand's record. The brand list never waits for GitHub (it uses the cached head and refreshes it in the background); the Overview waits at most 3 seconds. Errors keep the last known head and back off (2 minutes, 15 after a rate limit); the state then shows *Template not checked* and nothing else breaks. States: *Updates available*, *Template up to date*, *No template record* (run `template:update --base` once in Claude Code), *Template not checked*, and *Update PR open* when an open pull request from a `template-update/` branch is in the brand's history.
+- **Open update PR** (`POST /brands/<slug>/template-update`, owner session with MFA, CSRF token and same Origin, rate limited, recorded in `STUDIO_DATA_DIR/audit.jsonl`). Studio downloads the template archives at the recorded and latest commits and the brand's default-branch archive, and runs the core `planChanges` (the same logic as `npm run template:update`). Only core and merge-carefully paths are extracted from the brand archive; brand-owned paths are classified and skipped before any brand content is read. Template migrations new since the brand's commit (`.brand-os/migrations/`, JSON data, core paths only, refused otherwise) run on top of that plan and are listed in the pull request body. It writes the result as one commit on a new branch `template-update/<sha>` through the Git Data API and opens a pull request that lists changed files and files that need a person. The only `brand/` file it changes is `brand/template-version.json`.
+- **Idempotent.** An open pull request from a `template-update/` branch is linked instead of opening another; a branch left by an earlier attempt is reused, never moved; concurrent requests for one brand are refused as busy.
+- **Never**: pushing to the default branch, merging, force-moving a branch, writing to a public repository or to a repository outside `STUDIO_ALLOWED_OWNERS`.
+
+The provisioning credential therefore also needs **Pull requests: write** on the allowlisted destinations (Contents: write is already required). Without it, the button reports that the pull request could not be opened. See `docs/template-sync.md`.
+
+### Periodic template check
+
+`apps/studio/src/template-update-job.ts` runs in the background, started by `main.ts` (never by tests or CLI commands):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `STUDIO_TEMPLATE_CHECK_MINUTES` | `360` | Minutes between runs, ±10 % jitter. `0` turns the job off; otherwise at least 15. The first run is within about 5 minutes of start. |
+| `STUDIO_TEMPLATE_AUTO_PR` | `0` | `0`: check only; the result feeds **Updates available** and the owner opens pull requests by hand. `1`: also open an update pull request for each brand that is behind. |
+
+- Each run reads the template head once through the cached update service (GET only) and compares it with every ready brand's recorded commit from the sync cache, re-reading a brand whose cache is stale (read credential, GET only).
+- **At most one open update pull request per brand.** A brand whose history already shows an open `template-update/` pull request is only linked. Otherwise the job calls the same `openUpdatePull` as the button, which looks for an open update pull request on GitHub first and links it instead of opening another; a branch left by an earlier attempt is reused. It never writes the default branch and never merges.
+- Only brands in `STUDIO_ALLOWED_OWNERS` can get a pull request; others are reported as `not_allowed`.
+- Errors double the wait (up to a day); a rate limit waits at least an hour and ends the run early. A successful run resets the wait.
+- One run at a time, one brand after another, on an `unref`'d timer: page requests never wait for it. On `SIGTERM`/`SIGINT` the timer is cancelled and a run in progress stops after the brand it is on.
+- Audit: each run appends `{"action":"template_update_check","actor":"periodic-job",...}` with counts (brands, available, opened, linked, failed) to `STUDIO_DATA_DIR/audit.jsonl`; each pull request it opens is a `template_update_pull` entry with the actor `periodic-job`.
+- Without a provisioning credential the job does not start.
 
 ## Tests
 
@@ -147,12 +186,14 @@ All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-g
 - `tests/studio-cli.test.ts`: `bootstrap-owner` (0600 file, verifiable hash, no overwrite, no argv password, enrollment on stderr only) and `check-config` (no secret values printed).
 - `tests/studio-deploy.test.ts`: the Phase 10 package (Dockerfile, Compose, Caddy block, env template, scripts), the production bundle passing `smoke-test.sh`, the smoke test failing on a leaky server, the backup and restore drill. Set `CADDY_BIN` to also validate the Caddy block with a real Caddy.
 - `tests/studio-browser-production.test.ts`: headless Chrome over HTTPS through a TLS proxy. Covers Secure HttpOnly `__Host-` cookies, CSRF from same-site and cross-site origins, CORS and framing blocks, and a foreign Host.
-- `tests/studio-browser.test.ts`: real headless Chrome over the DevTools protocol (no npm dependency). Owner journey with the progressive wizard and provisioning polling, every page at 1440/1024/390 px without horizontal overflow, static accessibility checks, keyboard (skip link, focus ring, mobile drawer with Escape and focus return), Persian RTL mirroring with LTR code, Turkish LTR, CSP enforcement and no third-party requests. These run inside `npm test` when Chrome is installed (`CHROME_PATH` or the usual paths) and **skip with a message when it is not**. `npm run test:e2e` requires a browser and fails without one. `STUDIO_E2E_SCREENSHOTS=<dir>` saves desktop/tablet/mobile screenshots in English and Persian for visual review.
+- `tests/studio-template-update-job.test.ts`: the periodic check with fake timers: check-only default, one pull request per brand with the flag on, linking an open one, refused accounts, jitter, back-off and rate limits, clean stop, configuration.
+- `tests/studio-template-update.test.ts`: the update check (cache, rate-limit back-off), the update pull request (core files only, brand files byte-identical, default branch unmoved, conflicts reported, audit), idempotency, branch reuse, busy and refused brands, and the route (guest, CSRF, Origin, flash, en/fa/tr).
+- `tests/studio-browser.test.ts`: real headless Chrome over the DevTools protocol (no npm dependency). Owner journey with the progressive wizard and provisioning polling, every page at 1440/1024/390 px without horizontal overflow, static accessibility checks, keyboard (skip link, focus ring, mobile drawer with Escape and focus return), Persian RTL mirroring with LTR code, Turkish LTR, the self-hosted fonts and logo, AA text contrast in light and dark, CSP enforcement and no third-party requests, and the template update indicator and **Open update PR** (accessible, RTL, no overflow). These are part of the Studio suite (`npm run test:studio`, `npm run test:full`, `npm run ci`), not of `npm test`, which is the brand suite. They run when Chrome is installed (`CHROME_PATH` or the usual paths) and **skip with a message when it is not**. In CI they run only in the template repository (the `studio` job of `validate.yml`, on `ubuntu-latest`, which ships Google Chrome; no Playwright); brand repositories never run the Studio or browser suite. `npm run test:e2e` requires a browser and fails without one. `STUDIO_E2E_SCREENSHOTS=<dir>` saves desktop/tablet/mobile screenshots in English and Persian for visual review.
 
 ## Known limits
 
 - One owner account. No SSO or multi-user roles.
 - Sessions and rate limits live in memory, so a restart signs the owner out. The registry and sync cache persist in `STUDIO_DATA_DIR`.
 - Interview question text and module guidance inside brand documents are English unless the brand repository has localized them; Studio's own interface is fully localized in en, fa and tr.
-- Font specimens use a family only if it is installed on the viewing device; Studio loads no font files.
+- Font specimens use a family only if it is installed on the viewing device; Studio never loads a brand's font files (it self-hosts only its own interface fonts).
 - The VPS deployment package (image, Compose, Caddy block, runbooks, Grok handoff) is in `infra/production` and `docs-internal/phase-10/`. It has not been deployed; the live launch is a separate operator step.

@@ -3,9 +3,11 @@ import path from 'node:path'
 import { after, before, test } from 'node:test'
 import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
+import { teardown } from './helpers/cleanup.js'
 import { approve, editOutsideStudio } from './helpers/edits.js'
 import { OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
+import { newNoteId, serializeNote } from '@brand-os/brand-core'
 
 /**
  * Browser end-to-end tests: a real headless Chrome drives Studio (loopback server, in-memory GitHub,
@@ -30,15 +32,17 @@ before(async () => {
   s = await startStudio()
   page = await browser.newPage()
   await page.viewport(1440, 900)
-})
+}, { timeout: 120_000 })
 
 after(async () => {
   if (!chrome) return
-  // Close the browser first: its keep-alive connections would otherwise hold the server open.
-  page?.close()
-  await browser?.close()
-  await s?.close()
-})
+  // Every step runs even if one fails: a server left listening keeps the test process alive.
+  await teardown(
+    () => page?.close(),
+    () => browser?.close(),
+    () => s?.close(),
+  )
+}, { timeout: 60_000 })
 
 /** Every page must render with no console error, uncaught exception or CSP violation. */
 function assertClean(where: string): void {
@@ -89,6 +93,8 @@ test('owner journey in a real browser: sign in, step through the wizard, watch p
   await page.goto(`${s.url}/brands`)
   assert.match(await page.eval<string>('location.pathname'), /^\/login$/)
   await assertAccessible('login')
+  assert.equal(await page.eval<boolean>(`(() => { const img = document.querySelector('.plain-aside .product-logo'); return img.complete && img.naturalWidth > 0 && img.alt === 'Omid Ataei' })()`), true, 'the sign-in page shows the omidataei.com logo')
+  assert.deepEqual(await contrastFailures(), [], 'login: text contrast')
   await capture('login')
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
@@ -171,6 +177,91 @@ test('every brand page renders cleanly, without overflow, at desktop, tablet and
   assertClean('brand pages')
 })
 
+/**
+ * WCAG AA text contrast in the rendered page: every visible element with its own text, against the
+ * background colours of its ancestors blended together (gradients and images are not counted).
+ */
+async function contrastFailures(): Promise<string[]> {
+  return page.eval<string[]>(`(() => {
+    const parse = (value) => {
+      const m = value.match(/^rgba?\\(([^)]+)\\)$/) || value.match(/^color\\(srgb ([^)]+)\\)$/)
+      if (!m) return null
+      const parts = m[1].split(/[ ,/]+/).filter(Boolean).map(Number)
+      const scale = value.startsWith('color(') ? 255 : 1
+      return { r: parts[0] * scale, g: parts[1] * scale, b: parts[2] * scale, a: parts.length > 3 ? parts[3] : 1 }
+    }
+    const over = (top, bottom) => ({ r: top.r * top.a + bottom.r * (1 - top.a), g: top.g * top.a + bottom.g * (1 - top.a), b: top.b * top.a + bottom.b * (1 - top.a), a: 1 })
+    const background = (el) => {
+      const layers = []
+      for (let node = el; node; node = node.parentElement) {
+        const bg = parse(getComputedStyle(node).backgroundColor)
+        if (bg && bg.a > 0) { layers.push(bg); if (bg.a >= 1) break }
+      }
+      return layers.reverse().reduce((acc, layer) => over(layer, acc), { r: 255, g: 255, b: 255, a: 1 })
+    }
+    const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b) }
+    const failures = []
+    for (const el of document.querySelectorAll('body *')) {
+      if (!['SCRIPT', 'STYLE', 'OPTION'].includes(el.tagName) && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) {
+        const style = getComputedStyle(el)
+        const box = el.getBoundingClientRect()
+        if (box.width === 0 || box.height === 0 || style.visibility === 'hidden' || el.closest('[hidden], [aria-hidden="true"], .visually-hidden, .skip-link')) continue
+        const fg = parse(style.color)
+        if (!fg) continue
+        const bg = background(el)
+        const [hi, lo] = [lum(over(fg, bg)), lum(bg)].sort((a, b) => b - a)
+        const ratio = (hi + 0.05) / (lo + 0.05)
+        const size = parseFloat(style.fontSize)
+        const large = size >= 24 || (size >= 18.66 && Number(style.fontWeight) >= 700)
+        if (ratio < (large ? 3 : 4.5)) failures.push(el.tagName.toLowerCase() + '.' + el.className + ' "' + el.textContent.trim().slice(0, 30) + '" ' + ratio.toFixed(2))
+      }
+    }
+    return failures
+  })()`)
+}
+
+test('the omidataei.com identity: self-hosted fonts, the logo on sign-in and in the shell, AA contrast in light and dark', { skip }, async () => {
+  await page.viewport(1440, 900)
+  await page.goto(`${s.url}/brands/acme-learning`)
+  assert.equal(await page.eval<string>(`document.querySelector('link[rel=icon]').getAttribute('href')`), '/static/favicon.svg')
+  const logo = await page.eval<{ src: string; alt: string; loaded: boolean }>(`(() => { const img = document.querySelector('.sidebar .product-logo'); return { src: img.getAttribute('src'), alt: img.alt, loaded: img.complete && img.naturalWidth > 0 } })()`)
+  assert.deepEqual(logo, { src: '/static/logo-omid-ataei-white.svg', alt: 'Omid Ataei', loaded: true }, 'the shell shows the omidataei.com logo')
+  await page.eval('document.fonts.ready.then(() => true)')
+  const fonts = await page.eval<{ h1: string; body: string; display: boolean; text: boolean }>(`({
+    h1: getComputedStyle(document.querySelector('h1')).fontFamily,
+    body: getComputedStyle(document.body).fontFamily,
+    display: document.fonts.check('600 36px "Studio Rajdhani"'),
+    text: [...document.fonts].some((f) => f.family.includes('Studio Inter') && f.status === 'loaded'),
+  })`)
+  assert.match(fonts.h1, /^"Studio Rajdhani"/, 'headings use the site display face')
+  assert.match(fonts.body, /^"Studio Inter"/, 'body text uses Inter')
+  assert.ok(fonts.display && fonts.text, 'both faces load from the Studio origin')
+  // The active page carries the lime signal.
+  assert.equal(await page.eval<string>(`getComputedStyle(document.querySelector('.nav-link.is-active .icon')).color`), 'rgb(213, 254, 0)')
+
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
+    for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/design', '/brands/acme-learning/history', '/brands/new', '/account']) {
+      await page.goto(`${s.url}${pathname}`)
+      assert.deepEqual(await contrastFailures(), [], `${scheme} ${pathname}: text contrast`)
+    }
+    if (shots) {
+      for (const pathname of ['/brands', '/brands/acme-learning']) {
+        await page.goto(`${s.url}${pathname}`)
+        await page.screenshot(path.join(shots, `${scheme}${pathname.replaceAll('/', '-')}.png`))
+      }
+    }
+  }
+  await page.send('Emulation.setEmulatedMedia', { features: [] })
+
+  await page.goto(`${s.url}/brands/acme-learning?lang=fa`)
+  await page.eval('document.fonts.ready.then(() => true)')
+  assert.match(await page.eval<string>(`getComputedStyle(document.body).fontFamily`), /^"Studio Vazirmatn"/, 'Persian uses Vazirmatn')
+  assert.equal(await page.eval<boolean>(`document.fonts.check('400 14px "Studio Vazirmatn"', 'سلام')`), true)
+  await page.goto(`${s.url}/brands?lang=en`)
+  assertClean('identity')
+})
+
 test('keyboard: skip link first, visible focus, and the mobile drawer opens, traps Escape and returns focus', { skip }, async () => {
   await page.viewport(1440, 900)
   await page.goto(`${s.url}/brands/acme-learning`)
@@ -238,6 +329,75 @@ test('Persian mirrors the layout right-to-left while code, SHAs and URLs stay le
   assertClean('locales')
 })
 
+test('failed provisioning: Edit and retry is prefilled, the live name check suggests a free name (keyboard, RTL), Discard asks first', { skip }, async () => {
+  await page.viewport(1440, 900)
+  await page.goto(`${s.url}/brands?lang=en`)
+  s.github.addRepo(OWNER, 'beta', new Map([['README.md', Buffer.from('someone else')]]))
+  const base = { name: 'Beta Studio', slug: 'beta', profile: 'business' as const, facets: [], default_locale: 'en' as const, locales: ['en' as const], mascot: false, gamification: false, owner: OWNER }
+  assert.ok(s.studio.provisioning.start({ ...base, repo: 'beta' }, 'owner').ok)
+  await s.studio.provisioning.settled()
+
+  await page.goto(`${s.url}/brands/beta/provisioning`)
+  assert.match(await text('main'), /could not be created/)
+  await assertAccessible('provisioning failed')
+  await page.navigation(() => page.click('[data-edit-retry]'))
+  assert.equal(await page.eval<string>('location.pathname + location.search'), '/brands/new?retry=beta')
+  assert.match(await text('h1'), /Edit and retry/)
+  assert.equal(await page.eval<string>(`document.querySelector('#name').value`), 'Beta Studio')
+  assert.equal(await page.eval<string>(`document.querySelector('#repo').value`), 'beta')
+  // The prefilled name is checked at once; the result is announced politely and offers a free name.
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'taken'`)
+  assert.equal(await page.eval<string>(`document.querySelector('[data-repo-check]').getAttribute('aria-live')`), 'polite')
+  assert.match(await text('[data-repo-check]'), /beta already exists on GitHub\. Try beta-brand\./)
+  for (let k = 0; k < 3; k += 1) await page.click('[data-wizard-next]')
+  assert.equal(await page.eval<boolean>(`document.querySelector('[data-step="repository"]').hidden`), false)
+  await assertAccessible('wizard edit and retry')
+  // Keyboard: the suggestion is a real button; Enter applies it and the name is checked again.
+  await page.eval(`document.querySelector('[data-use-suggestion]').focus()`)
+  await page.press('Enter')
+  assert.equal(await page.eval<string>(`document.querySelector('#repo').value`), 'beta-brand')
+  assert.equal(await page.eval<string>('document.activeElement.id'), 'repo', 'focus returns to the repository field')
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'free'`)
+  assert.match(await text('[data-repo-check]'), /beta-brand is free\./)
+  assertClean('edit and retry')
+
+  // Persian: the message reads right-to-left while the repository names stay isolated left-to-right.
+  await page.goto(`${s.url}/brands/new?retry=beta&lang=fa`)
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'taken'`)
+  assert.equal(await page.eval<string>(`getComputedStyle(document.querySelector('[data-repo-check]')).direction`), 'rtl')
+  assert.deepEqual(await page.eval<string[]>(`[...document.querySelectorAll('[data-repo-check] bdi')].map((el) => el.dir + ':' + el.textContent)`), ['ltr:beta', 'ltr:beta-brand', 'ltr:beta-brand'])
+  await assertNoOverflow('fa edit and retry')
+  await capture('fa-wizard-name-taken')
+  await page.goto(`${s.url}/brands/new?retry=beta&lang=en`)
+  await page.waitFor(`document.querySelector('[data-repo-check]').getAttribute('data-state') === 'taken'`)
+  await page.eval(`(() => { const r = document.querySelector('#repo'); r.value = 'beta-brand'; r.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  for (let k = 0; k < 4; k += 1) await page.click('[data-wizard-next]')
+  await page.navigation(() => page.click('[data-submit]'))
+  assert.equal(await page.eval<string>('location.pathname'), '/brands/beta/provisioning')
+  await s.studio.provisioning.settled()
+  await page.waitFor(`document.querySelector('[data-provisioning]')?.getAttribute('data-state') === 'ready'`, 20_000)
+  await s.studio.sync.settled()
+  assert.equal(s.github.repo(OWNER, 'beta-brand')?.private, true)
+  assert.ok(s.github.repo(OWNER, 'beta'), 'the repository that was in the way is untouched')
+
+  // Discard: a confirmation page first, then only Studio's record goes; GitHub is never called.
+  assert.ok(s.studio.provisioning.start({ ...base, slug: 'gamma', name: 'Gamma', repo: 'beta' }, 'owner').ok)
+  await s.studio.provisioning.settled()
+  await page.goto(`${s.url}/brands/gamma/provisioning`)
+  await page.navigation(() => page.click('[data-discard]'))
+  assert.equal(await page.eval<string>('location.pathname'), '/brands/gamma/provisioning/discard')
+  assert.match(await text('main'), /Nothing on GitHub is changed or deleted/)
+  await assertAccessible('discard confirmation')
+  assert.ok(s.studio.registry.get('gamma'), 'opening the confirmation changes nothing')
+  const calls = s.github.calls.length
+  await page.navigation(() => page.click('[data-discard-confirm]'))
+  assert.equal(await page.eval<string>('location.pathname + location.search'), '/brands?discarded=1')
+  assert.match(await text('main'), /The failed attempt was discarded/)
+  assert.equal(s.studio.registry.get('gamma'), null)
+  assert.equal(s.github.calls.length, calls, 'discarding never calls GitHub')
+  assertClean('discard')
+})
+
 test('the browser enforces the CSP: an injected inline script never runs and no page loads a third-party origin', { skip }, async () => {
   const origins = new Set<string>()
   page.on('Network.requestWillBeSent', (params) => origins.add(new URL((params.request as { url: string }).url).origin))
@@ -252,4 +412,91 @@ test('the browser enforces the CSP: an injected inline script never runs and no 
   assert.ok(page.problems.length > 0 && page.problems.every((problem) => /Content Security Policy|net::ERR|Failed to load/i.test(problem.text)), JSON.stringify(page.problems))
   page.problems.length = 0
   await page.send('Network.disable')
+})
+
+test('Knowledge page: shared notes render without overflow, accessibly and with AA contrast in English and Persian, and never fetch note images', { skip }, async () => {
+  const id = newNoteId()
+  const other = newNoteId()
+  const meta = (noteId: string, title: string, language: string, extra: Record<string, unknown> = {}) => ({
+    schema_version: 1, id: noteId, brand_slug: 'acme-learning', title, kind: 'idea' as const, status: 'inbox' as const, classification: 'internal' as const, language,
+    tags: ['mascot', 'gamification', 'retention'], links: [], question_ids: ['brand.strategy.purpose'], source: { kind: 'owner_note' as const, ref: null },
+    created_at: '2026-11-20T10:00:00.000Z', updated_at: '2026-11-21T10:00:00.000Z', ...extra,
+  })
+  const persian = 'بعد از ۷ روز یادگیری پشت‌سرهم، رتبه‌ی خلبان کاکادو را ارتقا بده. این یک فرضیه است، نه یک قانون تأییدشده.\n' + 'x'.repeat(400) + '\n<img src="https://evil.example/pixel.png"> ![remote](https://evil.example/md.png)'
+  s.github.pushEdit(OWNER, 'acme-learning', (tree) => {
+    tree.set(`brand/knowledge/shared/${id}.md`, Buffer.from(serializeNote({ meta: meta(id, 'ارتقای رتبه‌ی خلبان کاکادو بعد از هفت روز یادگیری پشت‌سرهم', 'fa'), body: persian })))
+    tree.set(`brand/knowledge/shared/${other}.md`, Buffer.from(serializeNote({ meta: meta(other, 'Weekly streak recap', 'en', { status: 'triaged', links: [{ id, relationship: 'supports' }] }), body: `Builds on [[${id}]].` })))
+  })
+  await s.studio.sync.refresh('acme-learning')
+  const origins = new Set<string>()
+  page.on('Network.requestWillBeSent', (params) => origins.add(new URL((params.request as { url: string }).url).origin))
+  await page.send('Network.enable')
+  for (const lang of ['en', 'fa'] as const) {
+    await page.viewport(1440, 900)
+    await page.goto(`${s.url}/brands/acme-learning/knowledge?lang=${lang}`)
+    for (const [width, height, mobile] of [[1440, 900, false], [1024, 768, false], [390, 844, true]] as const) {
+      await page.viewport(width, height, mobile)
+      for (const pathname of ['/knowledge', `/knowledge?note=${id}`, `/knowledge?note=${other}`, '/knowledge?q=kakadu', '/knowledge?tag=mascot']) {
+        await page.goto(`${s.url}/brands/acme-learning${pathname}`)
+        await assertNoOverflow(`${lang} ${pathname} @${width}`)
+        if (width === 1440) {
+          await assertAccessible(`${lang} ${pathname}`)
+          assert.deepEqual(await contrastFailures(), [], `${lang} ${pathname}: text contrast`)
+        }
+      }
+    }
+    await page.viewport(1440, 900)
+    await page.goto(`${s.url}/brands/acme-learning/knowledge?note=${id}`)
+    assert.equal(await page.eval<number>('document.querySelectorAll(".note-body img, .note-body a[href^=\'http\']").length'), 0, 'note markup is text')
+    await capture(`${lang}-knowledge-note`)
+    await page.goto(`${s.url}/brands/acme-learning/knowledge`)
+    await capture(`${lang}-knowledge`)
+    if (lang === 'fa') assert.equal(await page.eval<string>('document.documentElement.dir'), 'rtl')
+  }
+  assert.deepEqual([...origins], [s.url], 'only the Studio origin is contacted; note images are never fetched')
+  await page.send('Network.disable')
+  await page.goto(`${s.url}/brands?lang=en`)
+  assertClean('knowledge pages')
+})
+
+// Runs last: it moves the shared fake template forward, which changes the overview of every later page.
+test('template updates: the indicator is visible, accessible and RTL-safe, and "Open update PR" opens one pull request', { skip }, async () => {
+  s.github.pushEdit('omidlog', 'brand-os-template', (tree) => {
+    tree.set('.brand-os/sync.json', Buffer.from(JSON.stringify({ schema_version: 1, template: { repository: 'omidlog/brand-os-template' }, record: 'brand/template-version.json', rules: [{ kind: 'brand', paths: ['brand/**'] }, { kind: 'core', paths: ['scripts/**', '.brand-os/**'] }] })))
+    tree.set('scripts/fix.ts', Buffer.from('export const fixed = true\n'))
+  }, 'fix: template release')
+  await s.studio.templateUpdates.templateHead({ force: true })
+  await page.viewport(1440, 900)
+  await page.goto(`${s.url}/brands?lang=en`)
+  assert.match(await text('.brand-card-badges'), /Updates available/)
+  await assertAccessible('brands with update')
+
+  await page.goto(`${s.url}/brands/acme-learning`)
+  assert.equal(await page.eval<string>(`document.getElementById('template-update').dataset.updateState`), 'available')
+  assert.match(await text('#template-update'), /Updates available/)
+  assert.equal(await page.eval<string>(`document.querySelector('#template-update button').getAttribute('aria-describedby')`), 'update-hint')
+  await assertAccessible('overview with update')
+  assert.deepEqual(await contrastFailures(), [], 'update panel: text contrast')
+  for (const [width, height, mobile] of [[1024, 768, false], [390, 844, true]] as const) {
+    await page.viewport(width, height, mobile)
+    await assertNoOverflow(`update panel ${width}`)
+  }
+  await page.viewport(1440, 900)
+  await page.goto(`${s.url}/brands/acme-learning?lang=fa`)
+  assert.equal(await page.eval<string>('document.documentElement.dir'), 'rtl')
+  assert.match(await text('#template-update'), /به‌روزرسانی موجود است/)
+  assert.equal(await page.eval<string>(`getComputedStyle(document.querySelector('#template-update .mono')).direction`), 'ltr')
+  await assertNoOverflow('fa update panel')
+  await capture('fa-template-update')
+  await page.goto(`${s.url}/brands/acme-learning?lang=en`)
+  await capture('template-update')
+
+  await page.click('#template-update button[type=submit]')
+  await page.waitFor(`location.search.includes('update=opened')`)
+  assert.match(await text('#template-update [role=status]'), /Update pull request #1 is open/)
+  assert.equal(await page.eval<string>(`document.querySelector('#template-update [role=status] a').getAttribute('href')`), `https://github.com/${OWNER}/acme-learning/pull/1`)
+  const repo = s.github.repo(OWNER, 'acme-learning')!
+  assert.equal(repo.pulls.length, 1)
+  assert.ok(repo.pulls[0]!.head.startsWith('template-update/'))
+  assertClean('template update')
 })

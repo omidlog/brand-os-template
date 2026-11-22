@@ -12,7 +12,7 @@ import { escapeHtml, html } from '../apps/studio/src/views/html.js'
 import { scanPublicTree } from '../scripts/scan-public.js'
 import { Client, OWNER_LOGIN, startStudio, WEBHOOK_SECRET, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER, READ_TOKEN, PROVISION_TOKEN } from './helpers/studio.js'
-import { approve, editOutsideStudio } from './helpers/edits.js'
+import { addApprovedAsset, approve, editOutsideStudio, PNG } from './helpers/edits.js'
 
 async function withStudio(fn: (s: RunningStudio) => Promise<void>, overrides = {}): Promise<void> {
   const s = await startStudio(overrides)
@@ -189,7 +189,10 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
         'POST ^\\/webhooks\\/github$',
         'POST ^\\/brands\\/new$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/retry$',
+        'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/discard$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/refresh$',
+        // Studio's second GitHub write: opens (never merges) a template update pull request.
+        'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/template-update$',
       ],
     )
     for (const route of writes) assert.ok(route.writes, `${route.pattern} documents what it changes`)
@@ -207,11 +210,12 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
       const res = await client.request('POST', pathname, { form: { _csrf: 'x' } })
       assert.equal(res.status, 404, pathname)
     }
-    // No page offers a write form other than sign-out, refresh and (on the wizard) provisioning.
+    // No page offers a write form other than sign-out, refresh, (on the wizard) provisioning and,
+    // only when the template moved on, "Open update PR".
     for (const pathname of ['/brands/acme-learning', '/brands/acme-learning/brand-book', '/brands/acme-learning/design', '/brands/acme-learning/assets', '/brands/acme-learning/business', '/brands/acme-learning/history', '/brands/acme-learning/handoff']) {
       const { text } = await client.page(pathname)
       const actions = [...text.matchAll(/<form[^>]*action="([^"]+)"/g)].map((match) => match[1])
-      assert.ok(actions.every((action) => action === '/logout' || action === '/brands/acme-learning/refresh'), `${pathname}: ${actions.join(', ')}`)
+      assert.ok(actions.every((action) => action === '/logout' || action === '/brands/acme-learning/refresh' || action === '/brands/acme-learning/template-update'), `${pathname}: ${actions.join(', ')}`)
       assert.equal(/<textarea(?![^>]*readonly)/.test(text), false, 'no editable text areas')
       assert.equal(/type="file"/.test(text), false, 'no uploads')
       assert.equal(/contenteditable/i.test(text), false)
@@ -337,11 +341,22 @@ test('security headers, no tokens in any response, and the static bundle carries
     assert.match(account.text, /Connected as studio-owner/)
     const staticDir = path.resolve(import.meta.dirname, '../apps/studio/static')
     assert.deepEqual(scanPublicTree(staticDir), [])
-    for (const file of fs.readdirSync(staticDir)) {
-      const text = fs.readFileSync(path.join(staticDir, file), 'utf8')
-      for (const needle of ['STUDIO_', 'token', 'Acme', 'api.github.com', 'anthropic', 'claude']) assert.equal(text.toLowerCase().includes(needle.toLowerCase()), false, `${file} contains ${needle}`)
+    const files = fs.readdirSync(staticDir, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile())
+    for (const entry of files) {
+      const relative = path.relative(staticDir, path.join(entry.parentPath, entry.name))
+      // Self-hosted fonts (binary WOFF2) and their license are the only files below the top level.
+      if (relative.includes(path.sep)) assert.match(relative, /^fonts[/\\]([a-z0-9-]+\.woff2|OFL\.txt)$/, `unexpected static file ${relative}`)
+      if (relative.endsWith('.woff2')) continue
+      const text = fs.readFileSync(path.join(staticDir, relative), 'utf8')
+      for (const needle of ['STUDIO_', 'token', 'Acme', 'api.github.com', 'anthropic', 'claude']) assert.equal(text.toLowerCase().includes(needle.toLowerCase()), false, `${relative} contains ${needle}`)
     }
-    for (const name of ['studio.css', 'studio.js', 'favicon.svg']) assert.equal((await client.get(`/static/${name}`)).status, 200)
+    for (const name of ['studio.css', 'studio.js', 'favicon.svg', 'logo-omid-ataei-white.svg']) assert.equal((await client.get(`/static/${name}`)).status, 200)
+    for (const name of ['inter-var', 'rajdhani-medium', 'rajdhani-semibold', 'rajdhani-bold', 'vazirmatn-var']) {
+      const font = await client.get(`/static/fonts/${name}.woff2`)
+      assert.equal(font.status, 200, name)
+      assert.equal(font.headers.get('content-type'), 'font/woff2', name)
+    }
+    assert.equal((await client.get('/static/fonts/OFL.txt')).status, 404, 'only allowlisted files are served')
     assert.equal((await client.get('/static/..%2fsrc%2fconfig.ts')).status, 404)
     assert.equal((await client.get('/static/server.ts')).status, 404)
   })
@@ -373,6 +388,53 @@ test('Persian renders right-to-left and Turkish left-to-right from locale data; 
     assert.match(tr.text, /Markalarım/)
     await client.get('/brands?lang=xx')
     assert.match((await client.page('/brands')).text, /lang="tr"/, 'an unknown locale is ignored')
+  })
+})
+
+test('the owner previews a draft asset badged as a draft in en, fa (RTL) and tr; an unsafe draft is never linked', async () => {
+  await withStudio(async (s) => {
+    const client = new Client(s.url)
+    await client.login()
+    await createBrand(s, client)
+    editOutsideStudio(s, 'acme-learning', (_engine, root) => {
+      addApprovedAsset(root, { id: 'asset.logo.ok', name: 'Approved logo', file: 'brand/assets/logo/ok.png', data: PNG })
+      addApprovedAsset(root, { id: 'asset.mascot.stage-1', name: 'Mascot stage 1', file: 'brand/assets/mascot/stage-1.png', data: Buffer.concat([PNG, Buffer.from([1])]), status: 'draft' })
+      addApprovedAsset(root, { id: 'asset.mascot.bad', name: 'Bad draft', file: 'brand/assets/mascot/bad.svg', data: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"></svg>'), status: 'draft' })
+    })
+    const csrf = await client.csrf('/brands/acme-learning')
+    assert.equal((await client.request('POST', '/brands/acme-learning/refresh', { form: { _csrf: csrf, return: '/brands/acme-learning/assets' } })).status, 303)
+
+    const expected = {
+      en: { dir: 'ltr', flag: 'Draft, not approved', alt: 'Mascot stage 1 (draft, not approved)' },
+      fa: { dir: 'rtl', flag: 'پیش‌نویس، تأیید نشده', alt: 'Mascot stage 1 (پیش‌نویس، تأیید نشده)' },
+      tr: { dir: 'ltr', flag: 'Taslak, onaylı değil', alt: 'Mascot stage 1 (taslak, onaylı değil)' },
+    } as const
+    for (const [locale, want] of Object.entries(expected)) {
+      await client.get(`/brands/acme-learning/assets?lang=${locale}`)
+      const page = await client.page('/brands/acme-learning/assets')
+      assert.match(page.text, new RegExp(`<html lang="${locale}" dir="${want.dir}">`))
+      const cards = page.text.split('<li class="asset-card"').slice(1)
+      const draft = cards.find((card) => card.includes('asset.mascot.stage-1'))!
+      const approved = cards.find((card) => card.includes('asset.logo.ok'))!
+      const bad = cards.find((card) => card.includes('asset.mascot.bad'))!
+      assert.match(draft, /class="asset-preview asset-preview-draft"/, locale)
+      assert.ok(draft.includes(`alt="${want.alt}"`), `${locale}: the image text says it is a draft`)
+      assert.ok(draft.includes(want.flag), `${locale}: a visible draft flag`)
+      assert.match(draft, /<img src="\/brands\/acme-learning\/assets\/file\/[0-9a-f]{64}"/)
+      assert.doesNotMatch(approved, /asset-preview-draft|asset-draft-flag/, 'an approved asset carries no draft flag')
+      assert.match(approved, /<img src=/)
+      assert.doesNotMatch(bad, /<img|\/assets\/file\//, `${locale}: an unsafe draft is never previewed`)
+    }
+
+    // The draft preview is served like every preview: an image, never inline content.
+    await client.get('/brands/acme-learning/assets?lang=en')
+    const page = await client.page('/brands/acme-learning/assets')
+    const src = /<img src="(\/brands\/acme-learning\/assets\/file\/[0-9a-f]{64})" alt="Mascot stage 1 \(draft/.exec(page.text)![1]!
+    const res = await client.get(src)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers.get('content-type'), 'image/png')
+    assert.match(res.headers.get('content-security-policy') ?? '', /default-src 'none'/)
+    assert.equal(res.headers.get('x-content-type-options'), 'nosniff')
   })
 })
 
