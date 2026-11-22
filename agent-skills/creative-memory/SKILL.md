@@ -9,6 +9,8 @@ The current brand checkout, run as the owner (no `BRAND_OS_AGENT_TOKEN`; every c
 ## Tools
 `npm run brand:creative -- <command> --json`: `project`, `variant`, `feedback`, `select`, `suggest`, `approve` (owner only), `preferences`, `show`, `list`, `context`.
 
+As an MCP agent with a `creative-read` token (not in the checkout), call the read-only `creative_context` tool instead. It returns approved preferences and cited reasons only; local note text comes back as `quote_withheld: local_note`. Do not ask the owner for more access to work around that.
+
 ## Process
 1. **Start with context.** Before designing, run `context --surface <s> --series <name>` (or `--project <id>`). Follow `brand_rules` and `preferences.applied`. Use `references` as cited examples. Treat `not_applied` as history or unverified drafts. Quote provenance (`knowledge:kn_…@…`) when you rely on an item.
 2. **Register real variants only.** `variant --asset <manifest id>` if the file is in `brand/assets/asset-manifest.yaml`, otherwise `--asset missing`. Never invent files, paths or URLs.

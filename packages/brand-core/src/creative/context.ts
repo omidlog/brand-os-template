@@ -18,7 +18,7 @@ import {
   type Surface,
   type Variant,
 } from './model.js'
-import { assertOwnerProcess, listPreferences, listProjects, readProject, resolveAsset, sourceStatus } from './store.js'
+import { assertOwnerProcess, loadProject, resolveAsset, scanPreferences, scanProjects, sourceStatus } from './store.js'
 
 /**
  * Next-session context for creative work. It walks explicit references only (no text search, no second index):
@@ -35,6 +35,8 @@ export interface CitedReason {
   linked_revision: string
   current_revision: string | null
   source_state: SourceState
+  /** Where the note lives now: local (this computer only) or shared (in the private brand repository). */
+  note_scope: 'local' | 'shared' | null
   source_kind: string
   verdict: string
   keep: Aspect[]
@@ -74,7 +76,7 @@ export interface CreativeContext {
   brand_rules: { status: string; profile: 'design'; items: Array<{ id: string; value: unknown; revision: string | null; approval_state: string }> }
   preferences: { applied: PreferenceItem[]; not_applied: PreferenceItem[] }
   references: ReferenceItem[]
-  inspirations: Array<{ project_id: string; provenance: string; source_state: SourceState; title: string | null; rights: string; reuse: 'owner_asset' | 'licensed_check_terms' | 'do_not_copy' }>
+  inspirations: Array<{ project_id: string; provenance: string; source_state: SourceState; note_scope: 'local' | 'shared' | null; title: string | null; rights: string; reuse: 'owner_asset' | 'licensed_check_terms' | 'do_not_copy' }>
   /** Explicit: owner selection is not a measured result and authorizes nothing outside this project. */
   performance: 'not_measured'
   authorizes: []
@@ -97,6 +99,11 @@ function preferenceApplies(pref: CreativePreference, target: CreativeContext['ta
   return pref.scope.surface === target.surface && pref.scope.series === target.series
 }
 
+function noteScope(loaded: { scope: string } | null): 'local' | 'shared' | null {
+  if (!loaded) return null
+  return loaded.scope === 'shared' ? 'shared' : 'local'
+}
+
 function cite(ws: KnowledgeWorkspace, ref: NoteRef, extra: { source_kind: string; verdict: string; keep: Aspect[]; avoid: Aspect[] }): CitedReason {
   const status = sourceStatus(ws, ref)
   const body = status.state === 'current' || status.state === 'stale' ? (status.loaded?.note.body.trim() ?? null) : null
@@ -107,6 +114,7 @@ function cite(ws: KnowledgeWorkspace, ref: NoteRef, extra: { source_kind: string
     linked_revision: ref.revision,
     current_revision: status.loaded?.revision ?? null,
     source_state: status.state,
+    note_scope: noteScope(status.loaded),
     ...extra,
     quote: body === null ? null : truncated ? `${body.slice(0, CREATIVE_LIMITS.maxQuoteChars)}…` : body,
     quote_truncated: truncated,
@@ -196,9 +204,19 @@ export interface ContextTarget {
 
 export function creativeContext(ws: KnowledgeWorkspace, engine: InterviewEngine, input: ContextTarget): CreativeContext {
   assertOwnerProcess()
+  // Brand rules: the same reader an agent with the `design` profile uses. Approved internal facts only.
+  const ctx: AuthContext = { ...agentTokenContext(ws.brandSlug, 'creative-context', 'design'), principal_id: 'local-process:creative-context' }
+  return buildCreativeContext(ws, engine, input, ctx)
+}
+
+/**
+ * The context without the owner-process check. `factsReader` decides which approved facts appear (the owner path
+ * uses the design reader; the agent tool passes the caller's own creative-read context). Callers authorize first.
+ */
+export function buildCreativeContext(ws: KnowledgeWorkspace, engine: InterviewEngine, input: ContextTarget, factsReader: AuthContext): CreativeContext {
   let target: CreativeContext['target']
   if (input.project_id) {
-    const project = readProject(ws, validateProjectId(input.project_id))
+    const project = loadProject(ws, validateProjectId(input.project_id))
     target = { project_id: project.project_id, surface: project.surface, series: project.series }
     if ((input.surface && input.surface !== project.surface) || (input.series && input.series !== project.series)) {
       throw new CreativeError('invalid_input', `Project ${project.project_id} is ${project.surface}/${project.series}; --surface/--series disagree.`)
@@ -209,22 +227,20 @@ export function creativeContext(ws: KnowledgeWorkspace, engine: InterviewEngine,
   }
   if (engine.config().brand.slug !== ws.brandSlug) throw new CreativeError('wrong_brand', 'The engine and the workspace are different brands.')
 
-  // Brand rules: the same reader an agent with the `design` profile uses. Approved internal facts only.
-  const ctx: AuthContext = { ...agentTokenContext(ws.brandSlug, 'creative-context', 'design'), principal_id: 'local-process:creative-context' }
-  const facts = brandRetrieve(engine, ctx, { kind: 'facts' })
+  const facts = brandRetrieve(engine, factsReader, { kind: 'facts' })
   const factItems = ((facts.data as { items?: Array<{ id: string; value: unknown; revision: string | null; approval_state: string; withheld: boolean }> } | null)?.items ?? [])
     .filter((item) => !item.withheld && item.approval_state === 'approved')
     .map((item) => ({ id: item.id, value: item.value, revision: item.revision, approval_state: item.approval_state }))
 
   const applied: PreferenceItem[] = []
   const notApplied: PreferenceItem[] = []
-  for (const pref of listPreferences(ws)) {
+  for (const pref of scanPreferences(ws)) {
     if (!preferenceApplies(pref, target)) continue
     const view = preferenceView(ws, pref)
     ;(view.state === 'approved' ? applied : notApplied).push(view)
   }
 
-  const projects = listProjects(ws).filter((project) => projectInScope(project, target))
+  const projects = scanProjects(ws).filter((project) => projectInScope(project, target))
   const references = projects.flatMap((project) => referencesFor(ws, project))
   const inspirations = projects.flatMap((project) =>
     project.inspirations.map((item) => {
@@ -233,6 +249,7 @@ export function creativeContext(ws: KnowledgeWorkspace, engine: InterviewEngine,
         project_id: project.project_id,
         provenance: knowledgeRef(item.note.id, item.note.revision),
         source_state: status.state,
+        note_scope: noteScope(status.loaded),
         title: status.loaded?.note.meta.title ?? null,
         rights: item.rights,
         reuse: item.rights === 'own' ? ('owner_asset' as const) : item.rights === 'licensed' ? ('licensed_check_terms' as const) : ('do_not_copy' as const),

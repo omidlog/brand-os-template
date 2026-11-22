@@ -101,6 +101,14 @@ function preferenceFile(ws: KnowledgeWorkspace, id: string): string {
 
 export function readProject(ws: KnowledgeWorkspace, id: string): CreativeProject {
   assertOwnerProcess()
+  return loadProject(ws, id)
+}
+
+/**
+ * Reads without the owner-process check. Only for callers that authorized the reader themselves (the
+ * creative-read agent tool in agent.ts). Never export a write built on these.
+ */
+export function loadProject(ws: KnowledgeWorkspace, id: string): CreativeProject {
   const doc = readRecord<CreativeProject>(ws, projectFile(ws, id), 'creative_project')
   if (!doc) throw new CreativeError('not_found', `No creative project ${id} in this brand.`)
   if (doc.project_id !== id) throw new CreativeError('invalid_record', `The file for ${id} carries another project id.`)
@@ -109,6 +117,11 @@ export function readProject(ws: KnowledgeWorkspace, id: string): CreativeProject
 
 export function listProjects(ws: KnowledgeWorkspace): CreativeProject[] {
   assertOwnerProcess()
+  return scanProjects(ws)
+}
+
+/** listProjects without the owner-process check (see loadProject). */
+export function scanProjects(ws: KnowledgeWorkspace): CreativeProject[] {
   const folder = dir(ws, 'projects')
   if (!dirUsable(ws, folder)) return []
   const out: CreativeProject[] = []
@@ -116,7 +129,7 @@ export function listProjects(ws: KnowledgeWorkspace): CreativeProject[] {
     const match = /^([a-z0-9][a-z0-9-]{2,39})\.json$/.exec(name)
     if (!match) continue
     try {
-      out.push(readProject(ws, match[1]!))
+      out.push(loadProject(ws, match[1]!))
     } catch (error) {
       // Another brand's file, a symlink or a corrupt record is skipped, never partially read.
       if (!(error instanceof CreativeError)) throw error
@@ -127,6 +140,11 @@ export function listProjects(ws: KnowledgeWorkspace): CreativeProject[] {
 
 export function readPreference(ws: KnowledgeWorkspace, id: string): CreativePreference {
   assertOwnerProcess()
+  return loadPreference(ws, id)
+}
+
+/** readPreference without the owner-process check (see loadProject). */
+export function loadPreference(ws: KnowledgeWorkspace, id: string): CreativePreference {
   const doc = readRecord<CreativePreference>(ws, preferenceFile(ws, id), 'creative_preference')
   if (!doc) throw new CreativeError('not_found', `No creative preference ${id} in this brand.`)
   if (doc.preference_id !== id) throw new CreativeError('invalid_record', `The file for ${id} carries another preference id.`)
@@ -135,6 +153,11 @@ export function readPreference(ws: KnowledgeWorkspace, id: string): CreativePref
 
 export function listPreferences(ws: KnowledgeWorkspace): CreativePreference[] {
   assertOwnerProcess()
+  return scanPreferences(ws)
+}
+
+/** listPreferences without the owner-process check (see loadProject). */
+export function scanPreferences(ws: KnowledgeWorkspace): CreativePreference[] {
   const folder = dir(ws, 'preferences')
   if (!dirUsable(ws, folder)) return []
   const out: CreativePreference[] = []
@@ -142,7 +165,7 @@ export function listPreferences(ws: KnowledgeWorkspace): CreativePreference[] {
     const match = /^(cp_[0-9a-f-]{36})\.json$/.exec(name)
     if (!match) continue
     try {
-      out.push(readPreference(ws, match[1]!))
+      out.push(loadPreference(ws, match[1]!))
     } catch (error) {
       if (!(error instanceof CreativeError)) throw error
     }

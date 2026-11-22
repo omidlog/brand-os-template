@@ -26,7 +26,7 @@ export interface ResourceRef {
  * Every profile is read-only, limited to the `internal` audience, and has no `restricted` scope, so
  * restricted (financial or legal) values are never returned to an agent in this release.
  */
-export type AgentProfile = 'internal-read' | 'design' | 'marketing' | 'finance' | 'knowledge-read'
+export type AgentProfile = 'internal-read' | 'design' | 'marketing' | 'finance' | 'knowledge-read' | 'creative-read'
 
 const MARKETING_BUSINESS_MODULES = new Set([
   'business-company',
@@ -87,6 +87,15 @@ export const AGENT_PROFILES: Record<AgentProfile, { description: string; allowsM
   'knowledge-read': {
     description: 'Approved internal facts in every module, plus shared knowledge notes (brand/knowledge/shared) labelled as unapproved ideas. No local or restricted notes. No restricted values.',
     allowsModule: () => true,
+  },
+  /**
+   * The only profile the creative_context MCP tool answers. Facts as design, plus the owner's approved creative
+   * preferences and cited selection/rejection reasons (derived records, no drafts). Verbatim note text only from
+   * shared notes. Existing tokens keep their profile, so none gains creative access.
+   */
+  'creative-read': {
+    description: 'Approved internal facts as the design profile, plus the read-only creative_context tool: owner-approved scoped creative preferences and cited selection/rejection reasons. No drafts, no local note text, no restricted values.',
+    allowsModule: (module) => AGENT_PROFILES.design.allowsModule(module),
   },
 }
 
