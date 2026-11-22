@@ -3,10 +3,22 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
-import { applyInit, backupBrand, InterviewEngine, migrateBrand, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
+import { applyInit, backupBrand, InterviewEngine, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand } from '@brand-os/brand-core'
 import type { BatchResult, IntakeReport, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
 
 const [command, ...rest] = process.argv.slice(2)
+
+/** brand:init --template-commit <sha>: the template commit this brand was created from (for template:update). */
+function templateFromFlag(commit: string | undefined) {
+  if (commit === undefined) return undefined
+  if (!/^[0-9a-f]{7,64}$/.test(commit)) {
+    console.error('--template-commit needs a git commit id (hex).')
+    process.exit(1)
+  }
+  const manifest = readSyncManifest(process.cwd())
+  const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as { version?: string }
+  return { repository: manifest?.template.repository ?? null, commit, version: pkg.version ?? null, source: 'brand:init' }
+}
 const root = process.cwd()
 const engine = new InterviewEngine(root)
 
@@ -29,6 +41,7 @@ if (command === 'init') {
       facets: { type: 'string' },
       yes: { type: 'boolean', default: false },
       reset: { type: 'boolean', default: false },
+      'template-commit': { type: 'string' },
     },
   })
   if (!values.name || !values.slug) {
@@ -54,6 +67,7 @@ if (command === 'init') {
     personal: values.personal === undefined ? undefined : values.personal === 'true',
     facets: values.facets ? values.facets.split(',').map((item) => item.trim()).filter(Boolean) : [],
     reset: values.reset === true,
+    template: templateFromFlag(values['template-commit']),
   })
   const personal = config.modules.personal
   console.log(`Initialized ${config.brand.name} (${config.brand.slug}). Profile ${config.brand.profile}. Mascot ${config.modules.mascot.enabled ? 'on' : 'off'}. Personal ${personal?.enabled ? `on${personal.facets.length ? ` (${personal.facets.join(', ')})` : ''}` : 'off'}.`)
@@ -606,6 +620,87 @@ if (command === 'init') {
     for (const item of result.results) console.log(`${item.outcome.padEnd(11)} ${item.id}  ${item.reason}`)
   }
   if (!result.ok) process.exit(1)
+} else if (command === 'assets') {
+  const [sub, ...args] = rest
+  if (sub === 'check') {
+    const { values } = parseArgs({ args, options: { ids: { type: 'string' }, json: { type: 'boolean', default: false } } })
+    const { checkAssets } = await import('@brand-os/asset-catalog')
+    const ids = values.ids ? values.ids.split(',').map((id) => id.trim()).filter(Boolean) : undefined
+    const reports = checkAssets(root, ids)
+    if (values.json) console.log(JSON.stringify({ ok: reports.every((report) => report.ok), assets: reports }, null, 2))
+    else {
+      for (const report of reports) {
+        console.log(`${(report.ok ? 'ok' : report.fixable ? 'fixable' : 'refused').padEnd(8)} ${report.id}  ${report.path}`)
+        for (const issue of report.issues) console.log(`         ${issue.fixable ? 'fixable' : 'blocks '} ${issue.code}${issue.line ? ` line ${issue.line}` : ''}: ${issue.message}`)
+        for (const warning of report.warnings) console.log(`         warning ${warning.code}${warning.line ? ` line ${warning.line}` : ''}: ${warning.message}`)
+        if (report.fix) console.log(`         fix: ${report.fix}`)
+        else if (!report.ok) console.log('         fix: not automatic. Fix the source file and export it again.')
+      }
+      const failing = reports.filter((report) => !report.ok).length
+      console.log(reports.length === 0 ? 'No SVG assets in the manifest.' : `${reports.length} SVG asset(s) checked, ${failing} not publishable.`)
+    }
+    if (reports.some((report) => !report.ok)) process.exit(1)
+  } else if (sub === 'normalize') {
+    const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { id: { type: 'string' }, 'dry-run': { type: 'boolean', default: false }, json: { type: 'boolean', default: false } } })
+    const ids = [...(values.id ? [values.id] : []), ...positionals]
+    if (ids.length === 0) {
+      console.error('Usage: brand:assets normalize <asset.id> [more ids] [--dry-run] [--json]')
+      process.exit(2)
+    }
+    const { normalizeAsset } = await import('@brand-os/asset-catalog/normalize')
+    const reports = []
+    for (const id of ids) reports.push(await normalizeAsset(root, id, { dryRun: values['dry-run'] }))
+    if (values.json) console.log(JSON.stringify({ ok: reports.every((report) => report.ok), assets: reports }, null, 2))
+    else {
+      for (const report of reports) {
+        console.log(`${report.outcome.padEnd(15)} ${report.id}  ${report.reason}`)
+        if (report.original && report.outcome !== 'unchanged') console.log(`                original kept at ${report.original}`)
+        if (report.checksum_before && report.checksum_after && report.checksum_before !== report.checksum_after) console.log(`                sha256 ${report.checksum_before.slice(0, 12)}… -> ${report.checksum_after.slice(0, 12)}…`)
+        if (report.render_check) console.log(`                render check: ${report.render_check.result} (${report.render_check.renderer}${report.render_check.width ? `, ${report.render_check.width}x${report.render_check.height}` : ''})${report.render_check.detail ? ` ${report.render_check.detail}` : ''}`)
+        for (const issue of report.issues ?? []) console.log(`                ${issue.code}${issue.line ? ` line ${issue.line}` : ''}: ${issue.message}`)
+      }
+      if (reports.some((report) => report.approval === 'reset')) console.log('An approval was reset. The owner approves the new file with: npm run brand:assets -- approve --ids <id>')
+    }
+    if (reports.some((report) => !report.ok)) process.exit(1)
+  } else if (sub === 'approve') {
+    const { values } = parseArgs({
+      args,
+      options: {
+        ids: { type: 'string' },
+        actor: { type: 'string', default: 'owner' },
+        json: { type: 'boolean', default: false },
+        // Declared only so it can be refused without echoing its value.
+        proof: { type: 'string' },
+      },
+    })
+    if (values.proof !== undefined) {
+      console.error('--proof is not accepted: a secret on the command line leaks into shell history and the process list. Nothing was changed.')
+      process.exit(2)
+    }
+    if (process.env.BRAND_OS_AGENT_TOKEN) {
+      console.error('brand:assets approve refuses to run while BRAND_OS_AGENT_TOKEN is set. Asset approval is a human action.')
+      process.exit(2)
+    }
+    const ids = (values.ids ?? '').split(',').map((id) => id.trim()).filter(Boolean)
+    if (ids.length === 0) {
+      console.error('Usage: brand:assets approve --ids <asset.id,…> [--actor owner] [--json]')
+      console.error('The approval proof is read from BRAND_OS_APPROVAL_PROOF, piped stdin, or a hidden prompt. Never from argv.')
+      process.exit(2)
+    }
+    const { approveAssets } = await import('@brand-os/brand-core')
+    const result = approveAssets(root, ids, await readApprovalProof(), values.actor ?? 'owner')
+    if (values.json) console.log(JSON.stringify(result, null, 2))
+    else {
+      if (result.proof === 'rejected') console.log('Proof rejected. Nothing was changed.')
+      for (const item of result.results) console.log(`${item.outcome.padEnd(10)} ${item.id}  ${item.reason}`)
+    }
+    if (!result.ok) process.exit(1)
+  } else {
+    console.error('Usage: brand:assets check [--ids <asset.id,…>] [--json]')
+    console.error('       brand:assets approve --ids <asset.id,…> [--actor owner] [--json]   (owner only; proof never on argv)')
+    console.error('       brand:assets normalize <asset.id> [--dry-run] [--json]')
+    process.exit(sub ? 1 : 0)
+  }
 } else if (command === 'finance') {
   const { values } = parseArgs({ args: rest, options: { input: { type: 'string' }, json: { type: 'boolean', default: false } } })
   if (!values.input) {
@@ -651,7 +746,7 @@ if (command === 'init') {
   const result = resetInterviewState(root, values.confirm)
   console.log(`Interview state cleared. Backup: ${path.relative(root, result.backup)}`)
 } else {
-  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, document, tokens:generate, tokens:approve, tokens:publish, query, agent-token, doctor, finance, backup, restore, migrate, reset`)
+  console.log(`Commands: init, interview, resume, next, propose, status, review, validate, export, approve, publish, document, tokens:generate, tokens:approve, tokens:publish, assets, query, agent-token, doctor, finance, backup, restore, migrate, reset`)
   process.exit(command ? 1 : 0)
 }
 

@@ -62,7 +62,7 @@ export interface PullSummary {
 
 export interface TreeEntry {
   path: string
-  mode: '100644'
+  mode: '100644' | '100755'
   type: 'blob'
   sha: string | null
 }
@@ -304,6 +304,46 @@ export class GitHubClient {
     await this.json('PATCH', `/repos/${seg(owner)}/${seg(repo)}/git/refs/heads/${branch.split('/').map(seg).join('/')}`, 'Update branch', { sha, force: false })
   }
 
+  /** The commit a branch points at, or null when the branch does not exist. Read-only. */
+  async getBranchRef(owner: string, repo: string, branch: string): Promise<string | null> {
+    if (!BRANCH_RE.test(branch)) throw new GitHubError('invalid', 0, 'Invalid branch name.')
+    try {
+      const raw = await this.json<Record<string, unknown>>('GET', `/repos/${seg(owner)}/${seg(repo)}/git/ref/heads/${branch.split('/').map(seg).join('/')}`, 'Read branch')
+      const sha = text((raw.object as Record<string, unknown> | undefined)?.sha, 40)
+      return SHA_RE.test(sha) ? sha : null
+    } catch (error) {
+      if (error instanceof GitHubError && error.kind === 'not_found') return null
+      throw error
+    }
+  }
+
+  /** Creates a new branch. GitHub refuses (422) when it already exists, so this never moves an existing branch. */
+  async createBranch(owner: string, repo: string, branch: string, sha: string): Promise<void> {
+    if (!BRANCH_RE.test(branch)) throw new GitHubError('invalid', 0, 'Invalid branch name.')
+    if (!SHA_RE.test(sha)) throw new GitHubError('invalid', 0, 'Invalid commit id.')
+    await this.json('POST', `/repos/${seg(owner)}/${seg(repo)}/git/refs`, 'Create branch', { ref: `refs/heads/${branch}`, sha })
+  }
+
+  /** Opens a pull request. Studio has no method that merges one. */
+  async createPull(owner: string, repo: string, input: { title: string; body: string; head: string; base: string }): Promise<PullSummary> {
+    if (!BRANCH_RE.test(input.head) || !BRANCH_RE.test(input.base)) throw new GitHubError('invalid', 0, 'Invalid branch name.')
+    const raw = await this.json<Record<string, unknown>>('POST', `/repos/${seg(owner)}/${seg(repo)}/pulls`, 'Open pull request', {
+      title: input.title.slice(0, 250),
+      body: input.body.slice(0, 60_000),
+      head: input.head,
+      base: input.base,
+      maintainer_can_modify: false,
+    })
+    return {
+      number: Number(raw.number) || 0,
+      title: text(raw.title, 200),
+      html_url: githubUrl(raw.html_url),
+      head_ref: text((raw.head as Record<string, unknown> | undefined)?.ref, 200),
+      draft: raw.draft === true,
+      updated_at: text(raw.updated_at, 40) || null,
+    }
+  }
+
   async deleteRepo(owner: string, repo: string): Promise<void> {
     await this.request('DELETE', `/repos/${seg(owner)}/${seg(repo)}`, 'Delete partially created repository')
   }
@@ -319,8 +359,8 @@ export class GitHubClient {
     })
   }
 
-  async listOpenPulls(owner: string, repo: string, limit = 20): Promise<PullSummary[]> {
-    const raw = await this.json<Array<Record<string, unknown>>>('GET', `/repos/${seg(owner)}/${seg(repo)}/pulls?state=open&per_page=${limit}`, 'Read pull requests')
+  async listOpenPulls(owner: string, repo: string, limit = 20, page = 1): Promise<PullSummary[]> {
+    const raw = await this.json<Array<Record<string, unknown>>>('GET', `/repos/${seg(owner)}/${seg(repo)}/pulls?state=open&per_page=${limit}${page > 1 ? `&page=${page}` : ''}`, 'Read pull requests')
     return (Array.isArray(raw) ? raw : []).slice(0, limit).map((item) => ({
       number: Number(item.number) || 0,
       title: text(item.title, 200),
