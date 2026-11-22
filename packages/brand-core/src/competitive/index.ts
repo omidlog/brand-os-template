@@ -26,3 +26,4 @@ export type { Alternative, CompetitiveMemo, FactCitation, MemoBase, MemoKind, Me
 export { ALTERNATIVES, DEPENDENCIES, MEMO_HEADINGS, MEMO_TITLES, NOT_KNOWN, PROPOSE_EDIT, SEO_NAME_STATUS, WARNINGS } from './memo-i18n.js'
 export { importSeoNames, seoNamedCompetitors } from './seo-bridge.js'
 export type { SeoImportResult } from './seo-bridge.js'
+export { renderMemo } from './render.js'

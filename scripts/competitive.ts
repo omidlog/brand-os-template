@@ -3,24 +3,31 @@ import { AGENT_TOKEN_ENV, KnowledgeError, openWorkspace, type KnowledgeWorkspace
 import {
   addCandidate,
   asLang,
+  buildCompetitiveMemo,
   buildLandscape,
   classifyCandidate,
   CompetitiveError,
   DIMENSION_LABELS,
   fill,
+  getCompetitiveContext,
   HEADINGS,
+  importSeoNames,
   linkEvidence,
+  MEMO_PURPOSES,
   readCandidate,
+  renderMemo,
   scanCandidates,
   setScope,
   setStatus,
   verifyDomain,
   type Landscape,
+  type Purpose,
 } from '@brand-os/brand-core/competitive'
 import { NETWORK_ENV, ResearchError, selectAdapter } from '@brand-os/brand-core/research'
+import { SeoError } from '@brand-os/brand-core/seo'
 
 /**
- * brand:competitive — the owner's local competitor index (Identity Slice B).
+ * brand:competitive — the owner's local competitor index (Identity Slice B) and its purpose drafts (Slice C).
  *
  * Sources are recorded once, as Knowledge research notes, with `brand:seo research capture|replay` (topic
  * market_observation). This command only indexes candidates and cites those notes. It never fetches, never writes a
@@ -47,6 +54,13 @@ const HELP = `brand:competitive <command> [options]
   list                                        candidates with assessment and domain state
   show --id <cmp_id>                          one candidate with every cited observation
   matrix [--lang en|fa|tr]                    landscape: matrix, prices (never ranked), gaps, limits
+  context --purpose <p> [--market TR] [--lang …]
+                                              one purpose's projection (identity, positioning, marketing,
+                                              pricing, seo, expansion); JSON with --json
+  memo --purpose marketing|pricing|seo|identity [--market TR] [--lang en|fa|tr]
+                                              a draft read against approved facts; prints, writes nothing
+  import-seo-names [--dry-run]                add seo.competitors.named answers as unverified candidates
+                                              (owner assumptions; existing names are reported, never merged)
 
 Dimensions: offer, audience, geography, public_price, public_message, visual_language, observable_channels,
 strength_hypothesis, weakness_hypothesis (the last two are inferences).
@@ -85,6 +99,8 @@ const OPTIONS = {
   promotion: { type: 'string' },
   'feature-scope': { type: 'string' },
   status: { type: 'string' },
+  purpose: { type: 'string' },
+  'dry-run': { type: 'boolean', default: false },
 } as const
 
 type Values = ReturnType<typeof parseArgs<{ args: string[]; options: typeof OPTIONS; allowPositionals: false; strict: true }>>['values']
@@ -213,6 +229,33 @@ function run(ws: KnowledgeWorkspace, values: Values): void {
       print(values, { ok: true, landscape: view }, () => landscapeText(view))
       return
     }
+    case 'context': {
+      const ctx = getCompetitiveContext(ws, need(values, 'purpose') as Purpose, { capability: selectAdapter({}).capability(ws.now()), lang: asLang(values.lang), market: values.market ?? null })
+      print(values, { ok: true, context: ctx }, () =>
+        [
+          `${ctx.purpose} context for ${ctx.brand_slug}${ctx.market ? ` (${ctx.market})` : ''}: ${ctx.state}. Draft input, owner-only; authorizes nothing.`,
+          `${ctx.competitors.length} competitor(s), ${ctx.freshness.usable} usable observation(s), ${ctx.freshness.historical} historical, ${ctx.freshness.needs_review} needing review, ${ctx.freshness.conflicting} conflicting; source digest ${ctx.source_digest.slice(0, 12)}`,
+          ...ctx.next_research.map((s) => `  - ${s.text}`),
+        ].join('\n'),
+      )
+      return
+    }
+    case 'memo': {
+      const purpose = need(values, 'purpose')
+      if (!(MEMO_PURPOSES as readonly string[]).includes(purpose)) usage(`--purpose must be one of ${MEMO_PURPOSES.join(', ')}.`)
+      const memo = buildCompetitiveMemo(ws, purpose as Purpose, { capability: selectAdapter({}).capability(ws.now()), lang: asLang(values.lang), market: values.market ?? null })
+      print(values, { ok: true, memo }, () => renderMemo(memo))
+      return
+    }
+    case 'import-seo-names': {
+      const out = importSeoNames(ws, { dryRun: values['dry-run'] })
+      print(values, { ok: true, dry_run: values['dry-run'], ...out }, () =>
+        out.interview === 'not_answered'
+          ? 'seo.competitors.named is not answered (or is unknown). Nothing to import.'
+          : [...out.results.map((r) => `${r.outcome.padEnd(10)} ${r.name}${r.competitor_id ? ` ${r.competitor_id}` : ''}${r.reason ? ` — ${r.reason}` : ''}`), 'Imported names are unverified candidates (owner assumptions), not search evidence.'].join('\n'),
+      )
+      return
+    }
     default:
       usage(command ? `Unknown command ${command}.` : 'No command given.')
   }
@@ -233,7 +276,7 @@ try {
 try {
   run(openWorkspace(root), values)
 } catch (error) {
-  if (error instanceof CompetitiveError || error instanceof KnowledgeError || error instanceof ResearchError) {
+  if (error instanceof CompetitiveError || error instanceof KnowledgeError || error instanceof ResearchError || error instanceof SeoError) {
     if (values.json) console.log(JSON.stringify({ ok: false, error: { code: error.code, message: error.message } }, null, 2))
     else console.error(`${error.code}: ${error.message}`)
     process.exit(1)
