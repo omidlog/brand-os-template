@@ -119,6 +119,19 @@ Branch `feat/knowledge-inbox`. Guide: `docs-internal/KNOWLEDGE.md`. Review: `doc
 | C2 Studio browser checks | Done | Real headless Chrome: no overflow at three widths in English and Persian, accessible names, AA contrast, no remote fetch of note images. Not yet checked against a deployed Studio or live GitHub. |
 | Performance | Baseline | 1,000 and 10,000 synthetic notes measured (`docs-internal/KNOWLEDGE.md`). No gate. |
 
+## Creative Learning MVP (Sprint 1)
+
+Branch `feat/creative-learning`, built on the Knowledge Inbox (PR #9). Guide: `docs-internal/CREATIVE_LEARNING.md`. Reuse map: `docs-internal/CREATIVE_LEARNING_REUSE_MAP.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Projects, variants, selection | Done | Local records under `brand/.private/creative`; assets are manifest ids or `missing`; selection means owner choice for one project only. |
+| Feedback as Knowledge notes | Done | Verbatim text stored once, as a local Knowledge note; records hold `kn_…` + revision and closed-vocabulary aspects. |
+| Scoped preferences | Done | Draft → owner approval with the existing proof; project or series scope; brand scope refused (routed to `propose`/`approve`); supersession keeps history. |
+| Next-session context | Done | Approved facts (design reader), applied preferences, cited selected/rejected/kept references from in-scope projects, provenance and source state. |
+| Agent / MCP / Studio access | Not started | Owner CLI only; refuses under an agent token. |
+| Performance data | Not started | `performance: not_measured`; no connectors. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.
