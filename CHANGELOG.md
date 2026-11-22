@@ -21,7 +21,7 @@ Theme: capture messy ideas per brand, find them in fa/tr/en, link them, and turn
 - `knowledge-read` agent-token profile and read-only MCP tools `knowledge_list`, `knowledge_search`, `knowledge_read`, `knowledge_backlinks`, `knowledge_suggest_proposal` (shared notes only). Existing profiles unchanged.
 - `agent-skills/knowledge-inbox/SKILL.md`.
 - Studio: read-only **Knowledge** section for merged shared notes (labelled unverified ideas), en/fa/tr, filters, search, detail with backlinks and linked questions. No new write route.
-- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`, `knowledge-proposals`, `knowledge-agent`, `knowledge-studio`; Knowledge page browser checks in `studio-browser`.
+- Tests: `knowledge-storage`, `knowledge-search`, `knowledge-security`, `knowledge-cli`, `knowledge-proposals`, `knowledge-agent`, `studio-knowledge`; Knowledge page browser checks in `studio-browser`.
 
 ## Unreleased — SVG checker, normalizer and asset approval
 
