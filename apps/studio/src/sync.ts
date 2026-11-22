@@ -77,12 +77,31 @@ export class SyncService {
     return path.join(this.cacheRoot(), slug)
   }
 
+  /**
+   * Every page view (and the brand list, once per brand) reads state.json. The parsed file is kept per
+   * slug and reused while the file's inode, size and mtime are unchanged; state.json is only ever
+   * replaced by an atomic rename, which always changes the inode. Callers must not mutate the result.
+   */
+  private readonly parsed = new Map<string, { key: string; state: StateFile }>()
+
   private readState(slug: string): StateFile | null {
     const file = path.join(this.dir(slug), 'state.json')
-    if (!fs.existsSync(file)) return null
+    let stat: fs.Stats
     try {
-      return JSON.parse(fs.readFileSync(file, 'utf8')) as StateFile
+      stat = fs.statSync(file)
     } catch {
+      this.parsed.delete(slug)
+      return null
+    }
+    const key = `${stat.ino}:${stat.size}:${stat.mtimeMs}`
+    const hit = this.parsed.get(slug)
+    if (hit?.key === key) return hit.state
+    try {
+      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as StateFile
+      this.parsed.set(slug, { key, state })
+      return state
+    } catch {
+      this.parsed.delete(slug)
       return null
     }
   }
@@ -90,7 +109,7 @@ export class SyncService {
   get(slug: string): CachedBrand {
     const state = this.readState(slug)
     if (!state) return { status: { ...EMPTY }, projection: null, history: null }
-    return { status: state.status, projection: state.projection, history: state.history }
+    return { status: { ...state.status }, projection: state.projection, history: state.history }
   }
 
   /** Stale when the last check is older than the TTL, when a refresh failed, or when a webhook said the branch moved. */
