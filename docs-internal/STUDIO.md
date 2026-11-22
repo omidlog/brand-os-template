@@ -134,6 +134,26 @@ The repository must be private and reachable with the read credential, and its `
 
 Add a repository or organization webhook for push events to `https://<studio-origin>/webhooks/github` with content type `application/json` and the secret in `STUDIO_GITHUB_WEBHOOK_SECRET`.
 
+### What a restart clears (in-memory state)
+
+Studio runs as one process and keeps its security state in that process's memory, not on disk. Every restart (a deploy, a crash, a host reboot) clears it:
+
+| State | Where | Effect of a restart |
+| --- | --- | --- |
+| Owner sessions | `apps/studio/src/auth/session.ts` | The owner is signed out and signs in again with password and authenticator code. Absolute expiry (`STUDIO_SESSION_HOURS`, default 12) and idle expiry (`STUDIO_IDLE_MINUTES`, default 60) only apply within one process lifetime. |
+| Rate limits | `apps/studio/src/auth/rate-limit.ts`, created in `server.ts` | Counters start from zero: failed sign-ins (5 per IP and 30 overall per 15 minutes), provisioning (10 per hour), refresh (once per 5 seconds per brand) and the name check (60 per minute). A restart therefore also lifts an active sign-in lockout. |
+| Used authenticator codes | `TotpVerifier` in `apps/studio/src/auth/totp.ts` | The "each code works once" record is lost. A code seen just before a restart could be accepted once more inside its 30-second step (plus one step of drift) after the restart, still only together with the password. |
+| Webhook delivery ids | `DeliveryLog` in `apps/studio/src/github/webhook.ts` | A recent delivery could be processed again. That only queues one more read-only refresh. |
+
+The brand registry, the sync cache and provisioning records are files in `STUDIO_DATA_DIR` and survive restarts.
+
+What this means for an operator:
+
+- Run exactly one Studio process per data directory. Two processes (or a load balancer over several) would each keep separate sessions and separate rate limits, which multiplies the sign-in attempts allowed.
+- Do not restart Studio in a loop, for example from a health check that restarts on every failure: each restart resets the sign-in limits. Use a supervisor with back-off.
+- After a restart, everyone signs in again. That is expected, not a fault.
+- Persisting sessions and limits (for example in a small file or database in `STUDIO_DATA_DIR`) is a possible later change; it is not built.
+
 ## Private repository access for Claude Code
 
 A repository URL is not permission. Claude Code can read a private brand repository only if you give it access, for example:
