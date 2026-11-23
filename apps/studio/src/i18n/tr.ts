@@ -230,6 +230,11 @@ export const tr: Messages = {
   'overview.group.business': 'İşletme',
   'overview.group.personal': 'Kişisel',
   'overview.group.governance': 'Yönetişim',
+  'overview.coach.title': 'Onaylamadan önce: koç notları',
+  'overview.coach.hint': 'Tavsiye niteliğinde, birleştirilmiş taslaklardan okunur. Buradaki hiçbir şey onaylamaz, engellemez ya da değiştirmez ve hiçbir yanıt alıntılanmaz. Bir nota göre işlem yapmak için marka deposunda Claude Code kullanın.',
+  'overview.coach.more': '{count} taslağın daha notu var.',
+  'overview.coach.run': "Claude Code'da",
+  'overview.coach.label': 'Taslaklar için koç notları',
 
   'doc.counts': 'Öğe durumu',
   'doc.chapters': 'Bölümler',

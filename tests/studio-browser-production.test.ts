@@ -6,10 +6,9 @@ import https from 'node:https'
 import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
-import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
 import { closeServer, removeTempDir, teardown, tempDir } from './helpers/cleanup.js'
-import { OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
+import { freshTotp, OWNER_LOGIN, OWNER_PASSWORD, startStudio, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
 
 /**
@@ -120,13 +119,12 @@ async function cookies(): Promise<CdpCookie[]> {
 }
 
 /** Each sign-in uses its own accepted TOTP step: replay protection refuses a code used twice. */
-let signIns = 0
 async function signIn(): Promise<void> {
   await page.goto(`${origin}/brands`)
   assert.equal(await page.eval<string>('location.pathname'), '/login')
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
-  await page.type('#totp', totpAt(TOTP_SECRET, Date.now() + [0, 30_000, -30_000][signIns++ % 3]!))
+  await page.type('#totp', await freshTotp(origin))
   await page.navigation(() => page.click('button[type=submit]'))
 }
 
