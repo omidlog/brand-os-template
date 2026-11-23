@@ -1,5 +1,5 @@
 export * from './model.js'
-export { LAYOUTS, paletteOf, planSocialBatch } from './plan.js'
+export { LAYOUTS, paletteOf, planSocialBatch, scriptDirection } from './plan.js'
 export type { Angle, BatchPlan, Layout, Palette, PostPlan } from './plan.js'
 export { bidi, escapeXml, fitHeadline, localDigits, logoMarkup, POST_LABELS, renderPost, wrapText } from './render.js'
 export type { EmbeddedLogo, RenderedPost } from './render.js'

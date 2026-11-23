@@ -1,6 +1,6 @@
 import type { TaskLocale } from '../task-context/model.js'
 import { POST_FORMAT, SOCIAL_BATCH_COUNT } from './model.js'
-import type { Angle, BatchPlan, Palette, PostPlan } from './plan.js'
+import { scriptDirection, type Angle, type BatchPlan, type Palette, type PostPlan } from './plan.js'
 
 /**
  * The deterministic HTML/SVG post renderer. Pure: plan in, SVG text out. No model, no network, no clock, no random
@@ -124,13 +124,16 @@ function hexOf(palette: Palette, role: string): string {
   return palette.roles.find((entry) => entry.role === role)!.hex
 }
 
-/** Wraps a line in RIGHT-TO-LEFT EMBEDDING … POP DIRECTIONAL FORMATTING for an RTL batch. Display only. */
-export function bidi(line: string, rtl: boolean): string {
-  return rtl ? `\u202B${line}\u202C` : line
+/**
+ * Wraps a right-to-left string in RIGHT-TO-LEFT EMBEDDING … POP DIRECTIONAL FORMATTING so neutral punctuation lands
+ * where a reader expects. Decided per string by its own script, so an English label is never reordered. Display only.
+ */
+export function bidi(line: string): string {
+  return scriptDirection(line) === 'rtl' ? `\u202B${line}\u202C` : line
 }
 
-function textBlock(lines: string[], x: number, y: number, size: number, lineHeight: number, attrs: string, rtl: boolean): string {
-  return lines.map((line, i) => `<text x="${x}" y="${y + i * lineHeight}" font-size="${size}" ${attrs}>${escapeXml(bidi(line, rtl))}</text>`).join('\n    ')
+function textBlock(lines: string[], x: number, y: number, size: number, lineHeight: number, attrs: string): string {
+  return lines.map((line, i) => `<text x="${x}" y="${y + i * lineHeight}" font-size="${size}" ${attrs}>${escapeXml(bidi(line))}</text>`).join('\n    ')
 }
 
 export interface RenderedPost {
@@ -188,19 +191,19 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
 
   const headline = fitHeadline(post.message, headlineWidth, 6)
   const lineHeight = Math.round(headline.size * 1.22)
-  body.push(`<text x="${startX}" y="${headlineTop - 110}" font-size="34" font-weight="600" letter-spacing="${rtl ? 0 : 2}" ${textAttrs} fill-opacity="0.85">${escapeXml(bidi(labels[post.angle], rtl))}</text>`)
-  body.push(textBlock(headline.lines, startX, headlineTop, headline.size, lineHeight, `font-weight="700" ${textAttrs}`, rtl))
+  body.push(`<text x="${startX}" y="${headlineTop - 110}" font-size="34" font-weight="600" letter-spacing="${rtl ? 0 : 2}" ${textAttrs} fill-opacity="0.85">${escapeXml(bidi(labels[post.angle]))}</text>`)
+  body.push(textBlock(headline.lines, startX, headlineTop, headline.size, lineHeight, `font-weight="700" ${textAttrs}`))
 
   // Footer: brand name and the approved CTA, both from the pack. A missing one is simply absent.
   const footerY = H - 210
   deco.push(`<rect x="${MARGIN}" y="${footerY - 70}" width="${contentWidth}" height="2" fill="${fg}" opacity="0.35"/>`)
   if (post.cta) {
     const cta = wrapText(post.cta, 36, contentWidth - 180, 2)
-    body.push(textBlock(cta.lines, startX, footerY, 36, 46, `font-weight="600" ${textAttrs}`, rtl))
+    body.push(textBlock(cta.lines, startX, footerY, 36, 46, `font-weight="600" ${textAttrs}`))
     pairs.push({ foreground: post.colors.foreground, background: post.colors.background, text: 'body' })
   }
   if (post.brand_name) {
-    body.push(`<text x="${startX}" y="${H - 110}" font-size="30" font-weight="700" ${textAttrs}>${escapeXml(bidi(post.brand_name, rtl))}</text>`)
+    body.push(`<text x="${startX}" y="${H - 110}" font-size="30" font-weight="700" ${textAttrs}>${escapeXml(bidi(post.brand_name))}</text>`)
   }
   const counter = localDigits(`${String(post.index).padStart(2, '0')}/${SOCIAL_BATCH_COUNT}`, locale)
   body.push(`<text x="${rtl ? MARGIN : W - MARGIN}" y="${H - 110}" font-size="28" ${attrs(rtl ? 'start' : 'end')} fill-opacity="0.8">${escapeXml(counter)}</text>`)
@@ -212,7 +215,7 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
 
   // The draft stamp is part of the artwork, so a screenshot cannot lose it.
   const stamp = [labels.draft, ...(opts.demo ? [labels.demo] : [])].join(' · ')
-  body.push(`<text x="${W / 2}" y="${H - 44}" font-size="22" ${attrs('middle')} fill-opacity="0.7">${escapeXml(bidi(stamp, rtl))}</text>`)
+  body.push(`<text x="${W / 2}" y="${H - 44}" font-size="22" ${attrs('middle')} fill-opacity="0.7">${escapeXml(bidi(stamp))}</text>`)
 
   const title = `${labels[post.angle]} — ${post.post_id}`
   const svg = [

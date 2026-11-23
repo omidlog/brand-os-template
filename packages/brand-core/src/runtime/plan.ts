@@ -107,9 +107,17 @@ function pairings(palette: Palette): Array<{ background: string; foreground: str
   ]
 }
 
+/** Direction of the first strong character (Unicode bidi classes R/AL approximated by script ranges). */
+export function scriptDirection(text: string): 'ltr' | 'rtl' | null {
+  for (const char of text) {
+    if (/[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/u.test(char)) return 'rtl'
+    if (/\p{L}/u.test(char)) return 'ltr'
+  }
+  return null
+}
+
 export function planSocialBatch(pack: TaskContextPack): BatchPlan {
   const locale = pack.task.locale
-  const direction = locale === 'fa' ? 'rtl' : 'ltr'
   const palette = paletteOf(pack)
   const blockers: BatchPlan['blockers'] = []
 
@@ -126,6 +134,12 @@ export function planSocialBatch(pack: TaskContextPack): BatchPlan {
       }
     }
   }
+
+  // Direction follows the script of the approved copy, not the UI locale: Persian copy stays right-to-left even when
+  // the labels are English. With no copy, the locale decides.
+  const scripts = candidates.map((candidate) => scriptDirection(candidate.message)).filter((dir) => dir !== null)
+  const rtlCount = scripts.filter((dir) => dir === 'rtl').length
+  const direction: 'ltr' | 'rtl' = scripts.length === 0 ? (locale === 'fa' ? 'rtl' : 'ltr') : rtlCount * 2 >= scripts.length ? 'rtl' : 'ltr'
 
   const brand = approved(pack, 'brand_name')[0] ?? null
   const cta = approved(pack, 'cta')[0] ?? null

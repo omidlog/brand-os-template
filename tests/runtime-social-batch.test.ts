@@ -132,12 +132,17 @@ test('same input gives the same bytes and digests, also across two independent d
   }
 })
 
-test('en and tr change labels and direction, never the approved copy', () => {
+test('en and tr change labels, never the approved copy or its direction', () => {
   const descs = (r: SocialBatchResult): string[] => r.manifests.map((manifest) => /<desc id="d">([^<]*)<\/desc>/.exec(r.files.get(manifest.file)!)![1]!)
   for (const locale of ['en', 'tr'] as const) {
     const other = runSocialBatch(demoPack(demo, locale), { demo: true, demoBanner: DEMO_BANNER, logo, coach: null, now: DEMO_NOW })
     assert.deepEqual(descs(other), descs(result), locale)
-    assert.ok(other.manifests.every((manifest) => manifest.direction === 'ltr'))
+    // Direction follows the script of the approved copy (Persian here), not the UI locale.
+    assert.ok(other.manifests.every((manifest) => manifest.direction === 'rtl'), locale)
+    assert.ok(other.manifests.every((manifest) => manifest.locale === locale))
+    const svg = other.files.get(other.manifests[0]!.file)!
+    assert.ok(svg.includes('\u202B'), `${locale}: Persian lines carry an RTL embedding`)
+    assert.ok(!/\u202B(Why|Our|Made|The|Theme|In one|DRAFT|Sözümüz|TASLAK)/u.test(svg), `${locale}: Latin labels are never embedded RTL`)
   }
   assert.ok(result.manifests.every((manifest) => manifest.direction === 'rtl'))
 })
