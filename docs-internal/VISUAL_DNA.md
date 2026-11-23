@@ -19,7 +19,7 @@ no second visual memory: every call re-reads the existing owners of visual truth
 
 | `state` | Meaning | `reason` |
 | --- | --- | --- |
-| `approved` | Readable here, file verified now. Carries path, media type, size, checksum, licence, usage, restrictions, rights subject, `model_use` and `provider_gate`. `delivery: metadata_only`. | — |
+| `approved` | Readable here, file verified now. Carries path, media type, size, checksum, licence and `license_basis`, usage, restrictions, rights subject, `model_use` and `provider_gate`. `delivery: metadata_only`. | — |
 | `withheld` | Approved, but not usable by this caller or not safe to use. | `not_authorized`, `rights`, `license_missing`, `unsafe_file`, `too_large` |
 | `missing` | Not there for this caller. Nothing is substituted. | `not_found`, `not_approved`*, `not_present`*, `no_artwork`, `creative_asset_missing` |
 | `changed` | The bytes are not the approved bytes. | `checksum_mismatch`, `approved_bytes_differ`, `creative_record_changed` |
@@ -27,15 +27,39 @@ no second visual memory: every call re-reads the existing owners of visual truth
 \* Only the owner process sees `not_approved` and `not_present`. An agent gets `not_found` for a draft and for an
 unknown id alike, so it never learns that a draft exists (the same rule `brand_retrieve` applies to facts).
 
+Manifest status `approved` and `published` both count as approved (`published` is approved and released). Every
+other status (`draft`, `review`, `retired`, ...) is `missing`. A `published` asset goes through every check below.
+
 Checks added on top of `brand_retrieve`, never fewer:
 
 - `approved_sha256` must equal the manifest checksum: an approval for other bytes is `changed`.
 - The file must be at most 20 MiB (`too_large`).
 - A rights-sensitive subject (portrait, person, case study, client logo, testimonial) needs a granted, current rights
-  record (`rightsBlocker`), or it is `withheld / rights`.
-- A licence must be recorded; empty, `TBD`, `unknown` or `none` is `withheld / license_missing`.
+  record that covers the requested `use_scope` (`rightsBlocker`), or it is `withheld / rights`. See below.
+- A licence must be recorded; empty, `TBD`, `todo`, `unknown`, `none` or `n/a` is `withheld / license_missing`,
+  except for the brand's own mark (see below).
 - A creative variant whose asset changed after it was recorded is `changed`, never silently re-pointed.
 - The manifest `preview` field is never read or returned. Only the asset's own verified path is.
+
+### Owner policy (2026-11-23)
+
+**The brand's own marks need no licence record.** An asset is the brand's own mark when its id is `asset.logo.*`,
+`asset.wordmark.*`, `asset.logomark.*` or `asset.brand-mark.*`, or it is tagged `logo`, `wordmark`, `logomark`,
+`brand-mark` or `brandmark`. With an empty or placeholder licence it is still `approved`, with
+`rights.license_basis: own_brand_mark` and `rights.license` exactly as recorded (null or `TBD`, never invented). It is
+**not** an own mark, and still needs a recorded licence, when it has a rights-sensitive subject (`client_logo`, for
+example) or a `third-party`, `partner`, `client-logo`, `stock` or `licensed` tag. Tag a partner's or supplier's logo
+accordingly. Icons, photos, illustrations and mascot art are not marks and always need a recorded licence. A recorded
+licence gives `license_basis: recorded`. The exemption skips only the licence check: approval, bytes, size, safe path
+and SVG checks all still apply.
+
+**`use_scope`: where the reference will be used.** `public` (the default) or `internal`, on the MCP input, the CLI
+(`--use-scope`) and owner `read`. Rights with `scope: internal` (and an internal-scope evidence permission) cover a
+portrait or other rights-sensitive subject for `internal` use. `public` use still needs `scope: public`; without it the
+reference is `withheld / rights`. Public-scope rights cover both. The result echoes `use_scope`; a verdict holds only
+for the scope it was asked for, and an `internal` verdict is not permission to publish. A public-audience context is
+always checked for `public`. Publication gates (`brand_retrieve` publication flag, the docs build, Studio) still ask
+for public use and are unchanged.
 
 A mascot request that matches no approved artwork (wrong angle, wrong stage, no art yet) returns one
 `mascot:request` reference with `missing / no_artwork` and the finder's own explanation. The front view is never
@@ -76,14 +100,15 @@ MCP (stdio, metadata only; the input schema is strict, so a forged `role`, `bran
 
 ```json
 { "asset_ids": ["asset.logo.primary"], "mascot": { "emotion": "celebrating", "angle": "front" }, "locale": "fa" }
+{ "asset_ids": ["asset.photo.founder"], "use_scope": "internal" }
 { "creative": { "project_id": "launch-posts-1" } }
 ```
 
 CLI:
 
 ```sh
-npm run brand:visual-dna -- resolve --ids asset.logo.primary --emotion celebrating --angle front [--lang fa] [--json]
-npm run brand:visual-dna -- read asset.logo.primary --for renderer [--stdout | --json]
+npm run brand:visual-dna -- resolve --ids asset.logo.primary --emotion celebrating --angle front [--use-scope internal] [--lang fa] [--json]
+npm run brand:visual-dna -- read asset.logo.primary --for renderer [--use-scope internal] [--stdout | --json]
 ```
 
 `resolve` runs as the agent token in the environment, exactly as the MCP server would, or as the owner without one.
@@ -109,5 +134,8 @@ asset as if you had seen it.
   still reads its logo through its own `loadApprovedLogo` gate; using Visual DNA there is later work.
 - Canonical mascot view sets (front / three-quarter / profile as one approved set) are not modelled; each angle is
   its own catalog artwork, and the owner registers and approves it.
-- `published` manifest status is treated as `brand_retrieve` treats it today (only `approved` is served).
 - Fonts are out of scope; Visual DNA covers files in the asset manifest.
+- The 20 MiB limit is unchanged (owner decision 2026-11-23).
+- `published` counts as approved in `brand_retrieve kind: asset` and Visual DNA. The docs-build publication check
+  (`assetIsPublic`) and the mascot catalog validator still require manifest status `approved`; aligning them is
+  separate work.

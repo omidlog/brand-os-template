@@ -9,6 +9,27 @@
 - Studio: `GET /brands/<slug>/visual/mascot[/print[?edition=public]]`, read-only, en/fa/tr with RTL and Vazirmatn, ids only in details and the print appendix; one link on the Assets page's mascot card. Sync rebuilds caches written before the atlas existed.
 - Framework registry entry `MASCOT-MODEL-SHEET`; ILLUSTRATIVE fixture in `npm run visual:golden`.
 - Tests: `visual-mascot`, `studio-visual-mascot`, `studio-visual-mascot-browser`.
+
+## Unreleased — Visual V1.2: print engine (book_a4_portrait)
+
+### Added
+
+- Typed print profiles (`@brand-os/brand-core/visual` `PRINT_PROFILE_SPECS`): `book_a4_portrait`, `canvas_a3_landscape` (unchanged), `deck_16_9` (planned stub). en/fa/tr book text (`BOOK_TEXT`).
+- The Brand Book "Visual identity" print view is now an A4 portrait book: cover, imprint, contents with the printed page numbers and dotted leaders, running heads (book title verso, chapter recto), outer-edge folios (mirrored, with Persian digits, in fa), numbered notes on the page of their reference, tables continued with a repeated header, headings kept with what follows, no orphan page. New stylesheet `visual-book.css`; the canvas print output is unchanged byte for byte.
+- `npm run brand:export-visual`: owner-machine export of the identity book or the canvas to self-contained HTML and, with a local Chrome, PDF from a measured two-pass layout with an overflow check. Never inside `brand/` or `.private`, refused under an agent token. Studio stays GET-only.
+- Tests: `studio-visual-print-book`; book checks added to `studio-visual-browser` and `studio-visual-identity`.
+## Unreleased — Visual DNA owner policy decisions and the `published` status fix
+
+### Fixed
+
+- Manifest status `published` was counted as unapproved: `brand_retrieve kind: asset` skipped it and Visual DNA reported it `missing`. `published` now reads exactly like `approved`; `approved_sha256`, checksum, safe-path, SVG, size, rights and licence checks still apply (replaced bytes are `changed`).
+
+### Changed
+
+- Visual DNA: the brand's own logo, wordmark, logomark or brand mark (`asset.logo.*` and the other mark ids, or a mark tag) with an empty or `TBD` licence is `approved` with `rights.license_basis: own_brand_mark`. Third-party assets still need a recorded licence: client logos, marks tagged `third-party`, `partner`, `client-logo`, `stock` or `licensed`, and every icon, photo, illustration and mascot artwork (`withheld / license_missing`). Approved references now carry `license_basis` (`recorded` or `own_brand_mark`).
+- Visual DNA: new `use_scope` (`public` by default; MCP input, `--use-scope` on `resolve` and owner `read`, echoed in the result). Internal-scope rights cover a portrait or other rights-sensitive subject for internal use; public use without public-scope rights stays `withheld / rights`. `rightsBlocker` takes the use and defaults to `public`, so every publication gate is unchanged.
+- Tests: `visual-dna-policy` (own mark with empty/TBD licence approved; third-party, partner, client logo, icon and mascot art with TBD withheld; exemption skips no other check; internal portrait approved for internal use and withheld for public use; public rights cover both; pending, expired, holderless and missing rights cover neither; strict `use_scope`; `published` approved; published with replaced bytes or an approval for other bytes `changed`; other statuses missing). `visual-dna-agent` checks `--use-scope` on the CLI.
+
 ## Unreleased — Assurance: owner-local bridge to approved brand facts (GAP-09)
 
 ### Added

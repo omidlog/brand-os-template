@@ -262,9 +262,28 @@ test('Visual identity print view: A4 portrait PDF with the chapter opener, plate
     assert.ok(box, 'a media box')
     assert.ok(Math.abs(Number(box[1]) - 595.28) < 2 && Math.abs(Number(box[2]) - 841.89) < 2, `${lang}: A4 portrait, got ${box[1]}×${box[2]}`)
     const pages = (text.match(/\/Type\s*\/Page(?![s\w])/g) ?? []).length
-    assert.ok(pages >= 5, `${lang}: at least opener, three plates and the appendix (${pages})`)
+    assert.ok(pages >= 7, `${lang}: cover, imprint, contents, three plates and the appendix (${pages})`)
+    // Print engine V1.2: the renderer laid out every page, so Chrome prints exactly one PDF page per sheet.
+    assert.equal(pages, await page.eval<number>(`document.querySelectorAll('.bk-sheet').length`), `${lang}: one PDF page per sheet (no spill, no orphan page)`)
     assert.ok(text.includes('/FontFile2') || text.includes('/FontFile'), `${lang}: fonts are embedded`)
     if (shots) fs.writeFileSync(path.join(shots, `identity-print-${lang}.pdf`), pdf)
+    await page.send('Emulation.setEmulatedMedia', { media: 'print' })
+    const book = await page.eval<{ overflow: number[]; toc: Array<[number, number]>; folioSide: Array<[number, string]> }>(`(() => {
+      const sheets = [...document.querySelectorAll('.bk-sheet')]
+      const overflow = sheets.filter((s) => { const b = s.querySelector('.bk-body'); return b.scrollHeight > b.clientHeight + 1 }).map((s) => Number(s.dataset.folio))
+      const toc = [...document.querySelectorAll('.bk-toc a')].map((a) => [Number(a.querySelector('[data-toc-page]').dataset.tocPage), Number(document.querySelector(a.getAttribute('href')).dataset.folio)])
+      const folioSide = sheets.filter((s) => s.querySelector('.bk-folio-num')).map((s) => { const r = s.getBoundingClientRect(); const f = s.querySelector('.bk-folio-num').getBoundingClientRect(); return [Number(s.dataset.folio), f.left - r.left < r.width / 2 ? 'left' : 'right'] })
+      return { overflow, toc, folioSide }
+    })()`)
+    await page.send('Emulation.setEmulatedMedia', { media: '' })
+    assert.deepEqual(book.overflow, [], `${lang}: no text block overflows its A4 sheet`)
+    assert.ok(book.toc.length === 4 && book.toc.every(([shown, actual]) => shown === actual), `${lang}: contents page numbers are the printed folios ${JSON.stringify(book.toc)}`)
+    // Folios sit on the outer edge: right on recto in a left-to-right book; mirrored (left on recto) in Persian.
+    for (const [folio, side] of book.folioSide) {
+      const recto = folio % 2 === 1
+      const outer = lang === 'fa' ? (recto ? 'left' : 'right') : recto ? 'right' : 'left'
+      assert.equal(side, outer, `${lang} page ${folio}: folio on the outer edge`)
+    }
   }
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })

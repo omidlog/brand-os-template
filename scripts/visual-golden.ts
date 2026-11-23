@@ -16,7 +16,7 @@ import { pathToFileURL } from 'node:url'
 import { illustrativeBusinessModelCanvas, illustrativeMascotAtlas, illustrativeVisualIdentity, VISUAL_LANGS, type IdentityFixtureVariant, type MascotFixtureVariant, type VisualLang } from '@brand-os/brand-core/visual'
 import { html, trusted } from '../apps/studio/src/views/html.js'
 import { printDocument } from '../apps/studio/src/views/visual.js'
-import { identityPrintDocument } from '../apps/studio/src/views/visual-identity.js'
+import { identityBookDocument } from '../apps/studio/src/views/visual-print-book.js'
 import { mascotPrintDocument } from '../apps/studio/src/views/visual-mascot.js'
 import { renderBlock } from '../apps/studio/src/views/visual-registry.js'
 
@@ -53,10 +53,15 @@ export function renderGolden(lang: VisualLang, edition: 'internal' | 'public'): 
   return printDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html`` }).value
 }
 
-/** The Visual identity chapter fixture (V2.1), A4 portrait. The mock master is a labelled frame, not a file. */
+/** The book stylesheet (print engine V1.2), with the same offline font URLs. Kept apart so the canvas golden is unchanged. */
+export function inlineBookStyles(): string {
+  return `${inlineStyles()}\n${fs.readFileSync(path.join(STATIC, 'visual-book.css'), 'utf8')}`
+}
+
+/** The Visual identity chapter fixture as an A4 portrait book (V1.2). The mock master is a labelled frame, not a file. */
 export function renderIdentityGolden(lang: VisualLang, edition: 'internal' | 'public', variant: IdentityFixtureVariant): string {
   const doc = illustrativeVisualIdentity(edition, variant)
-  return identityPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html``, assetUrl: () => null }, (block, ctx) => renderBlock(block, { ...ctx, idPrefix: 'p' })).value
+  return identityBookDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineBookStyles())}</style>`, toolbar: html``, assetUrl: () => null }).html.value
 }
 
 /** The mascot atlas fixture (V3.4), A4 portrait. Mock artwork is a labelled frame, never a drawn character. */

@@ -82,33 +82,37 @@ export async function startStudio(overrides: Partial<StudioConfig> = {}, githubO
   }
 }
 
-/** Accepted TOTP windows: each login in a test uses the next one so replay protection does not refuse it. */
+/** Accepted TOTP windows (current, next, previous step). */
 const DRIFTS = [0, 30_000, -30_000]
-let loginCount = 0
-/** TOTP steps already sent to each Studio server (by base URL); a server refuses a step it has seen as "reused". */
+/**
+ * TOTP steps already used by a sign-in, per Studio server (keyed by its origin). Replay protection lives in each
+ * server's own TotpVerifier, so a step only has to be fresh for the server it is sent to. One set for the whole file
+ * would throttle a file that starts many servers to about one sign-in per 30 s step once the three accepted steps
+ * are used. A port reused by a later server only makes that server's first sign-ins more cautious, never refused.
+ */
 const usedSteps = new Map<string, Set<number>>()
 
 /**
- * A TOTP code for a step no earlier login to this server used (HTTP client or browser), so a browser
- * sign-in after `Client.login()` cannot land on the step the client took when a 30 s boundary passes
- * in between. Rotates through the accepted drifts; waits for the next step if all three are taken.
+ * A TOTP code for the owner from an accepted step that no earlier sign-in to the same server used, so replay
+ * protection never refuses it. A fixed drift order is not enough: when setup crosses a 30 s step boundary under load,
+ * the "current" step of a later sign-in can equal the "next" step an earlier one already used. When every accepted
+ * step is taken, waits for the next step. The previous step is skipped close to a boundary, where the request could
+ * reach the server after that step has stopped being accepted.
  */
-export async function freshTotp(base: string): Promise<string> {
-  const used = usedSteps.get(base) ?? new Set<number>()
-  usedSteps.set(base, used)
+export async function freshTotp(server: string): Promise<string> {
+  const used = usedSteps.get(server) ?? new Set<number>()
+  usedSteps.set(server, used)
   for (;;) {
-    for (let tried = 0; tried < DRIFTS.length; tried += 1) {
-      loginCount += 1
-      const drift = DRIFTS[loginCount % 3]!
-      // The previous step's code is accepted only until the current step ends. Under load, the request
-      // can reach the server after that boundary and fail as "invalid", so never use it close to it.
-      if (drift < 0 && 30_000 - (Date.now() % 30_000) < 5_000) continue
-      const step = Math.floor((Date.now() + drift) / 30_000)
+    const now = Date.now()
+    const left = 30_000 - (now % 30_000)
+    for (const drift of DRIFTS) {
+      if (drift < 0 && left < 5_000) continue
+      const step = Math.floor((now + drift) / 30_000)
       if (used.has(step)) continue
       used.add(step)
-      return totpAt(TOTP_SECRET, step * 30_000)
+      return totpAt(TOTP_SECRET, now + drift)
     }
-    await new Promise((resolve) => setTimeout(resolve, 30_000 - (Date.now() % 30_000) + 50))
+    await new Promise((resolve) => setTimeout(resolve, left + 50))
   }
 }
 
