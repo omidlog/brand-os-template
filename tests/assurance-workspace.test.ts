@@ -354,3 +354,9 @@ test('every bridge string has en, fa and tr text', () => {
     }
   }
 })
+
+test('no score because a person has not judged PRR-08 says exactly that, not that a source changed', () => {
+  const brand = sellingCompany()
+  const { assessment } = withoutAgentToken(() => assessWorkspace(brand.root, { asOf: AS_OF, paidMedia: 'no' }))
+  assert.deepEqual(assessment.completeness.blocked_by, ['reviewer_required'])
+})
