@@ -32,8 +32,8 @@ verdict `visual_dna` gives (approval for these bytes, rights, licence, size, saf
 a file that differs from the checksum the pack pinned is `visual_dna:changed:pack_pin_differs`. A logo that is not
 embedded carries its reason code (`visual_dna:<state>:<reason>`, `not_svg`, `visual_dna_read:<code>`) in the post
 manifest. The resolver appends its own audit line to `brand/.private/access-log.jsonl` (ids only); nothing else in
-`brand/` is written. Until the Visual DNA policy fix (PR #44) merges, a brand's own logo with no recorded licence is
-withheld (`license_missing`); the synthetic demo logo records its licence.
+`brand/` is written. The resolver runs with its default `use_scope: public`, so the runtime embeds only what public
+use allows; a brand's own mark with an empty or `TBD` licence is approved (`own_brand_mark`, Visual DNA policy #44).
 
 A pack file is checked in this order: regular file (no symlink), ≤ 2 MB, valid JSON, a `task_context` envelope must be
 `status: ok` with empty `authorizes` and the same `brand_id` as its pack, then the shape guard (`assertPackShape`), then

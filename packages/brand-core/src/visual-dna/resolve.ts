@@ -19,7 +19,9 @@ import {
   VISUAL_DNA_SCHEMA,
   VISUAL_DNA_TOOL,
   type ReferenceReason,
+  type LicenseBasis,
   type ReferenceState,
+  type UseScope,
   type VisualDnaRequest,
   type VisualDnaResult,
   type VisualReference,
@@ -31,7 +33,8 @@ import {
  * - `brand_retrieve kind: asset` decides which manifest assets are approved and readable (approval, audience, profile
  *   module, publication, safe path, no symlink, checksum, both SVG gates). Visual DNA adds checks on top, never fewer:
  *   the approval must be for these bytes (`approved_sha256`), the file must be within the size limit, a
- *   rights-sensitive subject needs a granted rights record, and a licence must be recorded.
+ *   rights-sensitive subject needs a granted rights record covering the requested use scope, and a licence must be
+ *   recorded unless the asset is the brand's own mark (`ownBrandMark`).
  * - `brand_retrieve kind: mascot` decides which approved artwork matches an emotion, stage, use case and angle. When
  *   nothing matches, the request stays `missing` with the reader's own explanation; no other pose is substituted.
  * - `creative_context` decides which creative references and preferences this token may see (creative-read only).
@@ -63,9 +66,30 @@ const audienceOf = (value: unknown): Audience => (value === 'public' || value ==
 /** The module `brand_retrieve` assigns to an asset; kept identical so profiles decide the same way. */
 const assetModule = (id: string): string => (id.includes('mascot') ? 'mascot-identity' : 'assets')
 
+/** `published` is approved and released: it counts as approved here, with every other check still applied. */
+const approvedStatus = (value: unknown): boolean => value === 'approved' || value === 'published'
+
 function licenseMissing(value: unknown): boolean {
   const license = str(value)
   return license === null || /^(tbd|todo|unknown|none|n\/a)$/i.test(license.trim())
+}
+
+const MARK_TAGS = new Set(['logo', 'wordmark', 'logomark', 'brand-mark', 'brandmark'])
+const MARK_ID = /^asset\.(logo|wordmark|logomark|brand-?mark)\./
+const THIRD_PARTY_TAGS = new Set(['third-party', 'third_party', 'partner', 'client-logo', 'stock', 'licensed'])
+
+/**
+ * The brand's own logo, wordmark, logomark or brand mark (owner decision 2026-11-23): such a mark needs no licence
+ * record, because the brand is its owner. A mark is recognized by its manifest id (`asset.logo.*`, `asset.wordmark.*`,
+ * `asset.logomark.*`, `asset.brand-mark.*`) or a mark tag. It is never an own mark when it has a rights-sensitive
+ * subject (a client logo, for example) or a third-party tag (`third-party`, `partner`, `client-logo`, `stock`,
+ * `licensed`). Icons, photos, illustrations and mascot art are not marks and still need a recorded licence.
+ */
+function ownBrandMark(id: string, row: Row): boolean {
+  if (rightsSubject(row) !== null) return false
+  const tags = Array.isArray(row.tags) ? row.tags.filter((tag): tag is string => typeof tag === 'string').map((tag) => tag.trim().toLowerCase()) : []
+  if (tags.some((tag) => THIRD_PARTY_TAGS.has(tag))) return false
+  return MARK_ID.test(id) || tags.some((tag) => MARK_TAGS.has(tag))
 }
 
 function notApproved(state: Exclude<ReferenceState, 'approved'>, reason: ReferenceReason, text: VisualDnaText, revision: string | null = null): Resolved {
@@ -87,7 +111,7 @@ function notApproved(state: Exclude<ReferenceState, 'approved'>, reason: Referen
 /** Why an asset `brand_retrieve` did not return is not approved here. Never reveals drafts to an agent. */
 function diagnose(root: string, ctx: AuthContext, brandId: string, id: string, row: Row | undefined, detailed: boolean, text: VisualDnaText): Resolved {
   if (!row) return notApproved('missing', 'not_found', text)
-  if (row.status !== 'approved') return notApproved('missing', detailed ? (row.present === false ? 'not_present' : 'not_approved') : 'not_found', text)
+  if (!approvedStatus(row.status)) return notApproved('missing', detailed ? (row.present === false ? 'not_present' : 'not_approved') : 'not_found', text)
   const published = readPublicationPolicy(root).approved_asset_ids.includes(id) && rightsBlocker(root, row) === null
   const decision = authorize(ctx, { brand_id: brandId, classification: audienceOf(row.visibility), status: 'approved', publication: published ? 'published' : 'unpublished', module: assetModule(id) }, 'read')
   if (!decision.allow) return notApproved('withheld', 'not_authorized', text)
@@ -100,7 +124,7 @@ function diagnose(root: string, ctx: AuthContext, brandId: string, id: string, r
 }
 
 /** Extra checks on an asset `brand_retrieve` returned, then its metadata. */
-function verifyReturned(root: string, item: RetrievedItem, row: Row, text: VisualDnaText): Resolved {
+function verifyReturned(root: string, item: RetrievedItem, row: Row, useScope: UseScope, text: VisualDnaText): Resolved {
   const value = (item.value ?? {}) as Row
   const assetPath = String(value.path ?? row.path)
   const checksum = String(value.checksum_sha256 ?? row.checksum_sha256)
@@ -111,8 +135,12 @@ function verifyReturned(root: string, item: RetrievedItem, row: Row, text: Visua
   if (!inspected.ok) return inspected.reason === 'checksum' ? notApproved('changed', 'checksum_mismatch', text, checksum) : notApproved('withheld', 'unsafe_file', text, checksum)
   const size = fs.statSync(inspected.realPath).size
   if (size > MAX_REFERENCE_BYTES) return notApproved('withheld', 'too_large', text, checksum)
-  if (rightsSubject(row) !== null && rightsBlocker(root, row) !== null) return notApproved('withheld', 'rights', text, checksum)
-  if (licenseMissing(value.license ?? row.license)) return notApproved('withheld', 'license_missing', text, checksum)
+  if (rightsSubject(row) !== null && rightsBlocker(root, row, new Date(), useScope) !== null) return notApproved('withheld', 'rights', text, checksum)
+  let licenseBasis: LicenseBasis = 'recorded'
+  if (licenseMissing(value.license ?? row.license)) {
+    if (!ownBrandMark(item.id, row)) return notApproved('withheld', 'license_missing', text, checksum)
+    licenseBasis = 'own_brand_mark'
+  }
   const modelUse = effectiveModelUse(row)
   return {
     asset_id: item.id,
@@ -121,7 +149,7 @@ function verifyReturned(root: string, item: RetrievedItem, row: Row, text: Visua
     reason_text: null,
     source: { path: MANIFEST_PATH, revision: item.revision },
     asset: { name: str(value.name), path: assetPath, media_type: str(row.mime), size_bytes: size, checksum_sha256: checksum },
-    rights: { license: str(value.license ?? row.license), usage: str(value.usage ?? row.usage), restrictions: str(row.restrictions), rights_subject: rightsSubject(row) },
+    rights: { license: str(value.license ?? row.license), license_basis: licenseBasis, usage: str(value.usage ?? row.usage), restrictions: str(row.restrictions), rights_subject: rightsSubject(row) },
     model_use: modelUse,
     provider_gate: providerGate(modelUse),
     delivery: 'metadata_only',
@@ -130,7 +158,7 @@ function verifyReturned(root: string, item: RetrievedItem, row: Row, text: Visua
 }
 
 /** One verdict per asset id, in one `brand_retrieve` call under the caller's context. */
-function resolveAssetIds(engine: InterviewEngine, ctx: AuthContext, ids: string[], text: VisualDnaText): Map<string, Resolved> {
+function resolveAssetIds(engine: InterviewEngine, ctx: AuthContext, ids: string[], useScope: UseScope, text: VisualDnaText): Map<string, Resolved> {
   const out = new Map<string, Resolved>()
   if (ids.length === 0) return out
   const root = engine.workspaceRoot()
@@ -142,7 +170,7 @@ function resolveAssetIds(engine: InterviewEngine, ctx: AuthContext, ids: string[
   for (const id of ids) {
     const item = items.find((entry) => entry.id === id && !entry.withheld)
     const row = rows.get(id)
-    const resolved = item && row ? verifyReturned(root, item, row, text) : diagnose(root, ctx, brandId, id, row, detailed, text)
+    const resolved = item && row ? verifyReturned(root, item, row, useScope, text) : diagnose(root, ctx, brandId, id, row, detailed, text)
     out.set(id, { ...resolved, asset_id: id })
   }
   return out
@@ -165,6 +193,8 @@ export function resolveVisualDna(engine: InterviewEngine, ctx: AuthContext, requ
   const brandId = engine.config().brand.slug
   const locale = request.locale ?? 'en'
   const text = visualDnaText(locale)
+  // A public-audience context can only ever ask for public use.
+  const useScope: UseScope = request.use_scope === 'internal' && ctx.audience !== 'public' ? 'internal' : 'public'
   const explicit = [...new Set(request.asset_ids ?? [])]
 
   // Mascot artwork through the existing finder: approved art for exactly these filters, or missing with its explanation.
@@ -204,7 +234,7 @@ export function resolveVisualDna(engine: InterviewEngine, ctx: AuthContext, requ
   }
 
   const lookup = [...new Set([...explicit, ...mascotArt.map((art) => art.asset_id), ...creativeRefs.filter((ref) => ref.asset_state === 'manifest' && ref.asset_id).map((ref) => ref.asset_id as string)])]
-  const assets = resolveAssetIds(engine, ctx, lookup, text)
+  const assets = resolveAssetIds(engine, ctx, lookup, useScope, text)
 
   const references: VisualReference[] = []
   for (const id of explicit) references.push({ ref_id: `asset:${id}`, via: 'asset', ...assets.get(id)! })
@@ -252,6 +282,7 @@ export function resolveVisualDna(engine: InterviewEngine, ctx: AuthContext, requ
     brand_id: brandId,
     principal: { role: ctx.role, profile: ctx.profile ?? null },
     reason: null,
+    use_scope: useScope,
     locale,
     direction: locale === 'fa' ? 'rtl' : 'ltr',
     notice: [...text.notice],

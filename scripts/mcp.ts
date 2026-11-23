@@ -38,7 +38,7 @@ import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
 import { runContentTool } from '@brand-os/brand-core/content-bridge'
 import { REQUIRABLE_ASSETS, runProductionReadinessTool } from '@brand-os/brand-core/runtime'
 import { runStrategyTool } from '@brand-os/brand-core/strategy'
-import { MAX_ASSET_IDS, runVisualDnaTool, VISUAL_DNA_LOCALES } from '@brand-os/brand-core/visual-dna'
+import { MAX_ASSET_IDS, runVisualDnaTool, USE_SCOPES, VISUAL_DNA_LOCALES } from '@brand-os/brand-core/visual-dna'
 
 const engine = new InterviewEngine(process.cwd())
 
@@ -218,7 +218,7 @@ server.registerTool(
   'visual_dna',
   {
     description:
-      'Check visual references before using them: asset ids (from task_context or the manifest), a mascot request (emotion, stage, use_case, angle) and, for a creative-read token, the creative-memory variants of a project. Each reference is approved, withheld, missing or changed, with source, checksum, size, usage rights and the effective model_use (not_allowed unless the owner recorded more). Use only approved references. A missing pose, angle or logo stays missing: never draw, generate or borrow a substitute. model_use is a rights signal, not permission to upload; nothing here sends a file anywhere. Metadata only, never file bytes. authorizes is always empty. Needs an owner-issued agent token of this brand; others get denied.',
+      'Check visual references before using them: asset ids (from task_context or the manifest), a mascot request (emotion, stage, use_case, angle) and, for a creative-read token, the creative-memory variants of a project. Each reference is approved, withheld, missing or changed, with source, checksum, size, usage rights and the effective model_use (not_allowed unless the owner recorded more). Use only approved references. use_scope (default public) is where the reference will be used: internal-scope rights cover a portrait only for internal use, and an internal verdict is not permission to publish. A missing pose, angle or logo stays missing: never draw, generate or borrow a substitute. model_use is a rights signal, not permission to upload; nothing here sends a file anywhere. Metadata only, never file bytes. authorizes is always empty. Needs an owner-issued agent token of this brand; others get denied.',
     inputSchema: z.object({
       asset_ids: z.array(z.string().max(120)).max(MAX_ASSET_IDS).optional(),
       mascot: z
@@ -226,6 +226,7 @@ server.registerTool(
         .strict()
         .optional(),
       creative: z.object({ project_id: z.string().max(40).optional(), surface: z.string().max(40).optional(), series: z.string().max(40).optional() }).strict().optional(),
+      use_scope: z.enum(USE_SCOPES).optional(),
       locale: z.enum(VISUAL_DNA_LOCALES).optional(),
     }).strict(),
   },
