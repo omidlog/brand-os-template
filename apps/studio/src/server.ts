@@ -10,6 +10,7 @@ import { createCore, type RequestContext, type Route, type RouteInfo, type Studi
 import { requestGuards } from './routes/guards.js'
 import { provisioningRoutes } from './routes/provisioning.js'
 import { systemRoutes } from './routes/system.js'
+import { visualRoutes } from './routes/visual.js'
 import * as pages from './views/pages.js'
 
 export type { RouteInfo, StudioDeps } from './routes/context.js'
@@ -53,6 +54,8 @@ export function createStudio(deps: StudioDeps): {
 
   const { account } = accountRoutes(core)
 
+  const { visual } = visualRoutes(core)
+
   const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)'
   const routes: Route[] = [
     { method: 'GET', pattern: /^\/healthz$/, auth: 'none', handle: health },
@@ -81,6 +84,7 @@ export function createStudio(deps: StudioDeps): {
       handle: openUpdatePull,
     },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/visual(?:/(print))?$`), auth: 'session', handle: visual },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}(?:/(${BRAND_SECTIONS.join('|')}))?$`), auth: 'session', handle: brandPage },
   ]
 

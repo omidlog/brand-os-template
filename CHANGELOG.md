@@ -28,6 +28,19 @@
 - No MCP tool, no skill change and no Studio change in this slice. Found on the way and not fixed here:
   `get_logo_rules` and `get_motion_guidelines` ask for question ids that do not exist in the bank.
 
+## Unreleased — Strategic Coach & Answer Assurance (Coach PR 1)
+
+### Added
+
+- `npm run brand:coach`: an owner-local, read-only advisory layer over the existing interview. `analyze --mode follow_up` returns 0 or 1 clarifying question; `--mode quality_review` returns an explainable status with at most two named deficits; `--mode consistency_review` reports the interview's own deterministic contradictions. `next` coaches the question answered last. `--lang en|fa|tr`, `--json`.
+- Every result is `authority: derived_advice` with `authorizes: []`. The coach writes nothing — no answer, fact, config value, approval, strategy, calendar, asset or cache file — and the tests assert the brand is byte-for-byte unchanged after an analysis.
+- `follow_up` prefers an existing canonical question and returns its id instead of writing a second version of it. A gap inside the answer gets one localized clarifying question. The chooser is pure in (question, answer revision), so one answer never spawns a second question; `decide later`, `skip` and `unknown` on the target end it for good.
+- `quality_review` rubric: relevance, specificity, completeness for the documents the answer feeds, measurability, evidence support, clarity and internal coherence. No score, no percentage, no confidence. `measurability` applies only to questions that ask for a measure, so a qualitative brand answer is never penalised for having no numbers. A deficit on an approved answer sets `requires_change_request` and points at the human change flow.
+- `consistency_review` is an adapter: `findContradictions` stays the only implementation of those rules and its results are reported by id, unchanged. `potential_tension` and `needs_verification` are in the contract but not emitted yet, and every result says so.
+- No finding quotes, paraphrases or digests the owner's words; text is built from closed vocabularies, question ids and the coach's own lexicon. Restricted questions are refused outright, with no value and no digest. Every mode is denied while `BRAND_OS_AGENT_TOKEN` is set, and no MCP tool or `brand_retrieve` kind exposes the coach.
+- Nothing calls a model or the network in this version.
+- `schemas/coach-result.schema.json` (reference contract; the Zod schema in `packages/brand-core/src/coach/model.ts` stays authoritative). Guide: `docs-internal/STRATEGIC_COACH.md`. Tests: `coach-core` (25), `coach-cli` (7), with SYNTHETIC DEMO fixtures only.
+
 ## Unreleased — Content planner skill and agent integration guide (Content Bridge Slice D)
 
 ### Added
@@ -39,6 +52,15 @@
 ### Changed
 
 - The `brand:strategy review` note for a `content` strategy now says `content-read` agents read it (true since Slice C).
+
+## Unreleased — Visual Blueprint P0: business model canvas
+
+### Added
+
+- `@brand-os/brand-core/visual`: a versioned semantic `VisualDocument` (blocks, data states, missing reasons, framework claim) and a nine-zone business model canvas built through the document model's `itemFor`, so approval, drafts, restriction and publication follow the same rules as the Brand Book. Gaps name the question to answer; nothing is guessed.
+- Studio: read-only **Business model** page (`/brands/<slug>/visual`) and an A3-landscape print view (`/visual/print`, `?edition=public` without drafts), en/fa/tr, light/dark, reduced motion. No new non-GET route.
+- Reading polish after owner review: standard name "Business Model Canvas"; question ids, next questions and helper text moved out of the canvas into a closed "Details and sources" area (screen) and print page 2; editorial type scale and whitespace in the zones.
+- `npm run visual:golden`: golden examples from an ILLUSTRATIVE / MOCK DATA fixture. Guide `docs-internal/VISUAL.md`. Tests: `visual-bmc`, `studio-visual`, `studio-visual-browser`.
 
 ## Unreleased — Content agent tools (Content Bridge Slice C)
 

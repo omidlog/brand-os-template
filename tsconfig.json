@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@brand-os/brand-core": ["packages/brand-core/src/index.ts"],
+      "@brand-os/brand-core/coach": ["packages/brand-core/src/coach/index.ts"],
       "@brand-os/brand-core/competitive": ["packages/brand-core/src/competitive/index.ts"],
       "@brand-os/brand-core/content-bridge": ["packages/brand-core/src/content-bridge/index.ts"],
       "@brand-os/brand-core/identity": ["packages/brand-core/src/identity/index.ts"],
@@ -23,6 +24,7 @@
       "@brand-os/brand-core/research": ["packages/brand-core/src/research/index.ts"],
       "@brand-os/brand-core/seo": ["packages/brand-core/src/seo/index.ts"],
       "@brand-os/brand-core/strategy": ["packages/brand-core/src/strategy/index.ts"],
+      "@brand-os/brand-core/visual": ["packages/brand-core/src/visual/index.ts"],
       "@brand-os/design-tokens": ["packages/design-tokens/src/index.ts"],
       "@brand-os/asset-catalog": ["packages/asset-catalog/src/index.ts"],
       "@brand-os/asset-catalog/normalize": ["packages/asset-catalog/src/normalize.ts"]

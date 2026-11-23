@@ -308,6 +308,24 @@ Branch `feat/task-context-p0`. Preflight audit, permission and field-coverage ma
 | Calendar slots in the pack | Not started | Next slice: `scope_id` for an approved week, pinned `content_calendar` / `content_brief`, and `stale_pin`. Today a ten-post request is an on-demand draft brief, which is the required behaviour anyway. |
 | `task_context_validate`, Studio view | Not started | P2 and P4 of the plan. Studio stays read-only and untouched here. |
 
+## Strategic Coach & Answer Assurance (Coach PR 1)
+
+Branch `feat/coach-pr-1`. Guide: `docs-internal/STRATEGIC_COACH.md`. Contract: `schemas/coach-result.schema.json`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Data contract and output validation | Done | `CoachResult` with `schema_version`, `brand_id`, `mode`, `question_id`, `answer_ref` (ledger revision + digest), `analysis_scope` (profile, question ids, context digest), `locale`, `status`, `findings`, `generated_at`, `engine_version`, `rule_version`, `authority: derived_advice`, `authorizes: []` and `source_refs` as ids only. Validated with Zod before it is returned; `schemas/coach-result.schema.json` documents the same record and a test checks real results against both. `tests/coach-core.test.ts`. |
+| Read-only by construction | Done | The coach takes a `CoachSource` view of `InterviewEngine` that has no write method, reads contradictions from the pure `findContradictions` rather than the derived file, stores nothing and caches nothing. Every test snapshots the brand and asserts it is byte-for-byte unchanged. |
+| Eligibility and disposition guard | Done | A question the config or earlier answers turned off is `not_applicable`, not missing. `unknown`, `skip`, `not relevant` short-circuit to `not_applicable` with no deficits; `decide later` on a target counts as a decline. |
+| `quality_review` | Done | Six criteria (relevance, specificity, completeness for the documents it feeds, measurability, evidence support, clarity and internal coherence), explainable statuses (`ready`, `needs_clarification`, `evidence_missing`, `needs_review`, `not_applicable`, `insufficient_context`), at most two deficits, one concrete next step, no score. `measurability` applies only to questions that ask for a measure, so a qualitative brand answer is never penalised for having no numbers. An approved answer with a deficit sets `requires_change_request`. |
+| `follow_up` | Done | 0 or 1 question. An existing canonical question that closes the exact gap is linked by id (`canonical_question_id`) and never duplicated; a gap inside the answer gets one localized clarifying question. Pure in (question, answer revision), so one answer never spawns a second question, and `decide later` on the target ends it. `brand:coach next` coaches the last answered question. |
+| `consistency_review` | Partial (by design) | An adapter over the existing `findContradictions`: `confirmed_conflict` only, reported by id, rules unchanged. `potential_tension` and `needs_verification` are in the contract and **not emitted**; each result says so. Twelve tense-but-legitimate records (trade-offs, two markets, dated figures, explicit dispositions) are pinned as non-conflicts. The narrow rule registry is PR 2. |
+| Locales | Done | en, fa (RTL) and tr for every finding code, criterion, status, clarifying question and UI string, written as advice rather than translated labels. A missing entry fails `coachI18nErrors()` and a test. |
+| `npm run brand:coach` | Done | `analyze --mode follow_up\|quality_review\|consistency_review [--question <id>] [--lang en\|fa\|tr] [--json]` and `next`. Exit 0 / 1 (refusal or bad id, with a code) / 2 (usage). `tests/coach-cli.test.ts`. |
+| Privacy and access | Done | No finding ever quotes, paraphrases or digests the owner's words (canary-tested on JSON and printed text). Restricted questions are refused outright — no value, no digest, no length — on every stream. Every mode is denied while `BRAND_OS_AGENT_TOKEN` is set; no MCP tool and no `brand_retrieve` kind exposes the coach. A prompt-injection answer is tested as inert. |
+| Model | None | Nothing in this version calls a model or the network. Every finding is `origin: deterministic`; `model_suggestion` is reserved for PR 3. |
+| Personal facet rubrics, Studio or panel projection, optional provider, pilot measurement | Not started | PR 2, PR 3 and PR 4 in `docs-internal/STRATEGIC_COACH.md`. Facet *scoping* is already inherited from the condition engine; the per-facet prompts and checks are not written. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.
@@ -321,6 +339,18 @@ Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for exampl
 | Approval and normalizing | Done | An approved asset keeps its approval only if old and new files rasterize (resvg 2.6.2, 1024 px) to identical pixels: `approved_sha256`, `approval_carried_from`, `render_check`. Otherwise (or if the rasterizer is unavailable) it goes back to draft with `approval_reset`. |
 | `brand:assets approve` | Done | Owner approval of an asset's exact bytes (`approved_sha256`), with the same proof rules as `brand:tokens:approve`. Replaces approvals recorded by hand. `validate` flags an approved asset whose bytes changed. Test: `tests/svg-assets.test.ts` (Illustrator, Inkscape and Figma fixtures). |
 | Not done | — | `<use>` stays refused, even when it points inside the file. Raster previews generated on the server were not added. Asset publication (`approved_asset_ids`) still has no CLI. The checker filters attributes with a blocklist plus the regex gate; it does not have a full attribute allowlist. |
+
+## Visual Blueprint P0: semantic visual layer and business model canvas
+
+Guide: `docs-internal/VISUAL.md`. Audit and staged plan: owner notes (`visual-p0-audit.md`), not in this repository.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| `VisualDocument` / `VisualBlock` model | Done (first two block types) | `@brand-os/brand-core/visual`: `business_model_canvas`, `citation_list`; data states, missing reasons, framework claim (`informed_by`). No new store: built through `documents/model.ts` `itemFor`. `tests/visual-bmc.test.ts`. |
+| Business model canvas | Partial | Nine canonical zones from existing questions. Key activities and key resources have no question yet (designed gap, proposed ids); segments, offers, channels and revenue are single prose answers, so no links are drawn. |
+| Studio page and print view | Done | `GET /brands/<slug>/visual`, `GET /brands/<slug>/visual/print[?edition=public]`; no new non-GET route; en/fa/tr. `tests/studio-visual.test.ts`, `tests/studio-visual-browser.test.ts` (five widths, light/dark, A3 PDF via the browser). |
+| Golden example | Done | `npm run visual:golden` (ILLUSTRATIVE / MOCK DATA fixture, en/fa/tr, internal/public, HTML, PDF and PNG when Chrome and pdftoppm exist). |
+| Positioning map, brand book chapters, other frameworks, framework registry file, new interview questions | Not started | Staged in the P1–P5 plan. Competitor data is owner-only (`brand/.private`) and is not visible to Studio. |
 
 ## Commands that this remediation expects to pass
 

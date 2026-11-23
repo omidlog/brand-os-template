@@ -27,6 +27,7 @@ Skills for specific work:
 - `agent-skills/content-planner/SKILL.md` (owner plans and approves content weeks; content agents read briefs with a pin and report; `docs-internal/CONTENT_AGENT_INTEGRATION.md` connects an external bot read-only)
 - `docs-internal/CONTENT_BRIDGE.md` before touching `brand:content` or the `content` strategy type (content strategy cites approved facts, never restates voice; approval is `brand:strategy`)
 - `docs-internal/TASK_CONTEXT.md` before touching `packages/brand-core/src/task-context` or `task_context`, and before drafting for a task: one read-only pack of approved context per task, gaps as existing question ids, `authorizes: []`
+- `docs-internal/STRATEGIC_COACH.md` before touching `brand:coach` or anything under `packages/brand-core/src/coach` (owner-local, read-only advice; `authorizes: []`; a finding never quotes an answer and never authorizes a change)
 - `docs-internal/IDENTITY_BRIEF.md` before touching `brand:identity` (owner-only identity audit and logo brief; a brief or concept selection never approves a logo; skill `agent-skills/logo-identity-strategist/SKILL.md`)
 
 Claude Code can read this checkout only after the folder is open in a permitted session. A chat product does not automatically see this private repository.

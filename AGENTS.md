@@ -71,6 +71,15 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - For a bio, LinkedIn text or other deliverable, call `draft_personal_content` (or `brand:query --tool draft_personal_content --query <deliverable> [--section <id>]`) and use only what it returns. The result is a draft for the owner to approve.
 - Portraits, case-study images, client logos and testimonials are public only with a granted public `rights` record. A missing asset is missing; never guess a URL.
 
+## Strategic coach
+
+`npm run brand:coach` reads the interview and gives advice (guide: `docs-internal/STRATEGIC_COACH.md`). It is derived and advisory: `authority` is `derived_advice`, `authorizes` is always empty, and it writes nothing — no answer, fact, approval, strategy, asset or cache.
+
+- `analyze --mode follow_up` gives 0 or 1 clarifying question. When it names a `canonical_question_id`, ask that existing question; do not write a new one. `unknown`, `skip`, `not relevant` and `decide later` are final, and one answer never gets a second follow-up.
+- `analyze --mode quality_review` gives an explainable status and at most two named deficits. It judges the recorded data, not the person, and there is no score. A deficit on an approved fact still needs propose → review → approve; `requires_change_request` says so.
+- `analyze --mode consistency_review` reports the existing deterministic contradictions by id. Strategic trade-offs are not assessed yet, so no conflict found is not a clean bill of health.
+- Restricted questions are refused, and every mode is refused while `BRAND_OS_AGENT_TOKEN` is set. No MCP tool or `brand_retrieve` kind exposes the coach; do not look for one.
+
 ## Knowledge Inbox
 
 `npm run brand:knowledge` keeps the owner's unstructured notes (guide: `docs-internal/KNOWLEDGE.md`). A note is an unapproved idea, never a brand fact, whoever wrote it.
