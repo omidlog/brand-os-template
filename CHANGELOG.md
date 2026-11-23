@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — Visual V4.1: Command Center, Publishing gallery, audience redaction
+
+### Added
+
+- `packages/brand-core/src/visual/publishing.ts`: export profiles `public`, `investor`, `internal`; `redactVisualDocument` and `redactDocumentModel` (restricted never shown; finance, `.private`-sourced, unapproved and unknown-id values and draft marks never in public or investor; competitor analysis internal only; business and marketing plans never public); `buildPublishingGallery` (document types × profiles, readiness on redacted output, counts only, review-due count); `coverageCells`.
+- Studio Publishing gallery at `/brands/<slug>/governance/publishing` (GET only, en/fa/tr, RTL), in the Publishing & Governance group.
+- Tests: `visual-publishing`, `studio-publishing` (synthetic brands only).
+
+### Changed
+
+- Overview is now the **Command Center** (R4): a 30-second strip (decisions needed, review due, contradictions, exports ready) and a coverage mini-map per framework lead the page; the template update panel moved lower. Labels in en/fa/tr (Command Center / مرکز فرمان / Komuta Merkezi).
+- Public visual editions in the Studio projection pass the core public-profile redactor; the projection gains `publishing` (older caches rebuild on sync).
+
 ## Unreleased — Research notes linked to the evidence register (GAP-09 follow-up)
 
 ### Added
