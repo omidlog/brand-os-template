@@ -192,7 +192,7 @@ export interface LogoConstructionBlock extends BlockBase {
   master_state: 'approved' | 'missing' | 'example_only' | 'not_previewable'
 }
 
-export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock | ColorPaletteBlock | TypographySpecimenBlock | LogoConstructionBlock | CompetitorMatrixBlock | PriceStripBlock
+export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock | ColorPaletteBlock | TypographySpecimenBlock | LogoConstructionBlock | CompetitorMatrixBlock | PriceStripBlock | PositioningMapBlock
 
 export interface VisualDocument {
   schema: typeof VISUAL_SCHEMA
@@ -295,4 +295,55 @@ export interface PriceStripBlock extends BlockBase {
   unpriced: string[]
   ranked: false
   currency_conversion: 'none'
+}
+
+// ---- Visual V2.3: positioning map ----------------------------------------------------------------------
+
+/** Where a subject sits on one axis. Only evidenced, stale and conflicting placements are drawn. */
+export const POSITIONING_STATES = ['evidenced', 'stale', 'conflicting', 'needs_review', 'unknown'] as const
+export type PositioningState = (typeof POSITIONING_STATES)[number]
+
+/** An owner-written label: English always, Persian and Turkish when the owner gave them. Never machine-translated. */
+export interface OwnerLabel {
+  en: string
+  fa: string | null
+  tr: string | null
+}
+
+export interface PositioningAxis {
+  label: OwnerLabel
+  low: OwnerLabel
+  high: OwnerLabel
+}
+
+export interface PositioningPlacement {
+  state: PositioningState
+  /** Qualitative bands as recorded, low to high: one, or the disagreeing range. Never a number. */
+  bands: string[]
+}
+
+export interface PositioningPoint {
+  subject_id: string
+  kind: 'own_brand' | 'competitor'
+  name: string
+  /** Key number for plotted competitors (1…n); null for the own brand and for subjects not plotted. */
+  n: number | null
+  x: PositioningPlacement
+  y: PositioningPlacement
+  footnotes: number[]
+}
+
+/**
+ * The positioning map: the owner's two axes, subjects plotted only where both axes have a dated source, and a margin
+ * list of everyone else. Stale and conflicting placements are marked; a conflict is drawn as a range, never resolved.
+ */
+export interface PositioningMapBlock extends BlockBase {
+  type: 'positioning_map'
+  /** Null until the owner chose axes and shared them. */
+  axes: { x: PositioningAxis; y: PositioningAxis } | null
+  bands: string[]
+  stale_after_days: number | null
+  points: PositioningPoint[]
+  unplotted: PositioningPoint[]
+  share_state: 'not_shared' | 'shared' | 'withheld'
 }
