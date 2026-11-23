@@ -80,6 +80,8 @@ function snapshot(dir: string): Record<string, string> {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const full = path.join(current, entry.name)
       if (entry.isDirectory()) walk(full)
+      // The Visual DNA resolver appends its audit line here; checked separately (append-only, ids only).
+      else if (path.relative(dir, full) === path.join('.private', 'access-log.jsonl')) continue
       else out[path.relative(dir, full)] = createHash('sha256').update(fs.readFileSync(full)).digest('hex')
     }
   }
