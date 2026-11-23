@@ -82,6 +82,96 @@ test('renderer: Persian is RTL text around a direction-neutral plot; Turkish is 
   assert.match(render(doc, 'fa'), /Only English/)
 })
 
+interface Geometry {
+  size: number
+  centres: number[]
+  cys: number[]
+  ranges: Array<[number, number]>
+  chartDir: string | undefined
+  xDirection: string | undefined
+  arrow: string | undefined
+  poles: string[]
+}
+
+/** Reads the plot geometry and the x-axis row from rendered HTML. Points are emitted in the same order in every language. */
+function geometry(html: string): Geometry {
+  const size = Number(/viewBox="-2 -2 ([\d.]+)/.exec(html)![1]) - 4
+  const points = html.match(/<g class="vz-pos-point[\s\S]*?<\/g>/g) ?? []
+  const centre = (g: string): [number, number] => {
+    const own = /rotate\(45 ([\d.-]+) ([\d.-]+)\)/.exec(g)
+    const dot = /class="vz-pos-dot" cx="([\d.-]+)" cy="([\d.-]+)"/.exec(g)
+    const m = (own ?? dot)!
+    return [Number(m[1]), Number(m[2])]
+  }
+  const ranges = [...html.matchAll(/class="vz-pos-range" x="([\d.-]+)" y="[\d.-]+" width="([\d.-]+)"/g)].map((m) => [Number(m[1]), Number(m[1]) + Number(m[2])] as [number, number])
+  const xaxis = /<div class="vz-pos-xaxis">([\s\S]*?)<\/div>/.exec(html)![1]!
+  return {
+    size,
+    centres: points.map((g) => centre(g)[0]),
+    cys: points.map((g) => centre(g)[1]),
+    ranges,
+    chartDir: /<div class="vz-pos-chart[^"]*" dir="(\w+)"/.exec(html)?.[1],
+    xDirection: /data-x-direction="(\w+)"/.exec(html)?.[1],
+    arrow: /<span class="vz-pos-arrow" aria-hidden="true">([←→])<\/span>/.exec(xaxis)?.[1],
+    poles: [...xaxis.matchAll(/vz-pos-pole--(low|high)/g)].map((m) => m[1]!),
+  }
+}
+
+test('renderer: fa mirrors the horizontal axis (low on the right); en and tr stay left to right; web and print alike', () => {
+  for (const mode of ['screen', 'print'] as const) {
+    const doc = illustrativeCompetitorComparison('complete')
+    const block = doc.blocks.find((b): b is PositioningMapBlock => b.type === 'positioning_map')!
+    const en = geometry(render(doc, 'en', mode))
+    const tr = geometry(render(doc, 'tr', mode))
+    const fa = geometry(render(doc, 'fa', mode))
+    const where = `mode ${mode}`
+    assert.equal(en.centres.length, 3, where)
+
+    // en/tr: unchanged, low to high left to right.
+    for (const g of [en, tr]) {
+      assert.equal(g.chartDir, 'ltr', where)
+      assert.equal(g.xDirection, 'ltr', where)
+      assert.equal(g.arrow, '→', where)
+      assert.deepEqual(g.poles, ['low', 'high'], `${where}: DOM order low, high`)
+    }
+    assert.deepEqual(tr.centres, en.centres, `${where}: tr geometry is en geometry`)
+    assert.deepEqual(tr.ranges, en.ranges, where)
+    // en: a higher x band is further right.
+    const order = [...block.points.filter((p) => p.kind !== 'own_brand'), ...block.points.filter((p) => p.kind === 'own_brand')]
+    const firstBand = (i: number) => block.bands.indexOf(order[i]!.x.bands[0]!)
+    for (let i = 0; i < order.length; i++)
+      for (let j = 0; j < order.length; j++)
+        if (firstBand(i) < firstBand(j) && order[i]!.x.bands.length === 1 && order[j]!.x.bands.length === 1) assert.ok(en.centres[i]! < en.centres[j]!, `${where}: en low band is left of a higher band`)
+
+    // fa: the chart grid is rtl (y column on the right, low pole on the right), the arrow points left, and every
+    // point and range sits at the mirror image of its en position. Vertical positions are untouched.
+    assert.equal(fa.chartDir, 'rtl', where)
+    assert.equal(fa.xDirection, 'rtl', where)
+    assert.equal(fa.arrow, '←', where)
+    assert.deepEqual(fa.poles, ['low', 'high'], `${where}: same DOM order; rtl places low on the right`)
+    assert.equal(fa.size, en.size, where)
+    assert.deepEqual(fa.centres, en.centres.map((cx) => en.size - cx), `${where}: fa x = size - en x`)
+    assert.deepEqual(fa.cys, en.cys, `${where}: y is not mirrored`)
+    assert.deepEqual(fa.ranges, en.ranges.map(([x0, x1]) => [en.size - x1, en.size - x0]), `${where}: conflict ranges mirrored`)
+    assert.ok(fa.centres.some((cx, i) => cx !== en.centres[i]), `${where}: the fixture actually moves a point`)
+  }
+})
+
+test('renderer: fa mirroring keeps the legend, key and footnotes correct', () => {
+  const doc = illustrativeCompetitorComparison('complete')
+  const fa = render(doc, 'fa')
+  assert.match(fa, /<svg class="vz-pos-svg"[^>]*dir="ltr"/, 'the SVG stays explicit geometry')
+  assert.match(fa, /<div class="vz-pos-chart vz-pos-chart--mirrored" dir="rtl">/)
+  assert.match(fa, /کادر خط‌چین یعنی بازه/, 'range note')
+  assert.match(fa, /حلقهٔ خط‌چین/, 'stale note')
+  assert.match(fa, /متوسط رو به پایین – متوسط/, 'a conflict still reads low to high in the key')
+  // Footnote references are language-independent: the same targets in the same order.
+  const refs = (html: string) => [...html.matchAll(/href="#([^"]+)"/g)].map((m) => m[1])
+  assert.deepEqual(refs(fa), refs(render(doc, 'en')))
+  assert.equal(render(doc, 'en').includes('vz-pos-chart--mirrored'), false)
+  assert.equal(render(doc, 'tr').includes('vz-pos-chart--mirrored'), false)
+})
+
 test('Studio: the positioning map on the comparison page and its print view, from the shared file only', async () => {
   const s = await startStudio()
   try {
