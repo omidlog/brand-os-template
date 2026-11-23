@@ -66,7 +66,7 @@ before(async () => {
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
   // A code for a step the API login above did not use: a reused code leaves the browser on /login.
-  await page.type('#totp', await freshTotp())
+  await page.type('#totp', await freshTotp(s.url))
   await page.navigation(() => page.click('button[type=submit]'))
   assert.notEqual(await page.eval<string>('location.pathname'), '/login', 'the browser signed in')
 }, { timeout: 180_000 })

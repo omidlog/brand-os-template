@@ -124,7 +124,7 @@ async function signIn(): Promise<void> {
   assert.equal(await page.eval<string>('location.pathname'), '/login')
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
-  await page.type('#totp', await freshTotp())
+  await page.type('#totp', await freshTotp(origin))
   await page.navigation(() => page.click('button[type=submit]'))
 }
 

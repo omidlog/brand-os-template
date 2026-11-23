@@ -101,16 +101,24 @@ export function pickTotpStep(nowMs: number, used: ReadonlySet<number>): number |
   return candidates.find((candidate) => !used.has(candidate)) ?? null
 }
 
-/** Steps already used by any sign-in in this test process (Client.login and browser sign-ins share it). */
-const usedSteps = new Set<number>()
+/**
+ * Steps already used per Studio server (keyed by its base URL). Each startStudio() has its own replay memory,
+ * so the set is per server: a process-wide set would make files that start many servers wait for new steps.
+ */
+const usedSteps = new Map<string, Set<number>>()
 
-/** A TOTP code no earlier sign-in in this process used; waits for the next step when all accepted ones are taken. */
-export async function freshTotp(): Promise<string> {
+/**
+ * A TOTP code no earlier sign-in to this server used (Client.login and browser sign-ins share it); waits for the
+ * next step when all accepted ones are taken.
+ */
+export async function freshTotp(base: string): Promise<string> {
+  const used = usedSteps.get(base) ?? new Set<number>()
+  usedSteps.set(base, used)
   for (;;) {
     const now = Date.now()
-    const step = pickTotpStep(now, usedSteps)
+    const step = pickTotpStep(now, used)
     if (step !== null) {
-      usedSteps.add(step)
+      used.add(step)
       return totpAt(TOTP_SECRET, step * STEP_MS)
     }
     await new Promise((resolve) => setTimeout(resolve, STEP_MS - (now % STEP_MS) + 50))
@@ -173,7 +181,7 @@ export class Client {
   async login(): Promise<void> {
     const token = await this.csrf('/login')
     // Each login uses a TOTP step no earlier login used, so replay protection does not reject it.
-    const code = await freshTotp()
+    const code = await freshTotp(this.base)
     const res = await this.request('POST', '/login', { form: { _csrf: token, login: OWNER_LOGIN, password: OWNER_PASSWORD, totp: code, next: '/brands' } })
     if (res.status !== 303) throw new Error(`login failed: ${res.status} ${await res.text()}`)
   }
