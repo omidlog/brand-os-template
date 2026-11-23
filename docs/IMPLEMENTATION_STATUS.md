@@ -318,7 +318,7 @@ Branch `feat/task-context-p0`. Preflight audit, permission and field-coverage ma
 | `brand:query --tool task_context` | Done | `--task-type`, `--request`, `--channel`, `--count`, `--locale`, `--mode`, `--output-format`, `--scope-id`. Needs an owner-issued token of this brand; guests, unprofiled agents and the owner process are denied. |
 | Writes | None | Reading a pack creates no file. `tests/task-context.test.ts` compares the whole `brand/` tree before and after. |
 | Legacy `get_logo_rules` / `get_motion_guidelines` ids (BUG-01) | Fixed | Audit finding 1. Every named fact tool reads `NAMED_FACT_TOOL_IDS` (`query.ts`); logo and motion use the `logo_rules` / `motion_rules` ids. Same envelope, more ids listed. `tests/named-tool-ids.test.ts` pins each id against the question bank and field registry. |
-| MCP tool, skill handoff | Not started | Next slice (P2): one gated stdio MCP tool with negative security tests, then the `task-context` skill and the preflight call in the social, UI and marketing skills. |
+| MCP tool, skill handoff (GAP-02) | Done | `task_context` stdio MCP tool over the shared `runTaskContextTool` (same core and caller context as the CLI, access checked before classification, request text never logged or returned). Skill `agent-skills/task-context/SKILL.md`; social, UI, marketing and brand designer skills call it first. New-session setup in `docs-internal/AI_CONNECTORS.md`. `tests/task-context-agent.test.ts`. |
 | Calendar slots in the pack | Not started | Next slice: `scope_id` for an approved week, pinned `content_calendar` / `content_brief`, and `stale_pin`. Today a ten-post request is an on-demand draft brief, which is the required behaviour anyway. |
 | `task_context_validate`, Studio view | Not started | P2 and P4 of the plan. Studio stays read-only and untouched here. |
 
@@ -408,3 +408,8 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Done:** `packages/brand-core/src/runtime/` and `brand:runtime social-batch --demo`. Ten real SVG drafts (1080×1350, en/fa/tr labels, RTL by copy script) from one `task_context` pack, manifests with source pins, batch summary; schemas `runtime-post-manifest`, `runtime-batch`; asset `model_use` (absent ⇒ `not_allowed`). Tests: `runtime-social-batch`, `asset-model-use`.
 - **Not done:** real brands (CLI is `--demo` only), MCP tool, visual/semantic advisory review (`not_tested`), approved fonts from `brand.type.scale`, website / ads / mascot journeys, Studio view. Nothing is published, scheduled or approved.
+
+## Brand Runtime: `--pack`, type scale, final export
+
+- **Done:** `--pack <file>` (+ owner `--root`), approved type scale on drafts, `--final` outlines with owner font files (name/cmap checked, nothing substituted), Coach warnings never block, tagline/promise exemption in the Coach. Tests: `runtime-pack`, `runtime-type`, `coach-core`.
+- **Not done:** MCP tool (next slice), `brand.type.rtl` for RTL lines, variable-font instances in final export, logo variant per background.

@@ -79,7 +79,7 @@ and one concrete next step. It judges the data, never the person.
 | `relevance` | always | the stored value is a template placeholder (`TBD`, `EXAMPLE: …`, `—`) | `needs_review` |
 | `evidence_support` | the question declares `publication_requires: verified_evidence` | `claimVerification` says `unverified` or `owner_stated` | `evidence_missing` |
 | `clarity_coherence` | always | the field is named by an open contradiction from `findContradictions` | `needs_review` |
-| `specificity` | `short_text`, `long_text` | fewer content words than the type's minimum (8 / 2), or a vague lexicon term in an answer of ≤25 content words | `needs_clarification` |
+| `specificity` | `short_text`, `long_text` | fewer content words than the type's minimum (8 / 2; 1 for facts short by design — `brand.verbal.tagline`, `brand.strategy.promise`, `SHORT_BY_DESIGN_IDS`), or a vague lexicon term in an answer of ≤25 content words | `needs_clarification` |
 | `completeness_for_output` | the question declares `depends_on` | a declared prerequisite is still open | `needs_clarification` |
 | `measurability` | `number` type, or an id ending in `objective(s)`, `metric(s)`, `kpi(s)`, `okr(s)`, `target(s)`, `baseline`, `budget`, `price`, `pricing`, `runway` | the answer carries no digit (Persian and Arabic digits count) | `needs_clarification` |
 

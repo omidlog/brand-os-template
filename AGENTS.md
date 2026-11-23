@@ -115,7 +115,7 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 Before drafting for a task — one visual, ten posts, a website, a product screen, an ad concept, an identity brief or a
 personal page — read the context instead of asking the owner to paste it again:
 
-`npm run brand:query -- --tool task_context --task-type <type> [--channel …] [--count …] [--locale en|fa|tr]`
+MCP `task_context`, or `npm run brand:query -- --tool task_context --task-type <type> [--channel …] [--count …] [--locale en|fa|tr]`
 (guide: `docs-internal/TASK_CONTEXT.md`; `--request "<the owner's sentence>"` classifies the task deterministically).
 
 - It needs an owner-issued agent token of this brand. A guest gets `denied`; ask the owner for a token.
@@ -127,7 +127,9 @@ personal page — read the context instead of asking the owner to paste it again
   stay false. Assembling a brief produced no deliverable; say what you drafted and what is still missing.
 - An on-demand batch is not an approved calendar week. For approved slots use `content_calendar` and `content_brief`
   with a pin; for an exact mascot pose use `brand_retrieve --kind mascot` with filters.
-- There is no `task_context` MCP tool yet. If the CLI is not available, say so instead of answering from memory.
+- Over MCP, call the `task_context` tool once at the start of the task (`request` or `task_type`, plus `channel`,
+  `deliverable_count`, `locale`); it returns the same pack as the CLI. Skill: `agent-skills/task-context/SKILL.md`. If
+  neither MCP nor the CLI is available, say so instead of answering from memory.
 
 ## Brand OS Studio
 

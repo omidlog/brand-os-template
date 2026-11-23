@@ -1,3 +1,5 @@
+export { runTaskContextTool } from './agent.js'
+export type { TaskContextNeedType, TaskContextToolInput, TaskContextToolOptions, TaskContextToolResult } from './agent.js'
 export { classifyTask } from './classify.js'
 export type { TaskIntent, TaskIntentGap } from './classify.js'
 export { TASK_TEXT, taskText } from './i18n.js'

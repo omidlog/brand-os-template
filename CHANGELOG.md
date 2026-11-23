@@ -11,6 +11,19 @@
 - `BRAND_OS_COACH=off` silences the automatic moments for one shell.
 - Tests: `coach-moments`, `coach-moments-cli`, `studio-coach`.
 
+## Unreleased — Task Context MCP tool (GAP-02)
+
+### Added
+
+- `task_context` stdio MCP tool: one read-only pack of approved context per task (`task_type` or the owner's `request`, plus `channel`, `deliverable_count`, `locale`, `request_mode`, `output_format`, `scope_id`). Same core (`buildTaskContext`) and the same single caller context as `brand:query --tool task_context`, through a shared `runTaskContextTool`. Access is checked before a request is classified; the request text is never logged, hashed or returned. `authorizes: []`, every permission flag false. No new profile, store, write path or hosted API.
+- Skill `agent-skills/task-context/SKILL.md`; `social-designer`, `ui-designer`, `marketing-creative` and `brand-designer` call `task_context` first, once.
+- `docs-internal/AI_CONNECTORS.md`: setting the tool up for a new Claude Code session (token in the server environment, never in a prompt or a committed file).
+- Tests: `task-context-agent` (stdio server: listing, Persian ten-post request, digest equal to the core pack, guest, cross-brand, revoked, forged arguments, profile isolation, schema bounds, no request text in the log). `audit` now pins `task_context` in the tool list.
+
+### Changed
+
+- `brand:query --tool task_context` now checks access before classifying `--request`: a guest gets `denied` instead of `need_task_type`.
+
 ## Unreleased — Fix: Visual identity shows the approved master logo
 
 ### Fixed
@@ -413,3 +426,9 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 
 - `npm run brand:runtime -- social-batch --demo --out <dir>`: a `social_batch` `task_context` pack for the SYNTHETIC DEMO brand (temp workspace) becomes ten deterministic SVG drafts, per-post manifests citing pack source ids and revisions, and a batch summary. Checks are calls into existing layers (SVG checker, publication gate, normalizer, Content Bridge claim guard, design-tokens contrast, Strategic Coach, Assurance). No model, no network, `authorizes: []`. Guide: `docs-internal/BRAND_RUNTIME.md`.
 - Asset records: optional `model_use` (`not_allowed` | `local_only` | `external_allowed`); absent means `not_allowed`.
+
+## Unreleased — Brand Runtime: `--pack`, approved type scale, Coach tagline exemption
+
+- `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
+- Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
+- Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.

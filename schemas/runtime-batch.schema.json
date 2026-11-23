@@ -14,6 +14,7 @@
     "task",
     "status",
     "blockers",
+    "warnings",
     "context",
     "posts",
     "set_checks",
@@ -98,10 +99,49 @@
         }
       }
     },
+    "warnings": {
+      "type": "array",
+      "description": "Advice that never blocks a draft: Strategic Coach results that are not ready (status and finding codes, never answer text).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "layer",
+          "question_id",
+          "status",
+          "codes",
+          "blocks"
+        ],
+        "properties": {
+          "layer": {
+            "const": "coach"
+          },
+          "question_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blocks": {
+            "const": false
+          }
+        }
+      }
+    },
     "context": {
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "origin",
         "pack_schema",
         "pack_sha256",
         "pack_readiness",
@@ -110,6 +150,12 @@
         "missing"
       ],
       "properties": {
+        "origin": {
+          "enum": [
+            "demo",
+            "pack_file"
+          ]
+        },
         "pack_schema": {
           "const": "brand-os/task-context/v1"
         },

@@ -19,7 +19,7 @@ import type { TaskLocale } from '../task-context/model.js'
 export const RUNTIME_POST_SCHEMA = 'brand-os/runtime-post-manifest/v1' as const
 export const RUNTIME_BATCH_SCHEMA = 'brand-os/runtime-batch/v1' as const
 export const RUNTIME_RENDERER = 'brand-os-svg-post-renderer' as const
-export const RUNTIME_RENDERER_VERSION = '1.0.0' as const
+export const RUNTIME_RENDERER_VERSION = '1.1.0' as const
 
 /** Instagram portrait post, 4:5. The only format this slice renders. */
 export const POST_FORMAT = { id: 'instagram-portrait-1080x1350', width: 1080, height: 1350, media_type: 'image/svg+xml' } as const
@@ -87,10 +87,42 @@ export interface PostManifest {
   context: { pack_schema: string; pack_sha256: string; task_type: 'social_batch' }
   sources: UsedSource[]
   assets: UsedAsset[]
+  /** The type actually drawn: approved scale per slot (or renderer default, labelled), and the headline size used. */
+  typography: PostTypography
+  /** `draft`: live, editable text. `final`: text converted to outlines with owner-supplied font files (`outline.ts`). */
+  export: PostExport
   checks: ReportedCheck[]
   human_review_required: true
   authorizes: []
   permissions: typeof RUNTIME_PERMISSIONS
+}
+
+export interface PostTypography {
+  applied: boolean
+  canvas_scale: number
+  slots: Record<'headline' | 'label' | 'body', TypeSlotReport>
+  headline: { start_px: number; drawn_px: number; reduced_to_fit: boolean }
+}
+
+export interface TypeSlotReport {
+  role: string | null
+  family_stack: string[]
+  appended_generic: boolean
+  size_px: number
+  line_height: number
+  weight: number
+  family_source: 'approved' | 'renderer_default'
+  size_source: 'approved' | 'renderer_default'
+  line_height_source: 'approved' | 'renderer_default'
+  weight_source: 'approved_token' | 'renderer_default'
+}
+
+export interface PostExport {
+  mode: 'draft' | 'final'
+  text: 'live' | 'outlined'
+  /** The local outliner (no network, no model) and the exact font files it used, by digest. Null in draft mode. */
+  outliner: { name: 'resvg-js'; version: string } | null
+  fonts: Array<{ file_name: string; sha256: string; families: string[] }>
 }
 
 /** A layer the batch called, and what it returned, in its own vocabulary. */
@@ -112,7 +144,9 @@ export interface BatchSummary {
   task: { type: 'social_batch'; channel: 'instagram'; locale: TaskLocale; requested_count: number }
   status: 'drafted' | 'blocked'
   blockers: Array<{ code: string; detail: string }>
-  context: { pack_schema: string; pack_sha256: string; pack_readiness: string; pack_staleness: string; pack_verified: boolean; missing: string[] }
+  /** Advice that never blocks: Coach results that are not `ready`, by question id, status and finding codes. */
+  warnings: Array<{ layer: 'coach'; question_id: string | null; status: string; codes: string[]; blocks: false }>
+  context: { origin: 'demo' | 'pack_file'; pack_schema: string; pack_sha256: string; pack_readiness: string; pack_staleness: string; pack_verified: boolean; missing: string[] }
   posts: Array<{ post_id: string; file: string; manifest: string; sha256: string; angle: string; layout: string; checks: Record<CheckResult, number> }>
   set_checks: ReportedCheck[]
   layers: LayerReport[]
@@ -125,7 +159,7 @@ export interface BatchSummary {
 
 export class RuntimeError extends Error {
   constructor(
-    readonly code: 'invalid_pack' | 'wrong_task' | 'unsafe_output' | 'refused',
+    readonly code: 'invalid_pack' | 'wrong_task' | 'unsafe_output' | 'refused' | 'invalid_font',
     message: string,
   ) {
     super(message)

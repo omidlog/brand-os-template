@@ -7,12 +7,13 @@ Draft a social post that uses approved facts and refuses unsupported claims.
 `get_social_template`, `get_marketing_plan`, verbal facts. The starter social brief is a draft.
 
 ## Tools
-`get_social_template`, `get_brand_guidelines`, `get_marketing_plan`.
+`task_context` first, once per task. Then: `get_social_template`, `get_brand_guidelines`, `get_marketing_plan`.
 
 ## Required inputs
 Channel, approved message, and approved offer. No performance numbers unless a published fact contains them.
 
 ## Process
+0. Call `task_context` once first (skill `agent-skills/task-context/SKILL.md`) with task type `social_batch`, and work from its pack. Use the tools below only for detail the pack does not carry.
 1. Call `get_social_template` for the channel. An empty template list means there is no approved template.
 2. Pull only published lines for the caption.
 3. If the offer is missing, the caption says the offer is not approved.

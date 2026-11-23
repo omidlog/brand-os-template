@@ -71,6 +71,8 @@ Restricted fields (finance figures, budgets, partner shares, board details) come
 
 Every result has `brand_id`, `classification`, `approval_state`, `revision`, `source_path`, and `missing`. Every item has its id, source path, module, approval state, classification, revision, and value, or a withheld or missing marker.
 
+`task_context` returns one read-only pack of approved context for one task (`task_type` or the owner's `request`); see the next section and `docs-internal/TASK_CONTEXT.md`.
+
 The older named tools (`search_brand_docs`, `get_brand_tokens`, `get_brand_overview`, `get_business_plan`, and the rest) use the same retrieval path and the same identity.
 
 `brand:query` takes the same token from the environment:
@@ -79,6 +81,25 @@ The older named tools (`search_brand_docs`, `get_brand_tokens`, `get_brand_overv
 BRAND_OS_AGENT_TOKEN=… npm run brand:query -- --tool brand_retrieve --kind facts --module brand-strategy
 BRAND_OS_AGENT_TOKEN=… npm run brand:query -- --tool brand_retrieve --kind mascot --emotion celebrating --stage 3 --use-case correct-answer
 ```
+
+### Task context in a new Claude Code session
+
+One call gives a new session the approved context for one task, so the owner does not explain the brand again.
+
+1. The owner issues a token for the profile the work needs (`design` for visuals and UI, `content-read` for posts,
+   `strategy-ads-read` for an ad brief), in a trusted local shell:
+   `npm run brand:agent-token -- issue --profile design --label "claude-code design"`.
+2. The owner registers the local server in Claude Code with the token in the server's environment, not in the prompt
+   or a committed file. For example in the user-scoped Claude Code MCP settings, or with
+   `claude mcp add brand-os --env BRAND_OS_AGENT_TOKEN=<paste token> -- npm run -s mcp:serve`, run from the brand
+   repository. Do not put the token in a checked-in `.mcp.json`.
+3. In the new session, open the brand repository and ask for the work ("Make ten Instagram posts for this brand").
+   The agent follows `AGENTS.md` and `agent-skills/task-context/SKILL.md`: it calls `task_context` once, works from
+   the pack, cites `source_id` / `source_revision`, and asks the owner only for the question ids in `missing[]`.
+
+Without a token the tool answers `denied`; the agent should ask for one, never search for it. The server is local
+stdio; there is no hosted API and no new profile. One token is one profile: issue a second token for a second agent
+rather than widening one. Reading a pack authorizes no publishing, scheduling, spending or deploying.
 
 ### Access log
 
