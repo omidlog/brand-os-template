@@ -92,6 +92,7 @@ test('the gap report renders in en, fa and tr, opens with the demo banner and au
     if (lang === 'fa') assert.match(report, PERSIAN)
   }
   assert.ok(renderGapReport(assessment, 'en').includes('8 of 12 applicable controls complete, 3 excluded as not applicable'))
+  assert.ok(renderGapReport(assessment, 'en').includes(`- Offer: ${REPORT_TEXT.no_maturity_signal!.en}`), 'a domain without signals is not reported as not applicable')
   assert.equal(renderGapReport(assessment, 'tr'), renderGapReport(assess(SYNTHETIC_DEMO), 'tr'), 'the report is deterministic')
 })
 

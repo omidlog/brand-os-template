@@ -453,6 +453,7 @@ export const REPORT_TEXT: Catalog = {
   evidence: { en: 'Evidence', fa: 'شواهد', tr: 'Kanıt' },
   coverage: { en: '{n} of {d} applicable controls have independent evidence', fa: '{n} از {d} کنترل دارای موضوعیت، شواهد مستقل دارد', tr: '{d} geçerli kontrolden {n} tanesinin bağımsız kanıtı var' },
   maturity: { en: 'Observed maturity by domain', fa: 'بلوغ مشاهده‌شده به تفکیک حوزه', tr: 'Alana göre gözlenen olgunluk' },
+  no_maturity_signal: { en: 'This method observes no maturity signal in this domain', fa: 'این متد در این حوزه نشانه‌ای از بلوغ نمی‌سنجد', tr: 'Bu yöntem bu alanda olgunluk sinyali gözlemlemiyor' },
   controls: { en: 'Controls', fa: 'کنترل‌ها', tr: 'Kontroller' },
   next: { en: 'Next', fa: 'گام بعد', tr: 'Sonraki' },
   next_questions: { en: 'Questions that would move this forward', fa: 'پرسش‌هایی که این را جلو می‌برند', tr: 'Bunu ilerletecek sorular' },

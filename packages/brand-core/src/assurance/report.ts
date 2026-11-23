@@ -83,7 +83,9 @@ export function renderGapReport(assessment: AuditAssessment, lang: AssuranceLang
 
   lines.push(`## ${REPORT_TEXT.maturity![lang]}`, '')
   for (const domain of assessment.maturity_by_domain) {
-    lines.push(`- ${t(DOMAIN_TEXT, domain.domain, lang)}: ${t(MATURITY_TEXT, domain.state, lang)}`)
+    // A domain with no signal controls is not "not applicable" to the brand; the method just does not look.
+    const state = domain.signal_controls === 0 ? REPORT_TEXT.no_maturity_signal![lang] : t(MATURITY_TEXT, domain.state, lang)
+    lines.push(`- ${t(DOMAIN_TEXT, domain.domain, lang)}: ${state}`)
   }
   lines.push('')
 
