@@ -57,7 +57,7 @@ before(async () => {
   await page.goto(`${s.url}/login`)
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
-  await page.type('#totp', await freshTotp())
+  await page.type('#totp', await freshTotp(s.url))
   await page.navigation(() => page.click('button[type=submit]'))
 }, { timeout: 180_000 })
 
