@@ -82,9 +82,33 @@ export async function startStudio(overrides: Partial<StudioConfig> = {}, githubO
   }
 }
 
-/** Accepted TOTP windows: each login in a test uses the next one so replay protection does not refuse it. */
-const DRIFTS = [0, 30_000, -30_000]
-let loginCount = 0
+/**
+ * TOTP steps already used by a sign-in in this test process. Studio refuses a reused code, and the server accepts the
+ * previous, current and next 30-second step, so each sign-in (HTTP client or browser) takes an accepted step that no
+ * earlier sign-in used. A per-call drift is not enough: a `+30 s` code followed by a `0` code one step later is the
+ * same code, and Studio refuses it as reused.
+ */
+const usedTotpSteps = new Set<number>()
+
+/**
+ * A TOTP code for a step no sign-in in this process has used. Never starts within 8 s of a step boundary, so the
+ * previous step's code is still accepted when a slow request or a browser form reaches the server.
+ */
+export async function freshTotp(): Promise<string> {
+  for (;;) {
+    const now = Date.now()
+    const left = 30_000 - (now % 30_000)
+    if (left >= 8_000) {
+      const step = Math.floor(now / 30_000)
+      for (const candidate of [step, step + 1, step - 1]) {
+        if (usedTotpSteps.has(candidate)) continue
+        usedTotpSteps.add(candidate)
+        return totpAt(TOTP_SECRET, candidate * 30_000 + 1_000)
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, left + 50))
+  }
+}
 
 /** A tiny browser: cookie jar, manual redirects, Origin header on POST. */
 export class Client {
@@ -141,14 +165,8 @@ export class Client {
 
   async login(): Promise<void> {
     const token = await this.csrf('/login')
-    // Each login uses a fresh TOTP step so replay protection does not reject repeated logins in one test.
-    loginCount += 1
-    const drift = DRIFTS[loginCount % 3]!
-    // The previous step's code is accepted only until the current step ends. Under load, the request
-    // can reach the server after that boundary and fail as "invalid", so never start one close to it.
-    const left = 30_000 - (Date.now() % 30_000)
-    if (drift < 0 && left < 5_000) await new Promise((resolve) => setTimeout(resolve, left + 50))
-    const code = totpAt(TOTP_SECRET, Date.now() + drift)
+    // Each login uses an unused TOTP step so replay protection does not reject repeated logins in one test.
+    const code = await freshTotp()
     const res = await this.request('POST', '/login', { form: { _csrf: token, login: OWNER_LOGIN, password: OWNER_PASSWORD, totp: code, next: '/brands' } })
     if (res.status !== 303) throw new Error(`login failed: ${res.status} ${await res.text()}`)
   }

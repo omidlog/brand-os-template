@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
-import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
 import { teardown } from './helpers/cleanup.js'
 import { approve, editOutsideStudio } from './helpers/edits.js'
-import { OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
+import { freshTotp, OWNER_LOGIN, OWNER_PASSWORD, startStudio, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
 import { newNoteId, serializeNote } from '@brand-os/brand-core'
 
@@ -98,7 +97,7 @@ test('owner journey in a real browser: sign in, step through the wizard, watch p
   await capture('login')
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
-  await page.type('#totp', totpAt(TOTP_SECRET, Date.now()))
+  await page.type('#totp', await freshTotp())
   await page.navigation(() => page.click('button[type=submit]'))
   assert.equal(await page.eval<string>('location.pathname'), '/brands')
   assert.match(await text('main'), /No brands yet/)
