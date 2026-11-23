@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Assurance: owner-local bridge to approved brand facts (GAP-09)
+
+### Added
+
+- `npm run brand:assurance -- snapshot | assess | verify`: an owner-local, read-only bridge from a brand's approved facts, internal research notes and open contradictions to the existing Assurance evaluator. Reproducible snapshot digest, `--pin` / `verify` against a kept snapshot, no score while anything blocking is missing, restricted facts withheld below the `restricted` audience, en/fa/tr output, refused under `BRAND_OS_AGENT_TOKEN`, writes nothing, never a certification.
+- `@brand-os/brand-core/assurance/workspace` entry point (the pure `assurance` index still reads no file).
+- Tests: `assurance-workspace`, `assurance-cli` (synthetic temp brands only).
+
+### Fixed
+
+- Assurance `completeness.blocked_by` reported every `needs_review` blocker as `source_changed`; it now names the control's own reason (for example `reviewer_required`).
+
 ## Unreleased — Visual DNA reference resolver (fixes pack PR-C, GAP-03)
 
 ### Added

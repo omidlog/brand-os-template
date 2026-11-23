@@ -329,10 +329,12 @@ function completenessOf(results: ControlResult[]): Completeness {
   const excluded = results.filter((entry) => entry.status === 'not_applicable').length
   const blockers = results.filter((entry) => BLOCKING.includes(entry.status))
   if (blockers.length > 0) {
+    // A `needs_review` blocker carries its own reason: a changed source, or a judgment nobody has made yet.
+    // Reporting every one as `source_changed` would tell the owner to re-check data that never moved.
     const codes = sorted(
-      blockers.map((entry) =>
-        entry.status === 'applicability_unknown' ? 'applicability_unknown' : entry.status === 'not_assessed' ? 'no_input' : entry.status === 'blocked_by_license' ? 'license_blocked' : 'source_changed',
-      ) as ReasonCode[],
+      blockers.flatMap((entry): ReasonCode[] =>
+        entry.status === 'applicability_unknown' ? ['applicability_unknown'] : entry.status === 'not_assessed' ? ['no_input'] : entry.status === 'blocked_by_license' ? ['license_blocked'] : entry.reason_codes,
+      ),
     )
     return { state: 'not_scoreable', numerator: null, denominator: null, excluded, blocked_by: codes }
   }
