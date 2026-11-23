@@ -12,11 +12,11 @@ import type {
   VisualEntry,
   VisualLang,
 } from '@brand-os/brand-core/visual'
-import { fillVisual, visualCatalog } from '@brand-os/brand-core/visual'
+import { fillVisual } from '@brand-os/brand-core/visual'
 import { contrastRatio } from '@brand-os/design-tokens'
 import { html, join, safeHex, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
-import { dateOnly, ghostChart, illustrativeStamp, legend, stateChip, two, type GhostVariant } from './visual-primitives.js'
+import { dateOnly, ghostChart, stateChip, two, type GhostVariant } from './visual-primitives.js'
 
 /**
  * Brand Book "Visual identity" chapter renderers (Visual Blueprint V2.1): colour palette, typography specimen and
@@ -34,6 +34,11 @@ export interface IdentityContext {
   /** Owner-only steps; the public edition leaves them out. */
   showNext: boolean
   assetUrl: (key: string) => string | null
+  /**
+   * Print engine (V1.2): when set, a plate's source line becomes a numbered note. The hook registers the note and
+   * returns the reference mark placed after the plate title; the plate then omits its own source line.
+   */
+  note?: (entry: VisualEntry, extra?: string[]) => SafeHtml
 }
 
 function numbers(lang: VisualLang): Intl.NumberFormat {
@@ -45,25 +50,30 @@ function ratioText(ctx: IdentityContext, ratio: number): string {
 }
 
 /** Plate header: section number, title, lead. The numbering is the chapter's own, not a claim about the book. */
-function plateHead(n: number, id: string, title: string, lead: string, state: SafeHtml): SafeHtml {
+export function plateHead(n: number, id: string, title: string, lead: string, state: SafeHtml, ref: SafeHtml | null = null): SafeHtml {
   return html`<header class="vz-plate-head">
     <p class="vz-plate-num"><span>${two(n)}</span>${state}</p>
-    <h2 class="vz-plate-title" id="${id}-t">${title}</h2>
+    <h2 class="vz-plate-title" id="${id}-t">${title}${ref ?? ''}</h2>
     <p class="vz-plate-lead">${lead}</p>
   </header>`
 }
 
-function plateFoot(ctx: IdentityContext, entry: VisualEntry, extra: string[] = []): SafeHtml {
+/** The source line of a plate: label, version, approval date and any extra parts. The book prints it as a note. */
+export function footParts(ctx: IdentityContext, entry: VisualEntry, extra: string[] = []): SafeHtml {
   const approved = dateOnly(entry.approved_at, ctx.lang)
   const parts = [html`<span class="vz-foot-label" dir="auto">${entry.label}</span>`]
   if (entry.version !== null) parts.push(html`<span>${fillVisual(ctx.cat.text.version, { version: entry.version })}</span>`)
   if (approved) parts.push(html`<span>${fillVisual(ctx.cat.text.asOf, { date: approved })}</span>`)
   for (const item of extra) parts.push(html`<span dir="auto">${item}</span>`)
-  return html`<p class="vz-foot"><span class="vz-foot-kind">${ctx.cat.text.sourceShort}</span> ${join(parts, '<span class="vz-foot-sep" aria-hidden="true"> · </span>')} ${stateChip(ctx.cat, entry.state)}</p>`
+  return html`<span class="vz-foot-kind">${ctx.cat.text.sourceShort}</span> ${join(parts, '<span class="vz-foot-sep" aria-hidden="true"> · </span>')} ${stateChip(ctx.cat, entry.state)}`
+}
+
+function plateFoot(ctx: IdentityContext, entry: VisualEntry, extra: string[] = []): SafeHtml {
+  return html`<p class="vz-foot">${footParts(ctx, entry, extra)}</p>`
 }
 
 /** The designed "awaiting approved asset" page: ghost geometry, what it waits for, and (owner only) the next steps. */
-function awaiting(ctx: IdentityContext, input: { variant: GhostVariant; title: string; body: string; reasons: Array<{ text: string; state: DataState | null }>; steps: string[] }): SafeHtml {
+export function awaiting(ctx: IdentityContext, input: { variant: GhostVariant; title: string; body: string; reasons: Array<{ text: string; state: DataState | null }>; steps: string[] }): SafeHtml {
   const t = ctx.cat.identity
   return html`<div class="vz-await">
     <div class="vz-await-art">${ghostChart({ title: t.awaitingKicker, variant: input.variant })}</div>
@@ -78,7 +88,7 @@ function awaiting(ctx: IdentityContext, input: { variant: GhostVariant; title: s
 }
 
 /** Why an entry is not drawable, in the reader's language. */
-function entryReason(ctx: IdentityContext, entry: VisualEntry): { text: string; state: DataState } {
+export function entryReason(ctx: IdentityContext, entry: VisualEntry): { text: string; state: DataState } {
   const t = ctx.cat.identity
   if (entry.state === 'assumption' || entry.state === 'recommendation') return { text: t.awaitingDraft, state: entry.state }
   if (entry.state === 'withheld') return { text: t.awaitingWithheld, state: 'withheld' }
@@ -96,17 +106,14 @@ function levelMarks(ctx: IdentityContext, pair: ContrastPair): SafeHtml {
   return html`<ul class="vz-levels">${mark(pair.aa_normal, t.normalText)}${mark(pair.aa_large, t.largeText)}${mark(pair.aaa_normal, t.enhanced)}</ul>`
 }
 
-export function colorPaletteView(block: ColorPaletteBlock, ctx: IdentityContext): SafeHtml {
+function hexMap(block: ColorPaletteBlock): Map<string, string> {
+  return new Map(block.colors.map((color) => [color.role, color.hex]))
+}
+
+/** Role swatches; the book passes one row at a time so a long palette breaks between rows, never inside one. */
+export function swatchList(block: ColorPaletteBlock, ctx: IdentityContext, colors: ColorPaletteBlock['colors']): SafeHtml {
   const t = ctx.cat.identity
-  const id = 'vi-color'
-  const ready = block.colors.length > 0
-  const head = plateHead(1, id, t.colorTitle, t.colorLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`)
-  if (!ready) {
-    const steps = [fillVisual(t.stepApprove, { label: block.source.label })]
-    return html`<section class="vz-plate vz-plate--color" id="${id}" aria-labelledby="${id}-t">${head}${awaiting(ctx, { variant: 'swatches', title: t.awaitingColorTitle, body: t.awaitingColorBody, reasons: [entryReason(ctx, block.source)], steps })}</section>`
-  }
-  const hexOf = new Map(block.colors.map((color) => [color.role, color.hex]))
-  const swatches = html`<ul class="vz-swatches" aria-label="${t.rolesTitle}">${block.colors.map((color) => {
+  return html`<ul class="vz-swatches" aria-label="${t.rolesTitle}">${colors.map((color) => {
     const hex = safeHex(color.hex) ?? '#000000'
     return html`<li class="vz-swatch">
       <svg class="vz-swatch-chip" dir="ltr" role="img" aria-label="${color.role} ${hex}"><rect width="100%" height="100%" fill="${hex}"/><rect width="100%" height="100%" fill="none" class="vz-swatch-edge"/><text x="10" y="88%" fill="${inkOn(hex)}" direction="ltr" class="vz-swatch-aa">Aa</text></svg>
@@ -114,38 +121,72 @@ export function colorPaletteView(block: ColorPaletteBlock, ctx: IdentityContext)
       <p class="vz-swatch-values" dir="ltr"><span>${hex}</span><span>RGB ${color.rgb.join(' ')}</span></p>
     </li>`
   })}</ul>`
-  const combos = block.combinations.length
-    ? html`<ul class="vz-combos">${block.combinations.map((pair) => {
-        const fg = safeHex(hexOf.get(pair.foreground)) ?? '#000000'
-        const bg = safeHex(hexOf.get(pair.background)) ?? '#FFFFFF'
-        const label = fillVisual(t.textOn, { fg: pair.foreground, bg: pair.background })
-        return html`<li class="vz-combo">
+}
+
+/** Declared combinations with their measured ratio and levels. */
+export function comboList(block: ColorPaletteBlock, ctx: IdentityContext, pairs: ContrastPair[]): SafeHtml {
+  const t = ctx.cat.identity
+  const hexOf = hexMap(block)
+  return html`<ul class="vz-combos">${pairs.map((pair) => {
+    const fg = safeHex(hexOf.get(pair.foreground)) ?? '#000000'
+    const bg = safeHex(hexOf.get(pair.background)) ?? '#FFFFFF'
+    const label = fillVisual(t.textOn, { fg: pair.foreground, bg: pair.background })
+    return html`<li class="vz-combo">
           <svg class="vz-combo-chip" dir="ltr" viewBox="0 0 240 120" role="img" aria-label="${label}"><rect width="240" height="120" fill="${bg}"/><rect x="0.5" y="0.5" width="239" height="119" fill="none" class="vz-swatch-edge"/><text x="18" y="70" fill="${fg}" direction="ltr" class="vz-combo-aa">Aa</text><text x="18" y="100" fill="${fg}" direction="ltr" class="vz-combo-sample">${t.sample}</text></svg>
           <div class="vz-combo-meta"><p class="vz-combo-label" dir="ltr">${label}</p><p class="vz-combo-ratio"><bdi dir="ltr">${ratioText(ctx, pair.ratio)}</bdi></p>${levelMarks(ctx, pair)}</div>
         </li>`
-      })}</ul>`
-    : html`<p class="vz-note">${t.combinationsNone}</p>`
-  const grid = block.grid
-    ? html`<div class="vz-grid-wrap" ${ctx.mode === 'screen' ? html`tabindex="0" role="region" aria-label="${t.gridTitle}"` : ''}><table class="vz-cgrid">
-        <caption>${t.gridHint}</caption>
-        <thead><tr><th scope="col" class="vz-cgrid-corner">${t.gridCorner}</th>${block.grid.roles.map((role) => html`<th scope="col" dir="ltr"><svg class="vz-cgrid-dot" viewBox="0 0 10 10" aria-hidden="true"><rect width="10" height="10" fill="${safeHex(hexOf.get(role)) ?? '#000000'}"/></svg>${role}</th>`)}</tr></thead>
-        <tbody>${block.grid.roles.map((fg, row) => html`<tr><th scope="row" dir="ltr"><svg class="vz-cgrid-dot" viewBox="0 0 10 10" aria-hidden="true"><rect width="10" height="10" fill="${safeHex(hexOf.get(fg)) ?? '#000000'}"/></svg>${fg}</th>${block.grid!.roles.map((bg, col) => {
+  })}</ul>`
+}
+
+/**
+ * The measured contrast grid. `rows` limits the body rows (the book continues a long grid on the next page with the
+ * header repeated); `caption` replaces the hint on a continuation.
+ */
+export function contrastTable(block: ColorPaletteBlock, ctx: IdentityContext, rows: [number, number] | null = null, caption: string | null = null): SafeHtml {
+  const t = ctx.cat.identity
+  const grid = block.grid!
+  const hexOf = hexMap(block)
+  const [from, to] = rows ?? [0, grid.roles.length]
+  return html`<div class="vz-grid-wrap" ${ctx.mode === 'screen' ? html`tabindex="0" role="region" aria-label="${t.gridTitle}"` : ''}><table class="vz-cgrid">
+        <caption>${caption ?? t.gridHint}</caption>
+        <thead><tr><th scope="col" class="vz-cgrid-corner">${t.gridCorner}</th>${grid.roles.map((role) => html`<th scope="col" dir="ltr"><svg class="vz-cgrid-dot" viewBox="0 0 10 10" aria-hidden="true"><rect width="10" height="10" fill="${safeHex(hexOf.get(role)) ?? '#000000'}"/></svg>${role}</th>`)}</tr></thead>
+        <tbody>${grid.roles.slice(from, to).map((fg, index) => {
+          const row = from + index
+          return html`<tr><th scope="row" dir="ltr"><svg class="vz-cgrid-dot" viewBox="0 0 10 10" aria-hidden="true"><rect width="10" height="10" fill="${safeHex(hexOf.get(fg)) ?? '#000000'}"/></svg>${fg}</th>${grid.roles.map((bg, col) => {
           if (row === col) return html`<td class="vz-cgrid-self">—</td>`
-          const ratio = block.grid!.ratios[row]![col]!
+          const ratio = grid.ratios[row]![col]!
           const level = ratio >= 7 ? 'aaa' : ratio >= 4.5 ? 'aa' : ratio >= 3 ? 'large' : 'low'
           return html`<td class="vz-cgrid-cell vz-cgrid--${level}"><span class="vz-cgrid-ratio">${numbers(ctx.lang).format(ratio)}</span></td>`
-        })}</tr>`)}</tbody>
+        })}</tr>`
+        })}</tbody>
       </table></div>`
-    : html`<p class="vz-note">${fillVisual(t.gridOmitted, { count: 10 })}</p>`
+}
+
+export function gridKey(): SafeHtml {
+  return html`<p class="vz-grid-key"><span class="vz-key vz-cgrid--aaa">7+</span><span class="vz-key vz-cgrid--aa">4.5+</span><span class="vz-key vz-cgrid--large">3+</span><span class="vz-key vz-cgrid--low">&lt; 3</span></p>`
+}
+
+export function colorPaletteView(block: ColorPaletteBlock, ctx: IdentityContext): SafeHtml {
+  const t = ctx.cat.identity
+  const id = 'vi-color'
+  const ready = block.colors.length > 0
+  const head = plateHead(1, id, t.colorTitle, t.colorLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source) : null)
+  if (!ready) {
+    const steps = [fillVisual(t.stepApprove, { label: block.source.label })]
+    return html`<section class="vz-plate vz-plate--color" id="${id}" aria-labelledby="${id}-t">${head}${awaiting(ctx, { variant: 'swatches', title: t.awaitingColorTitle, body: t.awaitingColorBody, reasons: [entryReason(ctx, block.source)], steps })}</section>`
+  }
+  const swatches = swatchList(block, ctx, block.colors)
+  const combos = block.combinations.length ? comboList(block, ctx, block.combinations) : html`<p class="vz-note">${t.combinationsNone}</p>`
+  const grid = block.grid ? contrastTable(block, ctx) : html`<p class="vz-note">${fillVisual(t.gridOmitted, { count: 10 })}</p>`
   return html`<section class="vz-plate vz-plate--color" id="${id}" aria-labelledby="${id}-t">
     ${head}
     <h3 class="vz-sub">${t.rolesTitle}</h3>
     ${swatches}
     <div class="vz-plate-split">
       <div><h3 class="vz-sub">${t.combinationsTitle}</h3><p class="vz-note">${t.combinationsLead}</p>${combos}</div>
-      <div><h3 class="vz-sub">${t.contrastTitle}</h3><p class="vz-note">${t.contrastLead}</p>${grid}<p class="vz-grid-key"><span class="vz-key vz-cgrid--aaa">7+</span><span class="vz-key vz-cgrid--aa">4.5+</span><span class="vz-key vz-cgrid--large">3+</span><span class="vz-key vz-cgrid--low">&lt; 3</span></p></div>
+      <div><h3 class="vz-sub">${t.contrastTitle}</h3><p class="vz-note">${t.contrastLead}</p>${grid}${gridKey()}</div>
     </div>
-    ${plateFoot(ctx, block.source)}
+    ${ctx.note ? '' : plateFoot(ctx, block.source)}
   </section>`
 }
 
@@ -177,26 +218,20 @@ function fit(sample: string, size: number, width: number): string {
   return out || sample.slice(0, max)
 }
 
-export function typographySpecimenView(block: TypographySpecimenBlock, ctx: IdentityContext): SafeHtml {
+/** One type role: name, Aa, family and scale, and a true-size line per script. The book keeps a role on one page. */
+export function typeRoleItem(block: TypographySpecimenBlock, role: TypeRole, ctx: IdentityContext): SafeHtml {
   const t = ctx.cat.identity
-  const id = 'vi-type'
-  const ready = block.roles.length > 0
-  const head = plateHead(2, id, t.typeTitle, t.typeLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`)
-  if (!ready) {
-    return html`<section class="vz-plate vz-plate--type" id="${id}" aria-labelledby="${id}-t">${head}${awaiting(ctx, { variant: 'specimen', title: t.awaitingTypeTitle, body: t.awaitingTypeBody, reasons: [entryReason(ctx, block.source)], steps: [fillVisual(t.stepApprove, { label: block.source.label })] })}</section>`
-  }
   const n = numbers(ctx.lang)
-  const roles = block.roles.map((role) => {
-    const size = role.size_px ?? 16
-    const lh = role.line_height ?? 1.3
-    const rowH = Math.ceil(size * lh + 18)
-    const lines = block.scripts.map((script) => {
-      const sample = fit(t.specimenLine[script], size, ctx.mode === 'print' ? 440 : 620)
-      const rtl = script === 'fa'
-      // No viewBox: one user unit is one CSS pixel, so the specimen is set at its true size on screen and in print.
-      return html`<div class="vz-spec-line"><p class="vz-spec-script">${t.scriptName[script]}</p><svg class="vz-spec-svg" dir="${rtl ? 'rtl' : 'ltr'}" width="100%" height="${rowH}" role="img" aria-label="${role.role}, ${t.scriptName[script]}: ${sample}"><text x="${rtl ? '100%' : 0}" y="${Math.round(size * 0.95 + 6)}" font-family="${familyList(role, script)}" font-size="${size}" direction="${rtl ? 'rtl' : 'ltr'}" text-anchor="start" class="vz-spec-text" ${rtl ? html`lang="fa"` : html`lang="${script}"`}>${sample}</text></svg></div>`
-    })
-    return html`<li class="vz-type-role">
+  const size = role.size_px ?? 16
+  const lh = role.line_height ?? 1.3
+  const rowH = Math.ceil(size * lh + 18)
+  const lines = block.scripts.map((script) => {
+    const sample = fit(t.specimenLine[script], size, ctx.mode === 'print' ? 440 : 620)
+    const rtl = script === 'fa'
+    // No viewBox: one user unit is one CSS pixel, so the specimen is set at its true size on screen and in print.
+    return html`<div class="vz-spec-line"><p class="vz-spec-script">${t.scriptName[script]}</p><svg class="vz-spec-svg" dir="${rtl ? 'rtl' : 'ltr'}" width="100%" height="${rowH}" role="img" aria-label="${role.role}, ${t.scriptName[script]}: ${sample}"><text x="${rtl ? '100%' : 0}" y="${Math.round(size * 0.95 + 6)}" font-family="${familyList(role, script)}" font-size="${size}" direction="${rtl ? 'rtl' : 'ltr'}" text-anchor="start" class="vz-spec-text" ${rtl ? html`lang="fa"` : html`lang="${script}"`}>${sample}</text></svg></div>`
+  })
+  return html`<li class="vz-type-role">
       <div class="vz-type-meta">
         <p class="vz-type-name" dir="ltr">${role.role}</p>
         <svg class="vz-type-aa" dir="ltr" viewBox="0 0 120 96" role="img" aria-label="${role.family}"><text x="0" y="78" font-family="${familyList(role, 'en')}" font-size="84" direction="ltr" class="vz-spec-text">Aa</text></svg>
@@ -208,12 +243,22 @@ export function typographySpecimenView(block: TypographySpecimenBlock, ctx: Iden
       </div>
       <div class="vz-type-specimen">${lines}</div>
     </li>`
-  })
+}
+
+export function typographySpecimenView(block: TypographySpecimenBlock, ctx: IdentityContext): SafeHtml {
+  const t = ctx.cat.identity
+  const id = 'vi-type'
+  const ready = block.roles.length > 0
+  const head = plateHead(2, id, t.typeTitle, t.typeLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source) : null)
+  if (!ready) {
+    return html`<section class="vz-plate vz-plate--type" id="${id}" aria-labelledby="${id}-t">${head}${awaiting(ctx, { variant: 'specimen', title: t.awaitingTypeTitle, body: t.awaitingTypeBody, reasons: [entryReason(ctx, block.source)], steps: [fillVisual(t.stepApprove, { label: block.source.label })] })}</section>`
+  }
+  const roles = block.roles.map((role) => typeRoleItem(block, role, ctx))
   return html`<section class="vz-plate vz-plate--type" id="${id}" aria-labelledby="${id}-t">
     ${head}
     <ol class="vz-type-roles">${roles}</ol>
     <p class="vz-note vz-type-note">${t.fontNote}</p>
-    ${plateFoot(ctx, block.source)}
+    ${ctx.note ? '' : plateFoot(ctx, block.source)}
   </section>`
 }
 
@@ -257,7 +302,7 @@ export function logoConstructionView(block: LogoConstructionBlock, ctx: Identity
   const t = ctx.cat.identity
   const id = 'vi-logo'
   const ready = block.spec !== null && block.master !== null
-  const head = plateHead(3, id, t.logoTitle, t.logoLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`)
+  const head = plateHead(3, id, t.logoTitle, t.logoLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source, [block.master!.name]) : null)
   if (!ready) {
     const reasons: Array<{ text: string; state: DataState | null }> = []
     const steps: string[] = []
@@ -295,26 +340,40 @@ export function logoConstructionView(block: LogoConstructionBlock, ctx: Identity
         <figure class="vz-min"><div class="vz-min-stage">${minimum}</div><figcaption class="vz-note">${t.drawnAtMin}</figcaption></figure>
       </div>
     </div>
-    ${plateFoot(ctx, block.source, [master.name])}
+    ${ctx.note ? '' : plateFoot(ctx, block.source, [master.name])}
   </section>`
+}
+
+/** Rows of the sources appendix: one per cited fact, then the approved master file when there is one. */
+export function sourceRows(block: CitationListBlock, ctx: IdentityContext): { items: SafeHtml[]; master: SafeHtml | null } {
+  const cat = ctx.cat
+  const logo = ctx.doc.blocks.find((item): item is LogoConstructionBlock => item.type === 'logo_construction')
+  return {
+    items: block.items.map((item) => html`<tr>
+        <th scope="row"><span class="vz-entry-label" dir="auto">${item.label}</span><code class="vz-code" dir="ltr">${item.id}</code></th>
+        <td>${stateChip(cat, item.state)}</td>
+        <td>${item.version !== null ? fillVisual(cat.text.version, { version: item.version }) : '—'}</td>
+        <td>${dateOnly(item.approved_at, ctx.lang) ?? '—'}</td>
+      </tr>`),
+    master: logo?.master ? html`<tr><th scope="row"><span class="vz-entry-label" dir="auto">${cat.identity.masterFile}: ${logo.master.name}</span><code class="vz-code" dir="ltr">${logo.master.asset_id}</code></th><td>${stateChip(cat, 'approved')}</td><td>${logo.master.version ? html`<span dir="ltr">v${logo.master.version}</span>` : '—'}</td><td>—</td></tr>` : null,
+  }
+}
+
+export function sourcesHead(cat: VisualCatalog): SafeHtml {
+  return html`<thead><tr><th scope="col">${cat.text.colField}</th><th scope="col">${cat.text.colState}</th><th scope="col">${cat.text.colVersion}</th><th scope="col">${cat.text.colApproved}</th></tr></thead>`
 }
 
 /** Sources appendix: field and asset ids live here (and in the screen's details), never on the plates. */
 export function identitySources(block: CitationListBlock, ctx: IdentityContext): SafeHtml {
   const cat = ctx.cat
-  const logo = ctx.doc.blocks.find((item): item is LogoConstructionBlock => item.type === 'logo_construction')
+  const rows = sourceRows(block, ctx)
   return html`<section class="vz-panel vz-sources" aria-labelledby="vi-sources-title">
     <h2 class="vz-panel-title" id="vi-sources-title">${cat.text.sourcesTitle}</h2>
     <p class="vz-muted">${cat.identity.sourcesIntro}</p>
     <table class="vz-table">
-      <thead><tr><th scope="col">${cat.text.colField}</th><th scope="col">${cat.text.colState}</th><th scope="col">${cat.text.colVersion}</th><th scope="col">${cat.text.colApproved}</th></tr></thead>
-      <tbody>${block.items.map((item) => html`<tr>
-        <th scope="row"><span class="vz-entry-label" dir="auto">${item.label}</span><code class="vz-code" dir="ltr">${item.id}</code></th>
-        <td>${stateChip(cat, item.state)}</td>
-        <td>${item.version !== null ? fillVisual(cat.text.version, { version: item.version }) : '—'}</td>
-        <td>${dateOnly(item.approved_at, ctx.lang) ?? '—'}</td>
-      </tr>`)}
-      ${logo?.master ? html`<tr><th scope="row"><span class="vz-entry-label" dir="auto">${cat.identity.masterFile}: ${logo.master.name}</span><code class="vz-code" dir="ltr">${logo.master.asset_id}</code></th><td>${stateChip(cat, 'approved')}</td><td>${logo.master.version ? html`<span dir="ltr">v${logo.master.version}</span>` : '—'}</td><td>—</td></tr>` : ''}
+      ${sourcesHead(cat)}
+      <tbody>${rows.items}
+      ${rows.master ?? ''}
       </tbody>
     </table>
   </section>`
@@ -358,67 +417,4 @@ export function chapterOpener(ctx: IdentityContext, linked: boolean): SafeHtml {
     </nav>
     <p class="vz-opener-asof">${asOf ? fillVisual(ctx.cat.text.asOf, { date: asOf }) : ctx.cat.text.asOfNone}</p>
   </header>`
-}
-
-export interface IdentityPrintInput {
-  doc: VisualDocument
-  lang: VisualLang
-  commit: string | null
-  head: SafeHtml
-  toolbar: SafeHtml
-  assetUrl: (key: string) => string | null
-}
-
-/**
- * Static print view of the chapter, A4 portrait (named page): opener, one plate per page, then the sources and
- * framework appendix. Uses the existing print path (browser Print → PDF); not the V1.2 book engine.
- */
-export function identityPrintDocument(input: IdentityPrintInput, render: (block: VisualDocument['blocks'][number], ctx: IdentityContext) => SafeHtml): SafeHtml {
-  const { doc, lang } = input
-  const cat = visualCatalog(lang)
-  const t = cat.identity
-  const ctx: IdentityContext = { cat, lang, mode: 'print', doc, showNext: false, assetUrl: input.assetUrl }
-  const internal = doc.audience === 'internal'
-  const edition = internal ? cat.text.editionInternal : cat.text.editionPublic
-  const foot = (label: string) => html`<footer class="vz-print-foot"><span>${t.runningHead}</span><span dir="auto">${doc.brand_name}</span><span>${internal ? cat.text.classInternal : cat.text.classPublic}</span><span>${label}</span></footer>`
-  const plates: Array<[string, VisualDocument['blocks'][number] | undefined]> = [
-    [t.pageColor, doc.blocks.find((block) => block.type === 'color_palette')],
-    [t.pageType, doc.blocks.find((block) => block.type === 'typography_specimen')],
-    [t.pageLogo, doc.blocks.find((block) => block.type === 'logo_construction')],
-  ]
-  const citations = doc.blocks.find((block): block is CitationListBlock => block.type === 'citation_list')
-  return html`<!doctype html>
-<html lang="${lang}" dir="${cat.dir}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<meta name="referrer" content="same-origin">
-<title>${t.chapterTitle} · ${doc.brand_name}</title>
-${input.head}
-</head>
-<body class="vz-print-body vz-book-body${doc.illustrative ? ' vz-is-mock' : ''}">
-${input.toolbar}
-<main class="vz-print" id="main">
-  <section class="vz-page vz-page--book vz-page--opener" aria-label="${t.chapterTitle}">
-    ${illustrativeStamp(cat, doc)}
-    ${chapterOpener(ctx, false)}
-    <dl class="vz-print-meta vz-book-meta">
-      <div><dt>${cat.text.classification}</dt><dd><span class="vz-edition vz-edition--${doc.audience}">${edition}</span></dd></div>
-      <div><dt>${cat.text.commit}</dt><dd><code class="vz-code" dir="ltr">${input.commit ? input.commit.slice(0, 12) : '—'}</code></dd></div>
-    </dl>
-    ${foot(t.chapterTitle)}
-  </section>
-  ${plates.map(([label, block]) => (block ? html`<section class="vz-page vz-page--book vz-page--plate" aria-label="${label}">${illustrativeStamp(cat, doc)}${render(block, ctx)}${foot(label)}</section>` : ''))}
-  <section class="vz-page vz-page--book vz-page--appendix" aria-label="${t.pageSources}">
-    ${illustrativeStamp(cat, doc)}
-    ${citations ? identitySources(citations, ctx) : ''}
-    ${legend(cat, ['approved', 'stale', 'assumption', 'withheld', 'missing'])}
-    ${join(doc.framework_refs.map((ref) => frameworkNote(cat, ref, 'print', lang)))}
-    <p class="vz-muted vz-edition-note">${internal ? cat.text.editionInternalNote : cat.text.editionPublicNote}</p>
-    ${foot(t.pageSources)}
-  </section>
-</main>
-</body>
-</html>`
 }

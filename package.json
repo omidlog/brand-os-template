@@ -71,6 +71,7 @@
     "brand:identity": "tsx scripts/identity.ts",
     "brand:content": "tsx scripts/content.ts",
     "visual:golden": "tsx scripts/visual-golden.ts",
+    "brand:export-visual": "tsx scripts/export-visual.ts",
     "mcp:serve": "tsx scripts/mcp.ts",
     "studio:start": "tsx apps/studio/src/main.ts",
     "studio": "tsx apps/studio/src/cli.ts",
