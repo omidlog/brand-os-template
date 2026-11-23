@@ -453,6 +453,12 @@ if (command === 'init') {
       id: { type: 'string' },
       'pin-revision': { type: 'string' },
       'pin-sha': { type: 'string' },
+      from: { type: 'string' },
+      to: { type: 'string' },
+      channel: { type: 'string' },
+      week: { type: 'string' },
+      slot: { type: 'string' },
+      lang: { type: 'string' },
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
@@ -508,6 +514,13 @@ if (command === 'init') {
     strategy_get: async () => {
       const pin = values['pin-revision'] || values['pin-sha'] ? { revision: values['pin-revision'] ? Number(values['pin-revision']) : undefined, content_sha256: values['pin-sha'] } : undefined
       return (await import('@brand-os/brand-core/strategy')).runStrategyTool(root, engine.config().brand.slug, ctx, 'strategy_get', { strategy_id: values.id, pin })
+    },
+    // Content Bridge (content-read tokens): the same gate as the MCP tools. Reads only; reports go through MCP content_report.
+    content_calendar: async () =>
+      (await import('@brand-os/brand-core/content-bridge')).runContentTool(root, engine.config().brand.slug, ctx, 'content_calendar', { from: values.from, to: values.to, channel: values.channel, lang: values.lang }),
+    content_brief: async () => {
+      const pin = values['pin-revision'] || values['pin-sha'] ? { revision: values['pin-revision'] ? Number(values['pin-revision']) : undefined, content_sha256: values['pin-sha'] } : undefined
+      return (await import('@brand-os/brand-core/content-bridge')).runContentTool(root, engine.config().brand.slug, ctx, 'content_brief', { week_id: values.week, slot_id: values.slot, pin, lang: values.lang })
     },
   }
   const handler = handlers[tool]

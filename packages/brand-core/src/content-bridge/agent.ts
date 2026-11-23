@@ -122,7 +122,7 @@ export interface ContentBriefDocument {
   cta: BriefFact | null
   cta_rules: SourcedRule[]
   audience: ResolvedSource[]
-  voice: { do: SourcedRule[]; dont: SourcedRule[]; vocabulary: ContentStrategyView['voice']['vocabulary'] }
+  voice: { sources: ResolvedSource[]; do: SourcedRule[]; dont: SourcedRule[]; vocabulary: ContentStrategyView['voice']['vocabulary'] }
   claims: { banned: SourcedRule[]; availability: string | null; availability_rule: string | null }
   must_include: Array<{ field: 'key_message' | 'offer' | 'cta'; fact_id: string }>
   must_avoid: Array<{ kind: 'banned_claim' | 'voice_dont' | 'vocabulary_avoid' | 'availability'; text: string; source: string }>
@@ -334,7 +334,7 @@ export function buildBrief(ws: KnowledgeWorkspace, served: Served, slot: Content
   if (!cta && !view.cta.rules.length) missing.push('slot.cta')
   if (slot.hook === null) missing.push('slot.hook')
   if (!view.audience.length) missing.push('audience')
-  if (!view.voice.do.length && !view.voice.dont.length) missing.push('voice')
+  if (!view.voice.sources.length && !view.voice.do.length && !view.voice.dont.length) missing.push('voice')
   if (plan && plan.role === null) missing.push('channel_plan.role')
   const ids = slotFactIds(slot)
   const doc: Omit<ContentBriefDocument, 'digests'> & { digests: Omit<ContentBriefDocument['digests'], 'brief_sha256'> } = {
@@ -368,7 +368,7 @@ export function buildBrief(ws: KnowledgeWorkspace, served: Served, slot: Content
     cta,
     cta_rules: view.cta.rules,
     audience: view.audience,
-    voice: { do: view.voice.do, dont: view.voice.dont, vocabulary: view.voice.vocabulary },
+    voice: { sources: view.voice.sources, do: view.voice.do, dont: view.voice.dont, vocabulary: view.voice.vocabulary },
     claims: { banned: view.claims.banned, availability: view.claims.availability, availability_rule: view.claims.availability_rule },
     must_include: [keyMessage && { field: 'key_message' as const, fact_id: keyMessage.fact_id }, offer && { field: 'offer' as const, fact_id: offer.fact_id }, cta && { field: 'cta' as const, fact_id: cta.fact_id }].filter(
       (item): item is { field: 'key_message' | 'offer' | 'cta'; fact_id: string } => Boolean(item),

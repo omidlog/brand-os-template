@@ -30,6 +30,7 @@ import {
   searchMascotAssets,
 } from '@brand-os/brand-core'
 import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
+import { runContentTool } from '@brand-os/brand-core/content-bridge'
 import { runStrategyTool } from '@brand-os/brand-core/strategy'
 
 const engine = new InterviewEngine(process.cwd())
@@ -175,6 +176,41 @@ server.registerTool(
     }),
   },
   async ({ strategy_id, pin }) => text(runStrategyTool(engine.workspaceRoot(), engine.config().brand.slug, caller, 'strategy_get', { strategy_id, pin })),
+)
+
+// Content Bridge: content-read profile only (see content-bridge/agent.ts). Approved, current calendar weeks and per-slot
+// briefs; drafts and weeks that need review invisible; restricted facts withheld; a stale pin is refused. The one write
+// is a produced/published observation, which changes no week, strategy or fact. Every call is access-logged.
+const CONTENT_NOTE =
+  'Owner-approved, current content calendar weeks only. Drafts and weeks that need review are never served; restricted facts are withheld. Grants no permission to post, schedule, publish, advertise or spend. Needs a content-read token; others get denied. lang: en, fa or tr for notices and gap text.'
+const CONTENT_PIN = z
+  .object({ revision: z.number().int().min(1).max(999_999).optional(), content_sha256: z.string().max(64).optional() })
+  .strict()
+const CONTENT_LANG = z.enum(['en', 'fa', 'tr']).optional()
+const brandArgs = () => [engine.workspaceRoot(), engine.config().brand.slug, caller] as const
+server.registerTool(
+  'content_calendar',
+  {
+    description: `Read-only. Approved calendar slots in a date range (YYYY-MM-DD, at most 120 days), optionally one channel, as stable JSON with each week's revision, content_sha256 and approval digest, plus the latest produced/published report per slot. ${CONTENT_NOTE}`,
+    inputSchema: z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional(), channel: z.string().max(20).optional(), lang: CONTENT_LANG }),
+  },
+  async ({ from, to, channel, lang }) => text(runContentTool(...brandArgs(), 'content_calendar', { from, to, channel, lang })),
+)
+server.registerTool(
+  'content_brief',
+  {
+    description: `Read-only brief for one slot: voice do/don't, banned claims, audience, the resolved key message, offer and CTA, channel plan, format and language, the cited competitive angle and approved creative preference ids. Pass pin {revision, content_sha256} of the week to refuse a replaced week (status stale_pin). ${CONTENT_NOTE}`,
+    inputSchema: z.object({ week_id: z.string().max(16), slot_id: z.string().max(5), pin: CONTENT_PIN.optional(), lang: CONTENT_LANG }),
+  },
+  async ({ week_id, slot_id, pin, lang }) => text(runContentTool(...brandArgs(), 'content_brief', { week_id, slot_id, pin, lang })),
+)
+server.registerTool(
+  'content_report',
+  {
+    description: `Report that a slot was produced, or published at an https URL. Stored as an observation only: it changes no week, strategy or fact, is never fetched, and grants no permission to publish. pin {revision, content_sha256} of the served week is required. ${CONTENT_NOTE}`,
+    inputSchema: z.object({ week_id: z.string().max(16), slot_id: z.string().max(5), pin: CONTENT_PIN, status: z.enum(['produced', 'published']), url: z.string().max(500).optional(), lang: CONTENT_LANG }),
+  },
+  async ({ week_id, slot_id, pin, status, url, lang }) => text(runContentTool(...brandArgs(), 'content_report', { week_id, slot_id, pin, status, url, lang })),
 )
 
 const transport = new StdioServerTransport()
