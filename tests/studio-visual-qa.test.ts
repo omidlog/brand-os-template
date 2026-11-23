@@ -292,6 +292,14 @@ test('digital PDF: headings, contents entries and folios in the text, Persian di
     const layout = layoutIdentityBook({ doc, lang, commit: null, head: html``, toolbar: html``, assetUrl: () => null })
     const digits = (n: number) => new Intl.NumberFormat(rtl ? 'fa-IR' : 'en-US', { useGrouping: false }).format(n)
     const contents = pdf.pages[2]!.text
+    const contentsLines = contents.split('\n').map((line) => line.trim())
+    // The page number the printed contents gives each section, read from the exported (measured) HTML.
+    const exported = fs.readFileSync(result.html, 'utf8')
+    const tocPage = (title: string) => {
+      const escaped = title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const m = exported.match(new RegExp(`<span class="bk-toc-name">${escaped}</span>.*?data-toc-page="(\\d+)"`))
+      return m ? Number(m[1]) : null
+    }
     assert.ok(pdfHasWords(pdf.pages[0]!.text, cat.identity.chapterTitle), `${lang}: cover title "${cat.identity.chapterTitle}"`)
     assert.ok(pdfHas(pdf.pages[0]!.text, 'ILLUSTRATIVE / MOCK DATA'), `${lang}: the fixture is stamped`)
     for (const section of layout.sections) {
@@ -299,7 +307,9 @@ test('digital PDF: headings, contents entries and folios in the text, Persian di
       // The page the contents names holds the section's heading (titles are on their first page in the measured pass too).
       const target = pdf.pages.findIndex((p, i) => i >= 3 && pdfHasWords(p.text, section.title)) + 1
       assert.ok(target >= 4, `${lang}: "${section.title}" is printed`)
-      assert.ok(pdfHas(contents, digits(target)), `${lang}: contents shows page ${digits(target)} for "${section.title}"`)
+      // The entry's own number, not just the digit somewhere on the page: a contents off by one page fails here.
+      assert.equal(tocPage(section.title), target, `${lang}: the contents entry for "${section.title}" names page ${target}`)
+      assert.ok(contentsLines.includes(digits(target)), `${lang}: contents prints page ${digits(target)} for "${section.title}"`)
     }
     // Folios: every page from the contents on carries its number, in the reader's digits.
     pdf.pages.forEach((p, i) => {
