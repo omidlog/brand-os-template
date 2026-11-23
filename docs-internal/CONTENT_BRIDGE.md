@@ -6,8 +6,8 @@ built in four slices, one PR each:
 
 | Slice | What | State |
 | --- | --- | --- |
-| A | `content` strategy type, `brand:content strategy` proposer, voice rules projection | this guide |
-| B | Calendar planner and per-week owner approval, read-only Studio page | not started |
+| A | `content` strategy type, `brand:content strategy` proposer, voice rules projection | done |
+| B | Calendar planner and per-week owner approval, read-only Studio page | this guide |
 | C | `content_calendar` / `content_brief` agent tools through the existing gates | not started |
 | D | `content-planner` skill and integration guide | not started |
 
@@ -42,7 +42,7 @@ strategy and never projected.
 1. **Approved facts** hold the voice, audience, messaging, pillars, channels and claims.
 2. **Content strategy** (Slice A) holds the decisions facts do not: which pillars, the role, formats and cadence of each
    channel, content languages, owner-written extra rules, and explicit gaps. It cites facts; it does not restate them.
-3. **Content calendar** (Slice B) will cite the approved content strategy revision.
+3. **Content calendar** (Slice B) pins the approved content strategy revision and the facts its slots cite.
 4. **Content brief** (Slice C) will be a read-only projection of 1–3.
 
 ## Slice A: the content strategy record
@@ -158,3 +158,76 @@ holds dated slots. Everything else is reused.
 
 Not reused, on purpose: `brand:strategy` records for weeks. A week is not a strategy (no agent profile, validity
 window or recommendations), and putting weeks in the strategy store would make them visible to the Strategy Feed scan.
+
+## Slice B: the content calendar
+
+### Data model
+
+A week (`wk-YYYY-MM-DD`, Monday to Sunday) is a small record with immutable, hashed revisions under
+`brand/.private/content/calendar/<week_id>/` (`packages/brand-core/src/content-bridge/calendar-model.ts`). A revision
+pins the content strategy it was planned from (`strategy_id`, `revision`, `content_sha256`) and the `revision_hash` of
+every fact a slot cites. A slot holds `date, channel, format, pillar, language, objective, key_message, offer, cta,
+hook, angle, notes, research, status (idea | planned | skipped), fact_refs`. Fact text is never copied.
+`produced` / `published` are Slice C (agent observations).
+
+### Planner (`brand:content plan`)
+
+- Its only input is the served content strategy view; drafts are never planned from.
+- Deterministic and offline. Rotation of formats, pillars, languages and key messages is indexed by date.
+- Cadence `n/week` or `n/month` is respected; a `null` cadence gives no slots and a `cadence_not_decided` gap. A
+  requested channel not in the strategy is a `channel_not_in_strategy` gap. A slot that would cite nothing is dropped
+  (`no_source` gap): every slot cites at least one approved fact.
+- The planner writes no hook or angle, so it cannot write a banned claim. Owner-written slot text is checked against
+  the banned claims and the availability rule (`claims.ts`) on `week propose` and again on `week approve`.
+- `--research` adds an optional angle per slot from `buildCompetitiveMemo(ws, 'marketing')`: the observation id, its
+  Knowledge ref and a confidence label (high / medium / low). Never its quote.
+
+### Approval and status
+
+`week review` shows the revision and its hash; `week approve --expect-sha` needs the owner proof and seals the
+approval with the approval secret under its own domain (`brand-os/content-week-approval/v1`), so a week approval can
+never verify as a strategy approval. `calendar` shows approved, current weeks only. A newer strategy revision, a
+changed cited fact or research note puts an approved week in `needs_review`; a tampered revision or seal makes it
+`integrity_failed`. Neither is served.
+
+### Studio
+
+`brand:content share --week wk-… [--dry-run]` writes a derived summary of one approved, current week to
+`brand/content-calendar/shared/wk-YYYY-MM-DD.json` (ids, dates, pillar names, hook and angle, observation ids; no fact
+values, notes or quotes). The owner commits and merges it. Studio's read-only "Content calendar" page shows only those
+files from the merged commit (`buildStudioCalendar`); malformed, other-brand, misnamed, symlinked or secret-looking
+files are withheld with a reason. No approve button, no write route.
+
+### Owner workflow
+
+```bash
+npm run brand:content -- plan --from 2026-11-23 --weeks 2                 # preview, nothing written
+npm run brand:content -- plan --from 2026-11-23 --weeks 2 --out weeks.json # edit hooks / angles, then
+npm run brand:content -- week propose --file week.json                     # one item of weeks.json
+# or: plan … --store  to store every planned week as a draft as is
+npm run brand:content -- week review  --week wk-2026-11-23 --revision 1
+BRAND_OS_APPROVAL_PROOF=… npm run brand:content -- week approve --week wk-2026-11-23 --revision 1 --expect-sha <sha256>
+npm run brand:content -- calendar [--channel instagram] [--lang fa|tr]
+npm run brand:content -- share --week wk-2026-11-23 --dry-run
+```
+
+### Tests
+
+| Behaviour | Test |
+| --- | --- |
+| Cadence respected, every slot cites a source, pillars and languages rotate, nothing written | `content-calendar` "the planner respects cadence…" |
+| Per-week approval; draft week and draft v2 invisible until approved | `content-calendar` "a week is approved by the owner…" |
+| Tampered week or approval not served | `content-calendar` "tampering…" |
+| No slot contradicts a banned claim or the availability rule (en/fa/tr) | `content-calendar` "no slot may contradict…" |
+| New strategy revision or changed fact → `needs_review` | `content-calendar` "a new strategy revision…" |
+| Research angles cite observations with confidence, never text | `content-calendar` "optional research angles…" |
+| Owner-only | `content-calendar` "the calendar is owner-only" |
+| CLI journey: plan, store, proof-gated approve, calendar, banned hook refused, share | `content-calendar-cli` |
+| Studio path filter, projection withholding, read-only page in en/fa/tr, old-cache rebuild | `studio-calendar` |
+
+### Limits (Slice B)
+
+- No agent read path yet: no token profile reads weeks (Slice C).
+- Slot status stops at `idea | planned | skipped`; `produced` / `published` come from agent observations in Slice C.
+- The Studio page shows a week as of `shared_at`; the current status is the CLI `calendar`.
+- Fact text and pillar names are shown as written; gap, notice and CLI text is en/fa/tr.
