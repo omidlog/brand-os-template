@@ -199,7 +199,7 @@ server.registerTool(
 server.registerTool(
   'content_brief',
   {
-    description: `Read-only brief for one slot: voice do/don't, banned claims, audience, the resolved key message, offer and CTA, channel plan, format and language, the cited competitive angle and approved creative preference ids. Pass pin {revision, content_sha256} of the week to refuse a replaced week (status stale_pin). ${CONTENT_NOTE}`,
+    description: `Read-only brief for one slot: voice do/don't, banned claims, audience, the resolved key message, offer and CTA, channel plan, format and language, the cited research angle (observation id and confidence, never its text) and approved creative preference ids. Pass pin {revision, content_sha256} of the week to refuse a replaced week (status stale_pin). ${CONTENT_NOTE}`,
     inputSchema: z.object({ week_id: z.string().max(16), slot_id: z.string().max(5), pin: CONTENT_PIN.optional(), lang: CONTENT_LANG }),
   },
   async ({ week_id, slot_id, pin, lang }) => text(runContentTool(...brandArgs(), 'content_brief', { week_id, slot_id, pin, lang })),

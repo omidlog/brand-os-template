@@ -483,3 +483,20 @@ test('brand:content reports shows agent reports to the owner (en/fa/tr, --json) 
   assert.ok(!refused.stdout.includes(POST_URL))
   assert.notEqual(cli(['reports', '--week', 'wk-2026-11-24']).status, 0, 'a week id must be a Monday')
 })
+
+test('a week record edited to two approved revisions serves nothing; a pin to it reports integrity_failed', async () => {
+  const { s, week, w1 } = await servedBrand()
+  const v2 = proposeWeek(s.ws, { week: withSlots(week, (slot, i) => (i === 0 ? { ...slot, hook: V2_HOOK } : slot)) }).revision
+  const file = path.join(s.root, 'brand/.private/content/calendar', week.week_id, 'record.json')
+  const record = JSON.parse(fs.readFileSync(file, 'utf8')) as { revisions: Array<{ state: string }> }
+  record.revisions[1]!.state = 'approved'
+  fs.writeFileSync(file, JSON.stringify(record))
+  const cal = calOf(call(s, contentCtx(), 'content_calendar'))
+  assert.deepEqual(cal.weeks, [])
+  assert.equal(cal.withheld.integrity_failed, 1)
+  const pinned = call(s, contentCtx(), 'content_brief', { week_id: week.week_id, slot_id: 's01', pin: { revision: 1, content_sha256: w1.sha } })
+  assert.deepEqual([pinned.status, pinned.stale!.pinned_state, pinned.stale!.current, pinned.data], ['stale_pin', 'integrity_failed', null, null])
+  assert.equal(call(s, contentCtx(), 'content_brief', { week_id: week.week_id, slot_id: 's01' }).status, 'not_found')
+  assert.equal(call(s, contentCtx(), 'content_report', { week_id: week.week_id, slot_id: 's01', status: 'produced', pin: { revision: 2, content_sha256: v2.content_sha256 } }).status, 'stale_pin')
+  assert.ok(!JSON.stringify(cal).includes('V2-HOOK'))
+})

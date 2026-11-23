@@ -254,28 +254,31 @@ function lookupWeek(ws: KnowledgeWorkspace, weekId: string, pin: StrategyPin | u
     throw error
   }
   let entry: WeekEntry | null
+  let broken = false
   try {
     entry = approvedWeekEntry(record)
   } catch {
     entry = null
+    broken = true
   }
   const result = entry ? evaluateWeek(ws, record, entry, now, lang) : null
   const servedOk = entry && result && result.status === 'current' && result.revision && result.view && entry.approval
-  const state = !entry ? (record.revisions.some((item) => item.state === 'draft') ? 'draft' : 'not_approved') : (result?.status ?? 'integrity_failed')
+  // Effective status names only (as in strategy_get): a week with no approved revision reads as draft.
+  const state: StaleInfo['pinned_state'] = broken ? 'integrity_failed' : !entry ? 'draft' : result!.status === 'current' ? 'current' : result!.status === 'needs_review' ? 'needs_review' : 'integrity_failed'
   if (pin) {
     const matches = servedOk && (pin.revision === undefined || pin.revision === entry!.revision) && (pin.content_sha256 === undefined || pin.content_sha256 === entry!.content_sha256)
     if (!matches) {
       const pinned = record.revisions.find((item) => (pin.revision === undefined || item.revision === pin.revision) && (pin.content_sha256 === undefined || item.content_sha256 === pin.content_sha256))
       // A pin to a draft or rejected revision reveals nothing about it.
       const visible = pinned && ['approved', 'superseded'].includes(pinned.state)
-      const pinnedState = !visible ? 'unknown' : pinned.state === 'approved' ? state : 'superseded'
+      const pinnedState: StaleInfo['pinned_state'] = !visible ? 'unknown' : pinned.state === 'approved' ? state : 'superseded'
       return {
         served: null,
         state,
         stale: {
           pinned: { revision: pin.revision ?? null, content_sha256: pin.content_sha256 ?? null },
           current: servedOk ? { revision: entry!.revision, content_sha256: entry!.content_sha256 } : null,
-          pinned_state: pinnedState as StaleInfo['pinned_state'],
+          pinned_state: pinnedState,
         },
       }
     }
