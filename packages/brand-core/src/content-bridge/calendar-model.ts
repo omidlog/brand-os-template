@@ -283,7 +283,7 @@ export function parseWeekContent(raw: unknown): ContentWeekContent {
   })
   const factRefs = listOf(w.fact_refs, 'week.fact_refs', 60).map((item, i) => {
     const r = objectOf(item, `week.fact_refs[${i}]`, ['id', 'revision'])
-    return { id: matching(r.id, FACT_ID, `week.fact_refs[${i}].id`), revision: matching(r.revision, /^[0-9a-f]{64}$/, `week.fact_refs[${i}].revision`) }
+    return { id: matching(r.id, FACT_ID, `week.fact_refs[${i}].id`), revision: matching(r.revision, /^[A-Za-z0-9_.:-]{1,200}$/, `week.fact_refs[${i}].revision`) }
   })
   const researchRefs = [...new Set(listOf(w.research_refs, 'week.research_refs', 60).map((item, i) => matching(item, RESEARCH_REF, `week.research_refs[${i}]`)))]
   return { schema: 1, week_id: weekId, week_start: start, week_end: end, strategy, languages, slots, gaps, fact_refs: factRefs, research_refs: researchRefs }
