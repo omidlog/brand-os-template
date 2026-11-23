@@ -133,8 +133,28 @@ npm run brand:content -- show [--lang fa|tr]
 | Pinned SEO strategy replaced → `needs_review`; stale pin refused | `content-strategy` "a cited SEO strategy…" |
 | CLI journey with proof-gated approval through `brand:strategy` | `content-cli` |
 
-### Limits
+### Limits (Slice A)
 
 - No calendar, no per-slot brief and no agent read path yet (Slices B and C).
 - Channel detection reads wording; the owner checks the detected list before approving.
 - Approved fact text is shown as written; the projection does not translate it. Gap and rule text is en/fa/tr.
+
+## Slice B preflight reuse map (against main `06ac484`)
+
+Written before any Slice B code. The calendar adds one small store (per-week records), because no existing store
+holds dated slots. Everything else is reused.
+
+| Existing module | Reused for | New small type | Why it is not a second truth |
+| --- | --- | --- | --- |
+| `content-bridge/projection.ts` `contentStrategyView` (Slice A) | The planner's only input: the served content strategy (pillars, channels, cadence, formats, languages, source fact ids, banned claims, availability rule). | none | The planner never reads facts or drafts on its own. It pins the served revision (`strategy_id`, `revision`, `content_sha256`). |
+| `strategy/feed.ts` `servable`, `strategy/store.ts` `factState`, `evidenceState`, `assertOwnerProcess` | Week status at read time: the pinned strategy must still be the one served, every cited fact at its `revision_hash`, every research ref at its revision. | none | Same rules as strategies: a change makes the week `needs_review`, never silently re-pointed. |
+| `strategy/model.ts` `canonicalJson`, `sha256Hex`, `approvalSeal`, `newApprovalEventId`, `RevisionEntry`, `StrategyApproval`; `store.ts` `requireProof` | Week revisions are immutable and hashed; approval is owner proof + `--expect-sha` + HMAC seal keyed by the same approval secret. | `ContentWeekRecord`, `ContentWeekRevision` (same entry and approval shapes) | No new approval scheme. The seal gets its own domain string so a week approval can never verify as a strategy approval. |
+| Knowledge `withLock`, `writeVaultFile`, `safeRead`, `dirUsable`, `ensureDir` | Atomic 0600 writes under `brand/.private/content/calendar/<week_id>/` and a per-week lock. | none | Same private, git-ignored area as strategies; never in Studio, docs builds or exports. |
+| `competitive/memos.ts` `buildCompetitiveMemo(ws, 'marketing')` (Identity Slice C) | Optional research angles (`--research`): observation id, its `knowledge:kn_…@sha256` ref and a confidence label from the cell state. | `SlotResearch` | Quotes stay in Knowledge research notes; a slot cites the observation, never its text. |
+| `creative/share.ts` (`brand:creative share`, `buildStudioCreative`) | Studio pattern: the owner explicitly shares a derived summary of an approved week to a tracked file; Studio reads only that file from the merged commit, strictly validated. | `SharedContentWeek` | The shared file is a derived copy with ids and dates, labelled as of `shared_at`; the private week record stays the truth. |
+| `apps/studio` tar allowlist, projection, sync, brand sections, views, i18n | Read-only "Content calendar" page. | `StudioCalendarProjection` | No new non-GET route. |
+| `content-bridge/i18n.ts` | en/fa/tr for gaps, CLI lines, notices and conflict messages. | more catalog keys | Text only. |
+| Template sync / migrations | Nothing to migrate: new folders only, `brand/**` stays brand-owned. | none | — |
+
+Not reused, on purpose: `brand:strategy` records for weeks. A week is not a strategy (no agent profile, validity
+window or recommendations), and putting weeks in the strategy store would make them visible to the Strategy Feed scan.
