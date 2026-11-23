@@ -14,6 +14,7 @@ import {
   CoachResultSchema,
   openCoachContext,
   renderCoachResult,
+  SHORT_BY_DESIGN_IDS,
   vagueMarkersIn,
   type CoachResult,
 } from '@brand-os/brand-core/coach'
@@ -207,6 +208,25 @@ test('quality: a template placeholder is needs_review, and at most two deficits 
   assert.ok(codes(result).includes('placeholder_value'))
   assert.ok(result.findings.length <= COACH_LIMITS.maxDeficits, 'at most two deficits reach the owner')
   assert.ok(result.findings.every((finding) => finding.status !== 'ready'))
+})
+
+test('quality: a tagline or brand promise is short by design and is never too_brief_for_output', () => {
+  assert.ok(SHORT_BY_DESIGN_IDS.has('brand.verbal.tagline') && SHORT_BY_DESIGN_IDS.has('brand.strategy.promise'))
+  const brand = coachBrand()
+  answer(brand, 'brand.verbal.tagline', 'Less, but daily.')
+  answer(brand, 'brand.strategy.promise', 'Five minutes a day, one step ahead.')
+  answer(brand, 'brand.strategy.purpose', 'Make learning short.')
+  for (const id of ['brand.verbal.tagline', 'brand.strategy.promise']) {
+    for (const locale of ['en', 'fa'] as const) {
+      const result = run(brand, 'quality_review', id, locale)
+      assert.ok(!codes(result).includes('too_brief_for_output'), `${id} (${locale}) is exempt from the length minimum`)
+    }
+  }
+  // The exemption is by question id, not by length: a different long_text fact of the same size still fires.
+  assert.ok(codes(run(brand, 'quality_review', 'brand.strategy.purpose')).includes('too_brief_for_output'), 'purpose keeps the 8-word minimum')
+  // The vague-term rule still applies to a short-by-design fact.
+  answer(brand, 'brand.verbal.tagline', 'Best quality for everyone.')
+  assert.ok(codes(run(brand, 'quality_review', 'brand.verbal.tagline')).includes('vague_terms'), 'a vague tagline is still flagged')
 })
 
 test('quality: measurability applies only to questions that ask for a measure', () => {

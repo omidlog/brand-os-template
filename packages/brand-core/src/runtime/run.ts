@@ -16,10 +16,13 @@ import {
   SOCIAL_BATCH_COUNT,
   type BatchSummary,
   type CheckResult,
+  type LayerReport,
   type PostManifest,
   type UsedAsset,
   type UsedSource,
 } from './model.js'
+import type { Outliner } from './outline.js'
+import { assertPackShape } from './pack.js'
 import { planSocialBatch } from './plan.js'
 import { logoMarkup, renderPost, type EmbeddedLogo } from './render.js'
 
@@ -41,6 +44,13 @@ export interface SocialBatchOptions {
   coach?: CoachSource | null
   /** The clock for the coach and the assessment. Injected so a run is reproducible. */
   now: Date
+  /** Where the pack came from: the synthetic demo, or a pack file from `brand:query --tool task_context`. */
+  origin?: 'demo' | 'pack_file'
+  /**
+   * Final export: convert text to outlines with the owner's font files (`createOutliner`). Absent: drafts keep live,
+   * editable text. Final mode needs an approved type scale, so the outlined families are the approved ones.
+   */
+  final?: Outliner | null
 }
 
 export interface SocialBatchResult {
@@ -91,6 +101,20 @@ export function loadApprovedLogo(root: string, pack: TaskContextPack): { logo: A
   return { logo, considered }
 }
 
+/** One warning per Coach result that is not `ready`: the status and finding codes only, never answer text. */
+export function coachWarnings(layer: LayerReport): BatchSummary['warnings'] {
+  if (layer.layer !== 'coach' || !layer.called) return []
+  return layer.results
+    .filter((entry) => entry.status !== 'ready')
+    .map((entry) => ({
+      layer: 'coach' as const,
+      question_id: typeof entry.question_id === 'string' ? entry.question_id : null,
+      status: String(entry.status),
+      codes: Array.isArray(entry.codes) ? entry.codes.map(String) : [],
+      blocks: false as const,
+    }))
+}
+
 function dedupeSources(sources: Array<UsedSource | null>): UsedSource[] {
   const out: UsedSource[] = []
   for (const source of sources) if (source && !out.some((entry) => entry.source_id === source.source_id)) out.push(source)
@@ -100,12 +124,24 @@ function dedupeSources(sources: Array<UsedSource | null>): UsedSource[] {
 /** Pack in, ten SVG drafts + manifests + summary out, in memory. Deterministic for the same pack and options. */
 export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions): SocialBatchResult {
   if (pack?.schema !== TASK_CONTEXT_SCHEMA) throw new RuntimeError('invalid_pack', `Expected a ${TASK_CONTEXT_SCHEMA} pack.`)
+  assertPackShape(pack)
   if (!verifyPack(pack)) throw new RuntimeError('invalid_pack', 'The pack digest does not verify: it changed after task_context built it. Build a new pack.')
   if (pack.task.type !== 'social_batch') throw new RuntimeError('wrong_task', `This runtime slice renders social_batch packs only (got ${pack.task.type}).`)
   if (pack.task.deliverable_count !== SOCIAL_BATCH_COUNT) throw new RuntimeError('wrong_task', `This slice renders exactly ${SOCIAL_BATCH_COUNT} posts (the pack asks for ${pack.task.deliverable_count}).`)
   if (pack.authorizes.length !== 0 || Object.values(pack.permissions).some(Boolean)) throw new RuntimeError('invalid_pack', 'A pack never authorizes anything.')
 
   const plan = planSocialBatch(pack)
+  if (opts.final && plan.posts.length > 0 && !plan.type.applied) {
+    throw new RuntimeError('refused', 'Final export outlines the approved type, and this pack has no approved brand.type.scale. Drafts (without --final) still render.')
+  }
+  const finalFamilies = [...new Set(Object.values(plan.type.slots).map((slot) => slot.family_stack[0]!))].sort()
+  const exportInfo: PostManifest['export'] = opts.final ? opts.final.report() : { mode: 'draft', text: 'live', outliner: null, fonts: [] }
+  const typography = (headline: { start: number; size: number; reduced: boolean }): PostManifest['typography'] => ({
+    applied: plan.type.applied,
+    canvas_scale: plan.type.canvas_scale,
+    slots: plan.type.slots,
+    headline: { start_px: headline.start, drawn_px: headline.size, reduced_to_fit: headline.reduced },
+  })
   const packSha = pack.digests.context_sha256!
   const embedded: EmbeddedLogo | null = opts.logo ? logoMarkup(opts.logo.asset_id, opts.logo.svg) : null
   const logoAssets: UsedAsset[] = opts.logo
@@ -115,7 +151,8 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
   const files = new Map<string, string>()
   const manifests: PostManifest[] = []
   for (const post of plan.posts) {
-    const rendered = renderPost(plan, post, { demo: opts.demo, logo: embedded })
+    const draft = renderPost(plan, post, { demo: opts.demo, logo: embedded })
+    const rendered = opts.final ? { ...draft, svg: opts.final.outline(draft.svg, finalFamilies) } : draft
     const sha256 = sha256Hex(rendered.svg)
     const file = `posts/${post.post_id}.svg`
     const manifest: PostManifest = {
@@ -135,8 +172,10 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
       bytes: Buffer.byteLength(rendered.svg, 'utf8'),
       renderer: { name: RUNTIME_RENDERER, version: RUNTIME_RENDERER_VERSION, model: null, network: false },
       context: { pack_schema: pack.schema, pack_sha256: packSha, task_type: 'social_batch' },
-      sources: dedupeSources([post.message_source, post.brand_source, post.cta_source, plan.palette.source]),
+      sources: dedupeSources([post.message_source, post.brand_source, post.cta_source, plan.palette.source, plan.type.source, ...plan.type.weight_sources]),
       assets: logoAssets,
+      typography: typography(rendered.headline),
+      export: exportInfo,
       checks: postChecks(pack, plan, post, rendered),
       human_review_required: true,
       authorizes: [],
@@ -154,6 +193,9 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
     manifests.map((manifest, i) => ({ post: plan.posts[i]!, sha256: manifest.sha256 })),
   )
   const layers = [coachLayer(opts.coach ?? null, usedQuestionIds, opts.now), assuranceLayer(pack, pack.brand_id, opts.now, opts.demo)]
+  // Coach findings are advice about the answers behind the copy. They are surfaced as warnings and never block a draft
+  // (owner decision 4); `status` depends only on the plan's blockers and the post count.
+  const warnings = coachWarnings(layers[0]!)
   const batchSha = sha256Hex(canonicalJson(manifests.map((manifest) => ({ post_id: manifest.post_id, sha256: manifest.sha256 }))))
   const summary: BatchSummary = {
     schema: RUNTIME_BATCH_SCHEMA,
@@ -164,7 +206,9 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
     task: { type: 'social_batch', channel: 'instagram', locale: plan.locale, requested_count: pack.task.deliverable_count },
     status: blockers.length > 0 || manifests.length !== SOCIAL_BATCH_COUNT ? 'blocked' : 'drafted',
     blockers,
+    warnings,
     context: {
+      origin: opts.origin ?? (opts.demo ? 'demo' : 'pack_file'),
       pack_schema: pack.schema,
       pack_sha256: packSha,
       pack_readiness: pack.readiness,
