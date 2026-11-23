@@ -110,6 +110,7 @@ test('brand:visual-dna: resolve as the token or the owner; read delivers exact b
   const persian = cli(root, ['resolve', '--emotion', 'celebrating', '--angle', 'back', '--lang', 'fa'])
   assert.equal(persian.status, 0, persian.stderr.toString())
   assert.match(persian.stdout.toString(), /\[ناموجود\] mascot:request/)
+  assert.match(persian.stdout.toString(), /مسکات: ناموجود/)
 
   // Owner read: the exact approved bytes on stdout, verdict on stderr.
   const bytes = cli(root, ['read', IDS.logo, '--for', 'renderer', '--stdout'])

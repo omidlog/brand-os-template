@@ -9,6 +9,8 @@ export interface VisualDnaText {
   notice: string[]
   reasons: Record<ReferenceReason, string>
   states: Record<ReferenceState, string>
+  /** Mascot and creative section statuses, for the CLI. */
+  sections: Record<'not_requested' | 'resolved' | 'missing' | 'not_applicable' | 'ok' | 'not_authorized' | 'not_found' | 'invalid', string>
   /** CLI labels. */
   labels: { references: string; mascot: string; creative: string; digest: string; none: string; delivered: string; verdict: string }
 }
@@ -38,6 +40,7 @@ export const VISUAL_DNA_TEXT: Record<VisualDnaLocale, VisualDnaText> = {
       creative_record_changed: 'The asset changed after this creative variant was recorded.',
     },
     states: { approved: 'approved', withheld: 'withheld', missing: 'missing', changed: 'changed' },
+    sections: { not_requested: 'not requested', resolved: 'found', missing: 'missing', not_applicable: 'not applicable (module off)', ok: 'read', not_authorized: 'not authorized for this token', not_found: 'not found', invalid: 'invalid input' },
     labels: { references: 'References', mascot: 'Mascot', creative: 'Creative memory', digest: 'Digest', none: 'none', delivered: 'Verified bytes', verdict: 'Verdict' },
   },
   fa: {
@@ -64,6 +67,7 @@ export const VISUAL_DNA_TEXT: Record<VisualDnaLocale, VisualDnaText> = {
       creative_record_changed: 'این دارایی پس از ثبت این نسخهٔ خلاقانه تغییر کرده است.',
     },
     states: { approved: 'تأییدشده', withheld: 'نگه‌داشته‌شده', missing: 'ناموجود', changed: 'تغییرکرده' },
+    sections: { not_requested: 'درخواست نشده', resolved: 'پیدا شد', missing: 'ناموجود', not_applicable: 'کاربرد ندارد (ماژول خاموش است)', ok: 'خوانده شد', not_authorized: 'این توکن اجازه ندارد', not_found: 'پیدا نشد', invalid: 'ورودی نامعتبر' },
     labels: { references: 'مرجع‌ها', mascot: 'مسکات', creative: 'حافظهٔ خلاقانه', digest: 'چکیده', none: 'هیچ', delivered: 'بایت‌های بررسی‌شده', verdict: 'نتیجه' },
   },
   tr: {
@@ -90,6 +94,7 @@ export const VISUAL_DNA_TEXT: Record<VisualDnaLocale, VisualDnaText> = {
       creative_record_changed: 'Varlık, bu yaratıcı varyant kaydedildikten sonra değişti.',
     },
     states: { approved: 'onaylı', withheld: 'saklı', missing: 'eksik', changed: 'değişmiş' },
+    sections: { not_requested: 'istenmedi', resolved: 'bulundu', missing: 'eksik', not_applicable: 'geçerli değil (modül kapalı)', ok: 'okundu', not_authorized: 'bu jetonun yetkisi yok', not_found: 'bulunamadı', invalid: 'geçersiz girdi' },
     labels: { references: 'Referanslar', mascot: 'Maskot', creative: 'Yaratıcı hafıza', digest: 'Özet', none: 'yok', delivered: 'Doğrulanmış baytlar', verdict: 'Sonuç' },
   },
 }

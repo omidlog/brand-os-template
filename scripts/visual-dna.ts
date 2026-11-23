@@ -57,10 +57,10 @@ function render(result: VisualDnaResult): string {
   }
   if (result.references.length === 0) lines.push(`  ${t.labels.none}`)
   if (result.mascot.status !== 'not_requested') {
-    lines.push(`${t.labels.mascot}: ${result.mascot.status}`)
+    lines.push(`${t.labels.mascot}: ${t.sections[result.mascot.status]}`)
     for (const line of result.mascot.explanation) lines.push(`  ${line}`)
   }
-  if (result.creative.status !== 'not_requested') lines.push(`${t.labels.creative}: ${result.creative.status}`)
+  if (result.creative.status !== 'not_requested') lines.push(`${t.labels.creative}: ${t.sections[result.creative.status]}`)
   lines.push(`${t.labels.digest}: ${result.digest ?? t.labels.none}`, '', ...result.notice.map((line) => `- ${line}`))
   return lines.join('\n')
 }

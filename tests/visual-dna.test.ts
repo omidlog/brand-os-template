@@ -250,6 +250,7 @@ test('locales: fa is RTL with Persian notices, tr and en are LTR; asset data is 
   assert.match(VISUAL_DNA_TEXT.fa.notice[0]!, /[؀-ۿ]/)
   for (const locale of ['fa', 'tr'] as const) {
     assert.deepEqual(Object.keys(VISUAL_DNA_TEXT[locale].reasons).sort(), Object.keys(VISUAL_DNA_TEXT.en.reasons).sort())
+    for (const key of ['states', 'sections', 'labels'] as const) assert.deepEqual(Object.keys(VISUAL_DNA_TEXT[locale][key]).sort(), Object.keys(VISUAL_DNA_TEXT.en[key]).sort(), `${locale} ${key}`)
     assert.equal(VISUAL_DNA_TEXT[locale].notice.length, VISUAL_DNA_TEXT.en.notice.length)
   }
 })
