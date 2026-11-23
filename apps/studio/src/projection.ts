@@ -152,8 +152,9 @@ export interface StudioVisualProjection {
   /**
    * Brand Book "Visual identity" chapter (V2.1): colour palette, typography and logo construction from approved facts
    * and the approved master asset only. Absent in caches written before it existed; sync rebuilds those.
+   * `master_rule` is the master-logo resolution rule the documents were built with; sync rebuilds an older cache.
    */
-  identity?: { internal: VisualDocument; public: VisualDocument }
+  identity?: { internal: VisualDocument; public: VisualDocument; master_rule?: number }
   /**
    * Competitor comparison matrix and price strip (V2.2): owner-reviewed competitors from the shared landscape file
    * (`brand/competitive/shared/landscape.json`) and the own-brand row from approved facts. Internal only. Absent in
@@ -161,6 +162,12 @@ export interface StudioVisualProjection {
    */
   competitors?: VisualDocument
 }
+
+/**
+ * Version of the master-logo resolution rule baked into a cached identity chapter. 2: named in `brand.logo.masters`,
+ * else tagged `master`, else the only approved logo. Bump it when the rule changes so caches at the same commit rebuild.
+ */
+export const IDENTITY_MASTER_RULE = 2
 
 export class ProjectionError extends Error {
   constructor(
@@ -239,7 +246,7 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[]):
   try {
     const visual: StudioVisualProjection = {
       bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
-      identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }) },
+      identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }), master_rule: IDENTITY_MASTER_RULE },
       competitors: buildCompetitorComparison(engine, readSharedLandscape(engine.workspaceRoot(), engine.config().brand.slug)),
     }
     assertNoSecrets(visual)
@@ -373,6 +380,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
         published,
         tags: tags.slice(0, 50),
         example: tags.includes('example') || /example/i.test(asset.id) || /EXAMPLE/.test(String(asset.license ?? '')),
+        paths: [asset.path, asset.preview].filter((item): item is string => typeof item === 'string' && item.length > 0).map((item) => item.slice(0, 500)),
         preview_key: approved ? preview_key : null,
         mime: approved && preview_key ? mime : null,
         width: size?.width ?? null,

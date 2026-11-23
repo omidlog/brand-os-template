@@ -66,7 +66,10 @@ export interface IdentityText {
   awaitingLogoTitle: string
   awaitingLogoBody: string
   awaitingSpec: string
-  awaitingMaster: Record<'missing' | 'example_only' | 'not_previewable', string>
+  awaitingMaster: Record<'missing' | 'example_only' | 'not_previewable' | 'ambiguous', string>
+  /** Internal edition only: notes on the master file itself (never shown in the public edition). */
+  masterBadge: Record<'draft_tag' | 'internal_only', string>
+  stepMasterAmbiguous: string
   awaitingDraft: string
   awaitingWithheld: string
   awaitingStepsTitle: string
@@ -148,12 +151,15 @@ const en: IdentityText = {
     missing: 'No approved master file is registered.',
     example_only: 'Only template example placeholders are in the asset manifest. They are never used as a logo.',
     not_previewable: 'An approved master is registered but its file could not be safely read.',
+    ambiguous: 'Several approved logo files are registered and none is named as the master, so none is drawn. Nothing is guessed.',
   },
+  masterBadge: { draft_tag: 'Tagged draft', internal_only: 'Internal · not published' },
+  stepMasterAmbiguous: 'Name the master file by its asset id or path in the approved “Master location” answer (brand.logo.masters).',
   awaitingDraft: 'A draft exists and is waiting for review.',
   awaitingWithheld: 'The value is restricted and withheld here.',
   awaitingStepsTitle: 'To complete this page',
   stepApprove: 'Answer and approve “{label}”.',
-  stepMaster: 'Register the master in the asset manifest with the tags logo and master, a licence and a checksum, then approve it.',
+  stepMaster: 'Register the master in the asset manifest with the tag logo, a licence and a checksum, and approve it; name it in brand.logo.masters (or tag it master) if there is more than one logo.',
   ready: 'Drawn from approved data',
   waiting: 'Waiting',
   pageColor: 'Colour',
@@ -230,12 +236,15 @@ const fa: IdentityText = {
     missing: 'هیچ فایل اصلی تأییدشده‌ای ثبت نشده است.',
     example_only: 'در فهرست دارایی‌ها فقط نمونه‌های جای‌نگهدار قالب هست. این‌ها هرگز به‌عنوان لوگو به کار نمی‌روند.',
     not_previewable: 'یک فایل اصلی تأییدشده ثبت شده، اما فایل آن به‌طور امن خوانده نشد.',
+    ambiguous: 'چند فایل لوگوی تأییدشده ثبت شده و هیچ‌کدام به‌عنوان فایل اصلی نام برده نشده، پس هیچ‌کدام رسم نمی‌شود. هیچ چیز حدس زده نمی‌شود.',
   },
+  masterBadge: { draft_tag: 'برچسب پیش‌نویس', internal_only: 'داخلی · منتشرنشده' },
+  stepMasterAmbiguous: 'فایل اصلی را با شناسهٔ دارایی یا مسیر آن در پاسخ تأییدشدهٔ «محل فایل اصلی» (brand.logo.masters) نام ببرید.',
   awaitingDraft: 'یک پیش‌نویس هست و منتظر بازبینی است.',
   awaitingWithheld: 'این مقدار محدود است و اینجا نمایش داده نمی‌شود.',
   awaitingStepsTitle: 'برای کامل‌شدن این صفحه',
   stepApprove: '«{label}» را پاسخ دهید و تأیید کنید.',
-  stepMaster: 'فایل اصلی را با برچسب‌های logo و master، مجوز و checksum در فهرست دارایی‌ها ثبت و سپس تأیید کنید.',
+  stepMaster: 'فایل اصلی را با برچسب logo، مجوز و checksum در فهرست دارایی‌ها ثبت و تأیید کنید؛ اگر بیش از یک لوگو هست، آن را در brand.logo.masters نام ببرید (یا برچسب master بزنید).',
   ready: 'رسم‌شده از دادهٔ تأییدشده',
   waiting: 'در انتظار',
   pageColor: 'رنگ',
@@ -312,12 +321,15 @@ const tr: IdentityText = {
     missing: 'Kayıtlı onaylı bir ana dosya yok.',
     example_only: 'Varlık listesinde yalnızca şablon örnek yer tutucuları var. Bunlar asla logo olarak kullanılmaz.',
     not_previewable: 'Onaylı bir ana dosya kayıtlı, ancak dosyası güvenle okunamadı.',
+    ambiguous: 'Birden çok onaylı logo dosyası kayıtlı ve hiçbiri ana dosya olarak adlandırılmamış, bu yüzden hiçbiri çizilmiyor. Tahmin yapılmaz.',
   },
+  masterBadge: { draft_tag: 'Taslak etiketli', internal_only: 'Dahili · yayımlanmadı' },
+  stepMasterAmbiguous: 'Ana dosyayı, onaylı “Ana dosya konumu” yanıtında (brand.logo.masters) varlık kimliği veya yoluyla adlandırın.',
   awaitingDraft: 'Bir taslak var ve incelemeyi bekliyor.',
   awaitingWithheld: 'Değer kısıtlı ve burada gösterilmiyor.',
   awaitingStepsTitle: 'Bu sayfayı tamamlamak için',
   stepApprove: '“{label}” sorusunu yanıtlayın ve onaylayın.',
-  stepMaster: 'Ana dosyayı varlık listesine logo ve master etiketleri, lisans ve checksum ile kaydedin, sonra onaylayın.',
+  stepMaster: 'Ana dosyayı varlık listesine logo etiketi, lisans ve checksum ile kaydedip onaylayın; birden çok logo varsa brand.logo.masters içinde adlandırın (veya master etiketi verin).',
   ready: 'Onaylı veriden çizildi',
   waiting: 'Bekliyor',
   pageColor: 'Renk',
