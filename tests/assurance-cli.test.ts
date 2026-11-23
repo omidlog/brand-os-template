@@ -151,3 +151,23 @@ test('cli: the bridge is not reachable through brand:query', () => {
     assert.ok(!query.stdout.includes('brand-os.assurance-snapshot/1'))
   }
 })
+
+test('cli: --paid-media is a deprecated alias; the notice goes to stderr in the chosen language and JSON stays clean', () => {
+  const brand = demoBrand()
+  const plain = cli(brand.root, ['snapshot', '--as-of', '2026-11-23', '--json'])
+  assert.equal(plain.status, 0)
+  assert.equal(plain.stderr.includes('--paid-media'), false, 'no notice without the flag')
+
+  const flagged = cli(brand.root, ['snapshot', '--as-of', '2026-11-23', '--paid-media', 'no', '--json'])
+  assert.equal(flagged.status, 0, 'existing callers keep working')
+  assert.equal((flagged.json?.subject as Record<string, string>).runs_paid_media, 'no')
+  assert.match(flagged.stderr, /deprecated/)
+  assert.match(flagged.stderr, /business\.marketing\.paid_media/)
+  assert.match(cli(brand.root, ['snapshot', '--as-of', '2026-11-23', '--paid-media', 'no', '--lang', 'fa']).stderr, /منسوخ/)
+
+  approved(brand, 'business.marketing.paid_media', 'yes')
+  const answered = cli(brand.root, ['assess', '--as-of', '2026-11-23', '--paid-media', 'no', '--json'])
+  assert.equal(answered.status, 0)
+  assert.equal(((answered.json?.snapshot as Record<string, unknown>).subject as Record<string, string>).runs_paid_media, 'yes', 'the approved answer wins')
+  assert.match(answered.stderr, /ignored/)
+})

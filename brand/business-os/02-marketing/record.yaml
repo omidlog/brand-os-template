@@ -63,3 +63,9 @@ fields:
     status: unanswered
     sensitivity: internal
     notes: "TBD — no approved brand facts in the template"
+  business.marketing.paid_media:
+    label: "Paid media"
+    value: null
+    status: unanswered
+    sensitivity: internal
+    notes: "TBD — no approved brand facts in the template"
