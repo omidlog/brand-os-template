@@ -818,6 +818,27 @@ export function getSocialTemplate(engine: InterviewEngine, channel: string, ctx?
   })
 }
 
+/**
+ * The approved-fact ids each named fact tool reads, in answer order. Every id is an existing FieldQuestion id;
+ * `tests/named-tool-ids.test.ts` fails if one leaves the question bank. Logo and motion use the same ids as the Task
+ * Context `logo_rules` / `motion_rules` keys, so the two readers cannot disagree about what a logo or motion rule is.
+ */
+export const NAMED_FACT_TOOL_IDS = {
+  get_brand_overview: ['business.identity.trade_name', 'brand.strategy.purpose', 'business.offer.value_proposition'],
+  get_brand_guidelines: ['brand.personality.traits', 'brand.verbal.tagline', 'brand.verbal.voice'],
+  get_logo_rules: ['brand.logo.masters', 'brand.logo.variants', 'brand.logo.clear_space', 'brand.logo.min_size', 'brand.logo.misuse'],
+  get_mascot_profile: ['brand.mascot.role', 'brand.mascot.personality'],
+  get_motion_guidelines: ['brand.motion.principles', 'brand.motion.duration', 'brand.motion.reduced'],
+  get_marketing_plan: ['business.marketing.objective', 'business.marketing.channels', 'business.marketing.budget'],
+  get_business_plan: ['business.identity.trade_name', 'business.offer.summary', 'business.customer.primary_segment'],
+} as const satisfies Record<string, readonly string[]>
+
+export type NamedFactTool = keyof typeof NAMED_FACT_TOOL_IDS
+
+function namedFactTool(engine: InterviewEngine, tool: NamedFactTool, ctx?: AuthContext): ToolResult {
+  return factTool(engine, tool, [...NAMED_FACT_TOOL_IDS[tool]], ctx)
+}
+
 function factTool(engine: InterviewEngine, tool: string, ids: string[], ctx?: AuthContext): ToolResult {
   return run(engine, ctx, { kind: 'facts', ids }, {
     tool,
@@ -837,15 +858,15 @@ function factTool(engine: InterviewEngine, tool: string, ids: string[], ctx?: Au
 }
 
 export function getBrandOverview(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
-  return factTool(engine, 'get_brand_overview', ['business.identity.trade_name', 'brand.strategy.purpose', 'business.offer.value_proposition'], ctx)
+  return namedFactTool(engine, 'get_brand_overview', ctx)
 }
 
 export function getBrandGuidelines(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
-  return factTool(engine, 'get_brand_guidelines', ['brand.personality.traits', 'brand.verbal.tagline', 'brand.verbal.voice'], ctx)
+  return namedFactTool(engine, 'get_brand_guidelines', ctx)
 }
 
 export function getLogoRules(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
-  return factTool(engine, 'get_logo_rules', ['brand.logo.primary', 'brand.logo.clearspace'], ctx)
+  return namedFactTool(engine, 'get_logo_rules', ctx)
 }
 
 export function getMascotProfile(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
@@ -854,7 +875,7 @@ export function getMascotProfile(engine: InterviewEngine, ctx?: AuthContext): To
     if (result.status === 'denied') return result
     return { ...result, status: 'not_applicable', approval_state: 'not_applicable', approved: false, note: 'Mascot module is disabled.', data: { facts: [] } }
   }
-  return factTool(engine, 'get_mascot_profile', ['brand.mascot.role', 'brand.mascot.personality'], ctx)
+  return namedFactTool(engine, 'get_mascot_profile', ctx)
 }
 
 export function listMascotStages(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
@@ -891,15 +912,15 @@ export function getAssetMetadata(engine: InterviewEngine, id: string, ctx?: Auth
 }
 
 export function getMotionGuidelines(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
-  return factTool(engine, 'get_motion_guidelines', ['brand.motion.easing', 'brand.motion.duration'], ctx)
+  return namedFactTool(engine, 'get_motion_guidelines', ctx)
 }
 
 export function getMarketingPlan(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
-  return factTool(engine, 'get_marketing_plan', ['business.marketing.objective', 'business.marketing.channels', 'business.marketing.budget'], ctx)
+  return namedFactTool(engine, 'get_marketing_plan', ctx)
 }
 
 export function getBusinessPlan(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
-  return factTool(engine, 'get_business_plan', ['business.identity.trade_name', 'business.offer.summary', 'business.customer.primary_segment'], ctx)
+  return namedFactTool(engine, 'get_business_plan', ctx)
 }
 
 export function getBrandStatus(engine: InterviewEngine, ctx?: AuthContext): ToolResult {
