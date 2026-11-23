@@ -168,14 +168,15 @@ test('model_use defaults to not_allowed and nothing is sent to a model', () => {
   }
 })
 
-test('a changed logo file is not embedded: the publication gate refuses the checksum', () => {
+test('a changed logo file is not embedded: the Visual DNA resolver reports it changed', () => {
   const file = path.join(demo.root, 'brand/assets/logo/synthetic-demo-mark.svg')
   const original = fs.readFileSync(file, 'utf8')
   try {
     fs.writeFileSync(file, original.replace('#F2B705', '#F2B706'))
     const changed = loadApprovedLogo(demo.root, pack)
     assert.equal(changed.logo, null)
-    assert.equal(changed.considered[0]?.not_embedded_reason, 'publication_gate:checksum')
+    assert.equal(changed.considered[0]?.not_embedded_reason, 'visual_dna:changed:checksum_mismatch')
+    assert.equal(changed.references[0]?.state, 'changed')
   } finally {
     fs.writeFileSync(file, original)
   }
