@@ -449,3 +449,37 @@ test('gate over stdio MCP and brand:query: a mock Instagram agent reads the appr
   assert.ok(lines.filter((line) => line.decision === 'deny').every((line) => line.returned_ids.length === 0))
   never(fs.readFileSync(accessLogPath(s.root), 'utf8'), 'access log', [PROMISE, POST_URL])
 })
+
+test('brand:content reports shows agent reports to the owner (en/fa/tr, --json) and is refused under an agent token', async () => {
+  const { s, week, w1 } = await servedBrand()
+  const cli = (args: string[], extra: Record<string, string> = {}) => {
+    const env: Record<string, string> = {}
+    for (const [key, value] of Object.entries(process.env)) if (typeof value === 'string' && key !== 'BRAND_OS_AGENT_TOKEN') env[key] = value
+    env.BRAND_OS_DATA_KEY = TEST_DATA_KEY
+    return spawnSync(tsx, [path.join(repo, 'scripts/content.ts'), ...args], { cwd: s.root, encoding: 'utf8', env: { ...env, ...extra }, input: '' })
+  }
+  assert.match(cli(['reports']).stdout, /No produced or published reports yet/)
+  const pin = { revision: 1, content_sha256: w1.sha }
+  call(s, contentCtx(), 'content_report', { week_id: week.week_id, slot_id: 's02', pin, status: 'published', url: POST_URL })
+
+  const en = cli(['reports', '--lang', 'en'])
+  assert.equal(en.status, 0, en.stderr)
+  assert.match(en.stdout, /They change no week, strategy or fact/)
+  assert.ok(en.stdout.includes(`${week.week_id} s02 r1 published ${POST_URL}`))
+  assert.ok(!en.stdout.includes('not the one served now'))
+  assert.match(cli(['reports', '--lang', 'fa']).stdout, /هیچ هفته، استراتژی یا واقعیتی/)
+  assert.match(cli(['reports', '--lang', 'tr', '--week', week.week_id]).stdout, /Hiçbir haftayı/)
+  const json = JSON.parse(cli(['reports', '--json']).stdout) as { ok: boolean; reports: Array<{ slot_id: string; current: boolean }> }
+  assert.deepEqual(json.reports.map((item) => [item.slot_id, item.current]), [['s02', true]])
+
+  // After the owner approves a v2 of the week, the report is shown as made against the older revision.
+  const v2 = proposeWeek(s.ws, { week: withSlots(week, (slot, i) => (i === 0 ? { ...slot, hook: V2_HOOK } : slot)) }).revision
+  approveWeek(s.ws, { week_id: week.week_id, revision: 2, expected_sha256: v2.content_sha256, proof: s.proof })
+  assert.match(cli(['reports']).stdout, /reported against revision 1, not the one served now/)
+  assert.equal(calOf(call(s, contentCtx(), 'content_calendar')).weeks[0]!.reports.length, 0, 'a v1 report is not carried over to v2')
+
+  const refused = cli(['reports'], { BRAND_OS_AGENT_TOKEN: 'bos_at_x' })
+  assert.notEqual(refused.status, 0)
+  assert.ok(!refused.stdout.includes(POST_URL))
+  assert.notEqual(cli(['reports', '--week', 'wk-2026-11-24']).status, 0, 'a week id must be a Monday')
+})
