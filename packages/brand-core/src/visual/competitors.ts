@@ -5,6 +5,7 @@ import { itemFor, type ItemContext } from '../documents/model.js'
 import type { InterviewEngine } from '../engine.js'
 import { readEvidence } from '../evidence.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
+import { DEFAULT_STALENESS_DAYS } from '../research/model.js'
 import type { StructuredValue } from '../structured.js'
 import { entryFromItem } from './bmc.js'
 import {
@@ -92,10 +93,43 @@ function blockBase(id: string, filled: 'complete' | 'partial' | 'missing', asOf:
   }
 }
 
-/** Assembles the comparison from the shared landscape and the own-brand sources; shared by the builder and fixtures. */
-export function comparisonDocument(input: { brand_id: string; brand_name: string; illustrative: boolean; read: SharedLandscapeRead; own: Record<string, OwnSource> }): VisualDocument {
+/**
+ * True when every source is surely older than `maxDays` at `now`. The shared file keeps only the day a source was
+ * read, so one day is given back: a source is never called stale here before the research store would call it stale.
+ */
+function staleAt(sources: SharedSource[], now: Date, maxDays: number): boolean {
+  if (!sources.length) return false
+  const today = Date.parse(`${now.toISOString().slice(0, 10)}T00:00:00Z`)
+  const newest = sources.map((s) => Date.parse(`${s.observed_on}T00:00:00Z`)).reduce((a, b) => Math.max(a, b))
+  if (!Number.isFinite(newest)) return false
+  return Math.floor((today - newest) / 86_400_000) - 1 > maxDays
+}
+
+/**
+ * The shared file freezes each state on the day the owner ran `share`. When the page is built later, a state that was
+ * current then but whose newest source has since passed the stale threshold reads as stale (matrix and prices:
+ * historical; map: stale). States only go down: nothing is upgraded, resolved or re-ranked, and conflicts stay.
+ */
+function agedLandscape(landscape: SharedLandscape, now: Date): SharedLandscape {
+  const maxDays = DEFAULT_STALENESS_DAYS.market_observation
+  const current: ReadonlySet<string> = new Set(['observed', 'unverified'])
+  const aged = structuredClone(landscape)
+  for (const competitor of aged.competitors) for (const cell of competitor.cells) if (current.has(cell.state) && staleAt(cell.sources, now, maxDays)) cell.state = 'historical'
+  for (const row of aged.prices.rows) if (current.has(row.state) && staleAt([row.source], now, maxDays)) row.state = 'historical'
+  const pos = aged.positioning
+  if (pos) {
+    for (const pair of [pos.own, ...pos.competitors]) for (const p of [pair.x, pair.y]) if (p.state === 'evidenced' && staleAt(p.sources, now, pos.stale_after_days)) p.state = 'stale'
+  }
+  return aged
+}
+
+/**
+ * Assembles the comparison from the shared landscape and the own-brand sources; shared by the builder and fixtures.
+ * With `now`, states are aged to that day (see agedLandscape); without it (golden fixtures) they are drawn as shared.
+ */
+export function comparisonDocument(input: { brand_id: string; brand_name: string; illustrative: boolean; read: SharedLandscapeRead; own: Record<string, OwnSource>; now?: Date }): VisualDocument {
   const criteria = [...SHARED_CRITERIA]
-  const landscape: SharedLandscape | null = input.read.state === 'shared' ? input.read.landscape : null
+  const landscape: SharedLandscape | null = input.read.state === 'shared' ? (input.now ? agedLandscape(input.read.landscape, input.now) : input.read.landscape) : null
   const footnotes: ComparisonSource[] = []
   const noteFor = (source: SharedSource): number => {
     const found = footnotes.find((item) => item.source_class === source.source_class && item.host === source.host && item.observed_on === source.observed_on)
@@ -266,5 +300,5 @@ export function buildCompetitorComparison(engine: InterviewEngine, read: SharedL
     void _approved
     own[criterion] = { entry, structured: item.structured }
   }
-  return comparisonDocument({ brand_id: brandId, brand_name: String(config.brand.name ?? brandId), illustrative: false, read, own })
+  return comparisonDocument({ brand_id: brandId, brand_name: String(config.brand.name ?? brandId), illustrative: false, read, own, now })
 }
