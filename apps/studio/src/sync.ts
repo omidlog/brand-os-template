@@ -182,7 +182,7 @@ export class SyncService {
       let projection = previous?.projection ?? null
       let previews = previous?.previews ?? {}
       // A cache written before the knowledge, creative, calendar or visual projection (or the current master-logo rule, or the competitor matrix) existed is rebuilt once at the same commit.
-      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.visual === undefined || (projection.visual !== null && projection.visual.identity?.master_rule !== IDENTITY_MASTER_RULE) || (projection.visual !== null && projection.visual.competitors === undefined)) {
+      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.visual === undefined || (projection.visual !== null && projection.visual.identity?.master_rule !== IDENTITY_MASTER_RULE) || (projection.visual !== null && projection.visual.competitors === undefined) || (projection.visual?.competitors !== undefined && !projection.visual.competitors.blocks.some((block) => block.type === 'positioning_map'))) {
         const archive = await this.deps.github.getTarball(owner, name, head.sha)
         const checkout = path.join(work, 'checkout')
         extractTarGz(archive, { destRoot: checkout, include: studioPathAllowed })
