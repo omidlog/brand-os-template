@@ -352,7 +352,7 @@ function staleRefs(refs: RefReport, style: 'state' | 'paren'): string[] {
   ]
 }
 
-function readSecret(ws: KnowledgeWorkspace): string | null {
+export function readApprovalSecret(ws: KnowledgeWorkspace): string | null {
   const file = approvalSecretPath(ws.root)
   try {
     const stat = fs.lstatSync(file)
@@ -369,7 +369,7 @@ export function approvalVerifies(ws: KnowledgeWorkspace, record: StrategyRecord,
   if (!approval || typeof approval.digest !== 'string' || typeof approval.seal !== 'string') return false
   const digest = approvalDigest({ strategy_id: record.strategy_id, brand_slug: record.brand_slug, revision: entry.revision, content_sha256: entry.content_sha256, event_id: approval.event_id, approved_at: approval.approved_at })
   if (digest !== approval.digest) return false
-  const secret = readSecret(ws)
+  const secret = readApprovalSecret(ws)
   return secret !== null && approvalSeal(secret, digest) === approval.seal
 }
 
@@ -515,9 +515,10 @@ export function reviewRevision(ws: KnowledgeWorkspace, input: { strategy_id: str
 
 // ---- approve / reject / withdraw ----------------------------------------------------------------------
 
-function requireProof(ws: KnowledgeWorkspace, proof: string | undefined): string {
+/** Owner approval proof check shared by strategy and content-week approvals. Returns the approval secret. */
+export function requireProof(ws: KnowledgeWorkspace, proof: string | undefined): string {
   if (!approvalProofMatches(ws.root, proof)) throw new StrategyError('proof', 'Refused: missing or wrong owner approval proof. Nothing was changed.')
-  const secret = readSecret(ws)
+  const secret = readApprovalSecret(ws)
   if (!secret) throw new StrategyError('proof', 'The approval secret is unreadable. Nothing was changed.')
   return secret
 }

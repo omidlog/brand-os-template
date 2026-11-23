@@ -4,13 +4,14 @@ import { first, redirect, safeLocalPath } from '../http.js'
 import type { BrandRecord } from '../registry.js'
 import { brandIsReady } from '../sync.js'
 import type { UpdateStatus } from '../template-update.js'
+import { calendarPage } from '../views/calendar.js'
 import { creativePage } from '../views/creative.js'
 import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from '../views/knowledge.js'
 import type { BrandView } from '../views/layout.js'
 import * as pages from '../views/pages.js'
 import { withTimeout, type Handler, type RequestContext, type StudioCore } from './context.js'
 
-export const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'creative', 'history', 'handoff'] as const
+export const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'creative', 'calendar', 'history', 'handoff'] as const
 
 export interface BrandRoutes {
   home: Handler
@@ -161,6 +162,9 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
       case 'creative':
         // Read only: decisions the owner shared and merged. No query parameter changes anything.
         return render(ctx, 200, creativePage(v, brand, flashValue))
+      case 'calendar':
+        // Read only: approved weeks the owner shared and merged. No query parameter changes anything.
+        return render(ctx, 200, calendarPage(v, brand, flashValue))
       case 'history':
         return render(ctx, 200, pages.historyPage(v, brand, flashValue))
       case 'handoff':

@@ -18,7 +18,7 @@ export interface ViewContext {
   now: number
 }
 
-export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'creative' | 'history' | 'handoff'
+export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'creative' | 'calendar' | 'history' | 'handoff'
 
 export interface BrandView {
   record: BrandRecord
@@ -36,6 +36,7 @@ const SECTIONS: Array<{ id: BrandSection; key: MessageKey; icon: IconName; path:
   { id: 'personal', key: 'nav.personal', icon: 'user', path: '/personal' },
   { id: 'knowledge', key: 'nav.knowledge', icon: 'idea', path: '/knowledge' },
   { id: 'creative', key: 'nav.creative', icon: 'sparkle', path: '/creative' },
+  { id: 'calendar', key: 'nav.calendar', icon: 'clock', path: '/calendar' },
   { id: 'history', key: 'nav.history', icon: 'history', path: '/history' },
   { id: 'handoff', key: 'nav.handoff', icon: 'handoff', path: '/handoff' },
 ]
@@ -48,6 +49,8 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'knowledge') return Boolean(projection?.knowledge && (projection.knowledge.total > 0 || projection.knowledge.withheld.length > 0))
     // Listed once the merged branch has shared creative decisions (or files Studio withheld).
     if (section.id === 'creative') return Boolean(projection?.creative && (projection.creative.total > 0 || projection.creative.withheld.length > 0))
+    // Listed once the merged branch has shared calendar weeks (or files Studio withheld).
+    if (section.id === 'calendar') return Boolean(projection?.calendar && (projection.calendar.total > 0 || projection.calendar.withheld.length > 0))
     return true
   })
 }
