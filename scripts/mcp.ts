@@ -37,6 +37,7 @@ import {
 import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
 import { runContentTool } from '@brand-os/brand-core/content-bridge'
 import { runStrategyTool } from '@brand-os/brand-core/strategy'
+import { MAX_ASSET_IDS, runVisualDnaTool, VISUAL_DNA_LOCALES } from '@brand-os/brand-core/visual-dna'
 
 const engine = new InterviewEngine(process.cwd())
 
@@ -181,6 +182,27 @@ server.registerTool(
     }),
   },
   async ({ project_id, surface, series }) => text(runCreativeContextTool(engine, caller, { project_id, surface, series })),
+)
+
+// Visual DNA (see visual-dna/agent.ts and docs-internal/VISUAL_DNA.md): read-only reference verdicts over the asset
+// manifest, the mascot catalog and creative_context, with the same caller context. Metadata only: no file bytes ever
+// travel over MCP. Any owner-issued token of this brand; guests, unprofiled agents and other brands are denied.
+server.registerTool(
+  'visual_dna',
+  {
+    description:
+      'Check visual references before using them: asset ids (from task_context or the manifest), a mascot request (emotion, stage, use_case, angle) and, for a creative-read token, the creative-memory variants of a project. Each reference is approved, withheld, missing or changed, with source, checksum, size, usage rights and the effective model_use (not_allowed unless the owner recorded more). Use only approved references. A missing pose, angle or logo stays missing: never draw, generate or borrow a substitute. model_use is a rights signal, not permission to upload; nothing here sends a file anywhere. Metadata only, never file bytes. authorizes is always empty. Needs an owner-issued agent token of this brand; others get denied.',
+    inputSchema: z.object({
+      asset_ids: z.array(z.string().max(120)).max(MAX_ASSET_IDS).optional(),
+      mascot: z
+        .object({ emotion: z.string().max(100).optional(), stage: z.string().max(100).optional(), use_case: z.string().max(100).optional(), angle: z.string().max(100).optional() })
+        .strict()
+        .optional(),
+      creative: z.object({ project_id: z.string().max(40).optional(), surface: z.string().max(40).optional(), series: z.string().max(40).optional() }).strict().optional(),
+      locale: z.enum(VISUAL_DNA_LOCALES).optional(),
+    }).strict(),
+  },
+  async (args) => text(runVisualDnaTool(engine, caller, args)),
 )
 
 // Strategy Feed: two read-only tools, strategy-seo-read / strategy-ads-read profiles only (see strategy/feed.ts). The
