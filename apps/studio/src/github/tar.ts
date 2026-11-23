@@ -178,8 +178,20 @@ export function studioCalendarPathAllowed(relative: string): boolean {
   return SHARED_WEEK.test(relative)
 }
 
+/**
+ * `brand/competitive/` may only contribute the redacted landscape the owner wrote with `brand:competitive share`
+ * (Visual V2.2, D1): exactly `brand/competitive/shared/landscape.json`. Competitor records stay in
+ * `brand/.private/competitive` (excluded above); anything else committed under `brand/competitive/` stays out.
+ */
+const SHARED_LANDSCAPE = /^brand\/competitive\/shared\/landscape\.json$/
+
+export function studioCompetitivePathAllowed(relative: string): boolean {
+  return SHARED_LANDSCAPE.test(relative)
+}
+
 export function studioPathAllowed(relative: string): boolean {
   if (!relative.startsWith('brand/')) return false
+  if (relative.toLowerCase().startsWith('brand/competitive/') || relative.toLowerCase() === 'brand/competitive') return studioCompetitivePathAllowed(relative)
   if (relative.toLowerCase().startsWith('brand/content-calendar/') || relative.toLowerCase() === 'brand/content-calendar') return studioCalendarPathAllowed(relative)
   if (relative.toLowerCase().startsWith('brand/creative/') || relative.toLowerCase() === 'brand/creative') return studioCreativePathAllowed(relative)
   // Checked first: nothing below may re-admit a knowledge path.
