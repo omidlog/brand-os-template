@@ -21,9 +21,19 @@ layers → files in a local output directory**. No model, no network, no publish
 
 | Input | Where the pack comes from | Coach | Logo |
 | --- | --- | --- | --- |
-| `--demo` | `createDemoBrand()` + `buildTaskContext` for a `content-read` agent, in a temp dir | called | demo logo, through the publication gate |
+| `--demo` | `createDemoBrand()` + `buildTaskContext` for a `content-read` agent, in a temp dir | called | demo logo, through Visual DNA |
 | `--pack <file>` | the JSON `brand:query --tool task_context --task-type social_batch --count 10` printed (envelope or bare pack) | not called | none |
-| `--pack <file> --root <dir>` | same, plus the owner's checkout of the **same** brand (slug = pack `brand_id`), owner process only | called | approved logo, publication gate + pinned checksum |
+| `--pack <file> --root <dir>` | same, plus the owner's checkout of the **same** brand (slug = pack `brand_id`), owner process only | called | approved logo through Visual DNA + pinned checksum |
+
+**The logo goes through the Visual DNA resolver** (owner decision 6 of the Visual DNA slice, built in PR-E):
+`loadApprovedLogo` asks `resolveVisualDna` for the pack's logo ids as the local owner process and reads the bytes with
+`readVerifiedAsset(…, 'renderer')`, which hashes and gates the very bytes it returns. So the runtime gets the same
+verdict `visual_dna` gives (approval for these bytes, rights, licence, size, safe path, no symlink, both SVG gates), and
+a file that differs from the checksum the pack pinned is `visual_dna:changed:pack_pin_differs`. A logo that is not
+embedded carries its reason code (`visual_dna:<state>:<reason>`, `not_svg`, `visual_dna_read:<code>`) in the post
+manifest. The resolver appends its own audit line to `brand/.private/access-log.jsonl` (ids only); nothing else in
+`brand/` is written. Until the Visual DNA policy fix (PR #44) merges, a brand's own logo with no recorded licence is
+withheld (`license_missing`); the synthetic demo logo records its licence.
 
 A pack file is checked in this order: regular file (no symlink), ≤ 2 MB, valid JSON, a `task_context` envelope must be
 `status: ok` with empty `authorizes` and the same `brand_id` as its pack, then the shape guard (`assertPackShape`), then
@@ -121,6 +131,52 @@ approved weight that the file does not contain is not synthesised. The font lice
 
 The writer refuses a non-empty directory, a symlink, and any path inside a `brand/` folder; files are created with `wx`.
 
+## Production readiness (fixes pack PR-E)
+
+`productionReadiness()` (`runtime/production.ts`, contract `schemas/production-readiness.schema.json`,
+`brand-os/production-readiness/v1`) is a **separate view** over a `task_context` pack. It never changes
+`TaskContextPack.readiness`, which stays about context only: a pack can be `ready` while production is `not_ready`
+(GAP-05), and the projection copies the pack's `readiness` and `staleness` unchanged into `context`.
+
+`production_ready: ready` means one thing: **no deterministic rule blocks**. It is not an approval, not a quality
+verdict, carries no score, and `human_review_required` is always `true`. Each check names its rule owner, the input it
+looked at (ids and counts only, never brand text), its verdict (`pass`, `warn`, `fail`, `not_tested`,
+`needs_human_review`), whether it is a hard rule and whether it blocks. Only a hard rule can block.
+
+| Check | Rule owner | Blocks when |
+| --- | --- | --- |
+| `context.pack_integrity` | `task-context.pack` (`verifyPack`) | the digest does not verify (wrong SHA) |
+| `context.readiness` | `task-context.pack` | the pack is `blocked` (`partial` is a warning) |
+| `renderer.available` | `runtime.renderers` (`RENDERERS`) | no verified renderer for the task: only `social_batch` has one; other tasks are briefs |
+| `output.format` | `runtime.renderers` | count, `output_format` or channel the renderer does not produce |
+| `plan.copy` | `runtime.plan` (`planSocialBatch` blockers) | too few approved messages or no approved palette |
+| `copy.claims` | `content-bridge.claims` (`copyClaimConflicts`, the same guard `postChecks` runs) | a banned claim or availability wording in the copy |
+| `asset.reference` | `visual-dna.resolver` | never: optional assets do not block; the verdict (changed, withheld, missing, `pack_pin_differs`) is shown |
+| `asset.required_logo` | `owner.task_input` | the owner required a logo (`--require logo` / `required_assets: ["logo"]`) and none is approved, SVG and pinned; also when it could not be verified (`not_tested`, blocks) |
+| `artifact.pack_pin`, `artifact.file_sha256` | `task-context.pack`, `runtime.manifest` | a post not pinned to this pack, a file whose bytes differ from its manifest or summary, a wrong `batch_sha256` |
+| `artifact.svg_safety` | `asset-catalog.publication` | `checkSvg` or `svgPublicationIssues` fail on the actual bytes |
+| `artifact.required_logo` | `owner.task_input` | a required logo is not embedded in every post |
+| lifted runtime checks | their own layer | `svg.allowlist`, `svg.publication_gate`, `post.format`, `copy.claims`, `pack.digest`, `set.count` fail (`HARD_RUNTIME_CHECKS`); any other runtime `fail` (contrast, duplicates) becomes `needs_human_review` |
+| `coach.advice` | `strategic-coach` | never (advice) |
+| `review.visual_taste`, `review.semantic` | `human` | never: `needs_human_review` / `not_tested` |
+
+Before a render the artifact checks are one `artifact.checks: not_tested` line, not a pass. Asset verdicts are Visual DNA
+metadata; no asset bytes are given to an agent (owner decision 5). Interfaces:
+
+- **MCP** `production_readiness` (pre-render): the same inputs as `task_context` plus `required_assets`, strict schema.
+  It builds the pack with `task_context` and the asset verdicts with `visual_dna` under the **same caller context**
+  (each writes its own access-log line), and adds one `production_readiness` line (ids only). Access is the
+  `task_context` rule: guests, unprofiled agents and other brands are denied first.
+- **CLI** `brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require logo] [--locale fa|en|tr]
+  [--json]`: `--root` checks the pack's assets through Visual DNA as the owner (owner-local, same brand only);
+  `--batch` reads a `social-batch` output directory back (no symlinks, runtime file names only, size-capped) and re-hashes
+  the files. Exit 0 when ready, 3 when not ready. Labels in en, fa (RTL) and tr.
+- **`social-batch`** also writes `production-readiness.json` (artifact stage) next to `batch-summary.json`, which is
+  unchanged. `--require logo` marks the logo required for that run.
+
+The file checksums detect a changed or swapped file; they are not a signature. Someone who edits a post, its manifest
+and the summary together on the owner's own disk is outside this check.
+
 ## `model_use` on assets
 
 `schemas/asset.schema.json` has an optional `model_use`: `not_allowed` | `local_only` | `external_allowed`.
@@ -138,6 +194,8 @@ npm run -s brand:query -- --tool task_context --task-type social_batch --count 1
 # … and the owner renders it, in a shell without an agent token
 npm run brand:runtime -- social-batch --pack /tmp/pack.json --out /tmp/posts            # pack only
 npm run brand:runtime -- social-batch --pack /tmp/pack.json --root . --out /tmp/posts   # + Coach and logo (owner)
+npm run brand:runtime -- readiness --pack /tmp/pack.json --root . --require logo         # production readiness
+npm run brand:runtime -- readiness --pack /tmp/pack.json --batch /tmp/posts --locale fa  # re-check a written batch
 npm run brand:runtime -- social-batch --pack /tmp/pack.json --root . --final \
   --font-file ~/fonts/Display.ttf --font-file ~/fonts/Body.ttf --out /tmp/final
 ```
@@ -158,6 +216,14 @@ publication gate on every post, determinism across builds, source pins, en/fa/tr
 checksum-changed logo refused, writes only in the output dir and `git status brand/` unchanged, tampered pack / wrong
 task / wrong count refused, too few messages or no palette ⇒ `blocked` (no padding), banned claim ⇒ `copy.claims: fail`,
 Coach and Assurance called (and the Coach still refuses under an agent token), CLI parity with the library.
+
+`tests/production-readiness.test.ts` (10): the demo pack is ready pre-render and its own readiness is copied unchanged;
+missing renderer and format violations block while context stays as built; bad SHA (tampered pack, changed logo file,
+stale pin); blocked rights and a missing required logo block while the same optional asset does not; a banned claim
+blocks; artifact stage (wrong file checksum, unsafe SVG, missing required logo block; contrast `fail` is
+`needs_human_review`); a written batch re-checked on disk, symlinks and stray names refused; the agent entry (same
+caller, denied before input, invalid input); real stdio MCP (listed, strict schema, tr labels, guests denied); CLI
+(`--root`, exit 3, fa output).
 
 ## Open questions (owner)
 

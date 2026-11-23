@@ -33,6 +33,6 @@ Skills for specific work:
 
 Claude Code can read this checkout only after the folder is open in a permitted session. A chat product does not automatically see this private repository.
 
-Brand Runtime: read `docs-internal/BRAND_RUNTIME.md` before touching `packages/brand-core/src/runtime` or `brand:runtime` (drafts only, copy is approved pack text, quality checks are calls into existing layers, `authorizes: []`).
+Brand Runtime: read `docs-internal/BRAND_RUNTIME.md` before touching `packages/brand-core/src/runtime` or `brand:runtime` (drafts only, copy is approved pack text, quality checks are calls into existing layers, `authorizes: []`). Production readiness (`production_readiness`, `brand:runtime readiness`) is a separate view: it never changes the pack's context `readiness`, only objective rules block, and `ready` is not approval.
 
 Visual DNA: read `docs-internal/VISUAL_DNA.md` before touching `packages/brand-core/src/visual-dna`, `visual_dna` or `brand:visual-dna` (read-only reference verdicts over the asset manifest, mascot catalog and creative memory; metadata only over MCP; missing stays missing; `model_use` is not upload permission).
