@@ -27,6 +27,7 @@ import {
 import { html, join, safeGitHubUrl, safeHex, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
 import { brandAvatar, plainShell, refreshButton, shell, type BrandSection, type BrandView, type ViewContext } from './layout.js'
+import { mascotLink } from './visual-mascot.js'
 
 /* ---------------------------------------------------------------- sign in */
 
@@ -552,6 +553,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
       ${o.restricted_withheld ? badge(i.t('overview.withheld', { count: i.number(o.restricted_withheld) }), 'neutral', 'lock') : ''}
       ${o.contradictions ? html`<a href="/brands/${view.record.slug}/history#contradictions">${badge(i.t('overview.contradictions', { count: i.number(o.contradictions) }), 'warning', 'alert')}</a>` : ''}
     </div>
+    ${coachCard(ctx, p)}
     <div class="two-col">
       <section class="card" aria-labelledby="groups-title">
         <h2 class="card-title" id="groups-title">${i.t('overview.groups')}</h2>
@@ -590,6 +592,31 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
       </dl>
     </section>`
   return brandShell(ctx, view, 'overview', i.t('overview.title'), body, flash)
+}
+
+/**
+ * Strategic Coach notes on merged drafts (docs-internal/COACH_UX_DECISION.md, moment `studio_overview`). Rendered
+ * only when there is something to say: silence is the default. Ids and closed-vocabulary text only; no answer, no
+ * score, no button. Acting on a note happens in Claude Code.
+ */
+function coachCard(ctx: ViewContext, p: StudioProjection): SafeHtml | '' {
+  const coach = p.coach
+  if (!coach || coach.notes.length === 0) return ''
+  const { i } = ctx
+  return html`<section class="card coach-card" aria-labelledby="coach-title">
+      <h2 class="card-title" id="coach-title">${icon('info')} ${i.t('overview.coach.title')}</h2>
+      <p class="card-hint muted">${i.t('overview.coach.hint')}</p>
+      <ul class="question-list" aria-label="${i.t('overview.coach.label')}">${coach.notes.map((note) => {
+        const text = note.text[i.locale]
+        return html`<li>
+          <div class="question-head">${badge(text.criterion, 'warning')}${code(note.question_id, 'muted')}</div>
+          <p dir="auto">${text.next}</p>
+          <p class="muted small">${i.t('overview.coach.run')}: ${code(`npm run brand:coach -- analyze --mode follow_up --question ${note.question_id}`)}</p>
+        </li>`
+      })}</ul>
+      ${coach.more > 0 ? html`<p class="muted small">${i.t('overview.coach.more', { count: i.number(coach.more) })}</p>` : ''}
+      <p class="muted small mono" dir="ltr">authorizes: [] · ${coach.rule_version}</p>
+    </section>`
 }
 
 function commitList(ctx: ViewContext, commits: NonNullable<BrandView['cached']['history']>['commits']): SafeHtml {
@@ -740,6 +767,7 @@ export function assetsPage(ctx: ViewContext, view: BrandView, flash: string | nu
           <h2 class="card-title" id="mascot-title">${i.t('assets.mascot')}</h2>
           <div class="facts-strip">${badge(i.t('assets.mascotStates', { count: i.number(p.mascot.states) }), 'neutral', 'layers')}${badge(i.t('assets.mascotReady', { count: i.number(p.mascot.artwork_ready) }), p.mascot.artwork_ready ? 'success' : 'neutral', 'image')}</div>
           <p class="muted">${i.t('assets.mascotHonest')}</p>
+          ${mascotLink(isVisualLang(ctx.i.locale) ? ctx.i.locale : 'en', view.record.slug)}
           <div class="three-col">
             ${countTable(ctx, i.t('assets.mascotByStatus'), p.mascot.by_status)}
             ${countTable(ctx, i.t('assets.mascotByCategory'), p.mascot.by_category)}

@@ -1,9 +1,10 @@
 import type { BusinessModelCanvasBlock, VisualBlock, VisualCatalog, VisualDocument, VisualLang } from '@brand-os/brand-core/visual'
 import type { SafeHtml } from './html.js'
 import { canvasView, citationTable } from './visual.js'
-import { colorPaletteView, identitySources, logoConstructionView, typographySpecimenView } from './visual-identity.js'
+import { colorPaletteView, identitySources, logoConstructionView, typographySpecimenView, type IdentityContext } from './visual-identity.js'
 import { competitorMatrixView, priceStripView } from './visual-competitors.js'
 import { positioningMapView } from './visual-positioning.js'
+import { mascotAtlasView, mascotEvolutionView } from './visual-mascot.js'
 
 /**
  * Renderer registry (Visual Blueprint V1.1): one renderer per block type. The map is typed over every
@@ -21,6 +22,8 @@ export interface BlockContext {
   showNext: boolean
   /** URL of an approved asset preview by key, or null when the composition cannot serve files (golden examples). */
   assetUrl: (key: string) => string | null
+  /** Print engine (V1.2): turns a plate's source line into a numbered note (see `IdentityContext.note`). */
+  note?: IdentityContext['note']
 }
 
 type RendererMap = { [K in VisualBlock['type']]: (block: Extract<VisualBlock, { type: K }>, ctx: BlockContext) => SafeHtml }
@@ -43,6 +46,8 @@ const RENDERERS: RendererMap = {
   competitor_matrix: competitorMatrixView,
   price_strip: priceStripView,
   positioning_map: positioningMapView,
+  mascot_atlas: mascotAtlasView,
+  mascot_evolution: mascotEvolutionView,
 }
 
 export function renderBlock(block: VisualBlock, ctx: BlockContext): SafeHtml {

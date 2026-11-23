@@ -97,7 +97,7 @@ test('owner journey in a real browser: sign in, step through the wizard, watch p
   await capture('login')
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
-  await page.type('#totp', await freshTotp())
+  await page.type('#totp', await freshTotp(s.url))
   await page.navigation(() => page.click('button[type=submit]'))
   assert.equal(await page.eval<string>('location.pathname'), '/brands')
   assert.match(await text('main'), /No brands yet/)

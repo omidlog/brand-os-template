@@ -1,5 +1,5 @@
 import type { BusinessModelCanvasBlock, CitationListBlock, VisualDocument, VisualLang } from '@brand-os/brand-core/visual'
-import { fillVisual, visualCatalog } from '@brand-os/brand-core/visual'
+import { bookText, fillVisual, visualCatalog } from '@brand-os/brand-core/visual'
 import { studioAssets } from '../static-assets.js'
 import { banner, emptyState } from './components.js'
 import { html, join, type SafeHtml } from './html.js'
@@ -7,7 +7,8 @@ import { icon } from './icons.js'
 import type { BrandView, ViewContext } from './layout.js'
 import { brandHeader, brandShell } from './pages.js'
 import { renderBlock } from './visual-registry.js'
-import { chapterOpener, frameworkNote, identityPrintDocument } from './visual-identity.js'
+import { chapterOpener, frameworkNote } from './visual-identity.js'
+import { identityBookDocument } from './visual-print-book.js'
 import { competitorsBanner } from './visual-competitors-page.js'
 import { detailsView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
 
@@ -89,7 +90,7 @@ export function visualPrintPage(ctx: ViewContext, view: BrandView, edition: 'int
 }
 
 /** Approved previews are served by the existing asset route (session-only, GET). */
-function assetUrlFor(slug: string): (key: string) => string | null {
+export function assetUrlFor(slug: string): (key: string) => string | null {
   return (key) => (/^[0-9a-f]{64}$/.test(key) ? `/brands/${slug}/assets/file/${key}` : null)
 }
 
@@ -134,7 +135,10 @@ export function identityPage(ctx: ViewContext, view: BrandView, flash: string | 
   return shell(body)
 }
 
-/** Print view of the chapter (A4 portrait). Read-only; the only control is the browser's own print command. */
+/**
+ * Print view of the chapter: the print engine's `book_a4_portrait` profile (V1.2): cover, imprint, contents with
+ * page numbers, running heads, notes and folios. Read-only; the only control is the browser's own print command.
+ */
 export function identityPrintPage(ctx: ViewContext, view: BrandView, edition: 'internal' | 'public'): SafeHtml | null {
   const lang = ctx.i.locale as VisualLang
   const cat = visualCatalog(lang)
@@ -143,18 +147,15 @@ export function identityPrintPage(ctx: ViewContext, view: BrandView, edition: 'i
   const doc = edition === 'public' ? identity.public : identity.internal
   const toolbar = html`<nav class="vz-print-toolbar" aria-label="${cat.identity.printTitle}">
     <a class="vz-print-back" href="/brands/${view.record.slug}/visual/identity">${icon('chevron', 'vz-back-icon')}<span>${cat.identity.backToChapter}</span></a>
-    <p class="vz-print-hint">${cat.text.printOnly}</p>
+    <p class="vz-print-hint">${bookText(lang).printHint} ${cat.text.printOnly}</p>
     <button type="button" class="vz-print-button" data-print hidden>${cat.text.printButton}</button>
   </nav>`
-  return identityPrintDocument(
-    {
-      doc,
-      lang,
-      commit: view.cached.status.sha,
-      head: html`<link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="${studioAssets.url('visual.css')}"><script src="${studioAssets.url('visual.js')}" defer></script>`,
-      toolbar,
-      assetUrl: assetUrlFor(view.record.slug),
-    },
-    (block, blockCtx) => renderBlock(block, { ...blockCtx, idPrefix: 'p' }),
-  )
+  return identityBookDocument({
+    doc,
+    lang,
+    commit: view.cached.status.sha,
+    head: html`<link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="${studioAssets.url('visual.css')}"><link rel="stylesheet" href="${studioAssets.url('visual-book.css')}"><script src="${studioAssets.url('visual.js')}" defer></script>`,
+    toolbar,
+    assetUrl: assetUrlFor(view.record.slug),
+  }).html
 }

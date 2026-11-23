@@ -1,5 +1,59 @@
 # Changelog
 
+## Unreleased — Visual V3.4: mascot atlas and evolution sheet
+
+### Added
+
+- Mascot atlas (`mascot_atlas` block): every expression, pose and product state from approved catalog artwork only, backed by an approved, checksummed, previewable, non-example asset; each plate carries the recorded usage and do / don't notes. Draft artwork is never drawn: the internal edition lists it as "in review", the public edition leaves it out. A file still tagged `draft` stays out of the public edition. Designed empty state when nothing is approved.
+- Six-stage evolution sheet (`mascot_evolution` block): stages in order with approved stage artwork; missing or undefined stages are clear placeholders; the template's example configuration is labelled.
+- Studio: `GET /brands/<slug>/visual/mascot[/print[?edition=public]]`, read-only, en/fa/tr with RTL and Vazirmatn, ids only in details and the print appendix; one link on the Assets page's mascot card. Sync rebuilds caches written before the atlas existed.
+- Framework registry entry `MASCOT-MODEL-SHEET`; ILLUSTRATIVE fixture in `npm run visual:golden`.
+- Tests: `visual-mascot`, `studio-visual-mascot`, `studio-visual-mascot-browser`.
+## Unreleased — Production readiness and quality gate (fixes pack PR-E, GAP-05)
+
+### Added
+
+- `productionReadiness()` (`@brand-os/brand-core/runtime`): a separate `brand-os/production-readiness/v1` projection over a `task_context` pack. `TaskContextPack.readiness` keeps its meaning (context only) and is copied unchanged. `production_ready` is `ready` only when no deterministic rule blocks; it is not approval and carries no score; `human_review_required` is always true. Every check names its rule owner, input (ids and counts only), verdict and whether it blocks. Hard rules: pack digest, blocked context, no verified renderer (only `social_batch` has one), unsupported count/format/channel, missing approved copy, a banned claim (the content-bridge guard, shared with `postChecks` as `copyClaimConflicts`), and a logo the owner marked required that is missing, changed, withheld, not SVG or not verifiable. Optional assets never block. Artifact stage re-hashes every file, re-runs both SVG gates on the bytes, checks the pack pin and a required logo in every post, and lifts the runtime's own checks with their owners; non-hard runtime failures (contrast) become `needs_human_review`.
+- MCP tool `production_readiness` (strict schema; pre-render; builds the pack with `task_context` and asset verdicts with `visual_dna` under the same caller context; metadata only; guests, unprofiled agents and other brands denied first; one access-log line, ids only).
+- `brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require logo] [--locale fa|en|tr] [--json]` (exit 3 when not ready) and `--require logo` on `social-batch`, which also writes `production-readiness.json` (`batch-summary.json` is unchanged). en/fa/tr labels, fa RTL.
+- `schemas/production-readiness.schema.json`; guide section in `docs-internal/BRAND_RUNTIME.md`; `task-context` skill step 8. Tests: `production-readiness` (synthetic demo brand only); `audit` pins the tool.
+
+### Changed
+
+- The runtime reads its logo through the Visual DNA resolver (Visual DNA owner decision 6): `loadApprovedLogo` resolves the pack's logo ids as the owner process and reads the bytes with `readVerifiedAsset(…, 'renderer')`; a file that differs from the pack's pinned checksum is `pack_pin_differs`. Not-embedded reasons are now `visual_dna:<state>:<reason>` codes. The resolver's append-only access-log line is the only write under `brand/`. The runtime resolves with the default `use_scope: public` (#44), so a portrait with internal-only rights is never embedded. The synthetic demo logo records its licence.
+
+## Unreleased — Owner review judgments for assurance scores (GAP-09 follow-up)
+
+### Added
+
+- `npm run brand:assurance-review -- list | record`: owner-only. `list` shows the Assurance controls that need a person's judgment (today PRR-08) with their state, and `record --control PRR-08 --judgment yes|partly|no --note "…" [--date] [--expect]` records one. Refused under `BRAND_OS_AGENT_TOKEN`; no MCP tool, Studio route or agent profile reaches it. en/fa/tr text.
+- `assurance/reviews.ts`: judgments stored in `brand/.private/assurance/reviews/<control>.json` (brand workspace, gitignored, 0600, atomic, locked), as append-only hash-chained revisions. A tampered, foreign or symlinked history is refused.
+- Tests: `assurance-reviews`, `assurance-review-cli` (synthetic temp brands only).
+
+### Changed
+
+- The bridge (`brand-os.assurance-bridge/2`) reads the judgment in force on the `--as-of` day while what it judged (cited facts and research notes) is unchanged, so `brand:assurance assess` can give a score. A judgment whose basis changed is listed as `stale_judgment` (blocking). The snapshot carries the revision id, never the owner's note. Unconfirmed answers still lower the ratio; notes are still owner-stated; never a certification.
+
+## Unreleased — Coach UX: automatic, context-aware guidance
+
+### Added
+
+- `coach/moments.ts`: one policy for when the Strategic Coach speaks on its own (strategic id namespaces or evidence claims, free text or a measure, never restricted) with a closed list of silence reasons. Decision record `docs-internal/COACH_UX_DECISION.md`.
+- `brand:interview` prints at most one coach note after an important first answer (interactive and agent mode); `--json` gains an additive `coach` object.
+- `brand:approve` (and `--dry-run`) prints up to three coach notes on the batch's drafts before the proof prompt. Never blocks; JSON unchanged.
+- Studio Overview: a read-only "Before you approve: coach notes" card (en/fa/tr), hidden when empty. Screenshots in `docs/screenshots/coach-ux/`.
+- `BRAND_OS_COACH=off` silences the automatic moments for one shell.
+- Tests: `coach-moments`, `coach-moments-cli`, `studio-coach`.
+
+## Unreleased — Visual V1.2: print engine (book_a4_portrait)
+
+### Added
+
+- Typed print profiles (`@brand-os/brand-core/visual` `PRINT_PROFILE_SPECS`): `book_a4_portrait`, `canvas_a3_landscape` (unchanged), `deck_16_9` (planned stub). en/fa/tr book text (`BOOK_TEXT`).
+- The Brand Book "Visual identity" print view is now an A4 portrait book: cover, imprint, contents with the printed page numbers and dotted leaders, running heads (book title verso, chapter recto), outer-edge folios (mirrored, with Persian digits, in fa), numbered notes on the page of their reference, tables continued with a repeated header, headings kept with what follows, no orphan page. New stylesheet `visual-book.css`; the canvas print output is unchanged byte for byte.
+- `npm run brand:export-visual`: owner-machine export of the identity book or the canvas to self-contained HTML and, with a local Chrome, PDF from a measured two-pass layout with an overflow check. Never inside `brand/` or `.private`, refused under an agent token. Studio stays GET-only.
+- Tests: `studio-visual-print-book`; book checks added to `studio-visual-browser` and `studio-visual-identity`.
+
 ## Unreleased — Visual DNA owner policy decisions and the `published` status fix
 
 ### Fixed
@@ -23,6 +77,7 @@
 ### Fixed
 
 - Assurance `completeness.blocked_by` reported every `needs_review` blocker as `source_changed`; it now names the control's own reason (for example `reviewer_required`).
+
 
 ## Unreleased — Visual DNA reference resolver (fixes pack PR-C, GAP-03)
 
@@ -137,6 +192,7 @@ No command, Studio route, store, approval, MCP tool or agent scope was added. No
 - Nothing calls a model or the network in this version.
 - `schemas/coach-result.schema.json` (reference contract; the Zod schema in `packages/brand-core/src/coach/model.ts` stays authoritative). Guide: `docs-internal/STRATEGIC_COACH.md`. Tests: `coach-core` (25), `coach-cli` (7), with SYNTHETIC DEMO fixtures only.
 
+
 ## Unreleased — Visual V1.1 + V2.1: renderer registry and Brand Book "Visual identity" chapter
 
 ### Added
@@ -157,6 +213,7 @@ No command, Studio route, store, approval, MCP tool or agent scope was added. No
 ### Changed
 
 - The `brand:strategy review` note for a `content` strategy now says `content-read` agents read it (true since Slice C).
+
 
 ## Unreleased — Visual Blueprint P0: business model canvas
 
@@ -469,3 +526,15 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
 - Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
 - Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
+
+## Unreleased — GAP-09 follow-ups: paid-media interview question, company stays company
+
+### Added
+
+- Interview question `business.marketing.paid_media` (business marketing module, single choice `undecided` / `yes` / `no`, internal, en/fa/tr). It is in the question bank, field registry and marketing record.
+
+### Changed
+
+- `brand:assurance` reads `runs_paid_media` from the approved answer to `business.marketing.paid_media`. `--paid-media yes|no` is deprecated: it still works, but only while the question has no approved answer, and it prints an en/fa/tr notice on stderr. An approved answer always wins. A missing paid-media item now points at the question instead of the flag.
+- `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
+- Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.

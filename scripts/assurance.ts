@@ -14,6 +14,7 @@ import {
   renderSnapshotSummary,
   renderVerifyResult,
   verifyAssuranceSnapshot,
+  type AssuranceSnapshot,
   type BridgeOptions,
   type PaidMediaStatement,
 } from '@brand-os/brand-core/assurance/workspace'
@@ -81,6 +82,7 @@ function audience(values: Values): BridgeOptions['audience'] {
   return given
 }
 
+/** Deprecated alias. Kept so existing scripts keep working; the interview answer comes first. */
 function paidMedia(values: Values): PaidMediaStatement {
   const given = values['paid-media'] ?? 'unknown'
   if (given !== 'yes' && given !== 'no' && given !== 'unknown') usage(`--paid-media must be yes, no or unknown (given ${given}).`)
@@ -110,6 +112,14 @@ function options(values: Values): BridgeOptions {
   return base
 }
 
+/** On stderr, so `--json` output stays parseable. */
+function warnDeprecatedPaidMedia(values: Values, snapshot: AssuranceSnapshot, language: AssuranceLang): void {
+  if (values['paid-media'] === undefined) return
+  console.error(BRIDGE_TEXT.paid_media_deprecated![language])
+  const source = snapshot.subject_provenance.find((entry) => entry.field === 'runs_paid_media')?.source
+  if (source === 'approved_fact') console.error(BRIDGE_TEXT.paid_media_ignored![language])
+}
+
 function run(values: Values): void {
   // An agent process gets the same refusal whatever it asked for, before anything is read.
   if (process.env[AGENT_TOKEN_ENV]) throw new AssuranceBridgeError('refused', BRIDGE_TEXT.refused_agent!.en)
@@ -120,12 +130,14 @@ function run(values: Values): void {
     case 'snapshot': {
       if (values.snapshot !== undefined) usage('snapshot takes --pin, not --snapshot. Use verify --snapshot to check a kept snapshot.')
       const snapshot = buildAssuranceSnapshot(root, options(values))
+      warnDeprecatedPaidMedia(values, snapshot, language)
       console.log(values.json ? JSON.stringify(snapshot, null, 2) : renderSnapshotSummary(snapshot, language))
       return
     }
     case 'assess': {
       if (values.snapshot !== undefined) usage('assess takes --pin, not --snapshot. Use verify --snapshot to check a kept snapshot.')
       const result = assessWorkspace(root, options(values))
+      warnDeprecatedPaidMedia(values, result.snapshot, language)
       if (values.json) console.log(JSON.stringify(result, null, 2))
       else console.log(`${renderSnapshotSummary(result.snapshot, language)}\n${renderGapReport(result.assessment, language)}`)
       return
@@ -162,6 +174,7 @@ function message(error: AssuranceBridgeError, language: AssuranceLang): string {
   if (error.code === 'refused') return BRIDGE_TEXT.refused_agent![language]
   if (error.code === 'not_a_brand') return BRIDGE_TEXT.not_a_brand![language]
   if (error.code === 'invalid_pin') return fill(BRIDGE_TEXT.invalid_pin![language], { reason: error.message })
+  if (error.code === 'invalid_review') return fill(BRIDGE_TEXT.invalid_review![language], { reason: error.message })
   return error.message
 }
 

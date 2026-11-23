@@ -13,9 +13,10 @@ import {
   rightsBlocker,
 } from '@brand-os/brand-core'
 import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
+import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStatus } from '@brand-os/brand-core/coach'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
-import { buildCompetitorComparison } from '@brand-os/brand-core/visual'
+import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -140,6 +141,12 @@ export interface StudioProjection {
    */
   calendar?: StudioCalendarProjection | null
   /**
+   * Strategic Coach notes on the merged drafts awaiting approval (docs-internal/COACH_UX_DECISION.md, moment
+   * `studio_overview`). Advisory, `authorizes: []`, question ids and closed-vocabulary text only — never an
+   * answer. Null when the coach could not run. Absent in caches written before this field existed; sync rebuilds.
+   */
+  coach?: StudioCoachProjection | null
+  /**
    * Semantic visual documents (Visual Blueprint P0): the business model canvas in its internal and public editions,
    * built from the same approved facts and drafts as the documents. Null when they could not be built. Absent in
    * caches written before this field existed; sync rebuilds those.
@@ -161,6 +168,11 @@ export interface StudioVisualProjection {
    * caches written before it existed; sync rebuilds those.
    */
   competitors?: VisualDocument
+  /**
+   * Mascot atlas and six-stage evolution sheet (V3.4): approved catalog artwork backed by approved, previewable manifest
+   * assets only, in its internal and public editions. Absent in caches written before it existed; sync rebuilds those.
+   */
+  mascot?: { internal: VisualDocument; public: VisualDocument }
 }
 
 /**
@@ -200,6 +212,59 @@ const SECRET_PATTERNS = [/bos_at_[A-Za-z0-9_-]{20,}/, /-----BEGIN [A-Z ]*PRIVATE
 export function assertNoSecrets(value: unknown): void {
   const text = JSON.stringify(value)
   if (SECRET_PATTERNS.some((pattern) => pattern.test(text))) throw new ProjectionError('unsafe_projection', 'The repository content looks like it contains a credential. Studio refused to display it.')
+}
+
+export interface StudioCoachNote {
+  question_id: string
+  status: CoachStatus
+  criterion: CoachCriterion
+  canonical_question_id: string | null
+  /** Display text per Studio locale: the criterion name and the one next step. Closed vocabulary only. */
+  text: Record<'en' | 'fa' | 'tr', { criterion: string; next: string }>
+}
+
+export interface StudioCoachProjection {
+  authority: 'derived_advice'
+  authorizes: []
+  rule_version: string
+  /** Drafts checked; notes beyond the cap are counted in `more`. */
+  checked: number
+  more: number
+  notes: StudioCoachNote[]
+}
+
+/** Up to this many notes on the Overview card. */
+export const STUDIO_COACH_LIMIT = 5
+
+/**
+ * The coach on the merged drafts. Same policy as `brand:approve` (strategic, free text or a measure, never
+ * restricted, silent when ready). A coach failure must not take down the brand view: null, and the card hides.
+ */
+function projectCoach(engine: InterviewEngine, review: Array<{ question_id: string; state: string }>): StudioCoachProjection | null {
+  try {
+    const draftIds = review.filter((item) => item.state === 'draft').map((item) => item.question_id)
+    const changeIds = review.filter((item) => item.state === 'change_pending').map((item) => item.question_id)
+    const result = coachBeforeApproval(engine, { draftIds, changeIds }, { moment: 'studio_overview', limit: STUDIO_COACH_LIMIT })
+    if (result.silent.agent_token || result.silent.unavailable === draftIds.length && draftIds.length > 0) return null
+    const coach: StudioCoachProjection = {
+      authority: 'derived_advice',
+      authorizes: [],
+      rule_version: result.rule_version,
+      checked: result.checked,
+      more: result.more,
+      notes: result.notes.map((note) => ({
+        question_id: note.question_id,
+        status: note.status,
+        criterion: note.criterion,
+        canonical_question_id: note.canonical_question_id,
+        text: { en: coachNoteText(note, 'en'), fa: coachNoteText(note, 'fa'), tr: coachNoteText(note, 'tr') },
+      })),
+    }
+    assertNoSecrets(coach)
+    return coach
+  } catch {
+    return null
+  }
 }
 
 export interface PreviewFile {
@@ -242,12 +307,13 @@ function projectCreative(root: string, slug: string): StudioCreativeProjection |
 }
 
 /** The visual documents; a failure here must not take down the brand view either. */
-function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[]): StudioVisualProjection | null {
+function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], assets: MascotAssetCandidate[]): StudioVisualProjection | null {
   try {
     const visual: StudioVisualProjection = {
       bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
       identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }), master_rule: IDENTITY_MASTER_RULE },
       competitors: buildCompetitorComparison(engine, readSharedLandscape(engine.workspaceRoot(), engine.config().brand.slug)),
+      mascot: { internal: buildMascotAtlas(engine, 'internal', { assets }), public: buildMascotAtlas(engine, 'public', { assets }) },
     }
     assertNoSecrets(visual)
     return visual
@@ -338,6 +404,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
   const previews: PreviewFile[] = []
   // Logo assets offered to the Visual identity chapter; the core builder decides which (if any) is the master.
   const logoCandidates: LogoMasterCandidate[] = []
+  const assetCandidates: MascotAssetCandidate[] = []
   const sizes = new Map<string, { width: number; height: number } | null>()
   const assets: ProjectionAsset[] = (manifest.assets ?? []).slice(0, 2000).flatMap((asset) => {
     if (typeof asset.id !== 'string' || typeof asset.path !== 'string') return []
@@ -370,6 +437,20 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
       }
     }
     const tags = Array.isArray(asset.tags) ? asset.tags.filter((tag): tag is string => typeof tag === 'string') : []
+    // Every asset is offered to the mascot atlas; the core draws only approved, previewable catalog artwork.
+    assetCandidates.push({
+      asset_id: asset.id.slice(0, 200),
+      name: (typeof asset.name === 'string' ? asset.name : asset.id).slice(0, 200),
+      version: typeof asset.version === 'string' ? asset.version.slice(0, 40) : null,
+      approved,
+      published,
+      tags: tags.slice(0, 50),
+      example: tags.includes('example') || /EXAMPLE/.test(String(asset.license ?? '')),
+      preview_key: approved ? preview_key : null,
+      mime: approved && preview_key ? mime : null,
+      width: null,
+      height: null,
+    })
     if (tags.includes('logo')) {
       const size = preview_key ? (sizes.get(preview_key) ?? null) : null
       logoCandidates.push({
@@ -482,7 +563,8 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
-    visual: projectVisual(engine, logoCandidates),
+    visual: projectVisual(engine, logoCandidates, assetCandidates),
+    coach: projectCoach(engine, dashboard.review_queue.items),
   }
   assertNoSecrets(projection)
   return { projection, previews }

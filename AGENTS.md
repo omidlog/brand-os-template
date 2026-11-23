@@ -79,10 +79,13 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - `analyze --mode quality_review` gives an explainable status and at most two named deficits. It judges the recorded data, not the person, and there is no score. A deficit on an approved fact still needs propose → review → approve; `requires_change_request` says so.
 - `analyze --mode consistency_review` reports the existing deterministic contradictions by id. Strategic trade-offs are not assessed yet, so no conflict found is not a clean bill of health.
 - Restricted questions are refused, and every mode is refused while `BRAND_OS_AGENT_TOKEN` is set. No MCP tool or `brand_retrieve` kind exposes the coach; do not look for one.
+- You rarely need to call it yourself: `brand:interview --question … --answer … --json` returns a `coach` object after an important answer (`shown: true` with one `note`). Relay that one question to the owner in their language, or ask the `canonical_question_id` instead. `shown: false` means stay silent; do not run `brand:coach` to second-guess it. A note never blocks saving or approval (`docs-internal/COACH_UX_DECISION.md`).
 
 ## Assurance on a real brand
 
 `npm run brand:assurance` is the owner's local, read-only check of approved facts against the Positioning Readiness method (guide: `docs-internal/ASSURANCE.md`). It is refused while `BRAND_OS_AGENT_TOKEN` is set, and no MCP tool or `brand_retrieve` kind exposes it; do not look for one. Its result is an internal assessment, never a certification or a compliance claim, and `authorizes` is always empty. Do not quote a completeness ratio it did not print.
+
+`npm run brand:assurance-review` records the owner's own judgment on controls only a person can decide (PRR-08). It is refused under an agent token too. Never record, suggest or paraphrase a judgment for the owner, and never read `brand/.private/assurance/`.
 
 ## Knowledge Inbox
 

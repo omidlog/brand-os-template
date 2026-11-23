@@ -10,7 +10,7 @@ The question bank in `brand/interview/question-bank/`, the active profile from `
 All commands print JSON with `--json`. Run them from the repository root.
 
 - `npm run brand:next -- --json [--limit 5] [--locale en|fa|tr]` lists the next questions with reasons. It also lists open conflicts, follow-ups, tentative and unresolved answers, owner-only (restricted) questions, and suggested actions.
-- `npm run brand:interview -- --question <id> --answer "<text>" --json` records one answer to any question, in any order. The answer may also be a disposition: `unknown`, `skip`, `n/a`, or `estimate: …`.
+- `npm run brand:interview -- --question <id> --answer "<text>" --json` records one answer to any question, in any order. The answer may also be a disposition: `unknown`, `skip`, `n/a`, or `estimate: …`. The reply carries a `coach` object: when `shown` is true, it holds one advisory `note` for that answer (see Process step 2b).
 - `npm run brand:propose -- --file <batch.json | -> [--dry-run] --json` stores what you extracted from a free-form answer as drafts with provenance.
 - `npm run brand:interview -- --assist --file - --json` runs the built-in extractor on the owner's text. It uses the configured model provider, or deterministic rules when none is configured.
 - `npm run brand:status`, `npm run brand:review -- --json` show progress and the review queue.
@@ -21,6 +21,7 @@ The owner's own words. If they have not said something, it stays missing.
 ## Process
 1. **Next.** Run `brand:next --json`. Settle `conflicts` first, then `follow_ups`, then the first `next` question. Ask in the owner's language. English is the default. Persian (fa) and Turkish (tr) prompts exist where `prompt_locale` says so. A mixed-language answer is fine.
 2. **Ask.** Ask one question at a time, in plain words. Say why it matters, using `why_it_matters`. Offer `examples` only as examples, never as the answer.
+2b. **Coach note.** After `--question … --answer … --json`, if `coach.shown` is true, ask the owner that one thing next, in their language: the existing question `note.canonical_question_id` if set, otherwise `note.suggested_question`. Say it is optional. If they add detail, record it with the same command (the coach will not ask again for that question); if they decline or say `decide later`, move on. If `coach.shown` is false, say nothing about the coach. Never quote the coach as a judgement of the owner and never present it as a score.
 3. **Propose.** For a short, direct answer, use `brand:interview --question`. For a long answer that covers several facts, write a proposal batch:
    ```json
    {
