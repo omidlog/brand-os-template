@@ -6,6 +6,7 @@ import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
 import { applyInit, backupBrand, CHANGE_DEPTHS, IDENTITY_INTENTS, InterviewEngine, LOGO_PRESENCE, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand, validateIdentityChoice } from '@brand-os/brand-core'
 import type { BatchResult, IntakeReport, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
+import { coachAfterAnswer, coachBeforeApproval, renderAfterAnswer, renderBeforeApproval, type CoachMomentResult } from '@brand-os/brand-core/coach'
 
 const [command, ...rest] = process.argv.slice(2)
 
@@ -161,6 +162,8 @@ if (command === 'init') {
     }
     const result = engine.answerQuestion(values.question, values.answer)
     const ok = result.kind === 'recorded'
+    // Coach moment 1 (docs-internal/COACH_UX_DECISION.md): advisory, never blocks, silent unless it has one note.
+    const coach = ok ? afterAnswerCoach(result.questionId ?? values.question) : null
     if (values.json) {
       const upcoming = nextReport(engine, { limit: 3 })
       console.log(
@@ -174,6 +177,7 @@ if (command === 'init') {
             impact: result.impact ?? null,
             next: upcoming.next.map((item) => ({ id: item.id, prompt: item.prompt, reasons: item.reasons })),
             conflicts: upcoming.conflicts.length,
+            coach,
           },
           null,
           2,
@@ -181,6 +185,7 @@ if (command === 'init') {
       )
     } else {
       console.log(result.message)
+      if (coach?.shown) console.log(renderAfterAnswer(coach))
     }
     if (!ok) process.exit(1)
   } else {
@@ -412,10 +417,15 @@ if (command === 'init') {
   const approvals = engine.approvals()
   if (command === 'approve') {
     const queue = withSelectionErrors(() => approvals.reviewQueue(selection, { includeSettled: Boolean(selection.ids) }))
+    // Coach moment 2: notes on the drafts in this batch, before the proof prompt. Text mode only, on stderr, never
+    // blocking; the approve JSON contract is unchanged.
+    const coachNotes = values.json ? '' : beforeApprovalCoach(queue)
     if (values['dry-run']) {
       console.log(values.json ? JSON.stringify(queue, null, 2) : formatQueue(queue))
+      if (coachNotes) console.error(coachNotes)
       process.exit(0)
     }
+    if (coachNotes) console.error(`${coachNotes}\n`)
     if (!values.json) console.error(`About to approve ${queue.pending} item(s) as ${values.actor ?? 'owner'}. Approval does not publish.`)
     const proof = await readApprovalProof()
     const result = withSelectionErrors(() => approvals.approveBatch(selection, proof, values.actor ?? 'owner'))
@@ -904,6 +914,19 @@ function formatNext(report: NextReport): string {
   return lines.join('\n')
 }
 
+/** Coach moment 1: at most one advisory note right after an answer. Silent on anything unimportant; never throws. */
+function afterAnswerCoach(questionId: string): CoachMomentResult {
+  return coachAfterAnswer(engine, questionId, { locale: engine.session().locale })
+}
+
+/** Coach moment 2: notes on the plain drafts in an approval batch (change proposals are counted, not advised on). */
+function beforeApprovalCoach(queue: ReviewQueue): string {
+  const draftIds = queue.items.filter((item) => item.state === 'draft').map((item) => item.question_id)
+  const changeIds = queue.items.filter((item) => item.state === 'change_pending').map((item) => item.question_id)
+  if (draftIds.length === 0) return ''
+  return renderBeforeApproval(coachBeforeApproval(engine, { draftIds, changeIds }, { locale: engine.session().locale }))
+}
+
 async function readAllStdin(): Promise<string> {
   const chunks: Buffer[] = []
   for await (const chunk of input) chunks.push(Buffer.from(chunk as Buffer))
@@ -937,6 +960,10 @@ async function interactive(): Promise<void> {
       const result = engine.submit(raw)
       console.log(result.message)
       if (result.kind === 'exit') break
+      if (result.kind === 'recorded') {
+        const coach = afterAnswerCoach(result.questionId ?? question.id)
+        if (coach.shown) console.log(`\n${renderAfterAnswer(coach)}`)
+      }
     }
   } finally {
     rl.close()
