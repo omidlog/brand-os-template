@@ -23,11 +23,16 @@ import {
   InterviewEngine,
   listMascotAssets,
   listMascotStages,
+  MAX_DELIVERABLE_COUNT,
+  REQUEST_MODES,
   resolveAgentContext,
   RETRIEVE_KINDS,
   runKnowledgeTool,
+  runTaskContextTool,
   searchBrandDocs,
   searchMascotAssets,
+  TASK_LOCALES,
+  TASK_TYPES,
 } from '@brand-os/brand-core'
 import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
 import { runContentTool } from '@brand-os/brand-core/content-bridge'
@@ -112,6 +117,29 @@ server.registerTool(
     }),
   },
   async ({ deliverable, section }) => text(draftPersonalContent(engine, deliverable, caller, section)),
+)
+
+// Task Context (see task-context/agent.ts and docs-internal/TASK_CONTEXT.md): one read-only pack of approved context per
+// task, built with the same caller context as every other tool. Any owner-issued token of this brand; guests,
+// unprofiled agents and other brands are denied. The request text is classified and dropped, never logged or returned.
+// One access-log line per call, ids only. Nothing is written, approved, published, scheduled or spent.
+server.registerTool(
+  'task_context',
+  {
+    description:
+      'Call this first, once per task, before drafting a visual, social posts, a website, a product screen, an ad concept, an identity brief or a personal page. Returns one read-only pack of the approved brand context this token may read for that task: identity, voice, audience, claims, tokens, asset references and source revisions, plus missing[] (existing question ids to ask the owner; never fill them in) and readiness ready|partial|blocked. readiness is about context only, not about a finished deliverable. Give task_type, or request (the owner\'s sentence, classified deterministically in en/fa/tr and not stored); an unclear request returns need_task_type. Quote approved sentences unchanged and cite source_id and source_revision. authorizes is always empty: nothing here permits publishing, scheduling, spending or deploying, and an on-demand batch is not an approved calendar week. Needs an owner-issued agent token of this brand; others get denied.',
+    inputSchema: z.object({
+      task_type: z.enum(TASK_TYPES).optional(),
+      request: z.string().max(500).optional(),
+      channel: z.string().max(20).optional(),
+      deliverable_count: z.number().int().min(1).max(MAX_DELIVERABLE_COUNT).optional(),
+      locale: z.enum(TASK_LOCALES).optional(),
+      request_mode: z.enum(REQUEST_MODES).optional(),
+      output_format: z.string().max(40).optional(),
+      scope_id: z.string().max(40).optional(),
+    }),
+  },
+  async (args) => text(runTaskContextTool(engine, caller, args, { taskTypeHint: 'task_type' })),
 )
 
 // Knowledge tools: read and preview only, shared notes only, knowledge-read profile only (see knowledge/agent.ts).
