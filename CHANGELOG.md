@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Visual V3.4: mascot atlas and evolution sheet
+
+### Added
+
+- Mascot atlas (`mascot_atlas` block): every expression, pose and product state from approved catalog artwork only, backed by an approved, checksummed, previewable, non-example asset; each plate carries the recorded usage and do / don't notes. Draft artwork is never drawn: the internal edition lists it as "in review", the public edition leaves it out. A file still tagged `draft` stays out of the public edition. Designed empty state when nothing is approved.
+- Six-stage evolution sheet (`mascot_evolution` block): stages in order with approved stage artwork; missing or undefined stages are clear placeholders; the template's example configuration is labelled.
+- Studio: `GET /brands/<slug>/visual/mascot[/print[?edition=public]]`, read-only, en/fa/tr with RTL and Vazirmatn, ids only in details and the print appendix; one link on the Assets page's mascot card. Sync rebuilds caches written before the atlas existed.
+- Framework registry entry `MASCOT-MODEL-SHEET`; ILLUSTRATIVE fixture in `npm run visual:golden`.
+- Tests: `visual-mascot`, `studio-visual-mascot`, `studio-visual-mascot-browser`.
+
 ## Unreleased — Task Context MCP tool (GAP-02)
 
 ### Added
