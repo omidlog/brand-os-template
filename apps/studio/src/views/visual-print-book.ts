@@ -182,7 +182,7 @@ export interface BookInput {
   heights?: Heights
 }
 
-function digits(lang: VisualLang, n: number, min = 1): string {
+export function digits(lang: VisualLang, n: number, min = 1): string {
   return new Intl.NumberFormat(lang, { minimumIntegerDigits: min, useGrouping: false }).format(n)
 }
 
@@ -196,17 +196,17 @@ function typeRoleMm(block: TypographySpecimenBlock, role: TypographySpecimenBloc
   return Math.max(specimen, 52) + 4
 }
 
-interface FlowBuilder {
+export interface FlowBuilder {
   ctx: BlockContext
   notes: BookNote[]
 }
 
-function blockFlow(id: string, content: SafeHtml, mm: number, extra: { keepWithNext?: boolean; notes?: BookNote[] } = {}): BookFlow {
+export function blockFlow(id: string, content: SafeHtml, mm: number, extra: { keepWithNext?: boolean; notes?: BookNote[] } = {}): BookFlow {
   return { kind: 'block', id, html: content, mm, ...extra }
 }
 
 /** Notes registered while rendering a flow belong to that flow (and so to its page). */
-function take(builder: FlowBuilder): BookNote[] {
+export function take(builder: FlowBuilder): BookNote[] {
   return builder.notes.splice(0, builder.notes.length)
 }
 
@@ -220,11 +220,11 @@ function subHead(title: string, lead: string | null): SafeHtml {
   return html`<h3 class="vz-sub">${title}</h3>${lead ? html`<p class="vz-note">${lead}</p>` : ''}`
 }
 
-function colorFlows(block: ColorPaletteBlock, builder: FlowBuilder): BookFlow[] {
+export function colorFlows(block: ColorPaletteBlock, builder: FlowBuilder): BookFlow[] {
   const { ctx } = builder
   const t = ctx.cat.identity
   if (block.colors.length === 0) return [blockFlow('color:await', renderBlock(block, ctx), 165, { notes: take(builder) })]
-  const head = plateHead(1, 'vi-color', t.colorTitle, t.colorLead, html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>`, ctx.note!(block.source))
+  const head = plateHead(ctx.plateNum?.(1) ?? 1, 'vi-color', t.colorTitle, t.colorLead, html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>`, ctx.note!(block.source))
   const flows: BookFlow[] = [blockFlow('color:head', head, 34, { keepWithNext: true, notes: take(builder) }), blockFlow('color:roles', subHead(t.rolesTitle, null), 4, { keepWithNext: true })]
   chunks(block.colors, 4).forEach((row, i) => flows.push(blockFlow(`color:sw${i}`, swatchList(block, ctx, row), 47)))
   flows.push(blockFlow('color:combos', subHead(t.combinationsTitle, t.combinationsLead), 15, { keepWithNext: true }))
@@ -250,30 +250,30 @@ function colorFlows(block: ColorPaletteBlock, builder: FlowBuilder): BookFlow[] 
   return flows
 }
 
-function typeFlows(block: TypographySpecimenBlock, builder: FlowBuilder): BookFlow[] {
+export function typeFlows(block: TypographySpecimenBlock, builder: FlowBuilder): BookFlow[] {
   const { ctx } = builder
   const t = ctx.cat.identity
   if (block.roles.length === 0) return [blockFlow('type:await', renderBlock(block, ctx), 165, { notes: take(builder) })]
-  const head = plateHead(2, 'vi-type', t.typeTitle, t.typeLead, html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>`, ctx.note!(block.source))
+  const head = plateHead(ctx.plateNum?.(2) ?? 2, 'vi-type', t.typeTitle, t.typeLead, html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>`, ctx.note!(block.source))
   const flows: BookFlow[] = [blockFlow('type:head', head, 34, { keepWithNext: true, notes: take(builder) })]
   block.roles.forEach((role, i) => flows.push(blockFlow(`type:r${i}`, html`<ol class="vz-type-roles" start="${i + 1}">${typeRoleItem(block, role, ctx)}</ol>`, typeRoleMm(block, role))))
   flows.push(blockFlow('type:note', html`<p class="vz-note vz-type-note">${t.fontNote}</p>`, 13.5))
   return flows
 }
 
-function logoFlows(block: LogoConstructionBlock, builder: FlowBuilder): BookFlow[] {
+export function logoFlows(block: LogoConstructionBlock, builder: FlowBuilder): BookFlow[] {
   const ready = block.spec !== null && block.master !== null
   const content = renderBlock(block, builder.ctx)
   return [blockFlow(ready ? 'logo:plate' : 'logo:await', content, ready ? 205 : 165, { notes: take(builder) })]
 }
 
-function appendixFlows(doc: VisualDocument, citations: CitationListBlock | undefined, builder: FlowBuilder): BookFlow[] {
+export function appendixFlows(doc: Pick<VisualDocument, 'audience' | 'framework_refs'>, citations: Pick<CitationListBlock, 'items'> | undefined, builder: FlowBuilder, intro?: string): BookFlow[] {
   const { ctx } = builder
   const cat = ctx.cat
   const b = bookText(ctx.lang)
   const internal = doc.audience === 'internal'
   const flows: BookFlow[] = [
-    blockFlow('appendix:head', html`<header class="bk-appendix-head"><h2 class="bk-appendix-title" id="bk-sources-t">${cat.text.sourcesTitle}</h2><p class="vz-note">${cat.identity.sourcesIntro}</p></header>`, 24, { keepWithNext: true }),
+    blockFlow('appendix:head', html`<header class="bk-appendix-head"><h2 class="bk-appendix-title" id="bk-sources-t">${cat.text.sourcesTitle}</h2><p class="vz-note">${intro ?? cat.identity.sourcesIntro}</p></header>`, 24, { keepWithNext: true }),
   ]
   if (citations) {
     const rows = sourceRows(citations, ctx)
@@ -293,15 +293,20 @@ function appendixFlows(doc: VisualDocument, citations: CitationListBlock | undef
   return flows
 }
 
-function isBlock<T extends VisualBlock['type']>(type: T) {
+export function isBlock<T extends VisualBlock['type']>(type: T) {
   return (block: VisualBlock): block is Extract<VisualBlock, { type: T }> => block.type === type
 }
 
-/** The identity chapter as book sections, in reading order, with notes numbered across the book. */
-export function identitySections(input: BookInput): BookSection[] {
+/** Shell fields every book shares (the identity `VisualDocument` and the full-book document both have them). */
+export type BookMeta = Pick<VisualDocument, 'brand_name' | 'audience' | 'illustrative' | 'as_of'>
+
+/**
+ * The renderer context and note register of one book: notes are numbered across the whole book, and a note belongs
+ * to the flow that registered it. `doc` is the visual document the plates are drawn from.
+ */
+export function bookBuilder(input: { doc: VisualDocument; lang: VisualLang; assetUrl: (key: string) => string | null }, plateNum?: (n: number) => string): FlowBuilder {
   const { doc, lang } = input
   const cat = visualCatalog(lang)
-  const t = cat.identity
   const b = bookText(lang)
   const notes: BookNote[] = []
   let counter = 0
@@ -312,8 +317,17 @@ export function identitySections(input: BookInput): BookSection[] {
     notes.push({ n, body: footParts(icx, entry, extra) })
     return html`<sup class="bk-ref"><a href="#bk-note-${n}" id="bk-ref-${n}" aria-label="${fillVisual(b.noteRef, { n: digits(lang, n) })}">${digits(lang, n)}</a></sup>`
   }
-  const ctx: BlockContext = { cat, lang, mode: 'print', doc, idPrefix: 'bk', showNext: false, assetUrl: input.assetUrl, note }
-  const builder: FlowBuilder = { ctx, notes }
+  const ctx: BlockContext = { cat, lang, mode: 'print', doc, idPrefix: 'bk', showNext: false, assetUrl: input.assetUrl, note, ...(plateNum ? { plateNum } : {}) }
+  return { ctx, notes }
+}
+
+/** The identity chapter as book sections, in reading order, with notes numbered across the book. */
+export function identitySections(input: BookInput): BookSection[] {
+  const { doc, lang } = input
+  const cat = visualCatalog(lang)
+  const t = cat.identity
+  const b = bookText(lang)
+  const builder = bookBuilder(input)
   const color = doc.blocks.find(isBlock('color_palette'))
   const type = doc.blocks.find(isBlock('typography_specimen'))
   const logo = doc.blocks.find(isBlock('logo_construction'))
@@ -330,6 +344,9 @@ export function identitySections(input: BookInput): BookSection[] {
 // ---------------------------------------------------------------------------------------------------------------
 // Sheets
 
+/** More contents entries than this switch the contents page to its compact rows. */
+const COMPACT_TOC = 7
+
 /** Front matter: cover (1), imprint (2), contents (3). Body pages start at 4. */
 const FRONT = 3
 
@@ -343,7 +360,32 @@ interface SheetFrame {
   notes: BookNote[]
 }
 
-function sheet(input: BookInput, frame: SheetFrame): SafeHtml {
+/** What a book says about itself on its cover, imprint, contents and running heads. */
+export interface BookFrame {
+  /** Cover title, document title. */
+  title: string
+  /** Cover kicker line. */
+  kicker: string
+  /** Cover and contents lead. */
+  lead: string
+  /** Kicker above the contents title. */
+  contentsKicker: string
+  /** Verso running head (followed by the brand name). */
+  running: string
+  /** Imprint "Document" line. */
+  imprintDocument: string
+}
+
+/** Fields the shell (sheets, cover, imprint, contents) needs: the identity `BookInput` and the full book both fit. */
+export interface ShellInput {
+  doc: BookMeta
+  lang: VisualLang
+  commit: string | null
+  head: SafeHtml
+  toolbar: SafeHtml
+}
+
+function sheet(input: ShellInput, frame: SheetFrame): SafeHtml {
   const { doc, lang } = input
   const cat = visualCatalog(lang)
   const b = bookText(lang)
@@ -359,24 +401,23 @@ function sheet(input: BookInput, frame: SheetFrame): SafeHtml {
   </section>`
 }
 
-function mockStamp(input: BookInput): SafeHtml {
+function mockStamp(input: ShellInput): SafeHtml {
   const cat = visualCatalog(input.lang)
   if (!input.doc.illustrative) return html``
   return html`<p class="vz-mock bk-mock" role="note"><strong>${cat.text.illustrative}</strong> <span>${cat.text.illustrativeNote}</span></p>`
 }
 
-function cover(input: BookInput): SafeHtml {
+function cover(input: ShellInput, frame: BookFrame): SafeHtml {
   const { doc, lang } = input
   const cat = visualCatalog(lang)
-  const b = bookText(lang)
   const asOf = dateOnly(doc.as_of, lang)
   const edition = doc.audience === 'internal' ? cat.text.editionInternal : cat.text.editionPublic
   return html`<div class="bk-cover">
-    <p class="bk-cover-kicker"><span class="vz-kicker-bar" aria-hidden="true"></span>${b.coverKicker}</p>
+    <p class="bk-cover-kicker"><span class="vz-kicker-bar" aria-hidden="true"></span>${frame.kicker}</p>
     <div class="bk-cover-main">
       <p class="bk-cover-brand" dir="auto">${doc.brand_name}</p>
-      <h1 class="bk-cover-title">${cat.identity.chapterTitle}</h1>
-      <p class="bk-cover-lead">${cat.identity.chapterLead}</p>
+      <h1 class="bk-cover-title">${frame.title}</h1>
+      <p class="bk-cover-lead">${frame.lead}</p>
     </div>
     ${mockStamp(input)}
     <dl class="bk-cover-meta">
@@ -386,7 +427,7 @@ function cover(input: BookInput): SafeHtml {
   </div>`
 }
 
-function imprint(input: BookInput, pageCount: number): SafeHtml {
+function imprint(input: ShellInput, frame: BookFrame, pageCount: number): SafeHtml {
   const { doc, lang } = input
   const cat = visualCatalog(lang)
   const b = bookText(lang)
@@ -397,7 +438,7 @@ function imprint(input: BookInput, pageCount: number): SafeHtml {
     <h2 class="bk-imprint-title">${b.imprintTitle}</h2>
     <dl class="bk-imprint-list">
       <div><dt>${b.imprintBrand}</dt><dd dir="auto">${doc.brand_name}</dd></div>
-      <div><dt>${b.imprintDocument}</dt><dd>${b.bookTitle} · ${cat.identity.chapterTitle}</dd></div>
+      <div><dt>${b.imprintDocument}</dt><dd>${frame.imprintDocument}</dd></div>
       <div><dt>${b.imprintEdition}</dt><dd>${edition}</dd></div>
       <div><dt>${b.imprintAsOf}</dt><dd>${asOf ?? cat.text.asOfNone}</dd></div>
       <div><dt>${b.imprintCommit}</dt><dd><code class="vz-code" dir="ltr">${input.commit ? input.commit.slice(0, 12) : '—'}</code></dd></div>
@@ -410,14 +451,14 @@ function imprint(input: BookInput, pageCount: number): SafeHtml {
   </div>`
 }
 
-function contents(input: BookInput, sections: BookSection[], firstPage: Map<string, number>): SafeHtml {
+function contents(input: ShellInput, frame: BookFrame, sections: BookSection[], firstPage: Map<string, number>): SafeHtml {
   const { lang } = input
-  const cat = visualCatalog(lang)
   const b = bookText(lang)
-  return html`<div class="bk-contents">
-    <p class="vz-kicker"><span class="vz-kicker-bar" aria-hidden="true"></span>${cat.identity.chapterKicker}</p>
+  // A long contents (the full books) sets tighter rows so every entry fits on page 3; short books keep the airy rows.
+  return html`<div class="bk-contents${sections.length > COMPACT_TOC ? ' bk-contents--compact' : ''}">
+    <p class="vz-kicker"><span class="vz-kicker-bar" aria-hidden="true"></span>${frame.contentsKicker}</p>
     <h2 class="bk-contents-title">${b.contentsTitle}</h2>
-    <p class="bk-contents-lead">${cat.identity.chapterLead}</p>
+    <p class="bk-contents-lead">${frame.lead}</p>
     <nav class="bk-toc" aria-label="${b.contentsTitle}">
       <p class="bk-toc-col" aria-hidden="true"><span></span><span>${b.contentsPage}</span></p>
       <ol>${sections.map((section) => {
@@ -428,10 +469,16 @@ function contents(input: BookInput, sections: BookSection[], firstPage: Map<stri
   </div>`
 }
 
-/** Layout result: the pages and the first page of every section (the contents page numbers). */
-export function layoutIdentityBook(input: BookInput): { sections: BookSection[]; pages: BookPage[]; firstPage: Map<string, number>; pageCount: number } {
-  const sections = identitySections(input)
-  const pages = paginate(sections, input.heights)
+export interface BookLayout {
+  sections: BookSection[]
+  pages: BookPage[]
+  firstPage: Map<string, number>
+  pageCount: number
+}
+
+/** Paginates sections after the front matter: the pages and the first page of every section (contents numbers). */
+export function layoutBook(sections: BookSection[], heights?: Heights): BookLayout {
+  const pages = paginate(sections, heights)
   const firstPage = new Map<string, number>()
   pages.forEach((page, i) => {
     if (!firstPage.has(page.section.id)) firstPage.set(page.section.id, FRONT + 1 + i)
@@ -439,7 +486,12 @@ export function layoutIdentityBook(input: BookInput): { sections: BookSection[];
   return { sections, pages, firstPage, pageCount: FRONT + pages.length }
 }
 
-function documentShell(input: BookInput, title: string, bodyClass: string, main: SafeHtml): SafeHtml {
+/** Layout result: the pages and the first page of every section (the contents page numbers). */
+export function layoutIdentityBook(input: BookInput): BookLayout {
+  return layoutBook(identitySections(input), input.heights)
+}
+
+function documentShell(input: ShellInput, title: string, bodyClass: string, main: SafeHtml): SafeHtml {
   const cat = visualCatalog(input.lang)
   return html`<!doctype html>
 <html lang="${input.lang}" dir="${cat.dir}">
@@ -459,19 +511,17 @@ ${main}
 }
 
 /**
- * The Visual identity chapter as an A4 portrait book: cover, imprint, contents with page numbers, the plates with
- * running heads, numbered notes and folios, and the sources appendix. Folio digits follow the reader's language.
+ * Any book on the A4 portrait profile: cover, imprint, contents with page numbers, then the laid-out pages with
+ * running heads (book title on verso, section title on recto), numbered notes and folios in the reader's digits.
  */
-export function identityBookDocument(input: BookInput): { html: SafeHtml; pageCount: number } {
+export function renderBook(input: ShellInput, frame: BookFrame, layout: BookLayout): { html: SafeHtml; pageCount: number } {
   const { doc, lang } = input
-  const cat = visualCatalog(lang)
   const b = bookText(lang)
-  const layout = layoutIdentityBook(input)
-  const bookHead = html`${b.bookTitle} · <span dir="auto">${doc.brand_name}</span>`
+  const bookHead = html`${frame.running} · <span dir="auto">${doc.brand_name}</span>`
   const sheets: SafeHtml[] = [
-    sheet(input, { folio: 1, kind: 'cover', label: cat.identity.chapterTitle, runningHead: null, showFolio: false, body: cover(input), notes: [] }),
-    sheet(input, { folio: 2, kind: 'imprint', label: b.imprintTitle, runningHead: null, showFolio: false, body: imprint(input, layout.pageCount), notes: [] }),
-    sheet(input, { folio: 3, kind: 'contents', label: b.contentsTitle, runningHead: null, showFolio: true, body: contents(input, layout.sections, layout.firstPage), notes: [] }),
+    sheet(input, { folio: 1, kind: 'cover', label: frame.title, runningHead: null, showFolio: false, body: cover(input, frame), notes: [] }),
+    sheet(input, { folio: 2, kind: 'imprint', label: b.imprintTitle, runningHead: null, showFolio: false, body: imprint(input, frame, layout.pageCount), notes: [] }),
+    sheet(input, { folio: 3, kind: 'contents', label: b.contentsTitle, runningHead: null, showFolio: true, body: contents(input, frame, layout.sections, layout.firstPage), notes: [] }),
   ]
   layout.pages.forEach((page, i) => {
     const folio = FRONT + 1 + i
@@ -481,15 +531,28 @@ export function identityBookDocument(input: BookInput): { html: SafeHtml; pageCo
     sheets.push(sheet(input, { folio, kind: page.section.id === 'appendix' ? 'appendix' : 'plate', label: fillVisual(b.folio, { n: digits(lang, folio) }), runningHead: running, showFolio: true, body, notes: page.notes }))
   })
   const main = html`<main class="vz-print bk-book" id="main">${join(sheets)}</main>`
-  return { html: documentShell(input, `${cat.identity.chapterTitle} · ${doc.brand_name}`, 'vz-print-body vz-book-body bk-doc', main), pageCount: layout.pageCount }
+  return { html: documentShell(input, `${frame.title} · ${doc.brand_name}`, 'vz-print-body vz-book-body bk-doc', main), pageCount: layout.pageCount }
+}
+
+function identityFrame(lang: VisualLang): BookFrame {
+  const cat = visualCatalog(lang)
+  const b = bookText(lang)
+  return { title: cat.identity.chapterTitle, kicker: b.coverKicker, lead: cat.identity.chapterLead, contentsKicker: cat.identity.chapterKicker, running: b.bookTitle, imprintDocument: `${b.bookTitle} · ${cat.identity.chapterTitle}` }
+}
+
+/**
+ * The Visual identity chapter as an A4 portrait book: cover, imprint, contents with page numbers, the plates with
+ * running heads, numbered notes and folios, and the sources appendix. Folio digits follow the reader's language.
+ */
+export function identityBookDocument(input: BookInput): { html: SafeHtml; pageCount: number } {
+  return renderBook(input, identityFrame(input.lang), layoutIdentityBook(input))
 }
 
 /**
  * The galley for the measured pass: every flow at the text-block width, every note at the notes width, in one long
  * column. The export CLI measures it in Chrome and paginates the book with those heights.
  */
-export function identityBookGalley(input: BookInput): SafeHtml {
-  const sections = identitySections(input)
+export function bookGalley(input: ShellInput, sections: BookSection[]): SafeHtml {
   const all: SafeHtml[] = []
   const notes: BookNote[] = []
   for (const section of sections) {
@@ -506,4 +569,8 @@ export function identityBookGalley(input: BookInput): SafeHtml {
   const noteList = html`<aside class="bk-notes"><ol>${notes.map((note) => html`<li data-note="${note.n}"><a class="bk-note-num">${digits(lang, note.n)}</a><span class="bk-note-body vz-foot">${note.body}</span></li>`)}</ol></aside>`
   const main = html`<main class="vz-print bk-book" id="main"><section class="bk-sheet bk-recto bk-galley"><header class="bk-head"></header><div class="bk-body"><div class="bk-flows">${join(all)}</div>${noteList}</div><footer class="bk-folio"></footer></section></main>`
   return documentShell(input, 'galley', 'vz-print-body vz-book-body bk-doc', main)
+}
+
+export function identityBookGalley(input: BookInput): SafeHtml {
+  return bookGalley(input, identitySections(input))
 }
