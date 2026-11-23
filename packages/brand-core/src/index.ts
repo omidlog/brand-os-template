@@ -193,6 +193,12 @@ export { FinanceInputPathError, resolveFinanceInputPath, RESTRICTED_FINANCE_DIR,
 export { isMascotLifecycle, MASCOT_LIFECYCLE, migrateMascotCatalog, validateMascotLifecycle } from './mascot-lifecycle.js'
 export type { MascotArtwork, MascotLifecycle, MascotMigration } from './mascot-lifecycle.js'
 export * from './knowledge/index.js'
+/**
+ * Task Context Engine (`docs-internal/TASK_CONTEXT.md`). Exported from the main entry on purpose: the Visual
+ * Blueprint PR adds its own subpath lines to tsconfig.json and packages/brand-core/package.json, and this slice
+ * stays out of those two files.
+ */
+export * from './task-context/index.js'
 export {
   applyTemplateUpdate,
   classifyPath,
