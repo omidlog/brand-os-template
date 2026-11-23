@@ -69,6 +69,7 @@ function sort(questions: FieldQuestion[]): FieldQuestion[] {
 export function chooseFollowUp(ctx: CoachContext, question: FieldQuestion, locale: Locale = 'en'): FollowUpChoice {
   const assessment = assessAnswer(ctx, question, locale)
   const base = { criterion: null, canonicalId: null, deficit: null, assessment } as const
+  if (assessment.findings[0]?.code === 'question_not_applicable') return { ...base, kind: 'none', noneReason: 'question_inapplicable' }
   if (!assessment.answer) return { ...base, kind: 'none', noneReason: 'answer_open' }
   if (assessment.settled) return { ...base, kind: 'none', noneReason: 'answer_settled' }
 

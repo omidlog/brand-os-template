@@ -317,23 +317,26 @@ export const STATUS_NAMES: Record<Locale, Record<CoachStatus, string>> = {
 }
 
 /** Reasons the coach has nothing to ask. Interpolated into `follow_up_none`. */
-export const NO_FOLLOW_UP_REASONS = ['answer_settled', 'answer_open', 'quality_ready', 'already_deferred'] as const
+export const NO_FOLLOW_UP_REASONS = ['question_inapplicable', 'answer_settled', 'answer_open', 'quality_ready', 'already_deferred'] as const
 export type NoFollowUpReason = (typeof NO_FOLLOW_UP_REASONS)[number]
 
 export const NO_FOLLOW_UP_TEXT: Record<Locale, Record<NoFollowUpReason, string>> = {
   en: {
+    question_inapplicable: 'the question does not apply to this brand under its current configuration and answers.',
     answer_settled: 'you recorded an explicit decision (unknown, skip or not relevant), and the coach never reopens one.',
     answer_open: 'the question has no live answer yet, so a follow-up would come before the question itself.',
     quality_ready: 'the answer passes every criterion the coach can check, so one more question would only add fatigue.',
     already_deferred: 'the question that would close the gap is on your "decide later" list, which the coach treats as a decline.',
   },
   fa: {
+    question_inapplicable: 'این پرسش با تنظیمات و پاسخ‌های فعلی این برند مرتبط نیست.',
     answer_settled: 'شما تصمیم صریحی ثبت کرده‌اید (unknown، skip یا نامرتبط) و مربی هرگز آن را بازنمی‌کند.',
     answer_open: 'این پرسش هنوز پاسخ فعالی ندارد؛ پس پرسش تکمیلی پیش از خودِ پرسش می‌آمد.',
     quality_ready: 'پاسخ همهٔ معیارهای قابل‌سنجش مربی را می‌گذراند؛ یک پرسش بیشتر فقط خستگی می‌افزاید.',
     already_deferred: 'پرسشی که این شکاف را می‌بست در فهرست «بعداً تصمیم می‌گیرم» شماست و مربی آن را انصراف می‌داند.',
   },
   tr: {
+    question_inapplicable: 'soru, bu markanın mevcut yapılandırması ve yanıtlarıyla geçerli değil.',
     answer_settled: 'açık bir karar kaydettiniz (unknown, skip ya da ilgisiz) ve koç bunu asla yeniden açmaz.',
     answer_open: 'sorunun henüz canlı bir yanıtı yok; ek soru, sorunun kendisinden önce gelmiş olurdu.',
     quality_ready: 'yanıt koçun denetleyebildiği tüm ölçütleri geçiyor; bir soru daha yalnızca yorgunluk katardı.',
@@ -423,6 +426,9 @@ export function coachI18nErrors(): string[] {
     }
     for (const status of COACH_STATUSES) {
       if (!STATUS_NAMES[locale][status]?.trim()) errors.push(`coach status name ${locale}.${status} is missing`)
+    }
+    for (const reason of NO_FOLLOW_UP_REASONS) {
+      if (!NO_FOLLOW_UP_TEXT[locale][reason]?.trim()) errors.push(`coach no-follow-up reason ${locale}.${reason} is missing`)
     }
     for (const key of Object.keys(COACH_UI.en)) {
       if (!COACH_UI[locale][key]?.trim()) errors.push(`coach ui string ${locale}.${key} is missing`)

@@ -168,7 +168,11 @@ test('eligibility: a question the configuration turned off is not applicable, no
   const result = run(brand, 'quality_review', mascot.id)
   assert.equal(result.status, 'not_applicable')
   assert.deepEqual(codes(result), ['question_not_applicable'])
-  assert.deepEqual(codes(run(brand, 'follow_up', mascot.id)), ['follow_up_none'])
+  assert.ok(result.findings[0]!.reason.includes('does not apply'))
+  const followUp = run(brand, 'follow_up', mascot.id)
+  assert.deepEqual(codes(followUp), ['follow_up_none'])
+  assert.equal(followUp.status, 'not_applicable')
+  assert.ok(followUp.findings[0]!.reason.includes('does not apply to this brand'), 'the follow-up says it does not apply, not that the answer is missing')
 })
 
 test('quality: a vague short answer needs clarification and names the criterion, not the words', () => {
