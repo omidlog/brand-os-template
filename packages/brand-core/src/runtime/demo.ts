@@ -102,7 +102,8 @@ export function createDemoBrand(): DemoBrand {
       if (approved.kind !== 'recorded') throw new RuntimeError('refused', `demo fact ${id} was not approved (${approved.kind})`)
     }
 
-    // One approved logo asset; no model_use recorded, so it is `not_allowed` by default.
+    // One approved logo asset; no model_use recorded, so it is `not_allowed` by default. The demo brand owns its own
+    // mark, and the licence says so: the Visual DNA resolver withholds an approved asset with no recorded licence.
     const logoPath = 'brand/assets/logo/synthetic-demo-mark.svg'
     fs.mkdirSync(path.join(root, path.dirname(logoPath)), { recursive: true })
     fs.writeFileSync(path.join(root, logoPath), DEMO_LOGO_SVG)
@@ -112,7 +113,7 @@ export function createDemoBrand(): DemoBrand {
     manifest.schema_version = manifest.schema_version ?? 1
     manifest.assets = [
       ...(manifest.assets ?? []),
-      { id: DEMO_LOGO_ID, name: 'Synthetic demo mark', status: 'approved', path: logoPath, present: true, visibility: 'internal', checksum_sha256: sha, approved_sha256: sha, approved_by: 'owner', approved_at: DEMO_NOW.toISOString() },
+      { id: DEMO_LOGO_ID, name: 'Synthetic demo mark', status: 'approved', path: logoPath, present: true, visibility: 'internal', license: 'Owned by the synthetic demo brand (fixture, not a real licence)', checksum_sha256: sha, approved_sha256: sha, approved_by: 'owner', approved_at: DEMO_NOW.toISOString() },
     ]
     fs.writeFileSync(manifestFile, YAML.stringify(manifest))
 
