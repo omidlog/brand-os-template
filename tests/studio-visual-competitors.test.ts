@@ -43,10 +43,10 @@ test('Studio: the competitor comparison matrix is read-only, shared-file-only, d
     await s.studio.provisioning.settled()
     await s.studio.sync.settled()
 
-    // 1. Nothing shared: one link from the Business model page, a designed empty matrix with the owner's steps.
-    const canvas = await owner.page(`/brands/${SLUG}/visual`)
-    assert.equal((canvas.text.match(new RegExp(`href="/brands/${SLUG}/visual/competitors"`, 'g')) ?? []).length, 1)
-    let page = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    // 1. Nothing shared: one link from the Business model page (besides the sidebar entry), a designed empty matrix with the owner's steps.
+    const canvas = await owner.page(`/brands/${SLUG}/strategy/business-model`)
+    assert.equal((canvas.text.split('<main')[1]!.match(new RegExp(`href="/brands/${SLUG}/market/competitors"`, 'g')) ?? []).length, 1)
+    let page = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Competitor comparison matrix/)
     assert.match(page.text, /No competitor landscape shared yet/)
@@ -65,7 +65,7 @@ test('Studio: the competitor comparison matrix is read-only, shared-file-only, d
       write('brand/competitive/candidates/cmp_00000000-0000-4000-8000-0000000000ff.json', JSON.stringify({ status_reason: DECOY }))
     })
     await s.studio.sync.refresh(SLUG)
-    page = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    page = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.equal(page.res.status, 200)
     assert.equal(page.text.includes(DECOY), false, 'nothing else under brand/competitive reaches Studio')
     assert.match(page.text, /class="vz-cmp-table"/)
@@ -96,42 +96,42 @@ test('Studio: the competitor comparison matrix is read-only, shared-file-only, d
     assert.equal(/<form[^>]*method="post"/i.test(page.text.split('<main')[1] ?? ''), false, 'no write form')
 
     // 3. Print view on the existing print path: opener, landscape matrix, prices, sources. Internal only.
-    const print = await owner.page(`/brands/${SLUG}/visual/competitors/print`)
+    const print = await owner.page(`/brands/${SLUG}/market/competitors/print`)
     assert.equal(print.res.status, 200)
     assert.match(print.text, /vz-book-body/)
     assert.equal((print.text.match(/class="vz-page vz-page--book/g) ?? []).length, 4)
     assert.match(print.text, /vz-page--cmp-wide/)
     assert.match(print.text, /Internal edition only/)
     assert.equal(/\sstyle="/.test(print.text), false)
-    assert.equal((await owner.page(`/brands/${SLUG}/visual/competitors/print?edition=public`)).text.includes('Public edition'), false, 'no public edition')
+    assert.equal((await owner.page(`/brands/${SLUG}/market/competitors/print?edition=public`)).text.includes('Public edition'), false, 'no public edition')
 
     // 4. Read-only: no other method, no other path; guests are sent to sign in.
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      for (const pathname of [`/brands/${SLUG}/visual/competitors`, `/brands/${SLUG}/visual/competitors/print`]) {
+      for (const pathname of [`/brands/${SLUG}/market/competitors`, `/brands/${SLUG}/market/competitors/print`]) {
         const res = await owner.request(method, pathname, { form: { _csrf: 'x' } })
         assert.ok([404, 405].includes(res.status), `${method} ${pathname} ${res.status}`)
       }
     }
     assert.equal((await owner.get(`/brands/${SLUG}/visual/competitors/share`)).status, 404)
-    assert.equal((await new Client(s.url).get(`/brands/${SLUG}/visual/competitors`)).status, 302)
-    assert.equal((await owner.page(`/brands/${SLUG}/visual/identity`)).res.status, 200, 'the identity chapter is untouched')
+    assert.equal((await new Client(s.url).get(`/brands/${SLUG}/market/competitors`)).status, 302)
+    assert.equal((await owner.page(`/brands/${SLUG}/brand/book/visual-identity`)).res.status, 200, 'the identity chapter is untouched')
 
     // 5. Persian (RTL, Vazirmatn) and Turkish.
-    await owner.get(`/brands/${SLUG}/visual/competitors?lang=fa`)
-    const fa = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    await owner.get(`/brands/${SLUG}/market/competitors?lang=fa`)
+    const fa = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /ماتریس مقایسهٔ رقبا/)
     assert.match(fa.text, /قیمت‌های منتشرشده/)
-    await owner.get(`/brands/${SLUG}/visual/competitors?lang=tr`)
-    assert.match((await owner.page(`/brands/${SLUG}/visual/competitors`)).text, /Rakip karşılaştırma matrisi/)
-    await owner.get(`/brands/${SLUG}/visual/competitors?lang=en`)
+    await owner.get(`/brands/${SLUG}/market/competitors?lang=tr`)
+    assert.match((await owner.page(`/brands/${SLUG}/market/competitors`)).text, /Rakip karşılaştırma matrisi/)
+    await owner.get(`/brands/${SLUG}/market/competitors?lang=en`)
 
     // 6. A tampered file (an extra field) is withheld as a whole, with the reason.
     editOutsideStudio(s, SLUG, (_engine, root) => {
       fs.writeFileSync(path.join(root, SHARED_LANDSCAPE_PATH), JSON.stringify({ ...shared(), quote: DECOY }))
     })
     await s.studio.sync.refresh(SLUG)
-    page = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    page = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.match(page.text, /The shared landscape was not shown/)
     assert.match(page.text, /not in the expected shape/)
     assert.equal(page.text.includes(DECOY), false)

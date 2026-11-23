@@ -29,6 +29,22 @@
 - Studio: `GET /brands/<slug>/visual/mascot[/print[?edition=public]]`, read-only, en/fa/tr with RTL and Vazirmatn, ids only in details and the print appendix; one link on the Assets page's mascot card. Sync rebuilds caches written before the atlas existed.
 - Framework registry entry `MASCOT-MODEL-SHEET`; ILLUSTRATIVE fixture in `npm run visual:golden`.
 - Tests: `visual-mascot`, `studio-visual-mascot`, `studio-visual-mascot-browser`.
+
+## Unreleased — Visual V2.4: grouped Studio nav, stable routes, Brand Book editorial reader
+
+### Added
+
+- Studio sidebar grouped by intent (R1): **Command**, **Strategy Lab**, **Brand Studio**, **Market & Content**, **Publishing & Governance**, with standard page names (Business Model Canvas, Business plan, Marketing plan, Competitor analysis). Every page stays in the navigation; the competitor matrix and the Coach notes card (an Overview anchor) are now listed too. Group labels en/fa/tr.
+- Stable brand routes (R2): `/brands/<slug>/strategy/business-model`, `/strategy/business-plan`, `/brand/book`, `/brand/book/visual-identity`, `/brand/design-system`, `/brand/assets`, `/brand/creative-decisions`, `/brand/personal`, `/market/marketing-plan`, `/market/competitors`, `/market/content-calendar`, `/market/knowledge`, `/governance/history`, `/governance/github` (print views keep `/print`).
+- Brand Book page as an editorial chapter reader (R3, `apps/studio/src/views/visual-book.ts`): book opener with contents, chapter openers with numbers in the reader's digits, approved values as prose, do/don't spreads, the V2.1 colour/type/logo plates as specimens, version footers (approved version, commit, date), technical ids only under **Source ids**. Drafts are labelled *Draft, not approved* and never shown as published; the draft tag on a logo master stays visible to the owner.
+- Tests: `studio-visual-book` (reader), redirect and nav test in `studio-server`, reader browser checks in `studio-visual-browser` (four widths, en/fa, light/dark, AA contrast).
+
+### Changed
+
+- The old flat paths answer **301** to the stable paths for one release (query kept; `/business?doc=marketing-plan` → `/market/marketing-plan`). Auth is unchanged: guests go to `/login?next=<path>`, unregistered slugs get 404. No new non-GET route.
+- The V3.4 mascot atlas moves to the stable path `/brands/<slug>/brand/mascot[/print]` (Brand Studio); `/visual/mascot[/print]` answers 301 like the other old paths.
+- Business OS is split into **Business plan** (Strategy Lab) and **Marketing plan** (Market & Content); both keep `documentView`, as do personal documents.
+
 ## Unreleased — Production readiness and quality gate (fixes pack PR-E, GAP-05)
 
 ### Added

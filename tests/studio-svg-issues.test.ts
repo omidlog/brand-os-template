@@ -48,7 +48,7 @@ test('Studio names the SVG problem and the core command that fixes it, instead o
     assert.equal(figma.unavailable_detail, null)
     assert.equal(JSON.stringify(synced).includes('alert(1)'), false)
 
-    const page = await client.page('/brands/acme-learning/assets')
+    const page = await client.page('/brands/acme-learning/brand/assets')
     assert.equal(page.res.status, 200)
     assert.ok(page.text.includes(escapeHtml('SVG has a <style> block')))
     assert.ok(page.text.includes('npm run brand:assets -- normalize asset.mascot.illustrator'))

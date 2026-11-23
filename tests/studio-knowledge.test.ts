@@ -127,10 +127,10 @@ async function withStudio(fn: (s: RunningStudio, owner: Client) => Promise<void>
 test('Studio: the Knowledge page shows merged shared notes read-only, labelled as unverified ideas, and nothing else', async () => {
   await withStudio(async (s, owner) => {
     // Before any shared note: no navigation entry, an honest empty page.
-    const empty = await owner.page('/brands/acme-learning/knowledge')
+    const empty = await owner.page('/brands/acme-learning/market/knowledge')
     assert.equal(empty.res.status, 200)
     assert.match(empty.text, /No shared notes on this commit/)
-    assert.equal((await owner.page('/brands/acme-learning')).text.includes('href="/brands/acme-learning/knowledge"'), false)
+    assert.equal((await owner.page('/brands/acme-learning')).text.includes('href="/brands/acme-learning/market/knowledge"'), false)
 
     const a = note('acme-learning', { title: 'Pilot <script>alert(1)</script> rank', tags: ['mascot'], question_ids: ['brand.strategy.purpose'], status: 'triaged' }, 'After seven days <img src=https://evil.example/x.png onerror=alert(1)> promote the pilot.\nSecond line.')
     const b = note('acme-learning', { title: 'Streak recap', tags: ['retention'], links: [{ id: a.id, relationship: 'related' }] }, `See [[${a.id}]] and [[kn_not-projected]].`)
@@ -154,7 +154,7 @@ test('Studio: the Knowledge page shows merged shared notes read-only, labelled a
     await s.studio.sync.refresh('beta-brand')
     assert.equal(s.studio.sync.get('acme-learning').status.sha, sha)
 
-    const list = await owner.page('/brands/acme-learning/knowledge')
+    const list = await owner.page('/brands/acme-learning/market/knowledge')
     assert.equal(list.res.status, 200)
     assert.match(list.text, /Unverified idea/)
     assert.match(list.text, /Not an approved brand fact/)
@@ -163,55 +163,55 @@ test('Studio: the Knowledge page shows merged shared notes read-only, labelled a
     assert.equal(/<script>alert|<img src=https:\/\/evil/.test(list.text), false, 'note text is escaped, never markup')
     assert.match(list.text, /<form class="kn-filters" method="get"/)
     assert.equal(/<form[^>]*method="post"[^>]*action="\/brands\/acme-learning\/knowledge/i.test(list.text), false)
-    assert.match((await owner.page('/brands/acme-learning')).text, /href="\/brands\/acme-learning\/knowledge"/, 'the navigation entry appears once notes exist')
+    assert.match((await owner.page('/brands/acme-learning')).text, /href="\/brands\/acme-learning\/market\/knowledge"/, 'the navigation entry appears once notes exist')
     assert.match(list.text, /Belongs to another brand/, 'a note for another brand is withheld with a reason')
 
-    const detail = await owner.page(`/brands/acme-learning/knowledge?note=${a.id}`)
+    const detail = await owner.page(`/brands/acme-learning/market/knowledge?note=${a.id}`)
     assert.equal(detail.res.status, 200)
     assert.match(detail.text, /&lt;img src=https:\/\/evil\.example\/x\.png onerror=alert\(1\)&gt;/)
-    assert.match(detail.text, new RegExp(`href="/brands/acme-learning/knowledge\\?note=${b.id}"`), 'backlink from the other shared note')
-    assert.match(detail.text, /href="\/brands\/acme-learning\/brand-book"/, 'a linked question points at its brand section')
+    assert.match(detail.text, new RegExp(`href="/brands/acme-learning/market/knowledge\\?note=${b.id}"`), 'backlink from the other shared note')
+    assert.match(detail.text, /href="\/brands\/acme-learning\/brand\/book"/, 'a linked question points at its brand section')
     assert.match(detail.text, new RegExp(`https://github\\.com/${OWNER}/acme-learning/blob/${sha}/brand/knowledge/shared/${a.id}\\.md`))
     assert.match(detail.text, new RegExp(`show --id ${a.id} --json`), 'starter prompt names the note id')
-    const linked = await owner.page(`/brands/acme-learning/knowledge?note=${b.id}`)
-    assert.match(linked.text, new RegExp(`href="/brands/acme-learning/knowledge\\?note=${a.id}"`))
+    const linked = await owner.page(`/brands/acme-learning/market/knowledge?note=${b.id}`)
+    assert.match(linked.text, new RegExp(`href="/brands/acme-learning/market/knowledge\\?note=${a.id}"`))
     assert.match(linked.text, /\[\[kn_not-projected\]\]/, 'a link to a note Studio does not have stays plain text')
 
-    const search = await owner.page('/brands/acme-learning/knowledge?q=recap')
+    const search = await owner.page('/brands/acme-learning/market/knowledge?q=recap')
     assert.match(search.text, /1 matching notes/)
-    const tag = await owner.page('/brands/acme-learning/knowledge?tag=mascot')
+    const tag = await owner.page('/brands/acme-learning/market/knowledge?tag=mascot')
     assert.match(tag.text, /Pilot &lt;script&gt;/)
     assert.equal(tag.text.includes('Streak recap'), false)
 
     for (const query of ['?note=kn_does-not-exist', '?note=..%2F..%2Fetc%2Fpasswd', `?note=${other.id}`, '?note=kn_local-one']) {
-      assert.equal((await owner.page(`/brands/acme-learning/knowledge${query}`)).res.status, 404, query)
+      assert.equal((await owner.page(`/brands/acme-learning/market/knowledge${query}`)).res.status, 404, query)
     }
-    assert.equal((await owner.page(`/brands/beta-brand/knowledge?note=${a.id}`)).res.status, 404, 'another brand cannot show this note')
-    assert.equal((await owner.page(`/brands/beta-brand/knowledge?note=${other.id}`)).res.status, 200)
+    assert.equal((await owner.page(`/brands/beta-brand/market/knowledge?note=${a.id}`)).res.status, 404, 'another brand cannot show this note')
+    assert.equal((await owner.page(`/brands/beta-brand/market/knowledge?note=${other.id}`)).res.status, 200)
 
     const everything = [list.text, detail.text, linked.text, search.text, fs.readFileSync(path.join(s.config.dataDir, 'cache', 'acme-learning', 'state.json'), 'utf8')].join('\n')
     for (const canary of ['LOCAL-CANARY', 'CACHE-CANARY', 'README-CANARY', 'NESTED-CANARY', 'CASE-CANARY', 'BETA-ONLY']) assert.equal(everything.includes(canary), false, canary)
 
     // Read only: no write method is routed for the page.
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      const res = await owner.request(method, '/brands/acme-learning/knowledge', { form: { _csrf: 'x' } })
+      const res = await owner.request(method, '/brands/acme-learning/market/knowledge', { form: { _csrf: 'x' } })
       assert.ok([404, 405].includes(res.status), `${method} ${res.status}`)
     }
     // Guests: identical redirect for a real and a forged brand.
     const guest = new Client(s.url)
-    for (const pathname of ['/brands/acme-learning/knowledge', `/brands/acme-learning/knowledge?note=${a.id}`, '/brands/zzz-forged/knowledge']) {
+    for (const pathname of ['/brands/acme-learning/market/knowledge', `/brands/acme-learning/market/knowledge?note=${a.id}`, '/brands/zzz-forged/market/knowledge']) {
       const res = await guest.get(pathname)
       assert.equal(res.status, 302, pathname)
       assert.equal((await res.text()).includes('Pilot'), false)
     }
 
     // Persian and Turkish catalogs, right-to-left for Persian.
-    await owner.get('/brands/acme-learning/knowledge?lang=fa')
-    const fa = await owner.page('/brands/acme-learning/knowledge')
+    await owner.get('/brands/acme-learning/market/knowledge?lang=fa')
+    const fa = await owner.page('/brands/acme-learning/market/knowledge')
     assert.match(fa.text, /dir="rtl"/)
     assert.match(fa.text, /ایده‌ی تأییدنشده/)
-    await owner.get('/brands/acme-learning/knowledge?lang=tr')
-    assert.match((await owner.page('/brands/acme-learning/knowledge')).text, /Doğrulanmamış fikir/)
+    await owner.get('/brands/acme-learning/market/knowledge?lang=tr')
+    assert.match((await owner.page('/brands/acme-learning/market/knowledge')).text, /Doğrulanmamış fikir/)
   })
 })
 

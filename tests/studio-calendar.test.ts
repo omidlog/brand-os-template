@@ -108,10 +108,10 @@ test('Studio: the Content calendar page shows merged shared weeks read-only, esc
     await s.studio.provisioning.settled()
     await s.studio.sync.settled()
 
-    const empty = await owner.page('/brands/acme-learning/calendar')
+    const empty = await owner.page('/brands/acme-learning/market/content-calendar')
     assert.equal(empty.res.status, 200)
     assert.match(empty.text, /No shared calendar weeks on this commit/)
-    assert.equal((await owner.page('/brands/acme-learning')).text.includes('href="/brands/acme-learning/calendar"'), false, 'no nav entry before anything is shared')
+    assert.equal((await owner.page('/brands/acme-learning')).text.includes('href="/brands/acme-learning/market/content-calendar"'), false, 'no nav entry before anything is shared')
 
     s.github.pushEdit(OWNER, 'acme-learning', (tree) => {
       tree.set('brand/content-calendar/shared/wk-2026-11-23.json', week('acme-learning', '2026-11-23'))
@@ -123,7 +123,7 @@ test('Studio: the Content calendar page shows merged shared weeks read-only, esc
     })
     await s.studio.sync.refresh('acme-learning')
 
-    const page = await owner.page('/brands/acme-learning/calendar')
+    const page = await owner.page('/brands/acme-learning/market/content-calendar')
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Content calendar/)
     assert.match(page.text, /Owner-approved/)
@@ -135,24 +135,24 @@ test('Studio: the Content calendar page shows merged shared weeks read-only, esc
     assert.match(page.text, /Cadence not decided/)
     assert.match(page.text, /Medium confidence/)
     assert.match(page.text, /Belongs to another brand/, 'another brand’s file is withheld with a reason')
-    assert.match((await owner.page('/brands/acme-learning')).text, /href="\/brands\/acme-learning\/calendar"/, 'nav entry once weeks exist')
+    assert.match((await owner.page('/brands/acme-learning')).text, /href="\/brands\/acme-learning\/market\/content-calendar"/, 'nav entry once weeks exist')
     const everything = [page.text, fs.readFileSync(path.join(s.config.dataDir, 'cache', 'acme-learning', 'state.json'), 'utf8')].join('\n')
     for (const canary of ['PRIVATE-WEEK-CANARY', 'DRAFT-CANARY', 'NOTES-CANARY']) assert.equal(everything.includes(canary), false, canary)
     assert.equal(/<form[^>]*method="post"/i.test(page.text.split('<main')[1] ?? ''), false, 'no write form in the page body')
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      const res = await owner.request(method, '/brands/acme-learning/calendar', { form: { _csrf: 'x' } })
+      const res = await owner.request(method, '/brands/acme-learning/market/content-calendar', { form: { _csrf: 'x' } })
       assert.ok([404, 405].includes(res.status), `${method} ${res.status}`)
     }
     const guest = new Client(s.url)
-    const res = await guest.get('/brands/acme-learning/calendar')
+    const res = await guest.get('/brands/acme-learning/market/content-calendar')
     assert.equal(res.status, 302)
     assert.equal((await res.text()).includes('Hook'), false)
-    await owner.get('/brands/acme-learning/calendar?lang=fa')
-    const fa = await owner.page('/brands/acme-learning/calendar')
+    await owner.get('/brands/acme-learning/market/content-calendar?lang=fa')
+    const fa = await owner.page('/brands/acme-learning/market/content-calendar')
     assert.match(fa.text, /dir="rtl"/)
     assert.match(fa.text, /تقویم محتوا/)
-    await owner.get('/brands/acme-learning/calendar?lang=tr')
-    assert.match((await owner.page('/brands/acme-learning/calendar')).text, /İçerik takvimi/)
+    await owner.get('/brands/acme-learning/market/content-calendar?lang=tr')
+    assert.match((await owner.page('/brands/acme-learning/market/content-calendar')).text, /İçerik takvimi/)
   } finally {
     await s.close()
   }

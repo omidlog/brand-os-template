@@ -134,12 +134,12 @@ async function contrastFailures(scope: string): Promise<string[]> {
 
 test('mascot atlas: three widths, en and fa, light and dark: no overflow, clean CSP, accessible, AA contrast', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual/mascot?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/brand/mascot?lang=${lang}`)
     for (const scheme of ['light', 'dark'] as const) {
       await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
       for (const width of [1440, 768, 390]) {
         await page.viewport(width, 900, width < 500)
-        await page.goto(`${s.url}/brands/${SLUG}/visual/mascot`)
+        await page.goto(`${s.url}/brands/${SLUG}/brand/mascot`)
         await settle()
         const where = `mascot ${lang} ${scheme} ${width}px`
         assert.equal(await page.eval<string>('document.documentElement.dir'), lang === 'fa' ? 'rtl' : 'ltr', where)
@@ -169,8 +169,8 @@ test('mascot atlas: three widths, en and fa, light and dark: no overflow, clean 
 
 test('mascot print view: A4 portrait book pages, fonts embedded', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual/mascot?lang=${lang}`)
-    await page.goto(`${s.url}/brands/${SLUG}/visual/mascot/print`)
+    await page.goto(`${s.url}/brands/${SLUG}/brand/mascot?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/brand/mascot/print`)
     await settle()
     const result = await page.send('Page.printToPDF', { preferCSSPageSize: true, printBackground: true }, 60_000)
     const pdf = Buffer.from(String(result.data), 'base64')

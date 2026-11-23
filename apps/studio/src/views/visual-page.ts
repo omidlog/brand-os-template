@@ -4,7 +4,7 @@ import { studioAssets } from '../static-assets.js'
 import { banner, emptyState } from './components.js'
 import { html, join, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
-import type { BrandView, ViewContext } from './layout.js'
+import { brandPath, type BrandView, type ViewContext } from './layout.js'
 import { brandHeader, brandShell } from './pages.js'
 import { renderBlock } from './visual-registry.js'
 import { chapterOpener, frameworkNote } from './visual-identity.js'
@@ -39,7 +39,7 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
   if (!visual.bmc.applies) return shell(html`${header}${emptyState({ icon: 'briefcase', title: cat.text.notApplicableTitle, body: cat.text.notApplicableBody })}`)
   const doc = visual.bmc.internal
   const canvas = canvasBlock(doc)
-  const base = `/brands/${view.record.slug}/visual`
+  const base = brandPath(view.record.slug, 'visual')
   const asOf = doc.as_of ? new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeZone: 'UTC' }).format(Date.parse(doc.as_of)) : null
   const body = html`${header}
     <div class="vz-screen">
@@ -76,7 +76,7 @@ export function visualPrintPage(ctx: ViewContext, view: BrandView, edition: 'int
   if (!visual || !visual.bmc.applies) return null
   const doc = edition === 'public' ? visual.bmc.public : visual.bmc.internal
   const toolbar = html`<nav class="vz-print-toolbar" aria-label="${cat.text.printTitle}">
-    <a class="vz-print-back" href="/brands/${view.record.slug}/visual">${icon('chevron', 'vz-back-icon')}<span>${cat.text.backToCanvas}</span></a>
+    <a class="vz-print-back" href="${brandPath(view.record.slug, 'visual')}">${icon('chevron', 'vz-back-icon')}<span>${cat.text.backToCanvas}</span></a>
     <p class="vz-print-hint">${cat.text.printHint} ${cat.text.printOnly}</p>
     <button type="button" class="vz-print-button" data-print hidden>${cat.text.printButton}</button>
   </nav>`
@@ -109,7 +109,7 @@ export function identityPage(ctx: ViewContext, view: BrandView, flash: string | 
   if (visual === undefined) return shell(banner({ tone: 'info', body: cat.text.pending }))
   if (visual === null || !visual.identity) return shell(banner({ tone: 'warning', body: cat.text.unavailable }))
   const doc: VisualDocument = visual.identity.internal
-  const base = `/brands/${view.record.slug}/visual/identity`
+  const base = brandPath(view.record.slug, 'brand-book', '/visual-identity')
   const blockCtx = { cat, lang, mode: 'screen' as const, doc, idPrefix: 'vi', showNext: true, assetUrl: assetUrlFor(view.record.slug) }
   const plates = doc.blocks.filter((block) => block.type !== 'citation_list')
   const citations = doc.blocks.find((block): block is CitationListBlock => block.type === 'citation_list')
@@ -146,7 +146,7 @@ export function identityPrintPage(ctx: ViewContext, view: BrandView, edition: 'i
   if (!identity) return null
   const doc = edition === 'public' ? identity.public : identity.internal
   const toolbar = html`<nav class="vz-print-toolbar" aria-label="${cat.identity.printTitle}">
-    <a class="vz-print-back" href="/brands/${view.record.slug}/visual/identity">${icon('chevron', 'vz-back-icon')}<span>${cat.identity.backToChapter}</span></a>
+    <a class="vz-print-back" href="${brandPath(view.record.slug, 'brand-book', '/visual-identity')}">${icon('chevron', 'vz-back-icon')}<span>${cat.identity.backToChapter}</span></a>
     <p class="vz-print-hint">${bookText(lang).printHint} ${cat.text.printOnly}</p>
     <button type="button" class="vz-print-button" data-print hidden>${cat.text.printButton}</button>
   </nav>`
