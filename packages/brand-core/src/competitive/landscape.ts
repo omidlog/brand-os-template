@@ -117,7 +117,7 @@ export interface Landscape {
   authorizes: []
 }
 
-function refState(evidence: EvidenceSet, ref: EvidenceRef): { state: RefState; item: EvidenceItem | null } {
+export function refState(evidence: EvidenceSet, ref: EvidenceRef): { state: RefState; item: EvidenceItem | null } {
   const item = evidence.items.find((candidate) => candidate.note.id === ref.note_id) ?? null
   if (!item) return { state: 'missing', item }
   if (item.archived) return { state: 'archived', item }
@@ -128,7 +128,7 @@ function refState(evidence: EvidenceSet, ref: EvidenceRef): { state: RefState; i
   return { state: 'current', item }
 }
 
-function sourceClass(item: EvidenceItem, domain: string | null): SourceClass {
+export function sourceClass(item: EvidenceItem, domain: string | null): SourceClass {
   const type = item.source.source_type
   if (type === 'owner_testimony') return 'owner_statement'
   if (type === 'first_party_data') return 'first_party_data'
