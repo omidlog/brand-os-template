@@ -2,7 +2,7 @@
 
 This is a pure library: `packages/brand-core/src/assurance/`, exported as `@brand-os/brand-core/assurance`. It defines which methods Brand OS may cite and at which claim level, one original assessable method with typed controls, and a deterministic evaluator that turns frozen inputs into an assessment.
 
-- **It reads no brand file and writes nothing.** There is no command, route, MCP tool, agent scope, approval or store in this PR. Connecting the evaluator to a real workspace is PR-C, through the existing pinned refs (`strategy/model.ts` `FactRef` / `EvidenceRef`, `strategy/store.ts` `RefState`).
+- **It reads no brand file and writes nothing.** The pure library (`@brand-os/brand-core/assurance`) has no command, route, MCP tool, agent scope, approval or store. The owner-local bridge to a real workspace is a separate entry point, `@brand-os/brand-core/assurance/workspace`, used only by `brand:assurance` (see [Owner-local bridge to a real brand](#owner-local-bridge-to-a-real-brand-gap-09)).
 - **It is not a certification, a compliance statement or an independent audit.** The only assessable method is our own rubric. No ISO text is reproduced anywhere.
 - **It never takes a brand value.** Inputs are ids, revisions, states and classifications. Outputs are ids, revisions, statuses and reason codes.
 - **Human text is en / fa / tr** (`assurance/i18n.ts`); the engine speaks stable English codes only.
@@ -134,4 +134,49 @@ PRR-14 exists so the absence of a budget envelope is visible. Its fact is restri
 
 ## Not built here
 
-Evidence lineage over a real workspace (PR-B), a CLI that assesses a real brand (PR-C), any Studio view (PR-D), decision records (PR-E), PDF reports and manifests (PR-F), verification and expert review (PR-G), journeys, connectors and roles (PR-H). The plan and the reasons are in the owner's notes, `trust-v2-audit.md`.
+Evidence lineage over a real workspace (PR-B), any Studio view (PR-D), decision records (PR-E), PDF reports and manifests (PR-F), verification and expert review (PR-G), journeys, connectors and roles (PR-H). The plan and the reasons are in the owner's notes, `trust-v2-audit.md`.
+
+## Owner-local bridge to a real brand (GAP-09)
+
+`packages/brand-core/src/assurance/workspace.ts` (+ `workspace-text.ts`, exported from `assurance/local.ts` as `@brand-os/brand-core/assurance/workspace`) and the command `npm run brand:assurance`. It builds the frozen input `assess()` needs from what the brand has **already approved**, and hands it to the existing evaluator unchanged. Nothing about the evaluation is redone.
+
+```
+npm run brand:assurance -- snapshot --as-of 2026-11-23 --paid-media no [--audience internal] [--lang fa] [--json]
+npm run brand:assurance -- assess   --as-of 2026-11-23 --paid-media no [--lang tr]
+npm run brand:assurance -- snapshot --as-of 2026-11-23 --paid-media no --json > ~/kept/snapshot.json
+npm run brand:assurance -- verify   --snapshot ~/kept/snapshot.json      # exit 0 same digest, 3 changed
+```
+
+### What it reads, and how
+
+| Input to `assess()` | Source (reused) | Rule |
+| --- | --- | --- |
+| `ResolvedFact` per required question | `facts.ts` `readFacts(…, 'approved')`, pinned by `revision_hash` | Only `status: approved` of this brand counts. A non-approved answer is `draft` / `unknown` / `not_applicable` from the answer ledger, pinned by answer id; never treated as approved. No answer: `absent`, `missing`. |
+| `ResolvedEvidence` | Knowledge Inbox `scanAll(['local','shared'])` | Research notes only (`kind: research`, `internal`, not archived, this brand) whose `question_ids` touch the control. Restricted notes are never decrypted. Every note is `owner_stated`: notes carry no independent verification. |
+| `conflicts` | `contradictions.ts` `findContradictions` (pure) | Open contradictions whose fields touch the control, by id only. |
+| `review` | — | Always `null`: there is no reviewer store yet, so PRR-08 is `needs_review`. |
+| `subject.entity_kind` | `modules.personal.enabled` | `person` when on, else `company`. |
+| `subject.sells` | approved `business.sales.motion` | `not-applicable` → `no`; `undecided` or unapproved → `unknown`; any other option → `yes`. |
+| `subject.stage` | approved `business.stage.current`, else `business.identity.new_or_existing` | Otherwise `unknown`. |
+| `subject.runs_paid_media` | `--paid-media yes\|no` (owner statement) | No canonical question exists and none is invented, so it is `unknown` unless the owner states it. The statement is recorded (`owner_flag`) and is part of the digest. |
+
+### Guarantees
+
+- **Owner-local.** Refused while `BRAND_OS_AGENT_TOKEN` is set, before anything is read. No MCP tool, `brand_retrieve` kind, Studio route or agent profile imports the bridge; a test reads `scripts/mcp.ts` and `apps/studio` to keep it that way.
+- **Writes nothing.** Output goes to stdout. There is no `--out`; the owner redirects it where they want. A kept snapshot file is read as bounded data (regular file, no symlink, ≤ 1 MiB, ids validated), and its other contents are ignored and never echoed.
+- **No values.** The snapshot holds ids, revisions, states and closed-vocabulary subject values. Below the `restricted` audience a restricted fact is not pinned at all (`revision: withheld`), and its control lists no open question.
+- **Reproducible.** `source_snapshot_digest` is `sourceSnapshotDigest()` of the built input. Same workspace state, same `--as-of` (a UTC day; default today), same audience and statement → byte-identical snapshot and digest. `verify` rebuilds a kept snapshot with its own options; `reproduced: false` names the cited facts and notes that changed or disappeared.
+- **Versioned pins.** `--pin <kept snapshot>` re-checks the kept revisions (`strategy/store.ts` `factState` / `evidenceState`). A changed fact makes its control `needs_review`; a vanished note is `missing`, not silently dropped.
+- **No score on an incomplete snapshot.** `missing[]` lists every item; `blocking: true` items (an unstated scope field, a judgment nobody has made, a changed source) are exactly what makes `assess()` return `not_scoreable`, with `numerator` / `denominator` null. Tests assert `snapshot.scoreable` always equals the evaluator's verdict. `blocking: false` items are unapproved facts and missing research notes: the evaluator counts them as not complete; the bridge never fills them in.
+- **Never a certification.** `claim_level` stays `internally_assessed`, the `internal_assessment_only` limitation is always present, the snapshot carries `disclaimer: internal_assessment_not_certification`, and every rendering prints the disclaimer in en / fa / tr. `authorizes` is always `[]`.
+
+Today a real brand never gets a ratio: PRR-08 needs a person's judgment and there is no place to record one yet. That is deliberate (see the open questions in the GAP-09 report).
+
+Fixed with it: `completenessOf` reported every `needs_review` blocker as `source_changed`; a blocker now carries its own reason (`reviewer_required`, `source_changed`, …). Synthetic fixture results are unchanged.
+
+| Test | Covers |
+| --- | --- |
+| `tests/assurance-workspace.test.ts` | pinning approved facts, drafts and `unknown` never approved, subject derivation, reproducibility, value canaries in JSON and en/fa/tr text, restricted withholding, research-note selection, changed and vanished pins, conflict before judgment, no certification, agent refusal, no agent surface, read-only, hostile snapshot files, en/fa/tr text |
+| `tests/assurance-cli.test.ts` | the real command: usage errors, three languages, byte-identical runs, verify exit codes, agent refusal, symlinked or malformed files, outside a brand, not reachable through `brand:query` |
+
+All fixtures are synthetic temp brands.

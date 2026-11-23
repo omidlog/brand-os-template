@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./assurance": "./src/assurance/index.ts",
+    "./assurance/workspace": "./src/assurance/local.ts",
     "./coach": "./src/coach/index.ts",
     "./competitive": "./src/competitive/index.ts",
     "./creative": "./src/creative/index.ts",

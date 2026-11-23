@@ -300,7 +300,7 @@ Branch `feat/trust-v2-pr-a`. Guide: `docs-internal/ASSURANCE.md`. A pure library
 | Deterministic evaluator | Done | Ten statuses; `not_scoreable` unless the denominator is real; changed source forces `needs_review`; restricted inputs withheld; per-domain maturity, no aggregate; byte-identical output for the same inputs. |
 | en/fa/tr text and gap report | Done | Every emitted code has text in three languages; `renderGapReport` prints no ratio when not scoreable. Synthetic fixtures only. |
 | Coverage matrix in docs | Done | `docs-internal/ASSURANCE.md`, checked against the code by `tests/assurance-i18n.test.ts`. |
-| Assessing a real brand, evidence lineage, Studio view, reports, decisions | Not started | PR-B onward. The evaluator has never run on a real workspace. |
+| Assessing a real brand, evidence lineage, Studio view, reports, decisions | Partly done | Owner-local real-brand bridge: see GAP-09 below. Evidence lineage, Studio view, reports, decisions not started. |
 
 ## Task Context Engine (Slice 1: core and CLI)
 
@@ -405,3 +405,8 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 - **Done:** `packages/brand-core/src/visual-dna/`, MCP `visual_dna`, `brand:visual-dna resolve|read`. Read-only verdicts (`approved`, `withheld`, `missing`, `changed`) for asset ids, a mascot pose request and creative-memory variants, read through `brand_retrieve` and `creative_context` under one caller context; checksum, size, usage rights, effective `model_use` and a `provider_gate`. Metadata only over MCP. Owner-local `read` returns one checked file's exact bytes for a use its `model_use` allows. Schema `visual-dna`; guide `docs-internal/VISUAL_DNA.md`. Tests: `visual-dna`, `visual-dna-agent`.
 - **Done (owner policy, 2026-11-23):** the brand's own marks need no recorded licence (`license_basis: own_brand_mark`; third-party assets still do); `use_scope` lets internal-scope rights cover a portrait for internal use only; manifest status `published` counts as approved in `brand_retrieve kind: asset` and Visual DNA, with every byte check still applied. Tests: `visual-dna-policy`.
 - **Not done:** byte transport over MCP or any network, an export directory, production readiness (PR-E), wiring Visual DNA into `brand:runtime` (it still reads its logo through `loadApprovedLogo`), canonical mascot view sets, fonts, `published` in the docs-build publication check and the mascot catalog validator (both still require `approved`). The 20 MiB limit stays. Nothing is uploaded, published or approved; `model_use: external_allowed` is not an upload permission.
+
+## Assurance on a real brand: owner-local bridge (GAP-09)
+
+- **Done:** `brand:assurance snapshot | assess | verify` and `@brand-os/brand-core/assurance/workspace`. Approved facts (by `revision_hash`), internal research notes and open contradictions become the frozen input of the existing `assess()`. Reproducible digest, `--pin` / `verify` against a kept snapshot, restricted facts withheld below `restricted`, en/fa/tr output, stdout only, refused under `BRAND_OS_AGENT_TOKEN`, `authorizes: []`, never a certification. Guide: `docs-internal/ASSURANCE.md`.
+- **Not done:** a reviewer-judgment store (so PRR-08 keeps every real brand `not_scoreable`), independent evidence (every note is `owner_stated`), a canonical paid-media question (owner flag for now), observed maturity input, Studio view, MCP or agent access (deliberately none).

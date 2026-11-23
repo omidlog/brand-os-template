@@ -12,6 +12,18 @@
 - Visual DNA: new `use_scope` (`public` by default; MCP input, `--use-scope` on `resolve` and owner `read`, echoed in the result). Internal-scope rights cover a portrait or other rights-sensitive subject for internal use; public use without public-scope rights stays `withheld / rights`. `rightsBlocker` takes the use and defaults to `public`, so every publication gate is unchanged.
 - Tests: `visual-dna-policy` (own mark with empty/TBD licence approved; third-party, partner, client logo, icon and mascot art with TBD withheld; exemption skips no other check; internal portrait approved for internal use and withheld for public use; public rights cover both; pending, expired, holderless and missing rights cover neither; strict `use_scope`; `published` approved; published with replaced bytes or an approval for other bytes `changed`; other statuses missing). `visual-dna-agent` checks `--use-scope` on the CLI.
 
+## Unreleased — Assurance: owner-local bridge to approved brand facts (GAP-09)
+
+### Added
+
+- `npm run brand:assurance -- snapshot | assess | verify`: an owner-local, read-only bridge from a brand's approved facts, internal research notes and open contradictions to the existing Assurance evaluator. Reproducible snapshot digest, `--pin` / `verify` against a kept snapshot, no score while anything blocking is missing, restricted facts withheld below the `restricted` audience, en/fa/tr output, refused under `BRAND_OS_AGENT_TOKEN`, writes nothing, never a certification.
+- `@brand-os/brand-core/assurance/workspace` entry point (the pure `assurance` index still reads no file).
+- Tests: `assurance-workspace`, `assurance-cli` (synthetic temp brands only).
+
+### Fixed
+
+- Assurance `completeness.blocked_by` reported every `needs_review` blocker as `source_changed`; it now names the control's own reason (for example `reviewer_required`).
+
 ## Unreleased — Visual DNA reference resolver (fixes pack PR-C, GAP-03)
 
 ### Added
