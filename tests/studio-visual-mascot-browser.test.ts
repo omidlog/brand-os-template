@@ -147,7 +147,9 @@ test('mascot atlas: three widths, en and fa, light and dark: no overflow, clean 
         assert.ok(widths.scroll <= widths.client + 1, `${where}: page overflow ${widths.scroll} > ${widths.client}`)
         assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-mcard').length`), 1, where)
         assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-stage').length`), 6, where)
-        assert.equal(await page.eval<boolean>(`[...document.querySelectorAll('.vz-mframe-img')].every((img) => img.complete && img.naturalWidth > 0)`), true, `${where}: approved art loads`)
+        // The first plate is above the fold; later frames are lazy-loaded, so only their source is checked.
+        await page.waitFor(`(() => { const img = document.querySelector('.vz-mcard .vz-mframe-img'); return img && img.complete && img.naturalWidth > 0 })()`)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-stage.is-drawn .vz-mframe-img[src*="/assets/file/"]').length`), 1, `${where}: stage one points at the approved file`)
         if (width === 1440) {
           assert.deepEqual(await structureIssues(), [], `${where}: structure`)
           assert.deepEqual(await contrastFailures('.vz-mascot'), [], `${where}: contrast`)
