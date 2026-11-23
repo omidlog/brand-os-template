@@ -300,7 +300,7 @@ Branch `feat/trust-v2-pr-a`. Guide: `docs-internal/ASSURANCE.md`. A pure library
 | Deterministic evaluator | Done | Ten statuses; `not_scoreable` unless the denominator is real; changed source forces `needs_review`; restricted inputs withheld; per-domain maturity, no aggregate; byte-identical output for the same inputs. |
 | en/fa/tr text and gap report | Done | Every emitted code has text in three languages; `renderGapReport` prints no ratio when not scoreable. Synthetic fixtures only. |
 | Coverage matrix in docs | Done | `docs-internal/ASSURANCE.md`, checked against the code by `tests/assurance-i18n.test.ts`. |
-| Assessing a real brand, evidence lineage, Studio view, reports, decisions | Not started | PR-B onward. The evaluator has never run on a real workspace. |
+| Assessing a real brand, evidence lineage, Studio view, reports, decisions | Partly done | Owner-local real-brand bridge: see GAP-09 below. Evidence lineage, Studio view, reports, decisions not started. |
 
 ## Task Context Engine (Slice 1: core and CLI)
 
@@ -399,3 +399,8 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Done:** `--pack <file>` (+ owner `--root`), approved type scale on drafts, `--final` outlines with owner font files (name/cmap checked, nothing substituted), Coach warnings never block, tagline/promise exemption in the Coach. Tests: `runtime-pack`, `runtime-type`, `coach-core`.
 - **Not done:** MCP tool (next slice), `brand.type.rtl` for RTL lines, variable-font instances in final export, logo variant per background.
+
+## Assurance on a real brand: owner-local bridge (GAP-09)
+
+- **Done:** `brand:assurance snapshot | assess | verify` and `@brand-os/brand-core/assurance/workspace`. Approved facts (by `revision_hash`), internal research notes and open contradictions become the frozen input of the existing `assess()`. Reproducible digest, `--pin` / `verify` against a kept snapshot, restricted facts withheld below `restricted`, en/fa/tr output, stdout only, refused under `BRAND_OS_AGENT_TOKEN`, `authorizes: []`, never a certification. Guide: `docs-internal/ASSURANCE.md`.
+- **Not done:** a reviewer-judgment store (so PRR-08 keeps every real brand `not_scoreable`), independent evidence (every note is `owner_stated`), a canonical paid-media question (owner flag for now), observed maturity input, Studio view, MCP or agent access (deliberately none).
