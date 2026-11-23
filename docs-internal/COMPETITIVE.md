@@ -153,7 +153,7 @@ Its state is `missing`, `candidate_only`, `evidence_insufficient` or `evidence_a
 
 ## Share path (Visual V2.2, owner decision D1)
 
-`npm run brand:competitive -- share [--dry-run]` is the only way competitor data leaves `brand/.private/competitive`. It writes one tracked file, `brand/competitive/shared/landscape.json`. The owner reviews the diff, commits it and merges it. Studio shows it on the read-only "Competitor comparison matrix" page (`/brands/<slug>/visual/competitors`) after the merge. Studio never writes it. Code: `competitive/share.ts`. Tests: `tests/competitive-share.test.ts`.
+`npm run brand:competitive -- share [--dry-run]` is the only way competitor data leaves `brand/.private/competitive`. It writes one tracked file, `brand/competitive/shared/landscape.json`. The owner reviews the diff, commits it and merges it. Studio shows it on the read-only "Competitor comparison matrix" page (`/brands/<slug>/market/competitors`) after the merge. Studio never writes it. Code: `competitive/share.ts`. Tests: `tests/competitive-share.test.ts`.
 
 **What is shared** (an allow-list, rebuilt field by field):
 

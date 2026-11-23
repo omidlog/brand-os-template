@@ -32,9 +32,9 @@ test('Studio: the Visual identity chapter is read-only, approved-only, designed 
     await s.studio.sync.settled()
 
     // 1. Nothing approved: three designed awaiting plates; the Brand Book page links to the chapter.
-    const book = await owner.page(`/brands/${SLUG}/brand-book`)
-    assert.match(book.text, new RegExp(`href="/brands/${SLUG}/visual/identity"`))
-    let page = await owner.page(`/brands/${SLUG}/visual/identity`)
+    const book = await owner.page(`/brands/${SLUG}/brand/book`)
+    assert.match(book.text, new RegExp(`href="/brands/${SLUG}/brand/book/visual-identity"`))
+    let page = await owner.page(`/brands/${SLUG}/brand/book/visual-identity`)
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Visual identity/)
     assert.equal((page.text.match(/class="vz-await"/g) ?? []).length, 3, 'three awaiting plates')
@@ -60,7 +60,7 @@ test('Studio: the Visual identity chapter is read-only, approved-only, designed 
       fs.writeFileSync(file, stringify(manifest))
     })
     await s.studio.sync.refresh(SLUG)
-    page = await owner.page(`/brands/${SLUG}/visual/identity`)
+    page = await owner.page(`/brands/${SLUG}/brand/book/visual-identity`)
     assert.equal(page.res.status, 200)
     assert.equal(page.text.includes('#ABCDEF'), false, 'a draft palette is never drawn')
     assert.match(page.text, /A draft exists and is waiting for review/)
@@ -81,7 +81,7 @@ test('Studio: the Visual identity chapter is read-only, approved-only, designed 
     assert.equal(/<form[^>]*method="post"/i.test(page.text.split('<main')[1] ?? ''), false, 'no write form')
 
     // 3. Print view (print engine V1.2, book_a4_portrait: cover, imprint, contents, plates, appendix) and the public edition.
-    const print = await owner.page(`/brands/${SLUG}/visual/identity/print`)
+    const print = await owner.page(`/brands/${SLUG}/brand/book/visual-identity/print`)
     assert.equal(print.res.status, 200)
     assert.match(print.text, /vz-book-body/)
     assert.match(print.text, /<link rel="stylesheet" href="\/static\/visual-book\.css\?v=[A-Za-z0-9_-]+">/)
@@ -90,33 +90,33 @@ test('Studio: the Visual identity chapter is read-only, approved-only, designed 
     assert.equal((await owner.get('/static/visual-book.css')).status, 200)
     assert.equal(/\sstyle="/.test(print.text), false)
     assert.equal(/<script(?![^>]*src="\/static\/visual\.js\?v=[A-Za-z0-9_-]+")/.test(print.text), false)
-    const pub = await owner.page(`/brands/${SLUG}/visual/identity/print?edition=public`)
+    const pub = await owner.page(`/brands/${SLUG}/brand/book/visual-identity/print?edition=public`)
     assert.equal(pub.res.status, 200)
     assert.match(pub.text, /Public edition/)
     assert.equal(pub.text.includes('<image'), false, 'an unpublished master stays out of the public edition')
 
     // 4. Read-only: no other method, no other path.
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      for (const pathname of [`/brands/${SLUG}/visual/identity`, `/brands/${SLUG}/visual/identity/print`]) {
+      for (const pathname of [`/brands/${SLUG}/brand/book/visual-identity`, `/brands/${SLUG}/brand/book/visual-identity/print`]) {
         const res = await owner.request(method, pathname, { form: { _csrf: 'x' } })
         assert.ok([404, 405].includes(res.status), `${method} ${pathname} ${res.status}`)
       }
     }
     assert.equal((await owner.get(`/brands/${SLUG}/visual/identity/edit`)).status, 404)
     const guest = new Client(s.url)
-    assert.equal((await guest.get(`/brands/${SLUG}/visual/identity`)).status, 302)
+    assert.equal((await guest.get(`/brands/${SLUG}/brand/book/visual-identity`)).status, 302)
 
     // 5. The canvas page is untouched by the new route.
-    assert.equal((await owner.page(`/brands/${SLUG}/visual`)).res.status, 200)
+    assert.equal((await owner.page(`/brands/${SLUG}/strategy/business-model`)).res.status, 200)
 
     // 6. Persian and Turkish.
-    await owner.get(`/brands/${SLUG}/visual/identity?lang=fa`)
-    const fa = await owner.page(`/brands/${SLUG}/visual/identity`)
+    await owner.get(`/brands/${SLUG}/brand/book/visual-identity?lang=fa`)
+    const fa = await owner.page(`/brands/${SLUG}/brand/book/visual-identity`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /هویت بصری/)
     assert.match(fa.text, /class="vz-construct" viewBox="[^"]+" role="img" aria-label="[^"]+" dir="ltr"/, 'the construction drawing keeps its geometry')
-    await owner.get(`/brands/${SLUG}/visual/identity?lang=tr`)
-    assert.match((await owner.page(`/brands/${SLUG}/visual/identity`)).text, /Görsel kimlik/)
+    await owner.get(`/brands/${SLUG}/brand/book/visual-identity?lang=tr`)
+    assert.match((await owner.page(`/brands/${SLUG}/brand/book/visual-identity`)).text, /Görsel kimlik/)
   } finally {
     await s.close()
   }
@@ -152,7 +152,7 @@ test('Studio: an approved logo named in brand.logo.masters (no master tag, tagge
       fs.writeFileSync(file, stringify(manifest))
     })
     await s.studio.sync.refresh(slug)
-    const page = await owner.page(`/brands/${slug}/visual/identity`)
+    const page = await owner.page(`/brands/${slug}/brand/book/visual-identity`)
     assert.equal(page.res.status, 200)
     assert.ok(page.text.includes(`<image href="/brands/${slug}/assets/file/${checksum}"`), 'the named wordmark is drawn in the construction')
     assert.ok(page.text.includes(`<img class="vz-min-img" src="/brands/${slug}/assets/file/${checksum}"`), 'and at its minimum size')
@@ -161,12 +161,12 @@ test('Studio: an approved logo named in brand.logo.masters (no master tag, tagge
     assert.match(page.text, /data-badge="draft_tag">Tagged draft</)
     assert.match(page.text, /data-badge="internal_only">Internal · not published</)
     assert.doesNotMatch(page.text, /Logo construction is waiting/)
-    const pub = await owner.page(`/brands/${slug}/visual/identity/print?edition=public`)
+    const pub = await owner.page(`/brands/${slug}/brand/book/visual-identity/print?edition=public`)
     assert.equal(pub.res.status, 200)
     assert.equal(pub.text.includes(checksum), false, 'an internal, unpublished logo never reaches the public edition')
     assert.equal(pub.text.includes('Tagged draft'), false)
-    await owner.get(`/brands/${slug}/visual/identity?lang=fa`)
-    const fa = await owner.page(`/brands/${slug}/visual/identity`)
+    await owner.get(`/brands/${slug}/brand/book/visual-identity?lang=fa`)
+    const fa = await owner.page(`/brands/${slug}/brand/book/visual-identity`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.ok(fa.text.includes(`<image href="/brands/${slug}/assets/file/${checksum}"`))
     assert.match(fa.text, /برچسب پیش‌نویس/)

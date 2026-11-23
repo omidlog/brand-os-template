@@ -18,7 +18,22 @@ export interface ViewContext {
   now: number
 }
 
-export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'creative' | 'calendar' | 'history' | 'handoff' | 'visual'
+export type BrandSection =
+  | 'overview'
+  | 'brand-book'
+  | 'design'
+  | 'assets'
+  | 'business'
+  | 'marketing'
+  | 'personal'
+  | 'knowledge'
+  | 'creative'
+  | 'calendar'
+  | 'history'
+  | 'handoff'
+  | 'visual'
+  | 'competitors'
+  | 'coach'
 
 export interface BrandView {
   record: BrandRecord
@@ -27,19 +42,67 @@ export interface BrandView {
   refreshing: boolean
 }
 
-const SECTIONS: Array<{ id: BrandSection; key: MessageKey; icon: IconName; path: string }> = [
-  { id: 'overview', key: 'nav.overview', icon: 'overview', path: '' },
-  { id: 'brand-book', key: 'nav.brandBook', icon: 'book', path: '/brand-book' },
-  { id: 'design', key: 'nav.design', icon: 'palette', path: '/design' },
-  { id: 'assets', key: 'nav.assets', icon: 'image', path: '/assets' },
-  { id: 'business', key: 'nav.business', icon: 'briefcase', path: '/business' },
-  { id: 'visual', key: 'nav.visual', icon: 'layers', path: '/visual' },
-  { id: 'personal', key: 'nav.personal', icon: 'user', path: '/personal' },
-  { id: 'knowledge', key: 'nav.knowledge', icon: 'idea', path: '/knowledge' },
-  { id: 'creative', key: 'nav.creative', icon: 'sparkle', path: '/creative' },
-  { id: 'calendar', key: 'nav.calendar', icon: 'clock', path: '/calendar' },
-  { id: 'history', key: 'nav.history', icon: 'history', path: '/history' },
-  { id: 'handoff', key: 'nav.handoff', icon: 'handoff', path: '/handoff' },
+/** Sidebar groups by intent (Visual V2.4, R1): the reader's question, not the storage module. */
+export const NAV_GROUPS = ['command', 'strategy', 'studio', 'market', 'governance'] as const
+export type NavGroup = (typeof NAV_GROUPS)[number]
+
+/**
+ * Every brand page, its group and its stable path (Visual V2.4, R2). The path is the canonical URL under
+ * `/brands/<slug>`; the old flat paths answer 301 to these (see `LEGACY_SECTION_PATHS`). `coach` is an anchor on the
+ * overview (the Strategic Coach card), not a page of its own.
+ */
+const SECTIONS: Array<{ id: BrandSection; group: NavGroup; key: MessageKey; icon: IconName; path: string }> = [
+  { id: 'overview', group: 'command', key: 'nav.overview', icon: 'overview', path: '' },
+  { id: 'coach', group: 'command', key: 'nav.coach', icon: 'info', path: '#coach-title' },
+  { id: 'visual', group: 'strategy', key: 'nav.visual', icon: 'layers', path: '/strategy/business-model' },
+  { id: 'business', group: 'strategy', key: 'nav.businessPlan', icon: 'briefcase', path: '/strategy/business-plan' },
+  { id: 'brand-book', group: 'studio', key: 'nav.brandBook', icon: 'book', path: '/brand/book' },
+  { id: 'design', group: 'studio', key: 'nav.design', icon: 'palette', path: '/brand/design-system' },
+  { id: 'assets', group: 'studio', key: 'nav.assets', icon: 'image', path: '/brand/assets' },
+  { id: 'creative', group: 'studio', key: 'nav.creative', icon: 'sparkle', path: '/brand/creative-decisions' },
+  { id: 'personal', group: 'studio', key: 'nav.personal', icon: 'user', path: '/brand/personal' },
+  { id: 'marketing', group: 'market', key: 'nav.marketingPlan', icon: 'globe', path: '/market/marketing-plan' },
+  { id: 'competitors', group: 'market', key: 'nav.competitors', icon: 'shield', path: '/market/competitors' },
+  { id: 'calendar', group: 'market', key: 'nav.calendar', icon: 'clock', path: '/market/content-calendar' },
+  { id: 'knowledge', group: 'market', key: 'nav.knowledge', icon: 'idea', path: '/market/knowledge' },
+  { id: 'history', group: 'governance', key: 'nav.history', icon: 'history', path: '/governance/history' },
+  { id: 'handoff', group: 'governance', key: 'nav.handoff', icon: 'handoff', path: '/governance/github' },
+]
+
+/** Stable path of a brand page, for links between pages. */
+export function brandPath(slug: string, section: BrandSection, rest = ''): string {
+  const path = SECTIONS.find((item) => item.id === section)?.path ?? ''
+  return `/brands/${slug}${path}${rest}`
+}
+
+/** Page sections served by the brand page handler: stable path segment (after the slug) -> section. */
+export const PAGE_SECTION_PATHS: ReadonlyArray<readonly [string, BrandSection]> = SECTIONS.filter(
+  (item) => item.path.startsWith('/') && !['visual', 'competitors'].includes(item.id),
+).map((item) => [item.path.slice(1), item.id] as const)
+
+/**
+ * Old flat paths (before V2.4), kept as permanent redirects for one release. Old segment -> new segment, both after
+ * `/brands/<slug>/`. Longest first, so `visual/identity/print` wins over `visual`.
+ */
+export const LEGACY_SECTION_PATHS: ReadonlyArray<readonly [string, string]> = [
+  ['visual/identity/print', 'brand/book/visual-identity/print'],
+  ['visual/competitors/print', 'market/competitors/print'],
+  ['visual/mascot/print', 'brand/mascot/print'],
+  ['visual/identity', 'brand/book/visual-identity'],
+  ['visual/competitors', 'market/competitors'],
+  ['visual/mascot', 'brand/mascot'],
+  ['visual/print', 'strategy/business-model/print'],
+  ['visual', 'strategy/business-model'],
+  ['brand-book', 'brand/book'],
+  ['design', 'brand/design-system'],
+  ['assets', 'brand/assets'],
+  ['business', 'strategy/business-plan'],
+  ['personal', 'brand/personal'],
+  ['knowledge', 'market/knowledge'],
+  ['creative', 'brand/creative-decisions'],
+  ['calendar', 'market/content-calendar'],
+  ['history', 'governance/history'],
+  ['handoff', 'governance/github'],
 ]
 
 export function brandSections(view: BrandView): typeof SECTIONS {
@@ -54,8 +117,18 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'calendar') return Boolean(projection?.calendar && (projection.calendar.total > 0 || projection.calendar.withheld.length > 0))
     // Listed when the merged commit has a canvas that applies to this profile (a business, or a founder/consultant facet).
     if (section.id === 'visual') return projection?.visual?.bmc.applies !== false
+    // Listed when the merged commit has a competitor comparison document (a designed empty state until one is shared).
+    if (section.id === 'competitors') return Boolean(projection?.visual?.competitors)
+    // An anchor on the overview, listed only when the Strategic Coach card has notes.
+    if (section.id === 'coach') return Boolean(projection?.coach && projection.coach.notes.length > 0)
     return true
   })
+}
+
+/** Visible sections in their groups; a group with nothing to show is left out. */
+export function sectionGroups(view: BrandView): Array<[NavGroup, typeof SECTIONS]> {
+  const visible = brandSections(view)
+  return NAV_GROUPS.map((group) => [group, visible.filter((section) => section.group === group)] as [NavGroup, typeof SECTIONS]).filter(([, items]) => items.length > 0)
 }
 
 function initials(name: string): string {
@@ -111,10 +184,17 @@ function sidebar(ctx: ViewContext, brand?: { view: BrandView; section: BrandSect
               </a>
               ${active && brand
                 ? html`<ul class="section-list" aria-label="${i.t('nav.brandSections', { brand: record.display_name })}">
-                    ${brandSections(brand.view).map((section) => {
-                      const on = section.id === brand.section
-                      return html`<li><a class="nav-link nav-sub ${on ? 'is-active' : ''}" href="/brands/${record.slug}${section.path}" ${on ? html`aria-current="page"` : ''}>${icon(section.icon)}<span>${i.t(section.key)}</span></a></li>`
-                    })}
+                    ${sectionGroups(brand.view).map(
+                      ([group, sections]) => html`<li class="nav-section">
+                        <p class="nav-section-label" id="nav-group-${group}">${i.t(`nav.group.${group}` as MessageKey)}</p>
+                        <ul class="nav-section-list" aria-labelledby="nav-group-${group}">
+                          ${sections.map((section) => {
+                            const on = section.id === brand.section
+                            return html`<li><a class="nav-link nav-sub ${on ? 'is-active' : ''}" href="/brands/${record.slug}${section.path}" ${on ? html`aria-current="page"` : ''}>${icon(section.icon)}<span>${i.t(section.key)}</span></a></li>`
+                          })}
+                        </ul>
+                      </li>`,
+                    )}
                   </ul>`
                 : ''}
             </li>`

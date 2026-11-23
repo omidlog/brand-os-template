@@ -189,7 +189,7 @@ pending change proposal instead), drafts stored with `authority: unverified`. `i
 ## Studio (read only)
 
 Once a shared note is merged into the default branch and Studio has refreshed, the brand gets a **Knowledge** section
-(`/brands/<slug>/knowledge`). The sidebar entry appears only when the merged commit has shared notes or files Studio
+(`/brands/<slug>/market/knowledge`; the old `/knowledge` path redirects). The sidebar entry appears only when the merged commit has shared notes or files Studio
 withheld; there is no flag. Every card and the detail page carry *Unverified idea* and *Not an approved brand fact*.
 
 - Source: the merged default-branch commit only. Studio's archive filter admits `brand/knowledge/shared/*.md` and

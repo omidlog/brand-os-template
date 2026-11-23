@@ -33,7 +33,7 @@ export function mascotPage(ctx: ViewContext, view: BrandView, flash: string | nu
   if (visual === undefined) return shell(banner({ tone: 'info', body: cat.text.pending }))
   if (visual === null || !visual.mascot) return shell(banner({ tone: 'warning', body: cat.text.unavailable }))
   const doc = visual.mascot.internal
-  const base = `/brands/${view.record.slug}/visual/mascot`
+  const base = `/brands/${view.record.slug}/brand/mascot`
   const blockCtx = { cat, lang, mode: 'screen' as const, doc, idPrefix: 'ma', showNext: true, assetUrl: assetUrlFor(view.record.slug) }
   const mctx: MascotContext = blockCtx
   const body = html`<div class="vz-screen vz-book vz-mascot">
@@ -67,7 +67,7 @@ export function mascotPrintPage(ctx: ViewContext, view: BrandView, edition: 'int
   if (!mascot) return null
   const doc = edition === 'public' ? mascot.public : mascot.internal
   const toolbar = html`<nav class="vz-print-toolbar" aria-label="${t.printTitle}">
-    <a class="vz-print-back" href="/brands/${view.record.slug}/visual/mascot">${icon('chevron', 'vz-back-icon')}<span>${t.backToAtlas}</span></a>
+    <a class="vz-print-back" href="/brands/${view.record.slug}/brand/mascot">${icon('chevron', 'vz-back-icon')}<span>${t.backToAtlas}</span></a>
     <p class="vz-print-hint">${cat.text.printOnly}</p>
     <button type="button" class="vz-print-button" data-print hidden>${cat.text.printButton}</button>
   </nav>`

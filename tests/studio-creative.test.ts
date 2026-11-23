@@ -79,10 +79,10 @@ test('Studio: the Creative decisions page shows merged shared decisions read-onl
     await s.studio.provisioning.settled()
     await s.studio.sync.settled()
 
-    const empty = await owner.page('/brands/acme-learning/creative')
+    const empty = await owner.page('/brands/acme-learning/brand/creative-decisions')
     assert.equal(empty.res.status, 200)
     assert.match(empty.text, /No shared creative decisions on this commit/)
-    assert.equal((await owner.page('/brands/acme-learning')).text.includes('href="/brands/acme-learning/creative"'), false, 'no nav entry before anything is shared')
+    assert.equal((await owner.page('/brands/acme-learning')).text.includes('href="/brands/acme-learning/brand/creative-decisions"'), false, 'no nav entry before anything is shared')
 
     const current = 'cp_00000000-0000-4000-8000-000000000001'
     const old = 'cp_00000000-0000-4000-8000-000000000002'
@@ -97,7 +97,7 @@ test('Studio: the Creative decisions page shows merged shared decisions read-onl
     })
     await s.studio.sync.refresh('acme-learning')
 
-    const page = await owner.page('/brands/acme-learning/creative')
+    const page = await owner.page('/brands/acme-learning/brand/creative-decisions')
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Creative decisions/)
     assert.match(page.text, /Owner-approved/)
@@ -108,24 +108,24 @@ test('Studio: the Creative decisions page shows merged shared decisions read-onl
     assert.match(page.text, /Static camera/)
     assert.match(page.text, new RegExp(`href="#${old}"`), 'supersession is linked within the page')
     assert.match(page.text, /Belongs to another brand/, 'another brand’s file is withheld with a reason')
-    assert.match((await owner.page('/brands/acme-learning')).text, /href="\/brands\/acme-learning\/creative"/, 'nav entry once decisions exist')
+    assert.match((await owner.page('/brands/acme-learning')).text, /href="\/brands\/acme-learning\/brand\/creative-decisions"/, 'nav entry once decisions exist')
     const everything = [page.text, fs.readFileSync(path.join(s.config.dataDir, 'cache', 'acme-learning', 'state.json'), 'utf8')].join('\n')
     for (const canary of ['OTHER-BRAND-CANARY', 'PRIVATE-PROJECT-CANARY', 'PROJECT-CANARY', 'NOTES-CANARY']) assert.equal(everything.includes(canary), false, canary)
     assert.equal(/<form[^>]*method="post"/i.test(page.text.split('<main')[1] ?? ''), false, 'no write form in the page body')
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      const res = await owner.request(method, '/brands/acme-learning/creative', { form: { _csrf: 'x' } })
+      const res = await owner.request(method, '/brands/acme-learning/brand/creative-decisions', { form: { _csrf: 'x' } })
       assert.ok([404, 405].includes(res.status), `${method} ${res.status}`)
     }
     const guest = new Client(s.url)
-    const res = await guest.get('/brands/acme-learning/creative')
+    const res = await guest.get('/brands/acme-learning/brand/creative-decisions')
     assert.equal(res.status, 302)
     assert.equal((await res.text()).includes('Dynamic'), false)
-    await owner.get('/brands/acme-learning/creative?lang=fa')
-    const fa = await owner.page('/brands/acme-learning/creative')
+    await owner.get('/brands/acme-learning/brand/creative-decisions?lang=fa')
+    const fa = await owner.page('/brands/acme-learning/brand/creative-decisions')
     assert.match(fa.text, /dir="rtl"/)
     assert.match(fa.text, /تصمیم‌های خلاقانه/)
-    await owner.get('/brands/acme-learning/creative?lang=tr')
-    assert.match((await owner.page('/brands/acme-learning/creative')).text, /Yaratıcı kararlar/)
+    await owner.get('/brands/acme-learning/brand/creative-decisions?lang=tr')
+    assert.match((await owner.page('/brands/acme-learning/brand/creative-decisions')).text, /Yaratıcı kararlar/)
   } finally {
     await s.close()
   }

@@ -145,12 +145,12 @@ async function contrastFailures(scope: string): Promise<string[]> {
 
 test('canvas page: five widths, en and fa, light and dark: no overflow, clean CSP, accessible, AA contrast', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/strategy/business-model?lang=${lang}`)
     for (const scheme of ['light', 'dark'] as const) {
       await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
       for (const width of [1920, 1440, 1024, 768, 390]) {
         await page.viewport(width, 900, width < 500)
-        await page.goto(`${s.url}/brands/${SLUG}/visual`)
+        await page.goto(`${s.url}/brands/${SLUG}/strategy/business-model`)
         await settle()
         const where = `${lang} ${scheme} ${width}px`
         assert.equal(await page.eval<string>('document.documentElement.dir'), lang === 'fa' ? 'rtl' : 'ltr', where)
@@ -175,7 +175,7 @@ test('canvas page: five widths, en and fa, light and dark: no overflow, clean CS
   await page.send('Emulation.setEmulatedMedia', { features: [] })
   await page.viewport(1440, 900)
   // Keyboard: the mini-map links are focusable and jump to their zone.
-  await page.goto(`${s.url}/brands/${SLUG}/visual?lang=en`)
+  await page.goto(`${s.url}/brands/${SLUG}/strategy/business-model?lang=en`)
   await settle()
   await page.eval(`(() => { document.querySelector('.vz-map a[href="#bmc-zone-key_resources"]').focus(); location.hash = '#bmc-zone-key_resources'; return true })()`)
   await page.eval('new Promise((r) => setTimeout(r, 400))')
@@ -187,7 +187,7 @@ test('canvas page: five widths, en and fa, light and dark: no overflow, clean CS
 
 test('reduced motion: zones are visible immediately and carry no running animation', { skip }, async () => {
   await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
-  await page.goto(`${s.url}/brands/${SLUG}/visual?lang=en`)
+  await page.goto(`${s.url}/brands/${SLUG}/strategy/business-model?lang=en`)
   const durations = await page.eval<string[]>(`[...document.querySelectorAll('.vz-zone')].map((z) => getComputedStyle(z).animationDuration)`)
   assert.ok(durations.every((d) => parseFloat(d) <= 0.0001), durations.join(','))
   await page.send('Emulation.setEmulatedMedia', { features: [] })
@@ -195,7 +195,7 @@ test('reduced motion: zones are visible immediately and carry no running animati
 
 test('print view: the browser engine prints an A3-landscape PDF, canvas on page one, sources on page two', { skip }, async () => {
   for (const [lang, edition] of [['en', 'internal'], ['fa', 'internal'], ['tr', 'public']] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/strategy/business-model?lang=${lang}`)
     await page.goto(`${s.url}/brands/${SLUG}/visual/print${edition === 'public' ? '?edition=public' : ''}`)
     await settle()
     assert.equal(await page.eval<boolean>(`document.querySelector('[data-print]').hidden`), false, 'the print button appears with scripting')
@@ -223,12 +223,12 @@ test('print view: the browser engine prints an A3-landscape PDF, canvas on page 
 
 test('Visual identity chapter: five widths, en and fa, light and dark: no overflow, clean CSP, accessible, AA contrast', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual/identity?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/brand/book/visual-identity?lang=${lang}`)
     for (const scheme of ['light', 'dark'] as const) {
       await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
       for (const width of [1920, 1440, 1024, 768, 390]) {
         await page.viewport(width, 900, width < 500)
-        await page.goto(`${s.url}/brands/${SLUG}/visual/identity`)
+        await page.goto(`${s.url}/brands/${SLUG}/brand/book/visual-identity`)
         await settle()
         const where = `identity ${lang} ${scheme} ${width}px`
         const widths = await overflow()
@@ -254,8 +254,8 @@ test('Visual identity chapter: five widths, en and fa, light and dark: no overfl
 
 test('Visual identity print view: A4 portrait PDF with the chapter opener, plates and appendix', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual/identity?lang=${lang}`)
-    await page.goto(`${s.url}/brands/${SLUG}/visual/identity/print`)
+    await page.goto(`${s.url}/brands/${SLUG}/brand/book/visual-identity?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/brand/book/visual-identity/print`)
     await settle()
     const result = await page.send('Page.printToPDF', { preferCSSPageSize: true, printBackground: true }, 60_000)
     const pdf = Buffer.from(String(result.data), 'base64')
@@ -268,5 +268,47 @@ test('Visual identity print view: A4 portrait PDF with the chapter opener, plate
     assert.ok(text.includes('/FontFile2') || text.includes('/FontFile'), `${lang}: fonts are embedded`)
     if (shots) fs.writeFileSync(path.join(shots, `identity-print-${lang}.pdf`), pdf)
   }
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
+
+test('Brand Book reader (V2.4): four widths, en and fa, light and dark: no overflow, clean CSP, accessible, AA contrast', { skip }, async () => {
+  // A do/don't spread and an unapproved owner draft, so both editorial forms are drawn.
+  editOutsideStudio(s, SLUG, (engine, root) => {
+    approve(engine, root, { 'brand.verbal.voice_pairs': 'Say what happened | Blame the user\nInvite the next step | Lecture the learner' })
+    engine.answerQuestion('brand.strategy.vision', 'A calmer classroom everywhere.')
+  })
+  await s.studio.sync.refresh(SLUG)
+  for (const lang of ['en', 'fa'] as const) {
+    await page.goto(`${s.url}/brands/${SLUG}/brand/book?lang=${lang}`)
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
+      for (const width of [1440, 1024, 768, 390]) {
+        await page.viewport(width, 900, width < 500)
+        await page.goto(`${s.url}/brands/${SLUG}/brand/book`)
+        await settle()
+        const where = `book ${lang} ${scheme} ${width}px`
+        const widths = await overflow()
+        const wide = widths.scroll > widths.client + 1 ? await page.eval<string[]>(`[...document.querySelectorAll('main *')].filter((el) => !el.closest('.vz-grid-wrap') && el.getBoundingClientRect().right > document.documentElement.clientWidth + 1).slice(0, 6).map((el) => el.tagName + '.' + (el.className.baseVal ?? el.className))`) : []
+        assert.ok(widths.scroll <= widths.client + 1, `${where}: page overflow ${widths.scroll} > ${widths.client} ${wide.join(' ')}`)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-bk-chapter').length`), 7, where)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-bk-specimen .vz-plate').length`), 3, `${where}: three specimen plates`)
+        // The plate heads step aside inside a chapter; the chapter opener titles the specimen.
+        assert.equal(await page.eval<boolean>(`[...document.querySelectorAll('.vz-bk-specimen .vz-plate-head')].every((el) => el.getBoundingClientRect().height === 0)`), true, where)
+        assert.ok(await page.eval<boolean>(`document.querySelector('.vz-bk-specimen .vz-construct image').getBoundingClientRect().width > 0`), `${where}: the approved master is drawn`)
+        // Ids stay closed behind the toggle.
+        assert.equal(await page.eval<boolean>(`[...document.querySelectorAll('.vz-bk-ids')].every((el) => !el.open)`), true, where)
+        if (width === 1440) {
+          assert.deepEqual(await structureIssues(), [], `${where}: structure`)
+          assert.deepEqual(await contrastFailures('.vz-bk'), [], `${where}: contrast`)
+        }
+        if (shots && [1440, 390].includes(width)) {
+          fs.mkdirSync(shots, { recursive: true })
+          await page.screenshot(path.join(shots, `book-${lang}-${scheme}-${width}.png`))
+        }
+      }
+    }
+  }
+  await page.send('Emulation.setEmulatedMedia', { features: [] })
+  await page.viewport(1440, 900)
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })
