@@ -43,6 +43,7 @@ Which channels, messages, and budgets are in the current plan, and which claims 
 | Attribution | yes | internal | `business.marketing.attribution` |
 | Availability claims | yes | internal | `business.marketing.availability_claim` |
 | UTM taxonomy | optional | internal | `business.marketing.utm` |
+| Paid media | yes | internal | `business.marketing.paid_media` |
 | Primary customer | canonical reference | internal | `business.customer.primary_segment` |
 | Value proposition | canonical reference | internal | `business.offer.value_proposition` |
 | Geography | canonical reference | internal | `business.market.geography` |
