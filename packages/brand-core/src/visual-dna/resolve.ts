@@ -130,7 +130,7 @@ function verifyReturned(root: string, item: RetrievedItem, row: Row, text: Visua
 }
 
 /** One verdict per asset id, in one `brand_retrieve` call under the caller's context. */
-export function resolveAssetIds(engine: InterviewEngine, ctx: AuthContext, ids: string[], text: VisualDnaText): Map<string, Resolved> {
+function resolveAssetIds(engine: InterviewEngine, ctx: AuthContext, ids: string[], text: VisualDnaText): Map<string, Resolved> {
   const out = new Map<string, Resolved>()
   if (ids.length === 0) return out
   const root = engine.workspaceRoot()
