@@ -1,3 +1,4 @@
+import { entitySpec, readEntityList } from './entities.js'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -147,6 +148,19 @@ function readYamlFile<T>(root: string, relative: string, fallback: T): T {
   return (parse(fs.readFileSync(file, 'utf8')) as T | null) ?? fallback
 }
 
+/**
+ * Visual V3.1: a list question's fact carries its items next to the stored value, so an agent reads items, ids and
+ * links without parsing the canonical string. Legacy free text is labelled as such and has no items.
+ */
+function entityMeta(question: FieldQuestion | undefined, value: unknown): Record<string, unknown> | undefined {
+  if (question?.question_type !== 'repeating_entity') return undefined
+  const spec = entitySpec(question.id)
+  if (!spec) return undefined
+  const read = readEntityList(spec, value)
+  if (read.state === 'items') return { type: 'repeating_entity', entity: { state: 'items', items: read.list.items.map((item) => ({ id: item.id, ...item.fields, links: item.links })) } }
+  return { type: 'repeating_entity', entity: { state: read.state, items: [] } }
+}
+
 function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalRequest): Retrieval {
   const root = engine.workspaceRoot()
   const brandId = engine.config().brand.slug
@@ -204,7 +218,7 @@ function retrieveFacts(engine: InterviewEngine, ctx: AuthContext, req: InternalR
       if (!terms.every((term) => haystack.includes(term))) continue
     }
     // Personal claims carry their verification label so a reader never mistakes owner testimony for a verified fact.
-    const meta = question && id.startsWith('personal.') ? { verification: claimVerification(question, evidence, now) } : undefined
+    const meta = question && id.startsWith('personal.') ? { verification: claimVerification(question, evidence, now) } : entityMeta(question, fact.value)
     items.push({ ...base, value: fact.value, withheld: false, reason: null, ...(meta ? { meta } : {}) })
   }
   return { allow: true, reason: 'allowed', items: terms.length > 0 ? items.slice(0, 20) : items, missing, source: FACTS_PATH }

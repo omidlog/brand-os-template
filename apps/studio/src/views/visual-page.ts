@@ -61,7 +61,7 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
       </section>
       ${renderBlock(canvas, { cat, lang, mode: 'screen', doc, idPrefix: 'bmc', showNext: true, assetUrl: () => null })}
       ${legend(cat, ['approved', 'stale', 'assumption', 'recommendation', 'withheld', 'missing', 'not_applicable'])}
-      ${detailsView(cat, canvas, html`${relationshipsPanel(cat)}${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'screen')}`, cat.text.editionInternalNote, true)}
+      ${detailsView(cat, canvas, html`${relationshipsPanel(cat, canvas)}${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'screen')}`, cat.text.editionInternalNote, true)}
       ${competitorsBanner(lang, view.record.slug)}
     </div>`
   return shell(body)

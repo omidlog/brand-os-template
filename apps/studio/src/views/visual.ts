@@ -1,4 +1,5 @@
-import type { BmcZone, BusinessModelCanvasBlock, CitationListBlock, DataState, FrameworkRef, VisualCatalog, VisualDocument, VisualEntry, VisualLang } from '@brand-os/brand-core/visual'
+import { entityOptionLabel, entitySpec } from '@brand-os/brand-core'
+import type { BmcZone, BusinessModelCanvasBlock, CitationListBlock, DataState, FrameworkRef, ListZone, VisualCatalog, VisualDocument, VisualEntityItem, VisualEntry, VisualLang } from '@brand-os/brand-core/visual'
 import { fillVisual, visualCatalog } from '@brand-os/brand-core/visual'
 import { html, join, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
@@ -28,10 +29,42 @@ export interface CanvasOptions {
   idPrefix: string
 }
 
-function entryView(cat: VisualCatalog, entry: VisualEntry): SafeHtml {
+/** Item names visible on this canvas, by item id, so a link reads as a name instead of a technical id. */
+type ItemNames = Map<string, string>
+
+function itemNames(block: BusinessModelCanvasBlock): ItemNames {
+  return new Map(block.zones.flatMap((zone) => zone.entries.flatMap((entry) => (entry.items ?? []).map((item) => [item.id, item.name] as const))))
+}
+
+/**
+ * Visual V3.1: a list answer drawn as items in the owner's order. Choice values are labelled in the page language;
+ * names and details are shown as recorded. Links read as the target item's name; a target that is not on this
+ * canvas is said to be not shown, never guessed.
+ */
+function itemsView(cat: VisualCatalog, entry: VisualEntry, items: VisualEntityItem[], names: ItemNames, lang: VisualLang): SafeHtml {
+  const spec = entitySpec(entry.id)
+  return html`<ol class="vz-items" aria-label="${fillVisual(cat.entities.itemCount, { count: new Intl.NumberFormat(lang).format(items.length) })}">${items.map(
+    (item) => html`<li class="vz-item">
+      <span class="vz-item-name" dir="auto">${item.name}</span>${item.tags.map((tag) => html` <span class="vz-item-tag">${spec ? entityOptionLabel(spec, tag.field, tag.value, lang) : tag.value}</span>`)}
+      ${item.detail ? html`<span class="vz-item-detail" dir="auto">${item.detail}</span>` : ''}
+      ${item.links.length
+        ? html`<span class="vz-item-links"><span class="vz-item-links-k">${cat.entities.linkTo}:</span> ${join(
+            item.links.map((link) => (names.has(link) ? html`<span class="vz-item-link" dir="auto">${names.get(link)!}</span>` : html`<span class="vz-item-link vz-item-link--hidden">${cat.entities.linkHidden}</span>`)),
+            ', ',
+          )}</span>`
+        : ''}
+    </li>`,
+  )}</ol>`
+}
+
+function entryView(cat: VisualCatalog, entry: VisualEntry, names: ItemNames = new Map(), lang: VisualLang = 'en'): SafeHtml {
   const meta = STATE_META[entry.state]
   const body =
-    entry.state === 'withheld'
+    entry.items && entry.items.length
+      ? itemsView(cat, entry, entry.items, names, lang)
+      : entry.legacy && entry.value !== null
+        ? html`<p class="vz-entry-value" dir="auto">${entry.value}</p><p class="vz-legacy">${icon('alert')}<span>${cat.entities.legacy}</span><span class="vz-legacy-hint">${cat.entities.legacyHint}</span></p>`
+        : entry.state === 'withheld'
       ? html`<p class="vz-entry-value vz-entry-value--withheld">${icon('lock')}<span>${cat.text.withheldValue}</span></p>`
       : entry.state === 'not_applicable'
         ? html`<p class="vz-entry-value vz-entry-value--ghost">${cat.text.notApplicableZone}</p>`
@@ -60,10 +93,18 @@ function nextList(cat: VisualCatalog, zone: BmcZone): SafeHtml {
  * The canvas cell itself carries only the reading: title, the canonical prompt and the entries. Question ids, the
  * questions still to answer and related answers live in the collapsible details (screen) or on print page 2.
  */
-function zoneView(cat: VisualCatalog, zone: BmcZone, opts: CanvasOptions): SafeHtml {
+/** A list zone (V3.1) where nothing is visible yet: the designed empty state instead of a "missing" row. */
+function emptyListZone(zone: BmcZone): boolean {
+  return zone.zone_id in LIST_ZONES && zone.entries.some((entry) => entitySpec(entry.id)) && zone.entries.every((entry) => entry.value === null && entry.state !== 'withheld')
+}
+
+const LIST_ZONES: Record<ListZone, true> = { key_activities: true, key_resources: true, customer_segments: true, cost_structure: true }
+
+function zoneView(cat: VisualCatalog, zone: BmcZone, opts: CanvasOptions, names: ItemNames = new Map()): SafeHtml {
   const title = cat.zone[zone.zone_id]
   const id = `${opts.idPrefix}-zone-${zone.zone_id}`
   const gap = zone.entries.length === 0
+  const emptyList = !gap && emptyListZone(zone)
   return html`<article class="vz-zone vz-zone--${zone.zone_id} vz-zstate--${zone.state} vz-o${zone.order}" id="${id}" aria-labelledby="${id}-t" tabindex="-1">
     <header class="vz-zone-head">
       <span class="vz-zone-num" aria-hidden="true">${two(zone.order)}</span>
@@ -73,7 +114,9 @@ function zoneView(cat: VisualCatalog, zone: BmcZone, opts: CanvasOptions): SafeH
     <p class="vz-zone-prompt">${title.prompt}</p>
     ${gap
       ? ghostChart({ title: cat.text.gapTitle })
-      : html`<ul class="vz-entries">${zone.entries.map((entry) => entryView(cat, entry))}</ul>`}
+      : emptyList
+        ? ghostChart({ title: cat.entities.emptyTitle[zone.zone_id as ListZone], body: cat.entities.emptyBody })
+        : html`<ul class="vz-entries">${zone.entries.map((entry) => entryView(cat, entry, names, opts.lang))}</ul>`}
   </article>`
 }
 
@@ -103,8 +146,9 @@ export function detailsView(cat: VisualCatalog, block: BusinessModelCanvasBlock,
 
 /** The nine-zone canvas. The grid keeps the canonical topology in every language (text inside follows the locale). */
 export function canvasView(cat: VisualCatalog, block: BusinessModelCanvasBlock, opts: CanvasOptions): SafeHtml {
+  const names = itemNames(block)
   const grid = html`<div class="vz-bmc" dir="ltr" role="group" aria-label="${cat.text.canvasTitle}">
-    ${block.zones.map((zone) => html`<div class="vz-cell vz-cell--${zone.zone_id}" dir="${cat.dir}">${zoneView(cat, zone, opts)}</div>`)}
+    ${block.zones.map((zone) => html`<div class="vz-cell vz-cell--${zone.zone_id}" dir="${cat.dir}">${zoneView(cat, zone, opts, names)}</div>`)}
   </div>`
   if (opts.mode === 'print') return grid
   return html`<div class="vz-scroll" tabindex="0" role="region" aria-label="${cat.text.canvasTitle}">${grid}</div>`
@@ -153,10 +197,36 @@ export function frameworkPanel(cat: VisualCatalog, ref: FrameworkRef, lang: Visu
   </section>`
 }
 
-export function relationshipsPanel(cat: VisualCatalog): SafeHtml {
-  return html`<section class="vz-panel vz-limits" aria-labelledby="vz-links-title">
-    <h2 class="vz-panel-title" id="vz-links-title">${cat.text.relationshipsTitle}</h2>
-    <p>${cat.text.relationshipsBody}</p>
+/**
+ * Links between zones (V3.1): the links the owner recorded on list items, by item name and zone. Without list items
+ * the panel says why nothing is drawn. Item ids stay out of the main view; they are in the details and sources.
+ */
+export function relationshipsPanel(cat: VisualCatalog, block?: BusinessModelCanvasBlock): SafeHtml {
+  const rel = block?.relationships
+  if (!block || !rel || !rel.modeled) {
+    const body = rel && !rel.modeled && rel.reason === 'no_list_items' ? cat.entities.linksNoneNoItems : cat.entities.linksNoneProse
+    return html`<section class="vz-panel vz-limits" aria-labelledby="vz-links-title">
+    <h2 class="vz-panel-title" id="vz-links-title">${cat.entities.linksTitle}</h2>
+    <p>${body}</p>
+  </section>`
+  }
+  const names = itemNames(block)
+  const zoneTitle = (zone: BmcZone['zone_id'] | null) => (zone ? cat.zone[zone].title : '—')
+  return html`<section class="vz-panel vz-links" aria-labelledby="vz-links-title">
+    <h2 class="vz-panel-title" id="vz-links-title">${cat.entities.linksTitle}</h2>
+    <p class="vz-muted">${cat.entities.linksLead}</p>
+    ${rel.links.length === 0
+      ? html`<p>${cat.entities.linksEmpty}</p>`
+      : html`<table class="vz-table vz-links-table">
+      <thead><tr><th scope="col">${cat.entities.linksColFrom}</th><th scope="col">${cat.entities.linksColTo}</th><th scope="col">${cat.entities.linksColState}</th></tr></thead>
+      <tbody>${rel.links.map(
+        (link) => html`<tr class="vz-link vz-link--${link.state}">
+          <td><span class="vz-zone-ref">${zoneTitle(link.from_zone)}</span> <span dir="auto">${names.get(link.from) ?? ''}</span></td>
+          <td><span class="vz-zone-ref">${zoneTitle(link.to_zone)}</span> ${link.state === 'resolved' ? html`<span dir="auto">${names.get(link.to) ?? ''}</span>` : html`<span class="vz-muted">${cat.entities.linkHidden}</span>`}</td>
+          <td>${link.state === 'resolved' ? cat.entities.linkResolved : cat.entities.linkUnresolved}</td>
+        </tr>`,
+      )}</tbody>
+    </table>`}
   </section>`
 }
 
@@ -254,7 +324,7 @@ ${input.toolbar}
       <div class="vz-side">
         <section class="vz-panel"><h2 class="vz-panel-title">${cat.text.summaryTitle}</h2>${summaryView(cat, doc, lang)}${miniMap(cat, canvas, 'p', false)}<p class="vz-muted vz-edition-note">${internal ? cat.text.editionInternalNote : cat.text.editionPublicNote} ${cat.text.gapBody}</p></section>
         ${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'print')}
-        ${relationshipsPanel(cat)}
+        ${relationshipsPanel(cat, canvas)}
         ${internal ? html`<section class="vz-panel"><h2 class="vz-panel-title">${cat.text.nextQuestions}</h2><ul class="vz-next-all">${canvas.zones
           .filter((zone) => zone.next_questions.length)
           .map((zone) => html`<li><strong>${two(zone.order)} ${cat.zone[zone.zone_id].title}</strong> ${join(zone.next_questions.map((q) => html`<code class="vz-code" dir="ltr">${q.id}</code>`), ' ')}</li>`)}</ul></section>` : ''}

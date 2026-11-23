@@ -661,3 +661,28 @@
 /* The matrix needs the full measure: it is the one plate that does not sit on the inset column. */
 .vz-cmp-plate > .vz-cmp-scroll { margin-inline-start: 0; }
 .vz-cmp .vz-cmp-table { min-inline-size: 920px; }
+
+/* ---- Visual V3.1: list items on the canvas, links panel, legacy text ---------------------------------------- */
+.vz-items { margin: 0 0 8px; padding: 0; list-style: none; counter-reset: vz-item; display: grid; gap: 8px; }
+.vz-item { counter-increment: vz-item; display: grid; gap: 2px; padding-block-end: 8px; border-block-end: 1px solid var(--vz-rule); }
+.vz-item:last-child { border-block-end: 0; padding-block-end: 0; }
+.vz-item-name { font-weight: 600; overflow-wrap: anywhere; }
+.vz-item-name::before { content: counter(vz-item, decimal-leading-zero) "  "; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--vz-text-3); }
+.vz-item-tag { display: inline-block; margin-inline-start: 4px; padding: 0 6px; border: 1px solid var(--vz-rule-strong); border-radius: 999px; font-size: 10.5px; letter-spacing: 0.02em; color: var(--vz-text-2); white-space: nowrap; }
+.vz-item-detail { font-size: 12.5px; line-height: 1.5; color: var(--vz-text-2); overflow-wrap: anywhere; text-wrap: pretty; }
+.vz-item-links { font-size: 11px; color: var(--vz-text-3); }
+.vz-item-links-k { font-variant-caps: all-small-caps; letter-spacing: 0.04em; }
+.vz-item-link { color: var(--vz-text-2); }
+.vz-item-link--hidden { font-style: italic; color: var(--vz-text-3); }
+[dir="rtl"] .vz-item-link--hidden { font-style: normal; }
+.vz-entry--draft .vz-item-name, .vz-entry--suggestion .vz-item-name { font-style: italic; font-weight: 500; }
+[dir="rtl"] .vz-entry--draft .vz-item-name, [dir="rtl"] .vz-entry--suggestion .vz-item-name { font-style: normal; }
+.vz-legacy { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 11px; color: var(--vz-text-3); }
+.vz-legacy svg { width: 13px; height: 13px; }
+.vz-legacy-hint { flex-basis: 100%; }
+.vz-links-table .vz-link--unresolved td { color: var(--vz-text-3); }
+@media print {
+  .vz-item { break-inside: avoid; }
+  .vz-item-detail { font-size: 8pt; }
+  .vz-item-links, .vz-item-tag { font-size: 7pt; }
+}

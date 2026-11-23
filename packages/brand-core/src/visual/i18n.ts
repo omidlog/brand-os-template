@@ -1,3 +1,4 @@
+import { ENTITY_TEXT, type EntityText } from './i18n-entities.js'
 import { IDENTITY_TEXT, type IdentityText } from './i18n-identity.js'
 import type { BmcZoneId, BmcZone, DataState, MissingReason, PermittedClaim } from './model.js'
 
@@ -16,6 +17,8 @@ export interface VisualCatalog {
   dir: 'ltr' | 'rtl'
   /** Brand Book "Visual identity" chapter (V2.1). */
   identity: IdentityText
+  /** Business Model Canvas list questions (V3.1). */
+  entities: EntityText
   zone: Record<BmcZoneId, { title: string; prompt: string }>
   state: Record<DataState, string>
   zoneState: Record<BmcZone['state'], string>
@@ -92,6 +95,7 @@ export interface VisualCatalog {
 const en: VisualCatalog = {
   dir: 'ltr',
   identity: IDENTITY_TEXT.en,
+  entities: ENTITY_TEXT.en,
   zone: {
     key_partners: { title: 'Key partners', prompt: 'Who do we depend on to deliver?' },
     key_activities: { title: 'Key activities', prompt: 'What must we do well, every week?' },
@@ -198,6 +202,7 @@ const en: VisualCatalog = {
 const fa: VisualCatalog = {
   dir: 'rtl',
   identity: IDENTITY_TEXT.fa,
+  entities: ENTITY_TEXT.fa,
   zone: {
     key_partners: { title: 'شرکای کلیدی', prompt: 'برای ارائه به چه کسانی وابسته‌ایم؟' },
     key_activities: { title: 'فعالیت‌های کلیدی', prompt: 'چه کارهایی را باید هر هفته خوب انجام دهیم؟' },
@@ -304,6 +309,7 @@ const fa: VisualCatalog = {
 const tr: VisualCatalog = {
   dir: 'ltr',
   identity: IDENTITY_TEXT.tr,
+  entities: ENTITY_TEXT.tr,
   zone: {
     key_partners: { title: 'Kilit ortaklar', prompt: 'Teslimat için kime bağlıyız?' },
     key_activities: { title: 'Kilit faaliyetler', prompt: 'Her hafta neyi iyi yapmalıyız?' },
