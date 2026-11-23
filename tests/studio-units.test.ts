@@ -8,7 +8,7 @@ import { base32Encode, totpAt, TotpVerifier } from '../apps/studio/src/auth/totp
 import { first, parseCookies, parseForm, safeLocalPath, serializeCookie } from '../apps/studio/src/http.js'
 import { Registry, type BrandRecord } from '../apps/studio/src/registry.js'
 import { catalog, i18n, isLocale, LOCALES, type MessageKey } from '../apps/studio/src/i18n/index.js'
-import { Client, OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET } from './helpers/studio-server.js'
+import { Client, OWNER_LOGIN, OWNER_PASSWORD, pickTotpStep, startStudio, TOTP_SECRET } from './helpers/studio-server.js'
 
 /** Small Studio modules that had no direct tests: the TOTP verifier's results, the rate limiter, HTTP helpers, the registry and the message catalogs. */
 
@@ -130,6 +130,28 @@ test('registry: persists records privately, drops invalid rows on load, returns 
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('test sign-ins pick an unused TOTP step, also when the clock crosses a step boundary between them', () => {
+  const step = 56_666_666
+  const used = new Set<number>()
+  // An API login early in step N takes the next step (N + 1), as Client.login always did.
+  const first = pickTotpStep(step * 30_000 + 1_000, used)!
+  assert.equal(first, step + 1)
+  used.add(first)
+  // A browser sign-in after the clock reached N + 1 must not take N + 1 again (the server would say "reused"):
+  // this is what left the competitor browser test on /login.
+  const second = pickTotpStep((step + 1) * 30_000 + 1_000, used)!
+  assert.notEqual(second, first)
+  assert.equal(second, step + 2)
+  used.add(second)
+  const third = pickTotpStep((step + 1) * 30_000 + 1_000, used)!
+  assert.equal(third, step)
+  used.add(third)
+  // All three accepted steps used: wait for the next step.
+  assert.equal(pickTotpStep((step + 1) * 30_000 + 1_000, used), null)
+  // Never the previous step close to the end of the current one: it would expire on the way to the server.
+  assert.equal(pickTotpStep((step + 1) * 30_000 + 27_000, new Set([step + 2, step + 1])), null)
 })
 
 test('signing in again with an authentication code that was already used says to wait for a new code', async () => {
