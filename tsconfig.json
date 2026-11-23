@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@brand-os/brand-core": ["packages/brand-core/src/index.ts"],
+      "@brand-os/brand-core/assurance": ["packages/brand-core/src/assurance/index.ts"],
       "@brand-os/brand-core/coach": ["packages/brand-core/src/coach/index.ts"],
       "@brand-os/brand-core/competitive": ["packages/brand-core/src/competitive/index.ts"],
       "@brand-os/brand-core/content-bridge": ["packages/brand-core/src/content-bridge/index.ts"],

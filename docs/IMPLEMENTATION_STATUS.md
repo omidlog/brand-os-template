@@ -289,6 +289,19 @@ Branch `feat/content-bridge-slice-d`. Guides: `docs-internal/CONTENT_BRIDGE.md`,
 | CLI journey demo (real output) | Done | Owner journey, mock agent via `brand:query`, report over MCP, `reports`, revoke. `tests/content-journey.test.ts` runs it and checks the documents name only real commands, tools and schemas. |
 | Hosted API, per-channel tokens, Studio view of reports | Not started | Not in the brief. |
 
+## Assurance registry and assessable controls (Trust v2 PR-A)
+
+Branch `feat/trust-v2-pr-a`. Guide: `docs-internal/ASSURANCE.md`. A pure library; no command, route, store, approval or agent scope.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Claim ladder and methodology registry | Done | Six levels that only go down; unverified editions and unchecked sources are at most `informed_by`; attestations by kind (review, certificate). One assessable method (our own); ISO entries are named only. `assurance/bridge.ts` checks the visual layer's `PermittedClaim` against the registry without changing it. |
+| Assessable controls (Positioning Readiness v1) | Done | 15 typed controls over existing question ids; applicability first, `unknown` never read as `no`; privacy classification at least the question's sensitivity. |
+| Deterministic evaluator | Done | Ten statuses; `not_scoreable` unless the denominator is real; changed source forces `needs_review`; restricted inputs withheld; per-domain maturity, no aggregate; byte-identical output for the same inputs. |
+| en/fa/tr text and gap report | Done | Every emitted code has text in three languages; `renderGapReport` prints no ratio when not scoreable. Synthetic fixtures only. |
+| Coverage matrix in docs | Done | `docs-internal/ASSURANCE.md`, checked against the code by `tests/assurance-i18n.test.ts`. |
+| Assessing a real brand, evidence lineage, Studio view, reports, decisions | Not started | PR-B onward. The evaluator has never run on a real workspace. |
+
 ## Task Context Engine (Slice 1: core and CLI)
 
 Branch `feat/task-context-p0`. Preflight audit, permission and field-coverage matrices, and the guide:
