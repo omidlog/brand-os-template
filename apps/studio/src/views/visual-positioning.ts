@@ -9,10 +9,17 @@ import { two } from './visual-primitives.js'
  * Positioning map renderer (Visual Blueprint V2.3, owner decision D2). The owner's two axes, a quiet band grid, and
  * only the subjects whose position on BOTH axes is backed by a dated source. A stale position wears a dashed ring; a
  * conflict is drawn as a dashed range box spanning the disagreeing bands, never resolved to one point. Everyone else
- * is listed in the "Not placed" margin with each axis's state. The plot is direction-neutral geometry (`dir="ltr"`,
- * low to high, left to right and bottom to top); every word lives in HTML around it so Persian sets in Vazirmatn and
- * reads right to left. No inline style or script (strict CSP); no technical id in the main view.
+ * is listed in the "Not placed" margin with each axis's state. The SVG is explicit geometry (`dir="ltr"`); every word
+ * lives in HTML around it so Persian sets in Vazirmatn and reads right to left. The vertical axis always runs low to
+ * high, bottom to top. The horizontal axis follows the reading direction (owner decision, 2026-11-23): en/tr run low
+ * to high left to right; fa is mirrored, low on the right and high on the left, with the vertical axis on the right
+ * where the two low ends meet. No inline style or script (strict CSP); no technical id in the main view.
  */
+
+/** True when the horizontal axis runs right to left (low on the right). Only Persian, the one right-to-left edition. */
+export function mirrorsX(lang: VisualLang): boolean {
+  return lang === 'fa'
+}
 
 const CELL = 96
 const RANGE_INSET = 10
@@ -75,7 +82,7 @@ interface Placed {
 }
 
 /** Grid geometry: band centres; points that land on the same spot are spread side by side, never stacked. */
-function layout(block: PositioningMapBlock): { size: number; placed: Placed[] } {
+function layout(block: PositioningMapBlock, mirror: boolean): { size: number; placed: Placed[] } {
   const n = Math.max(block.bands.length, 1)
   const size = n * CELL
   const raw = block.points.map((point) => {
@@ -92,6 +99,12 @@ function layout(block: PositioningMapBlock): { size: number; placed: Placed[] } 
     groups.set(key, [...(groups.get(key) ?? []), item])
   }
   for (const group of groups.values()) group.forEach((item, k) => (item.cx += (k - (group.length - 1) / 2) * 34))
+  // Mirror last, so side-by-side neighbours also read in the reading direction.
+  if (mirror)
+    for (const item of raw) {
+      item.cx = size - item.cx
+      if (item.range) item.range = { ...item.range, x0: size - item.range.x1, x1: size - item.range.x0 }
+    }
   return { size, placed: raw }
 }
 
@@ -109,7 +122,8 @@ function marker(ctx: ComparisonContext, t: PositioningText, block: PositioningMa
 }
 
 function plot(ctx: ComparisonContext, t: PositioningText, block: PositioningMapBlock): SafeHtml {
-  const { size, placed } = layout(block)
+  const mirror = mirrorsX(ctx.lang)
+  const { size, placed } = layout(block, mirror)
   const n = block.bands.length
   const lines = Array.from({ length: Math.max(n - 1, 0) }, (_, i) => (i + 1) * CELL)
   const mid = size / 2
@@ -119,7 +133,7 @@ function plot(ctx: ComparisonContext, t: PositioningText, block: PositioningMapB
   const ranges = placed.filter((item) => item.range).map((item) => html`<rect class="vz-pos-range" x="${item.range!.x0}" y="${item.range!.y0}" width="${item.range!.x1 - item.range!.x0}" height="${item.range!.y1 - item.range!.y0}" rx="6"/>`)
   // Own brand last so it is drawn on top.
   const order = [...placed.filter((p) => p.point.kind !== 'own_brand'), ...placed.filter((p) => p.point.kind === 'own_brand')]
-  return html`<svg class="vz-pos-svg" viewBox="-2 -2 ${size + 4} ${size + 4}" role="group" aria-label="${label}" dir="ltr" focusable="false">
+  return html`<svg class="vz-pos-svg" viewBox="-2 -2 ${size + 4} ${size + 4}" role="group" aria-label="${label}" dir="ltr" data-x-direction="${mirror ? 'rtl' : 'ltr'}" focusable="false">
     <rect class="vz-pos-field" x="0" y="0" width="${size}" height="${size}"/>
     ${lines.map((at) => html`<line class="vz-pos-grid" x1="${at}" y1="0" x2="${at}" y2="${size}"/><line class="vz-pos-grid" x1="0" y1="${at}" x2="${size}" y2="${at}"/>`)}
     <line class="vz-pos-cross" x1="${mid}" y1="0" x2="${mid}" y2="${size}"/><line class="vz-pos-cross" x1="0" y1="${mid}" x2="${size}" y2="${mid}"/>
@@ -132,8 +146,11 @@ function plot(ctx: ComparisonContext, t: PositioningText, block: PositioningMapB
 function figure(ctx: ComparisonContext, t: PositioningText, block: PositioningMapBlock): SafeHtml {
   const axes = block.axes!
   const words = (l: OwnerLabel) => ownerWords(l, ctx.lang)
+  const mirror = mirrorsX(ctx.lang)
+  // The chart grid follows the x direction: in fa the vertical axis column sits on the right and the x poles swap
+  // sides (low on the right). DOM order stays low, name, high for every language.
   return html`<figure class="vz-pos-figure">
-    <div class="vz-pos-chart" dir="ltr">
+    <div class="vz-pos-chart${mirror ? ' vz-pos-chart--mirrored' : ''}" dir="${mirror ? 'rtl' : 'ltr'}">
       <div class="vz-pos-yaxis">
         <p class="vz-pos-pole vz-pos-pole--high" dir="auto">${words(axes.y.high)}</p>
         <p class="vz-pos-axis-name"><span class="vz-vh">${t.axisY}: </span><span class="vz-pos-arrow" aria-hidden="true">↑</span><span dir="auto">${words(axes.y.label)}</span></p>
@@ -142,7 +159,7 @@ function figure(ctx: ComparisonContext, t: PositioningText, block: PositioningMa
       <div class="vz-pos-plot">${plot(ctx, t, block)}</div>
       <div class="vz-pos-xaxis">
         <p class="vz-pos-pole vz-pos-pole--low" dir="auto">${words(axes.x.low)}</p>
-        <p class="vz-pos-axis-name"><span class="vz-vh">${t.axisX}: </span><span dir="auto">${words(axes.x.label)}</span><span class="vz-pos-arrow" aria-hidden="true">→</span></p>
+        <p class="vz-pos-axis-name"><span class="vz-vh">${t.axisX}: </span><span dir="auto">${words(axes.x.label)}</span><span class="vz-pos-arrow" aria-hidden="true">${mirror ? '←' : '→'}</span></p>
         <p class="vz-pos-pole vz-pos-pole--high" dir="auto">${words(axes.x.high)}</p>
       </div>
     </div>
