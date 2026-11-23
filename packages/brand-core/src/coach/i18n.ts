@@ -1,5 +1,9 @@
 import type { Locale } from '../i18n.js'
-import { COACH_CRITERIA, COACH_FINDING_CODES, COACH_STATUSES, type CoachCriterion, type CoachFindingCode, type CoachStatus } from './model.js'
+import { COACH_CRITERIA, COACH_FINDING_CODES, COACH_RULE_CHECK_OUTCOMES, COACH_STATUSES, type CoachCriterion, type CoachFindingCode, type CoachRuleCheckOutcome, type CoachStatus } from './model.js'
+
+/** Tension rules that carry an explanatory question. Mirrors the tension entries of `COACH_REGISTRY_RULES`. */
+export const COACH_TENSION_RULES = ['premium-vs-lowest-price', 'availability-held-back'] as const
+export type CoachTensionRule = (typeof COACH_TENSION_RULES)[number]
 
 /**
  * The coach's human text in en, fa (RTL) and tr.
@@ -68,6 +72,18 @@ const EN: Table = {
     reason: 'The answer to {question} passes every criterion the coach can check without a model: {criteria}. This is a check on the data, not a judgement of your decision.',
     improvement: null,
   },
+  facet_ownership_separate: {
+    reason: '{question} uses ownership wording. For a {facet} profile a role (founder, lead, adviser) never implies ownership: ownership is a separate statement that needs its own evidence.',
+    improvement: 'Keep {question} to the role, and record ownership in {canonical} with an explicit ownership state.',
+  },
+  facet_companion_open: {
+    reason: '{question} is answered, but for a {facet} profile it can only be used once {canonical} is settled, and that question is still open ({rubric}).',
+    improvement: 'Answer {canonical} next: npm run brand:interview -- --question {canonical}',
+  },
+  facet_claim_undated: {
+    reason: '{question} is a public track-record claim for a {facet} profile, and the answer gives no year. Undated numbers and history are not published.',
+    improvement: 'Add the year (and the month for audience numbers) to each item, then record its source: npm run brand:evidence -- add --claim {question}',
+  },
   follow_up_canonical: {
     reason: 'The gap after {question} is {criterion}, and the interview already owns a question for it: {canonical}. Asking that one keeps a single canonical answer.',
     improvement: 'Ask {canonical} next: npm run brand:interview -- --question {canonical}',
@@ -84,8 +100,16 @@ const EN: Table = {
     reason: 'The interview rule {rule} reports a conflict between {ids}. This is the existing deterministic rule, reported unchanged.',
     improvement: 'Settle which field is right with the owner, then correct the other through the change flow.',
   },
+  consistency_tension: {
+    reason: 'Rule {rule}: {ids} can both be true, but they often pull in different directions. This is a possible trade-off, not a contradiction, and nothing is wrong unless you decide it is.',
+    improvement: 'Answer the question below in one sentence, or leave it as it is: a deliberate trade-off is a valid decision.',
+  },
+  consistency_verification: {
+    reason: 'Rule {rule}: {ids} makes a claim that needs a source, and the evidence register holds no current independent source for it. The claim stays unverified; the coach cannot verify anything.',
+    improvement: 'Record a source and verify it: npm run brand:evidence -- add --claim {ids}. Until then, do not repeat the claim publicly.',
+  },
   consistency_none: {
-    reason: 'No deterministic contradiction is open across the {count} answered question(s) the coach read. Strategic trade-offs are not assessed in this version.',
+    reason: 'No contradiction, possible trade-off or unverified claim was found across the {count} answered question(s) the coach read. Rules that could not run are listed as not tested.',
     improvement: null,
   },
 }
@@ -139,6 +163,18 @@ const FA: Table = {
     reason: 'پاسخ {question} همهٔ معیارهایی را که مربی بدون مدل می‌تواند بسنجد می‌گذراند: {criteria}. این بررسیِ داده است، نه داوری دربارهٔ تصمیم شما.',
     improvement: null,
   },
+  facet_ownership_separate: {
+    reason: 'در {question} واژگان مالکیت آمده است. در پروفایل {facet}، نقش (بنیان‌گذار، مدیر، مشاور) هرگز به معنای مالکیت نیست؛ مالکیت جملهٔ جداگانه‌ای است که شاهد خودش را می‌خواهد.',
+    improvement: '{question} را فقط به نقش محدود کنید و مالکیت را با وضعیت صریح در {canonical} ثبت کنید.',
+  },
+  facet_companion_open: {
+    reason: '{question} پاسخ دارد، اما در پروفایل {facet} فقط وقتی قابل استفاده است که {canonical} روشن شده باشد، و آن پرسش هنوز باز است ({rubric}).',
+    improvement: 'در گام بعد به {canonical} پاسخ دهید: npm run brand:interview -- --question {canonical}',
+  },
+  facet_claim_undated: {
+    reason: '{question} در پروفایل {facet} یک ادعای عمومی دربارهٔ سابقه است و پاسخ هیچ سالی ندارد. عدد و سابقهٔ بدون تاریخ منتشر نمی‌شود.',
+    improvement: 'برای هر مورد سال (و برای آمار مخاطب، ماه) را بنویسید و منبعش را ثبت کنید: npm run brand:evidence -- add --claim {question}',
+  },
   follow_up_canonical: {
     reason: 'شکافِ بعد از {question} «{criterion}» است و مصاحبه از قبل پرسشی برای آن دارد: {canonical}. پرسیدن همان، یک پاسخ مرجع را حفظ می‌کند.',
     improvement: 'در گام بعد {canonical} را بپرسید: npm run brand:interview -- --question {canonical}',
@@ -155,8 +191,16 @@ const FA: Table = {
     reason: 'قاعدهٔ مصاحبهٔ {rule} یک تناقض میان {ids} گزارش می‌کند. این همان قاعدهٔ قطعیِ موجود است که بی‌تغییر بازگو می‌شود.',
     improvement: 'با مالک روشن کنید کدام فیلد درست است، سپس دیگری را از مسیر تغییر اصلاح کنید.',
   },
+  consistency_tension: {
+    reason: 'قاعدهٔ {rule}: {ids} می‌توانند هم‌زمان درست باشند، اما اغلب در دو جهت مختلف می‌کشند. این یک بده‌بستان احتمالی است، نه تناقض، و تا شما تصمیم نگیرید چیزی نادرست نیست.',
+    improvement: 'به پرسش زیر در یک جمله پاسخ دهید، یا همین‌طور بگذارید بماند: بده‌بستانِ آگاهانه یک تصمیم معتبر است.',
+  },
+  consistency_verification: {
+    reason: 'قاعدهٔ {rule}: {ids} ادعایی دارد که منبع می‌خواهد، و در دفتر شواهد هیچ منبع مستقل و به‌روزی برای آن نیست. این ادعا تأییدنشده می‌ماند؛ مربی نمی‌تواند چیزی را تأیید کند.',
+    improvement: 'یک منبع ثبت و تأیید کنید: npm run brand:evidence -- add --claim {ids}. تا آن زمان این ادعا را در متن عمومی تکرار نکنید.',
+  },
   consistency_none: {
-    reason: 'در {count} پرسشِ پاسخ‌داده‌شده‌ای که مربی خواند، هیچ تناقض قطعیِ بازی وجود ندارد. سنجش بده‌بستان‌های راهبردی در این نسخه انجام نمی‌شود.',
+    reason: 'در {count} پرسشِ پاسخ‌داده‌شده‌ای که مربی خواند، هیچ تناقض، بده‌بستان احتمالی یا ادعای تأییدنشده‌ای پیدا نشد. قاعده‌هایی که نتوانستند اجرا شوند «آزموده نشد» فهرست شده‌اند.',
     improvement: null,
   },
 }
@@ -210,6 +254,18 @@ const TR: Table = {
     reason: '{question} yanıtı, koçun modelsiz denetleyebildiği tüm ölçütleri geçiyor: {criteria}. Bu veriye dair bir denetim, kararınıza dair bir yargı değil.',
     improvement: null,
   },
+  facet_ownership_separate: {
+    reason: '{question} sahiplik ifadesi içeriyor. {facet} profilinde bir rol (kurucu, yönetici, danışman) asla sahiplik anlamına gelmez; sahiplik kendi kanıtını gerektiren ayrı bir ifadedir.',
+    improvement: '{question} alanını yalnızca role ayırın; sahipliği açık bir sahiplik durumuyla {canonical} içinde kaydedin.',
+  },
+  facet_companion_open: {
+    reason: '{question} yanıtlanmış, ancak {facet} profilinde ancak {canonical} netleştiğinde kullanılabilir ve o soru hâlâ açık ({rubric}).',
+    improvement: 'Sıradaki soru {canonical}: npm run brand:interview -- --question {canonical}',
+  },
+  facet_claim_undated: {
+    reason: '{question}, {facet} profili için kamuya açık bir geçmiş iddiasıdır ve yanıtta yıl yok. Tarihsiz sayılar ve geçmiş yayımlanmaz.',
+    improvement: 'Her maddeye yılı (kitle sayıları için ayı da) ekleyin ve kaynağını kaydedin: npm run brand:evidence -- add --claim {question}',
+  },
   follow_up_canonical: {
     reason: '{question} sonrasındaki boşluk «{criterion}» ve görüşmede bunun için zaten bir soru var: {canonical}. Onu sormak tek bir asli yanıtı korur.',
     improvement: 'Sırada {canonical} olsun: npm run brand:interview -- --question {canonical}',
@@ -226,8 +282,16 @@ const TR: Table = {
     reason: 'Görüşme kuralı {rule}, {ids} arasında bir çelişki bildiriyor. Bu, mevcut belirlenimci kuralın olduğu gibi aktarılmasıdır.',
     improvement: 'Hangi alanın doğru olduğunu sahiple netleştirin, sonra diğerini değişiklik akışıyla düzeltin.',
   },
+  consistency_tension: {
+    reason: '{rule} kuralı: {ids} aynı anda doğru olabilir, ancak çoğu zaman farklı yönlere çeker. Bu bir çelişki değil, olası bir ödünleşimdir; siz öyle karar vermedikçe yanlış bir şey yok.',
+    improvement: 'Aşağıdaki soruyu tek cümleyle yanıtlayın ya da olduğu gibi bırakın: bilinçli bir ödünleşim geçerli bir karardır.',
+  },
+  consistency_verification: {
+    reason: '{rule} kuralı: {ids} kaynak gerektiren bir iddia içeriyor ve kanıt kaydında bunun için güncel, bağımsız bir kaynak yok. İddia doğrulanmamış kalır; koç hiçbir şeyi doğrulayamaz.',
+    improvement: 'Bir kaynak kaydedip doğrulayın: npm run brand:evidence -- add --claim {ids}. O zamana kadar iddiayı kamuya açık metinde tekrarlamayın.',
+  },
   consistency_none: {
-    reason: 'Koçun okuduğu {count} yanıtlanmış soruda açık, belirlenimci bir çelişki yok. Stratejik ödünleşmeler bu sürümde değerlendirilmez.',
+    reason: 'Koçun okuduğu {count} yanıtlanmış soruda çelişki, olası ödünleşim ya da doğrulanmamış iddia bulunmadı. Çalıştırılamayan kurallar test edilmedi olarak listelenir.',
     improvement: null,
   },
 }
@@ -344,6 +408,47 @@ export const NO_FOLLOW_UP_TEXT: Record<Locale, Record<NoFollowUpReason, string>>
   },
 }
 
+/** The one explanatory question per tension rule, asked instead of reporting a conflict. */
+export const TENSION_QUESTIONS: Record<Locale, Record<CoachTensionRule, string>> = {
+  en: {
+    'premium-vs-lowest-price': 'Is the low price a deliberate entry or launch offer for a premium brand, or is the brand moving towards a value position? Which one should the documents say?',
+    'availability-held-back': 'The product is recorded as available, but public wording may not say so yet. Is this a deliberate staged or quiet launch, and until when?',
+  },
+  fa: {
+    'premium-vs-lowest-price': 'آیا قیمت پایین یک پیشنهاد ورودی یا افتتاحیهٔ آگاهانه برای یک برند ممتاز است، یا برند به سمت جایگاه «به‌صرفه» می‌رود؟ اسناد کدام را بگویند؟',
+    'availability-held-back': 'محصول «در دسترس» ثبت شده، اما متن عمومی هنوز اجازه ندارد این را بگوید. آیا این یک عرضهٔ مرحله‌ای یا بی‌سروصدای آگاهانه است، و تا چه زمانی؟',
+  },
+  tr: {
+    'premium-vs-lowest-price': 'Düşük fiyat, premium bir marka için bilinçli bir giriş ya da lansman teklifi mi, yoksa marka uygun fiyat konumuna mı kayıyor? Belgeler hangisini söylemeli?',
+    'availability-held-back': 'Ürün mevcut olarak kayıtlı, ancak kamuya açık metin bunu henüz söyleyemiyor. Bu bilinçli, aşamalı ya da sessiz bir lansman mı ve ne zamana kadar?',
+  },
+}
+
+/** How a rule check is named to a person. `not_tested` is said out loud, never left as silence. */
+export const RULE_OUTCOME_NAMES: Record<Locale, Record<CoachRuleCheckOutcome, string>> = {
+  en: {
+    confirmed_conflict: 'confirmed conflict',
+    potential_tension: 'possible trade-off (a question, not an error)',
+    needs_verification: 'needs a verified source',
+    no_finding: 'checked, nothing found',
+    not_tested: 'not tested (an input is still open)',
+  },
+  fa: {
+    confirmed_conflict: 'تناقض قطعی',
+    potential_tension: 'بده‌بستان احتمالی (یک پرسش، نه خطا)',
+    needs_verification: 'به منبع تأییدشده نیاز دارد',
+    no_finding: 'بررسی شد، چیزی پیدا نشد',
+    not_tested: 'آزموده نشد (یکی از ورودی‌ها هنوز باز است)',
+  },
+  tr: {
+    confirmed_conflict: 'kesin çelişki',
+    potential_tension: 'olası ödünleşim (bir soru, hata değil)',
+    needs_verification: 'doğrulanmış kaynak gerekiyor',
+    no_finding: 'denetlendi, bulgu yok',
+    not_tested: 'test edilmedi (bir girdi hâlâ açık)',
+  },
+}
+
 export const COACH_UI: Record<Locale, Record<string, string>> = {
   en: {
     title: 'Strategic coach',
@@ -367,6 +472,8 @@ export const COACH_UI: Record<Locale, Record<string, string>> = {
     momentApproveTitle: 'Coach notes before you approve (advisory; nothing is blocked):',
     momentMore: '{count} more: npm run brand:coach -- analyze --mode quality_review --question <id>',
     momentApproveFoot: 'Approving is your decision. The coach changed nothing and authorizes nothing.',
+    ruleChecks: 'Rules checked',
+    ruleGuard: 'a recognised exception applied',
   },
   fa: {
     title: 'مربی راهبردی',
@@ -390,6 +497,8 @@ export const COACH_UI: Record<Locale, Record<string, string>> = {
     momentApproveTitle: 'یادداشت‌های مربی پیش از تأیید (مشورتی؛ چیزی مسدود نمی‌شود):',
     momentMore: '{count} مورد دیگر: npm run brand:coach -- analyze --mode quality_review --question <id>',
     momentApproveFoot: 'تأیید تصمیم شماست. مربی چیزی را تغییر نداد و اجازهٔ هیچ کاری نمی‌دهد.',
+    ruleChecks: 'قاعده‌های بررسی‌شده',
+    ruleGuard: 'یک استثنای شناخته‌شده اعمال شد',
   },
   tr: {
     title: 'Stratejik koç',
@@ -413,6 +522,8 @@ export const COACH_UI: Record<Locale, Record<string, string>> = {
     momentApproveTitle: 'Onaylamadan önce koç notları (tavsiye; hiçbir şey engellenmez):',
     momentMore: '{count} tane daha: npm run brand:coach -- analyze --mode quality_review --question <id>',
     momentApproveFoot: 'Onaylamak sizin kararınız. Koç hiçbir şeyi değiştirmedi ve hiçbir şeye yetki vermez.',
+    ruleChecks: 'Denetlenen kurallar',
+    ruleGuard: 'tanınmış bir istisna uygulandı',
   },
 }
 
@@ -450,6 +561,12 @@ export function coachI18nErrors(): string[] {
     }
     for (const reason of NO_FOLLOW_UP_REASONS) {
       if (!NO_FOLLOW_UP_TEXT[locale][reason]?.trim()) errors.push(`coach no-follow-up reason ${locale}.${reason} is missing`)
+    }
+    for (const rule of COACH_TENSION_RULES) {
+      if (!TENSION_QUESTIONS[locale][rule]?.trim()) errors.push(`coach tension question ${locale}.${rule} is missing`)
+    }
+    for (const outcome of COACH_RULE_CHECK_OUTCOMES) {
+      if (!RULE_OUTCOME_NAMES[locale][outcome]?.trim()) errors.push(`coach rule outcome ${locale}.${outcome} is missing`)
     }
     for (const key of Object.keys(COACH_UI.en)) {
       if (!COACH_UI[locale][key]?.trim()) errors.push(`coach ui string ${locale}.${key} is missing`)
