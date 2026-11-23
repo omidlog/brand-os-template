@@ -55,6 +55,20 @@ export const REFERENCE_REASONS = [
 ] as const
 export type ReferenceReason = (typeof REFERENCE_REASONS)[number]
 
+/**
+ * Where the reference will be used. `public` (the default) needs public-scope rights for a portrait or other
+ * rights-sensitive subject; `internal` is also covered by internal-scope rights. A verdict holds only for the scope it
+ * was asked for: an `internal` verdict is not permission to publish.
+ */
+export const USE_SCOPES = ['public', 'internal'] as const
+export type UseScope = (typeof USE_SCOPES)[number]
+
+/**
+ * Why no licence record was needed or which one applies. `own_brand_mark`: the brand's own logo, wordmark, logomark or
+ * brand mark with an empty or TBD licence (owner decision 2026-11-23). Third-party assets always need `recorded`.
+ */
+export type LicenseBasis = 'recorded' | 'own_brand_mark'
+
 /** Intended consumer of an asset's bytes. `renderer` is a deterministic local program, not a model. */
 export const ASSET_USES = ['renderer', 'local_model', 'external_provider'] as const
 export type AssetUse = (typeof ASSET_USES)[number]
@@ -78,7 +92,7 @@ export interface VisualReference {
   /** Metadata of the verified file. Present only when `state` is `approved`. */
   asset: { name: string | null; path: string; media_type: string | null; size_bytes: number; checksum_sha256: string } | null
   /** Usage-rights record as the manifest states it. Present only when `state` is `approved`. */
-  rights: { license: string | null; usage: string | null; restrictions: string | null; rights_subject: string | null } | null
+  rights: { license: string | null; license_basis: LicenseBasis; usage: string | null; restrictions: string | null; rights_subject: string | null } | null
   /** Effective model-use right: the recorded value when valid, otherwise `not_allowed`. `not_allowed` unless approved. */
   model_use: ModelUse
   provider_gate: { local_model: ProviderVerdict; external_provider: ProviderVerdict }
@@ -106,6 +120,8 @@ export interface VisualDnaRequest {
   asset_ids?: string[]
   mascot?: MascotRequest
   creative?: CreativeRequest
+  /** Default `public`. */
+  use_scope?: UseScope
   locale?: VisualDnaLocale
 }
 
@@ -127,6 +143,8 @@ export interface VisualDnaResult {
   brand_id: string
   principal: { role: Role; profile: AgentProfile | null }
   reason: string | null
+  /** The use the verdicts were checked for. */
+  use_scope: UseScope
   locale: VisualDnaLocale
   direction: 'ltr' | 'rtl'
   notice: string[]
