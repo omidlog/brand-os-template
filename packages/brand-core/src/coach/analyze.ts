@@ -81,14 +81,16 @@ function fromQualityFinding(mode: CoachMode, assessment: QualityAssessment, find
   }
 }
 
-function shell(ctx: CoachContext, mode: CoachMode, locale: Locale, questionIds: string[]): Omit<CoachResult, 'status' | 'findings' | 'question_id' | 'answer_ref' | 'source_refs' | 'notes'> {
+function shell(ctx: CoachContext, mode: CoachMode, locale: Locale, ids: string[]): Omit<CoachResult, 'status' | 'findings' | 'question_id' | 'answer_ref' | 'source_refs' | 'notes'> {
+  // Deduplicated and sorted, so the scope and the digest do not depend on the order the rules ran in.
+  const questionIds = [...new Set(ids)].sort()
   return {
     schema_version: COACH_SCHEMA_VERSION,
     kind: 'coach_result',
     brand_id: ctx.brandId,
     mode,
     locale,
-    analysis_scope: { profile: ctx.profileId, questions: [...questionIds].sort(), context_digest: contextDigest(ctx, COACH_RULE_VERSION, questionIds) },
+    analysis_scope: { profile: ctx.profileId, questions: questionIds, context_digest: contextDigest(ctx, COACH_RULE_VERSION, questionIds) },
     generated_at: ctx.now.toISOString(),
     engine_version: COACH_ENGINE_VERSION,
     rule_version: COACH_RULE_VERSION,
