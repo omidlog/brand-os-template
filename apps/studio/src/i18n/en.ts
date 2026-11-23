@@ -231,6 +231,11 @@ export const en = {
   'overview.group.business': 'Business',
   'overview.group.personal': 'Personal',
   'overview.group.governance': 'Governance',
+  'overview.coach.title': 'Before you approve: coach notes',
+  'overview.coach.hint': 'Advisory, read from the merged drafts. Nothing here approves, blocks or changes anything, and no answer is quoted. Act on a note in Claude Code, in the brand repository.',
+  'overview.coach.more': '{count} more draft(s) have a note.',
+  'overview.coach.run': 'In Claude Code',
+  'overview.coach.label': 'Coach notes on drafts',
 
   'doc.counts': 'Item status',
   'doc.chapters': 'Chapters',
