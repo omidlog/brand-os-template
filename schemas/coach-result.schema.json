@@ -72,7 +72,24 @@
     "authority": { "const": "derived_advice" },
     "authorizes": { "type": "array", "maxItems": 0 },
     "source_refs": { "type": "array", "maxItems": 200, "items": { "$ref": "#/definitions/sourceRef" } },
-    "notes": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 600 } }
+    "notes": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 600 } },
+    "rule_checks": {
+      "description": "consistency_review only. One entry per rule: confirmed_conflict (only from findContradictions), potential_tension or needs_verification (only from the registry in coach/rules.ts), no_finding, or not_tested when an input is open. `basis: guard_matched` means a recognised legitimate explanation (for example an entry tier next to a premium position) kept the rule silent. Ids only, never values, never a percentage.",
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule_id", "kind", "outcome", "basis", "question_ids"],
+        "properties": {
+          "rule_id": { "type": "string", "maxLength": 80, "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "kind": { "enum": ["contradiction", "tension", "verification"] },
+          "outcome": { "enum": ["confirmed_conflict", "potential_tension", "needs_verification", "no_finding", "not_tested"] },
+          "basis": { "enum": ["rule_fired", "rule_silent", "guard_matched", "inputs_open"] },
+          "question_ids": { "type": "array", "maxItems": 100, "items": { "$ref": "#/definitions/questionId" } }
+        }
+      }
+    }
   },
   "definitions": {
     "questionId": { "type": "string", "pattern": "^[a-z0-9_]+(?:\\.[a-z0-9_]+)+$" },
@@ -139,10 +156,15 @@
             "evidence_owner_stated_only",
             "field_in_open_conflict",
             "meets_criteria",
+            "facet_ownership_separate",
+            "facet_companion_open",
+            "facet_claim_undated",
             "follow_up_canonical",
             "follow_up_clarify",
             "follow_up_none",
             "consistency_rule",
+            "consistency_tension",
+            "consistency_verification",
             "consistency_none"
           ]
         },

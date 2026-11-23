@@ -3,7 +3,7 @@ import type { CoachContext } from './context.js'
 import { COACH_LIMITS, type CoachConsistencyVerdict, type CoachSourceRef } from './model.js'
 
 /**
- * `consistency_review` — PR 1 scope: an **adapter** over the interview's existing deterministic rules.
+ * `consistency_review` — the confirmed-conflict part: an **adapter** over the interview's existing deterministic rules.
  *
  * `findContradictions` stays the only implementation of those rules; this file reports what it returns and
  * adds nothing. That is what keeps the acceptance promise "existing deterministic contradictions remain
@@ -11,10 +11,9 @@ import { COACH_LIMITS, type CoachConsistencyVerdict, type CoachSourceRef } from 
  *
  * Verdicts in this version:
  * - `confirmed_conflict` — an open rule hit from `findContradictions`. Evidence-supported and logical.
- * - `potential_tension` and `needs_verification` are declared in the contract and are **not emitted yet**.
- *   They arrive with the narrowly scoped rule registry in PR 2 (each rule declaring its field ids, exact
- *   conditions, severity, locale messages and evidence / time / market guards, plus negative tests). The
- *   result's `notes` says so, so a reader never mistakes silence for "no strategic tension exists".
+ * - `potential_tension` and `needs_verification` are **not** produced here. They come only from the narrow
+ *   registry in `rules.ts` (PR 2), which also reports `not_tested` per rule, so a reader never mistakes
+ *   silence for "no strategic tension exists".
  *
  * A restricted field never reaches a finding: restricted answers hold no value in the ledger, and the
  * fields a contradiction names are reported as ids only.
