@@ -28,7 +28,7 @@ Skills for specific work:
 - `docs-internal/CONTENT_BRIDGE.md` before touching `brand:content` or the `content` strategy type (content strategy cites approved facts, never restates voice; approval is `brand:strategy`)
 - `docs-internal/ASSURANCE.md` before touching `packages/brand-core/src/assurance` (claim ladder that only goes down, methodology registry, assessable controls; an internal assessment is never a certification or a compliance claim)
 - `docs-internal/TASK_CONTEXT.md` before touching `packages/brand-core/src/task-context` or `task_context`, and before drafting for a task: one read-only pack of approved context per task, gaps as existing question ids, `authorizes: []`; skill `agent-skills/task-context/SKILL.md` (call the `task_context` MCP tool once, first)
-- `docs-internal/STRATEGIC_COACH.md` before touching `brand:coach` or anything under `packages/brand-core/src/coach` (owner-local, read-only advice; `authorizes: []`; a finding never quotes an answer and never authorizes a change)
+- `docs-internal/STRATEGIC_COACH.md` before touching `brand:coach` or anything under `packages/brand-core/src/coach` (owner-local, read-only advice; `authorizes: []`; a finding never quotes an answer and never authorizes a change; when it speaks on its own: `docs-internal/COACH_UX_DECISION.md`)
 - `docs-internal/IDENTITY_BRIEF.md` before touching `brand:identity` (owner-only identity audit and logo brief; a brief or concept selection never approves a logo; skill `agent-skills/logo-identity-strategist/SKILL.md`)
 
 Claude Code can read this checkout only after the folder is open in a permitted session. A chat product does not automatically see this private repository.
