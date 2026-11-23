@@ -147,6 +147,7 @@ looked at (ids and counts only, never brand text), its verdict (`pass`, `warn`, 
 | --- | --- | --- |
 | `context.pack_integrity` | `task-context.pack` (`verifyPack`) | the digest does not verify (wrong SHA) |
 | `context.readiness` | `task-context.pack` | the pack is `blocked` (`partial` is a warning) |
+| `context.source_drift` | `task-context.pack` (`packSourceDrift`) | with `--root` only: an approved fact the pack cites changed or is no longer approved since the pack was built (`social-batch` then stops with `stale_pack` before writing); absent without `--root` |
 | `renderer.available` | `runtime.renderers` (`RENDERERS`) | no verified renderer for the task: only `social_batch` has one; other tasks are briefs |
 | `output.format` | `runtime.renderers` | count, `output_format` or channel the renderer does not produce |
 | `plan.copy` | `runtime.plan` (`planSocialBatch` blockers) | too few approved messages or no approved palette |
