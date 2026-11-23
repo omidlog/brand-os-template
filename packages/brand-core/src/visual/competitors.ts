@@ -1,4 +1,4 @@
-import type { SharedCellState, SharedLandscape, SharedLandscapeRead, SharedSource } from '../competitive/share.js'
+import type { SharedCellState, SharedLandscape, SharedLandscapeRead, SharedPlacement, SharedSource } from '../competitive/share.js'
 import { SHARED_CRITERIA } from '../competitive/share.js'
 import { latestAnswers } from '../completeness.js'
 import { itemFor, type ItemContext } from '../documents/model.js'
@@ -16,6 +16,9 @@ import {
   type ComparisonSource,
   type ComparisonState,
   type CompetitorMatrixBlock,
+  type PositioningMapBlock,
+  type PositioningPlacement,
+  type PositioningPoint,
   type PriceStripBlock,
   type PriceStripRow,
   type VisualDocument,
@@ -84,7 +87,7 @@ function blockBase(id: string, filled: 'complete' | 'partial' | 'missing', asOf:
     as_of: asOf,
     computed_from: ['brand/competitive/shared/landscape.json'],
     visibility: 'internal',
-    renderer_variant: id === 'competitor-matrix' ? 'matrix.book.v1' : 'prices.strip.v1',
+    renderer_variant: id === 'competitor-matrix' ? 'matrix.book.v1' : id === 'positioning-map' ? 'positioning.map.v1' : 'prices.strip.v1',
     layout_constraints: { preserve_topology: false, min_print_pt: 7, print_profile: 'book_a4_portrait' },
   }
 }
@@ -174,6 +177,7 @@ export function comparisonDocument(input: { brand_id: string; brand_name: string
     ranked: false,
     currency_conversion: 'none',
   }
+  const map = positioningMap(landscape, input.read.state, input.brand_name, noteFor)
   const summary = emptyStatusSummary()
   for (const cell of ownRow.cells) if (cell.own) summary[cell.own.state] += 1
   return {
@@ -190,7 +194,48 @@ export function comparisonDocument(input: { brand_id: string; brand_name: string
     print_profile: 'book_a4_portrait',
     status_summary: summary,
     framework_refs: [],
-    blocks: [matrix, strip],
+    blocks: [matrix, strip, map],
+  }
+}
+
+const DRAWN: ReadonlySet<string> = new Set(['evidenced', 'stale', 'conflicting'])
+
+/**
+ * Positioning map (V2.3, D2) from the shared landscape's optional positioning section. A subject is plotted only when
+ * both axes are evidenced, stale or conflicting; everyone else goes to the margin list with each axis's state. The
+ * own brand comes first; competitors keep the shared (alphabetical) order. Footnotes join the matrix's numbering.
+ */
+function positioningMap(landscape: SharedLandscape | null, shareState: SharedLandscapeRead['state'], brandName: string, noteFor: (source: SharedSource) => number): PositioningMapBlock {
+  const pos = landscape?.positioning ?? null
+  const points: PositioningPoint[] = []
+  const unplotted: PositioningPoint[] = []
+  if (pos && landscape) {
+    const names = new Map(landscape.competitors.map((c) => [c.competitor_id, c.display_name]))
+    const placed = (p: SharedPlacement): PositioningPlacement => ({ state: p.state, bands: [...p.bands] })
+    const subjects = [{ subject_id: 'own', kind: 'own_brand' as const, name: brandName, x: pos.own.x, y: pos.own.y }, ...pos.competitors.map((c) => ({ subject_id: c.competitor_id, kind: 'competitor' as const, name: names.get(c.competitor_id) ?? '', x: c.x, y: c.y }))]
+    for (const s of subjects) {
+      const drawn = DRAWN.has(s.x.state) && DRAWN.has(s.y.state)
+      const point: PositioningPoint = { subject_id: s.subject_id, kind: s.kind, name: s.name, n: null, x: placed(s.x), y: placed(s.y), footnotes: [] }
+      if (drawn) {
+        point.footnotes = [...new Set([...s.x.sources, ...s.y.sources].map(noteFor))].sort((a, b) => a - b)
+        if (s.kind === 'competitor') point.n = points.filter((p) => p.kind === 'competitor').length + 1
+        points.push(point)
+      } else {
+        unplotted.push(point)
+      }
+    }
+  }
+  const competitorsTotal = pos ? pos.competitors.length + 1 : 0
+  const state: BlockBase['data_state'] = !points.length ? 'missing' : points.length === competitorsTotal ? 'complete' : 'partial'
+  return {
+    ...blockBase('positioning-map', state, landscape?.as_of ?? null, []),
+    type: 'positioning_map',
+    axes: pos ? { x: pos.axes.x, y: pos.axes.y } : null,
+    bands: pos ? [...pos.bands] : [],
+    stale_after_days: pos?.stale_after_days ?? null,
+    points,
+    unplotted,
+    share_state: shareState,
   }
 }
 

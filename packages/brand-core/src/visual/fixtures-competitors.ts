@@ -1,4 +1,4 @@
-import type { SharedCell, SharedCriterion, SharedLandscape, SharedLandscapeRead, SharedPrice, SharedSource } from '../competitive/share.js'
+import type { SharedCell, SharedCriterion, SharedLandscape, SharedLandscapeRead, SharedPlacement, SharedPositioning, SharedPrice, SharedSource } from '../competitive/share.js'
 import { SHARED_CRITERIA, SHARED_LANDSCAPE_SCHEMA } from '../competitive/share.js'
 import { parseStructured } from '../structured.js'
 import { comparisonDocument, OWN_BRAND_FACTS, type OwnSource } from './competitors.js'
@@ -14,8 +14,12 @@ import type { DataState, VisualDocument } from './model.js'
  *
  * `complete`: three reviewed competitors in two currencies, every cell state, an unpriced competitor.
  * `empty`: nothing shared yet (the designed empty state).
+ * `no_axes`: the V2.2 landscape without a positioning section (the map's designed empty state).
+ *
+ * Positioning (V2.3): two invented axes in en/fa/tr; the own brand and two competitors placed (one stale, one with
+ * disagreeing sources drawn as a range), one competitor not placed (unknown on one axis).
  */
-export type ComparisonFixtureVariant = 'complete' | 'empty'
+export type ComparisonFixtureVariant = 'complete' | 'empty' | 'no_axes'
 
 const OWN_VALUES: Record<SharedCriterion, { label: string; value: string | null; state: DataState }> = {
   offer: { label: 'Offer summary', value: 'Guided ten-minute language lessons with a weekly live session', state: 'approved' },
@@ -156,7 +160,33 @@ export function illustrativeLandscape(): SharedLandscape {
   }
 }
 
+const placed = (state: SharedPlacement['state'], bands: SharedPlacement['bands'], sources: SharedSource[]): SharedPlacement => ({ state, bands, sources })
+const NONE: SharedPlacement = { state: 'unknown', bands: [], sources: [] }
+
+/** ILLUSTRATIVE / MOCK DATA: invented axes and placements. Never an axis suggestion for a real brand. */
+export function illustrativePositioning(): SharedPositioning {
+  const avenra = OWN_PAGE('avenra.example', '2026-11-14')
+  const kestrel = OWN_PAGE('kestrel-learn.example', '2026-11-18')
+  const owner: SharedSource = { source_class: 'owner_statement', host: null, observed_on: '2026-11-10' }
+  return {
+    axes: {
+      x: { label: { en: 'Guidance', fa: 'میزان راهنمایی', tr: 'Rehberlik' }, low: { en: 'Self-paced', fa: 'خودآموز', tr: 'Kendi hızında' }, high: { en: 'Live teacher', fa: 'معلم زنده', tr: 'Canlı öğretmen' } },
+      y: { label: { en: 'Price level', fa: 'سطح قیمت', tr: 'Fiyat düzeyi' }, low: { en: 'Budget', fa: 'اقتصادی', tr: 'Ekonomik' }, high: { en: 'Premium', fa: 'ممتاز', tr: 'Premium' } },
+    },
+    bands: ['low', 'lower_mid', 'mid', 'upper_mid', 'high'],
+    stale_after_days: 90,
+    own: { x: placed('evidenced', ['mid'], [owner]), y: placed('evidenced', ['upper_mid'], [owner]) },
+    competitors: [
+      { competitor_id: A, x: placed('evidenced', ['low'], [avenra]), y: placed('conflicting', ['lower_mid', 'mid'], [avenra, PRESS]) },
+      { competitor_id: B, x: placed('evidenced', ['high'], [kestrel]), y: placed('stale', ['high'], [OWN_PAGE('kestrel-learn.example', '2026-06-02')]) },
+      { competitor_id: C, x: placed('evidenced', ['high'], [PRESS]), y: NONE },
+    ],
+  }
+}
+
 export function illustrativeCompetitorComparison(variant: ComparisonFixtureVariant = 'complete'): VisualDocument {
-  const read: SharedLandscapeRead = variant === 'empty' ? { state: 'not_shared' } : { state: 'shared', landscape: illustrativeLandscape() }
+  const landscape = illustrativeLandscape()
+  if (variant === 'complete') landscape.positioning = illustrativePositioning()
+  const read: SharedLandscapeRead = variant === 'empty' ? { state: 'not_shared' } : { state: 'shared', landscape }
   return comparisonDocument({ brand_id: ILLUSTRATIVE_BRAND.id, brand_name: ILLUSTRATIVE_BRAND.name, illustrative: true, read, own: own() })
 }
