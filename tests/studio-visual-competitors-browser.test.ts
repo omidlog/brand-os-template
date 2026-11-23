@@ -137,12 +137,12 @@ async function contrastFailures(scope: string): Promise<string[]> {
 
 test('competitor matrix: three widths, en and fa, light and dark: no overflow, clean CSP, accessible, AA contrast', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors?lang=${lang}`)
     for (const scheme of ['light', 'dark'] as const) {
       await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
       for (const width of [1440, 768, 390]) {
         await page.viewport(width, 900, width < 500)
-        await page.goto(`${s.url}/brands/${SLUG}/visual/competitors`)
+        await page.goto(`${s.url}/brands/${SLUG}/market/competitors`)
         await settle()
         const where = `competitors ${lang} ${scheme} ${width}px`
         assert.equal(await page.eval<string>('document.documentElement.dir'), lang === 'fa' ? 'rtl' : 'ltr', where)
@@ -230,11 +230,11 @@ function assertDirection(where: string, lang: string, l: MapLayout): void {
 test('positioning map: fa mirrors the horizontal axis, en and tr run left to right, on screen and in the print view', { skip }, async () => {
   await page.viewport(1440, 900)
   for (const lang of ['en', 'tr', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors?lang=${lang}`)
-    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors`)
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors`)
     await settle()
     assertDirection(`screen ${lang}`, lang, await mapLayout())
-    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors/print`)
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors/print`)
     await page.send('Emulation.setEmulatedMedia', { media: 'print' })
     await settle()
     assertDirection(`print ${lang}`, lang, await mapLayout())
@@ -254,8 +254,8 @@ test('positioning map: fa mirrors the horizontal axis, en and tr run left to rig
 
 test('competitor print view: A4 portrait opener and an A4 landscape matrix page, fonts embedded', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
-    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors?lang=${lang}`)
-    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors/print`)
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors/print`)
     await settle()
     const result = await page.send('Page.printToPDF', { preferCSSPageSize: true, printBackground: true }, 60_000)
     const pdf = Buffer.from(String(result.data), 'base64')

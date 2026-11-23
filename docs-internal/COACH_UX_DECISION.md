@@ -59,8 +59,9 @@ Then, for that question, the existing Coach rules decide whether there is anythi
 **silence** — the cheapest coaching is none.
 
 Every silent outcome carries a closed-vocabulary reason (`not_strategic`, `factual_type`, `restricted`,
-`disposition`, `deferred`, `unanswered`, `already_coached`, `ready`, `declined_gap`, `change_pending`,
-`agent_token`, `disabled`, `unavailable`), so tests and the JSON output can show *why* it was quiet.
+`unknown_question`, `not_applicable`, `disposition`, `deferred`, `unanswered`, `already_coached`, `ready`,
+`declined_gap`, `change_pending`, `agent_token`, `disabled`, `unavailable`; the list is
+`COACH_SILENCE_REASONS`), so tests and the JSON output can show *why* it was quiet.
 
 ### When it is ON
 

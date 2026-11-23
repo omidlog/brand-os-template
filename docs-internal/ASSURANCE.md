@@ -152,7 +152,7 @@ npm run brand:assurance -- verify   --snapshot ~/kept/snapshot.json      # exit 
 | Input to `assess()` | Source (reused) | Rule |
 | --- | --- | --- |
 | `ResolvedFact` per required question | `facts.ts` `readFacts(…, 'approved')`, pinned by `revision_hash` | Only `status: approved` of this brand counts. A non-approved answer is `draft` / `unknown` / `not_applicable` from the answer ledger, pinned by answer id; never treated as approved. No answer: `absent`, `missing`. |
-| `ResolvedEvidence` | Knowledge Inbox `scanAll(['local','shared'])` | Research notes only (`kind: research`, `internal`, not archived, this brand) whose `question_ids` touch the control. Restricted notes are never decrypted. Every note is `owner_stated`: notes carry no independent verification. |
+| `ResolvedEvidence` | Knowledge Inbox `scanAll(['local','shared'])` | Research notes only (`kind: research`, `internal`, not archived, this brand) whose `question_ids` touch the control. Restricted notes are never decrypted. A note is `owner_stated` unless the owner linked it to a qualifying evidence-register entry (see [Evidence links](#research-notes-linked-to-the-evidence-register-gap-09-follow-up)); then `independent`. |
 | `conflicts` | `contradictions.ts` `findContradictions` (pure) | Open contradictions whose fields touch the control, by id only. |
 | `review` | owner judgments, `assurance/reviews.ts` (see [Owner review judgments](#owner-review-judgments-gap-09-follow-up)) | The judgment in force on the `--as-of` day, only while its basis is unchanged; otherwise `null` and the control is `needs_review`. |
 | `subject.entity_kind` | `brand.profile` | `person` only for the `personal-brand` profile, else `company`. The personal module never changes it (see below). |
@@ -206,10 +206,39 @@ npm run brand:assurance -- assess --as-of 2026-11-23      # now gives a ratio wh
 | Basis | Each revision records what it judged: the control's required and related facts by approved revision (`none` if not approved) and the research notes it cites, by revision. When any of them changes, the judgment is `stale`: the bridge passes `review: null` and lists `stale_judgment` (blocking). The owner judges again. |
 | Reproducible | The bridge uses the latest revision whose `reviewed_on` is on or before the `--as-of` day. Dates only go forward, so a snapshot as of an earlier day, and `verify` of it, are unchanged by later judgments. A judgment dated the snapshot's own day does change it. `reviewed_on` and the default `--as-of` are UTC days, so east of UTC the local date can be a day ahead and is refused as future until UTC midnight. `reviewer_id` is `owner:<revision>`, so a new judgment changes the digest. |
 | Private note | The snapshot's `rationale` is a reference, `assurance-review:<control>@<revision>`; the note text stays in the private file. It is never in a snapshot, report, `--json` record output or log, and `list` shows it only with `--show-notes`. |
-| Not changed | Unconfirmed answers still lower the ratio and are not removed. Research notes still count as `owner_stated` (linking them to the evidence register is a later, separate change). Claim level stays `internally_assessed`; a judgment is not a certification, and `authorizes` stays `[]`. |
+| Not changed | Unconfirmed answers still lower the ratio and are not removed. Research notes count as `owner_stated` unless linked to the evidence register (next section). Claim level stays `internally_assessed`; a judgment is not a certification, and `authorizes` stays `[]`. |
 
 | Test | Covers |
 | --- | --- |
 | `tests/assurance-reviews.test.ts` | score produced after `yes`, status mapping, latest revision wins, stale after a new note or a changed fact, reproducibility as of an earlier day, private 0600 versioned file with chained revisions, only private files written, note never leaves the file, tampered / foreign / symlinked / non-JSON history refused, bad input refused with nothing written, agent token refused for every read and write, no MCP or Studio import, agent role refused, en / fa / tr text |
 | `tests/assurance-audit.test.ts` | trust audit fixes: a credential-like note refused with nothing written, `--pin` from another brand or method refused, verify explains a digest change with no changed source in en / fa / tr, Persian text uses «واقعیت» and the Persian comma |
 | `tests/assurance-review-cli.test.ts` | the real command: help in three languages, usage errors, list → record → `brand:assurance assess` scoreable, note not echoed, `--show-notes`, `--expect`, not-a-judgment control, agent refusal with nothing written or echoed, tampered history makes `brand:assurance` refuse |
+
+## Research notes linked to the evidence register (GAP-09 follow-up)
+
+A research note is the owner's own writing, so the bridge counted every note as `owner_stated`, and a control that needs independent evidence (PRR-03, PRR-08) could never be met by notes. The evidence register (`evidence.ts`, `brand/interview/evidence-register.yaml`, guide `PERSONAL_BRAND.md` "Evidence and rights") already records sources and lets only the owner, with the approval proof, mark one `verified`. This change lets the owner link a note to a register entry. It reuses the register and its rules; nothing about verification is redone. `packages/brand-core/src/assurance/links.ts` (store), `workspace.ts` (`listEvidenceLinks`, `linkEvidence`, `unlinkEvidence`, and the bridge reading them) and `npm run brand:assurance-link`.
+
+```
+npm run brand:evidence -- add --claim business.customer.primary_segment --source third_party --reference "Survey report, held offline"
+npm run brand:evidence -- verify --id ev-0001                    # owner proof, as before
+npm run brand:assurance-link -- list [--as-of 2026-11-24] [--lang fa] [--json]
+npm run brand:assurance-link -- link --note kn_… --evidence ev-0001 [--date 2026-11-24] [--expect <revision>|none]
+npm run brand:assurance-link -- unlink --note kn_…
+npm run brand:assurance -- assess --as-of 2026-11-24             # the note now counts as independent
+```
+
+| Rule | How |
+| --- | --- |
+| What can be linked | An internal, non-archived research note of this brand (restricted notes are never read), to a register entry of kind `verification`, not `owner_testimony`, whose `claim_id` is one of the note's `question_ids`, and not `withdrawn` or `rejected`. A `pending` entry may be linked; it counts once verified. Anything else is refused (`not_linkable`) and nothing is written. |
+| When it counts (`qualifies`) | On the `--as-of` day: the link in force (latest revision with `linked_on` on or before the day, and a `link`, not an `unlink`) names the note's current revision, and the entry is `verified`, verified on or before the day and not past `review_due` (`isCurrent`). Otherwise the state says why: `note_changed`, `entry_missing`, `not_independent`, `claim_mismatch`, `not_verified`, `expired`, `withdrawn`, `rejected`, and the note stays `owner_stated`. |
+| Effect | Only `ResolvedEvidence.independence` changes, so the digest changes with it. The snapshot lists `evidence_links: [{ note_id, evidence_id, link_revision, state }]` (not part of the digest). A control that needs independent evidence and has only owner-stated notes lists a non-blocking `independent_evidence` gap. A qualifying link changes PRR-08's judgment basis (`<note revision>+<evidence id>`), so an earlier judgment goes stale and the owner judges again; judgments with no qualifying link are unchanged. |
+| Storage | `brand/.private/assurance/evidence-links/<note_id>.json` in the brand workspace (gitignored), mode 0600, atomic write, Knowledge lock per note. Append-only revisions (`link` / `unlink`), each a hash of its content and of the revision it `supersedes`; an edited, reordered, foreign or non-owner history is refused (`invalid_record`, `wrong_brand`) and the bridge then builds nothing (`invalid_link`). Ids, revisions and dates only: no note text, no register reference. |
+| Reproducible | Dates only go forward, so a snapshot as of an earlier day ignores later links. `verify` names a link that was added, removed or changed state (`evidence_link`). Snapshots kept before bridge version 3 have no `evidence_links` and still verify. |
+| Owner only | Every read and write refuses while `BRAND_OS_AGENT_TOKEN` is set. No MCP tool, Studio route or agent profile reaches it. Agents may still record register evidence with `brand:evidence add` (it starts `pending`); only the owner verifies it and links it. |
+| Not changed | Unapproved answers still lower the ratio and are not removed (owner decision). No score while anything blocking is missing. Claim level stays `internally_assessed`; a link is not a certification and `authorizes` stays `[]`. |
+
+| Test | Covers |
+| --- | --- |
+| `tests/assurance-links.test.ts` | independent only after verification, unapproved answers still lower the score, no score while blocked, note changed / withdrawn / rejected / expired stop counting, unlink history, what may be linked (testimony, permission, other question, withdrawn, rejected, idea and restricted notes refused, nothing written), reproducibility and verify, PRR-08 judgment goes stale, private chained storage and tampering, agent refusal and no agent surface, no note or register text in any output, en / fa / tr text |
+| `tests/assurance-link-cli.test.ts` | the real command: help in three languages, usage errors, agent refusal with nothing written, list → link → `brand:assurance assess` independent, unlink, refusal as JSON, no text echoed |
+

@@ -7,11 +7,17 @@ import type { UpdateStatus } from '../template-update.js'
 import { calendarPage } from '../views/calendar.js'
 import { creativePage } from '../views/creative.js'
 import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from '../views/knowledge.js'
-import type { BrandView } from '../views/layout.js'
+import { LEGACY_SECTION_PATHS, PAGE_SECTION_PATHS, type BrandSection, type BrandView } from '../views/layout.js'
 import * as pages from '../views/pages.js'
+import { brandBookPage } from '../views/visual-book.js'
 import { withTimeout, type Handler, type RequestContext, type StudioCore } from './context.js'
 
-export const BRAND_SECTIONS = ['brand-book', 'design', 'assets', 'business', 'personal', 'knowledge', 'creative', 'calendar', 'history', 'handoff'] as const
+/** Stable page paths after `/brands/<slug>/` (Visual V2.4, R2), e.g. `brand/book`, `governance/history`. */
+export const BRAND_SECTIONS = PAGE_SECTION_PATHS.map(([path]) => path)
+const SECTION_BY_PATH = new Map<string, BrandSection>(PAGE_SECTION_PATHS)
+/** Old flat paths before V2.4, answered with 301 for one release. */
+export const LEGACY_PATHS = LEGACY_SECTION_PATHS.map(([from]) => from)
+const LEGACY_TARGET = new Map<string, string>(LEGACY_SECTION_PATHS)
 
 export interface BrandRoutes {
   home: Handler
@@ -20,6 +26,7 @@ export interface BrandRoutes {
   openUpdatePull: Handler
   assetFile: Handler
   brandPage: Handler
+  legacyRedirect: Handler
 }
 
 /**
@@ -119,7 +126,8 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
     const record = brandRecord(ctx, match[1] ?? '')
     if (!record) return
     if (!brandIsReady(record)) return redirect(ctx.res, `/brands/${record.slug}/provisioning`, 302)
-    const section = (match[2] ?? 'overview') as (typeof BRAND_SECTIONS)[number] | 'overview'
+    const section = match[2] ? SECTION_BY_PATH.get(match[2]) : 'overview'
+    if (!section) return notFound(ctx)
     const brand = await brandView(ctx, record)
     const flash = ctx.url.searchParams.get('sync')
     const flashValue = flash === 'synced' || flash === 'failed' || flash === 'too-soon' ? flash : null
@@ -139,13 +147,15 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
         return render(ctx, 200, pages.overviewPage(v, brand, flashValue, update))
       }
       case 'brand-book':
-        return render(ctx, 200, pages.brandBookPage(v, brand, flashValue))
+        return render(ctx, 200, brandBookPage(v, brand, flashValue))
       case 'design':
         return render(ctx, 200, pages.designPage(v, brand, flashValue))
       case 'assets':
         return render(ctx, 200, pages.assetsPage(v, brand, flashValue))
       case 'business':
-        return render(ctx, 200, pages.businessPage(v, brand, doc, flashValue))
+        return render(ctx, 200, pages.businessPage(v, brand, 'business-plan', flashValue))
+      case 'marketing':
+        return render(ctx, 200, pages.businessPage(v, brand, 'marketing-plan', flashValue))
       case 'personal':
         // The section exists only when the Personal Brand OS module is enabled in the repository.
         if (!brand.cached.projection?.personal) return notFound(ctx)
@@ -169,8 +179,32 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
         return render(ctx, 200, pages.historyPage(v, brand, flashValue))
       case 'handoff':
         return render(ctx, 200, pages.handoffPage(v, brand, flashValue))
+      default:
+        return notFound(ctx)
     }
   }
 
-  return { home, brands, refresh, openUpdatePull, assetFile, brandPage }
+  /**
+   * Old flat paths (before V2.4) answer 301 to their stable path, keeping the query. Session-only like every brand
+   * route, so a guest is sent to sign in first; a slug that is not in the registry gets the same 404 as every other
+   * brand route.
+   */
+  const legacyRedirect: Handler = (ctx, match) => {
+    const record = brandRecord(ctx, match[1] ?? '')
+    if (!record) return
+    const slug = record.slug
+    const from = match[2] ?? ''
+    let target = LEGACY_TARGET.get(from)
+    if (!target) return notFound(ctx)
+    const params = new URLSearchParams(ctx.url.searchParams)
+    // The old Business OS page picked its document with ?doc=; each plan now has its own path.
+    if (from === 'business') {
+      if (params.get('doc') === 'marketing-plan') target = 'market/marketing-plan'
+      params.delete('doc')
+    }
+    const query = params.toString()
+    redirect(ctx.res, `/brands/${slug}/${target}${query ? `?${query}` : ''}`, 301)
+  }
+
+  return { home, brands, refresh, openUpdatePull, assetFile, brandPage, legacyRedirect }
 }
