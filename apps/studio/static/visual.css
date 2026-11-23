@@ -83,32 +83,37 @@
 .vz-cell--cost_structure { grid-column: 1 / 6; grid-row: 3; }
 .vz-cell--revenue_streams { grid-column: 6 / 11; grid-row: 3; }
 
-.vz-zone { flex: 1; min-width: 0; padding: 20px 20px 22px; display: flex; flex-direction: column; gap: 12px; color: var(--vz-text); font: 400 14px/1.6 var(--vz-font); outline-offset: -3px; }
-.vz-zone-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "num chip" "title title"; align-items: center; gap: 6px 8px; }
+.vz-zone { flex: 1; min-width: 0; padding: 26px 24px 28px; display: flex; flex-direction: column; gap: 14px; color: var(--vz-text); font: 400 14px/1.6 var(--vz-font); outline-offset: -3px; }
+.vz-zone-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "num chip" "title title"; align-items: center; gap: 10px 8px; }
 .vz-zone-num { grid-area: num; font: 600 11px/1 var(--vz-display); color: var(--vz-text-3); letter-spacing: 0.18em; font-variant-numeric: tabular-nums; }
 .vz-zone-head .vz-zchip { grid-area: chip; }
-.vz-zone-title { grid-area: title; margin: 0; font: 600 19px/1.15 var(--vz-display); letter-spacing: 0.005em; min-width: 0; }
-.vz-zone-prompt { margin: 0; padding-block-end: 12px; border-block-end: 1px solid var(--vz-rule); font-size: 12.5px; line-height: 1.5; font-style: italic; color: var(--vz-text-3); }
+.vz-zone-title { grid-area: title; margin: 0; font: 600 22px/1.08 var(--vz-display); letter-spacing: -0.004em; min-width: 0; text-wrap: balance; }
+.vz-zone-prompt { margin: 0; padding-block-end: 16px; border-block-end: 1px solid var(--vz-rule); font-size: 12.5px; line-height: 1.55; font-style: italic; color: var(--vz-text-3); text-wrap: pretty; }
 [dir="rtl"] .vz-zone-prompt { font-style: normal; }
-.vz-entries { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
-.vz-entry { padding-inline-start: 12px; border-inline-start: 2px solid var(--vz-rule-strong); }
+.vz-entries { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 20px; }
+.vz-entry { padding-inline-start: 14px; border-inline-start: 2px solid var(--vz-rule-strong); }
 .vz-entry--approved { border-inline-start-color: var(--vz-ok); }
 .vz-entry--stale { border-inline-start-color: var(--vz-draft); }
 .vz-entry--draft { border-inline-start: 2px dashed var(--vz-draft); }
 .vz-entry--suggestion { border-inline-start: 2px dashed var(--vz-info); }
 .vz-entry--withheld { border-inline-start-color: var(--vz-neutral); }
 .vz-entry--missing, .vz-entry--na { border-inline-start: 2px dotted var(--vz-rule-strong); }
-.vz-entry-value { margin: 0 0 6px; overflow-wrap: anywhere; white-space: pre-line; text-wrap: pretty; }
+.vz-entry-value { margin: 0 0 8px; overflow-wrap: anywhere; white-space: pre-line; text-wrap: pretty; }
 .vz-entry--draft .vz-entry-value, .vz-entry--suggestion .vz-entry-value { color: var(--vz-text-2); font-style: italic; }
 .vz-entry-value--ghost { color: var(--vz-text-3); font-style: italic; }
+[dir="rtl"] .vz-entry-value--ghost { font-style: normal; }
 .vz-entry-value--withheld { display: inline-flex; align-items: center; gap: 6px; color: var(--vz-neutral); }
 .vz-entry-value--withheld svg { width: 14px; height: 14px; }
 .vz-entry-meta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 11px; color: var(--vz-text-3); }
 .vz-entry-label { font-weight: 600; color: var(--vz-text-2); }
+/* A zone still to answer reads label first, then the quiet note: the page keeps its rhythm instead of
+   repeating "not answered yet" at the size of a real answer. Visual order only; the markup is unchanged. */
+.vz-entry--missing, .vz-entry--na, .vz-entry--withheld { display: flex; flex-direction: column-reverse; gap: 5px; }
+.vz-entry--missing .vz-entry-value, .vz-entry--na .vz-entry-value, .vz-entry--withheld .vz-entry-value { margin: 0; }
 .vz-entry-version { font-variant-numeric: tabular-nums; }
 
 /* An empty zone is designed, not blank: ghost geometry of the content it expects, and what to answer. */
-.vz-gap { position: relative; flex: 1; min-height: 96px; padding: 12px; border: 1px dashed var(--vz-rule-strong); border-radius: 6px; background: repeating-linear-gradient(135deg, transparent 0 9px, var(--vz-subtle) 9px 10px); }
+.vz-gap { position: relative; flex: 1; min-height: 96px; padding: 16px; border: 1px dashed var(--vz-rule); border-radius: 2px; background: repeating-linear-gradient(135deg, transparent 0 9px, var(--vz-subtle) 9px 10px); }
 .vz-gap-ghost { display: block; inline-size: 62%; block-size: 6px; margin-block-end: 10px; border-radius: 3px; background: var(--vz-rule); box-shadow: 0 12px 0 var(--vz-rule), 0 24px 0 var(--vz-rule); opacity: 0.8; }
 .vz-gap-title { margin: 30px 0 0; font-size: 12.5px; font-style: italic; color: var(--vz-text-3); }
 [dir="rtl"] .vz-gap-title { font-style: normal; }
@@ -127,13 +132,17 @@
 .vz-related-hint { display: block; }
 
 /* ---------- Studio page composition ---------- */
-.vz-screen { display: flex; flex-direction: column; gap: 28px; min-inline-size: 0; }
+.vz-screen { display: flex; flex-direction: column; gap: 32px; min-inline-size: 0; }
+/* Screen type scale: the answer carries the page; the note and the caption step down from it. Print keeps its
+   own scale (see the print section), so the two compositions stay independently tuned. */
+.vz-screen .vz-entry-value { font-size: 15px; line-height: 1.55; }
+.vz-screen .vz-entry-value--ghost, .vz-screen .vz-entry-value--withheld { font-size: 13px; line-height: 1.5; }
 .vz-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .vz-edition-line { margin: 0; max-width: 72ch; font-size: 13px; }
 .vz-edition { display: inline-block; padding: 2px 10px; border-radius: 999px; font: 600 11px/1.6 var(--vz-display); letter-spacing: 0.08em; text-transform: uppercase; background: var(--vz-ink); color: #f9fafb; }
 .vz-edition--public { background: var(--vz-ok-bg); color: var(--vz-ok); }
 .vz-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.vz-overview { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 48px; align-items: start; padding: 24px 0; border-block: 1px solid var(--vz-rule); }
+.vz-overview { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 56px; align-items: start; padding: 30px 0 32px; border-block: 1px solid var(--vz-rule); }
 .vz-map-nav { display: block; }
 .vz-map { display: block; inline-size: 100%; max-inline-size: 320px; block-size: auto; }
 .vz-map a:focus-visible { outline: none; }
@@ -231,12 +240,15 @@
 .vz-page .vz-bmc { grid-template-rows: minmax(64mm, auto) minmax(64mm, auto) minmax(38mm, auto); break-inside: avoid; }
 .vz-page .vz-zone { padding: 4mm 4mm 4.4mm; font-size: 8.8pt; line-height: 1.45; gap: 2.2mm; }
 .vz-page .vz-zone-num { font-size: 7pt; }
-.vz-page .vz-zone-title { font-size: 12pt; }
-.vz-page .vz-zone-prompt { font-size: 7.6pt; padding-block-end: 2mm; }
-.vz-page .vz-entries { gap: 2.6mm; }
+.vz-page .vz-zone-head { gap: 1.4mm 2mm; }
+.vz-page .vz-zone-title { font-size: 12.5pt; }
+.vz-page .vz-zone-prompt { font-size: 7.6pt; padding-block-end: 2.2mm; }
+.vz-page .vz-entries { gap: 2.8mm; }
+.vz-page .vz-entry { padding-inline-start: 2.4mm; }
+.vz-page .vz-entry--missing, .vz-page .vz-entry--na, .vz-page .vz-entry--withheld { gap: 0.8mm; }
 .vz-edition-note { margin: 3mm 0 0; font-size: 7.8pt; }
 .vz-page .vz-entry-meta, .vz-page .vz-chip, .vz-page .vz-zchip { font-size: 7pt; }
-.vz-page .vz-entry-value { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 7; line-clamp: 7; overflow: hidden; }
+.vz-page .vz-entry-value { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 7; line-clamp: 7; overflow: hidden; margin-block-end: 1.4mm; }
 .vz-page .vz-gap { min-height: 30mm; }
 .vz-print-under { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4mm 10mm; font-size: 8pt; color: var(--vz-text-2); }
 .vz-print-under .vz-legend { margin: 0; }
