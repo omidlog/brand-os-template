@@ -170,10 +170,29 @@ Its state is `missing`, `candidate_only`, `evidence_insufficient` or `evidence_a
 
 **Privacy note.** Competitor names and the shared labels become visible to everyone with read access to the brand repository.
 
+## Positioning map (Visual V2.3, owner decision D2)
+
+**Axes are the owner's.** `brand/.private/competitive/axes.json` holds exactly two axes, `x` and `y`. Each has an `axis_id` (owner-chosen, stable; positions cite it), a `label`, a `low` pole and a `high` pole (English required, Persian and Turkish when the owner writes them; never machine-translated) and an optional private `rationale`. The tool never suggests, ranks or invents an axis.
+
+```bash
+npm run brand:competitive -- axes set --x-id guidance --x-label "Guidance" --x-low "Self-paced" --x-high "Live teacher" \
+  --y-id price_level --y-label "Price level" --y-low "Budget" --y-high "Premium"
+npm run brand:competitive -- axes set --file axes.json      # the same as JSON, with fa/tr labels and rationale
+npm run brand:competitive -- axes validate [--file axes.json]
+npm run brand:competitive -- axes show
+```
+
+**Positions are cited bands.** `position add --subject own|<cmp_id> --axis <axis_id> --band low|lower_mid|mid|upper_mid|high --note <knowledge note> --claim <claim key>` records the owner's qualitative reading of one market observation. There is no number field. `positions` shows each (subject, axis) and how its sources read today; `position remove --position <pos_id>` removes one.
+
+**States, judged at read time:** `evidenced` (a current source, all sources agree), `stale` (only sources older than 90 days, the research threshold for market observations; still drawn, marked), `conflicting` (sources disagree; the recorded bands are drawn as a range, never resolved), `needs_review` (every source changed or was retired; not drawn), `unknown` (nothing recorded; not drawn). A subject is plotted only when both axes are evidenced, stale or conflicting. Everyone else is listed in the map's "Not placed" margin.
+
+**Share.** `brand:competitive share` adds a `positioning` section when axes exist: axis labels and poles, the band list, the stale threshold, and for the own brand and each shared competitor, per axis, the state, the bands and source labels (class, public host for web sources, date). Never shared: rationale, axis ids, position ids, note ids, revisions, claim keys, quotes, positions of non-reviewed competitors. Axis labels pass the same safety scan as other shared text; a label that matches a recorded quote is refused. Studio's strict reader withholds the whole file if the section has any extra field.
+
+**Studio.** The map is plate 03 on the competitor comparison page and has its own A4 portrait print page. The plot is direction-neutral (low to high, left to right and bottom to top); all text is HTML around it, so Persian reads right to left in Vazirmatn. Competitor ids appear only in the details disclosure.
+
 ## Not in this slice
 
 - An interview question such as "who do buyers compare us with". The gap checklist asks it, and the CLI records the answers as candidates.
 - The rebrand audit and logo brief (Slice D).
 - Agent access, and Studio views other than the shared comparison matrix (V2.2).
-- A positioning map (V2.3; needs the D2 axes record).
 - Live discovery or search.

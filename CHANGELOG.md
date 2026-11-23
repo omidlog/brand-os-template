@@ -27,6 +27,19 @@
 - Every named fact tool reads its ids from one exported map, `NAMED_FACT_TOOL_IDS`. Test: `tests/named-tool-ids.test.ts` (registry coverage, approved/draft/unanswered, guest, wrong profile, cross-brand, stdio MCP).
 - Skills `motion-designer` and `mascot-animator` name the real motion ids.
 
+## Unreleased — Visual V2.3: positioning map (owner axes, evidenced points only)
+
+### Added
+
+- Owner decision D2: `brand/.private/competitive/axes.json` is an owner-only record of two axes (label and pole names in en, optional fa/tr, private rationale). `npm run brand:competitive -- axes set|show|validate`. The tool never suggests, ranks or invents an axis.
+- `brand/.private/competitive/positions.json`: one qualitative band (`low | lower_mid | mid | upper_mid | high`, never a number) per subject (own brand or competitor) and axis, citing a Knowledge market observation like any competitor observation. `position add|remove`, `positions`.
+- `brand:competitive share` adds an optional allow-listed `positioning` section: axis labels and poles, and per subject and axis a state (`evidenced | stale | conflicting | needs_review | unknown`), the bands as recorded and source labels (class, public host, date). Stale = only sources older than 90 days (the research threshold for market observations); conflicting = sources disagree, kept as a range. Never shared: rationale, axis ids, note ids, claim keys, quotes, non-reviewed subjects. A file without the section is still a valid V2.2 file; a tampered section withholds the whole file.
+- Visual block `positioning_map` in the renderer registry, on the existing competitor comparison page (plate 03) and its print view (own A4 portrait page): only subjects with a dated source on both axes are plotted; own brand as a lime diamond; stale = dashed ring; conflicting = dashed range box, never resolved; everyone else in a "Not placed" margin with each axis's state; source footnotes share the matrix numbering. Designed empty and withheld states; en/fa/tr with RTL and Vazirmatn; competitor ids only in the details. Illustrative fixture axes and placements (reserved `.example` hosts).
+- Studio rebuilds a cache written before the map existed, once, at the same commit.
+- Tests: `competitive-positioning`, `visual-positioning`, `studio-visual-positioning`; `studio-visual-competitors-browser` now covers the map (widths, en/fa, light/dark, contrast, print).
+
+No scores, no fabricated numbers, no axis suggestions. No framework or ISO claim.
+
 ## Unreleased — Visual V2.2: competitor share path and comparison matrix
 
 ### Added
