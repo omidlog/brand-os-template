@@ -17,6 +17,7 @@ import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStat
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
+import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -173,6 +174,12 @@ export interface StudioVisualProjection {
    * assets only, in its internal and public editions. Absent in caches written before it existed; sync rebuilds those.
    */
   mascot?: { internal: VisualDocument; public: VisualDocument }
+  /**
+   * Full Brand Book and Business Report (V4.2), in both editions, for `brand:export-visual --doc brand-book|business-report`.
+   * Approved values only (drafts keep their label, restricted values are withheld in every edition). Absent in caches
+   * written before it existed; sync rebuilds those.
+   */
+  books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: BookDocument } }
 }
 
 /**
@@ -314,6 +321,12 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
       identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }), master_rule: IDENTITY_MASTER_RULE },
       competitors: buildCompetitorComparison(engine, readSharedLandscape(engine.workspaceRoot(), engine.config().brand.slug)),
       mascot: { internal: buildMascotAtlas(engine, 'internal', { assets }), public: buildMascotAtlas(engine, 'public', { assets }) },
+    }
+    const book = (kind: 'brand_book' | 'business_report', edition: 'internal' | 'public') =>
+      buildBook(engine, kind, edition, { identity: visual.identity?.[edition] ?? null, canvas: visual.bmc[edition], competitors: visual.competitors ?? null })
+    visual.books = {
+      brand_book: { internal: book('brand_book', 'internal'), public: book('brand_book', 'public') },
+      business_report: { internal: book('business_report', 'internal'), public: book('business_report', 'public') },
     }
     assertNoSecrets(visual)
     return visual

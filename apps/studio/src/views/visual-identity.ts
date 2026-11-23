@@ -39,6 +39,8 @@ export interface IdentityContext {
    * returns the reference mark placed after the plate title; the plate then omits its own source line.
    */
   note?: (entry: VisualEntry, extra?: string[]) => SafeHtml
+  /** Full book (V4.2): the plate's number in the whole book (localized digits), instead of the chapter's own 1–3. */
+  plateNum?: (n: number) => string
 }
 
 function numbers(lang: VisualLang): Intl.NumberFormat {
@@ -50,9 +52,9 @@ function ratioText(ctx: IdentityContext, ratio: number): string {
 }
 
 /** Plate header: section number, title, lead. The numbering is the chapter's own, not a claim about the book. */
-export function plateHead(n: number, id: string, title: string, lead: string, state: SafeHtml, ref: SafeHtml | null = null): SafeHtml {
+export function plateHead(n: number | string, id: string, title: string, lead: string, state: SafeHtml, ref: SafeHtml | null = null): SafeHtml {
   return html`<header class="vz-plate-head">
-    <p class="vz-plate-num"><span>${two(n)}</span>${state}</p>
+    <p class="vz-plate-num"><span>${typeof n === 'number' ? two(n) : n}</span>${state}</p>
     <h2 class="vz-plate-title" id="${id}-t">${title}${ref ?? ''}</h2>
     <p class="vz-plate-lead">${lead}</p>
   </header>`
@@ -170,7 +172,7 @@ export function colorPaletteView(block: ColorPaletteBlock, ctx: IdentityContext)
   const t = ctx.cat.identity
   const id = 'vi-color'
   const ready = block.colors.length > 0
-  const head = plateHead(1, id, t.colorTitle, t.colorLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source) : null)
+  const head = plateHead(ctx.plateNum?.(1) ?? 1, id, t.colorTitle, t.colorLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source) : null)
   if (!ready) {
     const steps = [fillVisual(t.stepApprove, { label: block.source.label })]
     return html`<section class="vz-plate vz-plate--color" id="${id}" aria-labelledby="${id}-t">${head}${awaiting(ctx, { variant: 'swatches', title: t.awaitingColorTitle, body: t.awaitingColorBody, reasons: [entryReason(ctx, block.source)], steps })}</section>`
@@ -249,7 +251,7 @@ export function typographySpecimenView(block: TypographySpecimenBlock, ctx: Iden
   const t = ctx.cat.identity
   const id = 'vi-type'
   const ready = block.roles.length > 0
-  const head = plateHead(2, id, t.typeTitle, t.typeLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source) : null)
+  const head = plateHead(ctx.plateNum?.(2) ?? 2, id, t.typeTitle, t.typeLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source) : null)
   if (!ready) {
     return html`<section class="vz-plate vz-plate--type" id="${id}" aria-labelledby="${id}-t">${head}${awaiting(ctx, { variant: 'specimen', title: t.awaitingTypeTitle, body: t.awaitingTypeBody, reasons: [entryReason(ctx, block.source)], steps: [fillVisual(t.stepApprove, { label: block.source.label })] })}</section>`
   }
@@ -302,7 +304,7 @@ export function logoConstructionView(block: LogoConstructionBlock, ctx: Identity
   const t = ctx.cat.identity
   const id = 'vi-logo'
   const ready = block.spec !== null && block.master !== null
-  const head = plateHead(3, id, t.logoTitle, t.logoLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source, [block.master!.name]) : null)
+  const head = plateHead(ctx.plateNum?.(3) ?? 3, id, t.logoTitle, t.logoLead, ready ? html`<span class="vz-plate-state vz-plate-state--ready">${t.ready}</span>` : html`<span class="vz-plate-state">${t.waiting}</span>`, ready && ctx.note ? ctx.note(block.source, [block.master!.name]) : null)
   if (!ready) {
     const reasons: Array<{ text: string; state: DataState | null }> = []
     const steps: string[] = []
@@ -349,7 +351,7 @@ export function logoConstructionView(block: LogoConstructionBlock, ctx: Identity
 }
 
 /** Rows of the sources appendix: one per cited fact, then the approved master file when there is one. */
-export function sourceRows(block: CitationListBlock, ctx: IdentityContext): { items: SafeHtml[]; master: SafeHtml | null } {
+export function sourceRows(block: Pick<CitationListBlock, 'items'>, ctx: IdentityContext): { items: SafeHtml[]; master: SafeHtml | null } {
   const cat = ctx.cat
   const logo = ctx.doc.blocks.find((item): item is LogoConstructionBlock => item.type === 'logo_construction')
   return {
