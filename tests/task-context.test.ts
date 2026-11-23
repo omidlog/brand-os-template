@@ -33,7 +33,7 @@ import { adsProposal, BUDGET_CANARY, DRAFT_CANARY, RESTRICTED_NOTE_CANARY } from
  * Task Context Engine, Slice 1 (core + CLI). What is checked here, against the acceptance matrix in
  * `../../brand-os-template-notes/task-context-v1/tests/03-ACCEPTANCE-MATRIX.md`:
  *
- * - the field map names only existing FieldQuestion ids (the bug `get_logo_rules` has);
+ * - the field map names only existing FieldQuestion ids (the bug `get_logo_rules` had; see tests/named-tool-ids.test.ts);
  * - one call returns audience, voice, positioning, tokens, asset refs and source revisions when they are approved;
  * - example assets and unapproved tokens are never substituted (CTX-002);
  * - a ten-post request creates no calendar week and nothing else on disk (CTX-003);
@@ -113,7 +113,7 @@ test('the task field map names only existing question ids, and every recipe key 
       for (const key of requirement.any_of) assert.ok(known.has(key), `${type}: requirement ${requirement.id} names unknown key ${key}`)
     }
   }
-  // The two legacy tools this engine deliberately does not copy (see docs-internal/TASK_CONTEXT.md, finding 1).
+  // The ids the two legacy tools used to ask for (BUG-01, fixed; docs-internal/TASK_CONTEXT.md finding 1).
   for (const id of ['brand.logo.primary', 'brand.logo.clearspace', 'brand.motion.easing']) assert.ok(!bank.has(id), `${id} should still be absent`)
 })
 

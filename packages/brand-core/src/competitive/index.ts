@@ -27,3 +27,21 @@ export { ALTERNATIVES, DEPENDENCIES, MEMO_HEADINGS, MEMO_TITLES, NOT_KNOWN, PROP
 export { importSeoNames, seoNamedCompetitors } from './seo-bridge.js'
 export type { SeoImportResult } from './seo-bridge.js'
 export { renderMemo } from './render.js'
+export {
+  buildSharedLandscape,
+  matchesQuote,
+  RATE_LABELS,
+  readSharedLandscape,
+  serializeSharedLandscape,
+  SHARED_CELL_STATES,
+  SHARED_CRITERIA,
+  SHARED_LANDSCAPE_DIR,
+  SHARED_LANDSCAPE_PATH,
+  SHARED_LANDSCAPE_SCHEMA,
+  SHARED_LIMITS,
+  SHARED_PRICE_STATES,
+  shareLandscape,
+  SOURCE_CLASSES,
+  validSharedLandscape,
+} from './share.js'
+export type { RateLabel, SharedCell, SharedCellState, SharedCompetitor, SharedCriterion, SharedLandscape, SharedLandscapeRead, SharedPrice, SharedPriceState, SharedSource } from './share.js'

@@ -139,9 +139,109 @@ test('drafts are never drawn and never carried; approved facts and the approved 
 test('master selection: examples, drafts, untagged and unreadable files never become the master', () => {
   assert.equal(pickMaster([{ ...MASTER, example: true }], 'internal').state, 'example_only')
   assert.equal(pickMaster([{ ...MASTER, approved: false }], 'internal').state, 'missing')
-  assert.equal(pickMaster([{ ...MASTER, tags: ['logo'] }], 'internal').state, 'missing', 'a logo is not a master unless tagged')
   assert.equal(pickMaster([{ ...MASTER, preview_key: null }], 'internal').state, 'not_previewable')
   assert.equal(pickMaster([MASTER], 'internal').state, 'approved')
+  assert.equal(pickMaster([MASTER], 'internal').master?.resolved_by, 'tag')
+})
+
+// Shaped like pilito-brand: an approved, internal, previewable wordmark tagged [logo, wordmark, draft] (no `master`
+// tag), named by id and path in the approved free-text brand.logo.masters answer.
+const WORDMARK: LogoMasterCandidate = {
+  asset_id: 'asset.logo.pilito-wordmark',
+  name: 'Pilito wordmark (owner-supplied)',
+  version: '0.1.0',
+  approved: true,
+  published: false,
+  tags: ['logo', 'wordmark', 'draft'],
+  example: false,
+  preview_key: 'b'.repeat(64),
+  mime: 'image/svg+xml',
+  width: 640,
+  height: 160,
+  paths: ['brand/assets/logo/pilito-wordmark.svg', 'brand/assets/logo/pilito-wordmark.svg'],
+}
+const OTHER: LogoMasterCandidate = { ...WORDMARK, asset_id: 'asset.logo.pilito-symbol', name: 'Pilito symbol', tags: ['logo', 'symbol'], preview_key: 'c'.repeat(64), paths: ['brand/assets/logo/pilito-symbol.svg'] }
+const EXAMPLE: LogoMasterCandidate = { ...WORDMARK, asset_id: 'asset.logo.example-wordmark', name: 'EXAMPLE wordmark', tags: ['logo', 'example'], example: true, paths: ['brand/assets/logo/example-wordmark.svg'] }
+const PILITO_MASTERS = 'This repository: brand/assets/logo/pilito-wordmark.svg (asset.logo.pilito-wordmark). No Figma master recorded.'
+
+test('master resolution: the asset named in brand.logo.masters, then the master tag, then the only approved logo', () => {
+  // a. Named by exact id or exact path, in the free text; first named wins, even over a `master` tag.
+  const named = pickMaster([OTHER, WORDMARK, EXAMPLE], 'internal', PILITO_MASTERS)
+  assert.equal(named.state, 'approved')
+  assert.equal(named.master?.asset_id, 'asset.logo.pilito-wordmark')
+  assert.equal(named.master?.resolved_by, 'reference')
+  assert.deepEqual(named.master?.badges, ['draft_tag', 'internal_only'], 'internal view says the file is tagged draft and unpublished')
+  assert.equal(pickMaster([OTHER, WORDMARK], 'internal', 'Masters: `brand/assets/logo/pilito-wordmark.svg`.').master?.asset_id, 'asset.logo.pilito-wordmark', 'path alone')
+  assert.equal(pickMaster([{ ...OTHER, tags: ['logo', 'master'] }, WORDMARK], 'internal', 'asset.logo.pilito-wordmark').master?.asset_id, 'asset.logo.pilito-wordmark')
+  assert.equal(pickMaster([WORDMARK, OTHER], 'internal', 'asset.logo.pilito-symbol and asset.logo.pilito-wordmark').master?.asset_id, 'asset.logo.pilito-symbol', 'first named')
+  // Token match only: a prefix, a directory or a near miss is not a reference.
+  for (const text of ['brand/assets/logo/', 'asset.logo.pilito', 'pilito-wordmark', 'asset.logo.pilito-wordmark-v2', 'xasset.logo.pilito-wordmark']) {
+    assert.equal(pickMaster([OTHER, WORDMARK], 'internal', text).state, 'ambiguous', text)
+  }
+  // b. The `master` tag still works without a reference.
+  assert.equal(pickMaster([OTHER, { ...WORDMARK, tags: ['logo', 'master'] }], 'internal').master?.resolved_by, 'tag')
+  // c. Exactly one approved previewable logo: used. Several and none named: ambiguous, never a guess.
+  const sole = pickMaster([WORDMARK, EXAMPLE], 'internal')
+  assert.equal(sole.master?.asset_id, 'asset.logo.pilito-wordmark')
+  assert.equal(sole.master?.resolved_by, 'sole_logo')
+  const two = pickMaster([WORDMARK, OTHER], 'internal')
+  assert.equal(two.master, null)
+  assert.equal(two.state, 'ambiguous')
+  // A reference to an unknown id is never chosen and does not break the tie.
+  const unknown = pickMaster([WORDMARK, OTHER], 'internal', 'asset.logo.does-not-exist brand/assets/logo/nope.svg')
+  assert.equal(unknown.master, null)
+  assert.equal(unknown.state, 'ambiguous')
+})
+
+test('master resolution never picks a draft-status, example, unreadable or (in public) unpublished file', () => {
+  const draft = { ...WORDMARK, approved: false, preview_key: null, mime: null }
+  assert.equal(pickMaster([draft], 'internal', PILITO_MASTERS).master, null, 'named but draft status')
+  assert.equal(pickMaster([draft], 'internal', PILITO_MASTERS).state, 'missing')
+  assert.equal(pickMaster([draft, OTHER], 'internal', PILITO_MASTERS).master?.asset_id, 'asset.logo.pilito-symbol', 'the draft is skipped, never drawn')
+  const example = pickMaster([{ ...EXAMPLE, approved: true }], 'internal', 'asset.logo.example-wordmark')
+  assert.equal(example.master, null, 'an example is never a master, even when named')
+  assert.equal(example.state, 'example_only')
+  assert.equal(pickMaster([{ ...WORDMARK, preview_key: null }, OTHER], 'internal', PILITO_MASTERS).state, 'not_previewable', 'named but unreadable: no fallback to another logo')
+  // Public: Pilito's wordmark is not published, so the public edition has no master.
+  assert.equal(pickMaster([WORDMARK], 'public', PILITO_MASTERS).master, null)
+  assert.equal(pickMaster([WORDMARK], 'public', PILITO_MASTERS).state, 'missing')
+  const published = pickMaster([{ ...WORDMARK, published: true }], 'public', PILITO_MASTERS)
+  assert.equal(published.master?.asset_id, 'asset.logo.pilito-wordmark')
+  assert.deepEqual(published.master?.badges, [], 'no internal badge in the public edition')
+})
+
+test('a pilito-shaped brand: internal draws the named wordmark with the approved rule; public has no master', () => {
+  const { root, engine, proof } = brand()
+  try {
+    approve(engine, proof, {
+      'brand.logo.min_size': 'min-size: 80px; clear-space: 0.4x',
+      'brand.logo.masters': PILITO_MASTERS,
+    })
+    const internal = logo(buildVisualIdentity(engine, 'internal', { masters: [WORDMARK, OTHER, EXAMPLE] }))
+    assert.deepEqual(internal.spec, { min_size_px: 80, clear_space: { value: 0.4, unit: 'x' }, min_print_mm: null })
+    assert.equal(internal.master?.asset_id, 'asset.logo.pilito-wordmark')
+    assert.equal(internal.master_state, 'approved')
+    assert.equal(internal.data_state, 'complete')
+    assert.ok(internal.sources.includes('asset:asset.logo.pilito-wordmark'))
+    const pub = logo(buildVisualIdentity(engine, 'public', { masters: [WORDMARK, OTHER, EXAMPLE] }))
+    assert.equal(pub.master, null, 'not published: never in the public edition')
+    assert.doesNotMatch(JSON.stringify(buildVisualIdentity(engine, 'public', { masters: [WORDMARK] })), /pilito-wordmark/)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('an unapproved brand.logo.masters answer names nothing', () => {
+  const { root, engine, proof } = brand()
+  try {
+    approve(engine, proof, { 'brand.logo.min_size': 'min-size: 80px; clear-space: 0.4x' })
+    assert.equal(engine.answerQuestion('brand.logo.masters', PILITO_MASTERS).kind, 'recorded')
+    const block = logo(buildVisualIdentity(engine, 'internal', { masters: [WORDMARK, OTHER] }))
+    assert.equal(block.master, null)
+    assert.equal(block.master_state, 'ambiguous')
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('image sizes: SVG viewBox and width/height, the PNG header; anything else is unknown', () => {

@@ -133,8 +133,8 @@ export {
   searchBrandDocs,
   searchMascotAssets,
 } from './query.js'
-export type { MascotFilters, RetrieveKind, RetrieveRequest, RetrievedItem, ToolResult } from './query.js'
-export { DRAFT_RULES, draftPersonalContent, MASCOT_FILTER_KEYS } from './query.js'
+export type { MascotFilters, NamedFactTool, RetrieveKind, RetrieveRequest, RetrievedItem, ToolResult } from './query.js'
+export { DRAFT_RULES, draftPersonalContent, MASCOT_FILTER_KEYS, NAMED_FACT_TOOL_IDS } from './query.js'
 export { asciiDigits, isStructuredType, normalizeStructured, parseStructured, STRUCTURED_FORMATS, STRUCTURED_TYPES, structuredFor } from './structured.js'
 export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, VoicePair } from './structured.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
