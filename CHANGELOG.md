@@ -616,6 +616,7 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:assurance verify` explains, in en/fa/tr, a digest change with no changed cited source (an answer approved, a research note added, or a judgment recorded for that day).
 - Persian text of the bridge and review commands uses «واقعیت» instead of the English word "fact", and the Persian comma «،» in lists.
 - `docs-internal/ASSURANCE.md`: an owner `yes` replaces PRR-08's evidence minimum; a same-day judgment changes that day's snapshot; dates are UTC days. Tests: `assurance-audit`.
+- After merging main (GAP-09 evidence links): `brand:assurance-link list` in Persian uses the Persian comma «،» and shows the register status (pending, verified, rejected, withdrawn) in en/fa/tr instead of the English token. `verify` with `--pin` keeps both the brand/method check and the evidence-link comparison.
 
 ## Unreleased — Audit: Runtime area fixes
 

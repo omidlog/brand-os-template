@@ -464,6 +464,7 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Done:** credential-like judgment notes refused; `--pin` from another brand or method refused; `verify` says why a digest changed when no cited source did (en/fa/tr); Persian wording; docs now state that an owner `yes` replaces PRR-08's evidence minimum and that dates are UTC days. Tests: `assurance-audit`.
 - **Not done (owner questions):** whether `yes` should be allowed on PRR-08 with no research note cited; local-timezone dates for `--date`; the runtime gate's fixed `entity_kind: company` subject (runtime area).
+- **Done (after merging GAP-09 links):** the link list (`brand:assurance-link list`) uses the Persian comma and translated register statuses. Checked the link store and CLI against the same criteria (owner-only refusal before any read, 0600 private files, ids and dates only, tamper refusal, no certification wording, UTC days); no other change needed.
 
 ## Audit: Runtime area (2026-11-24)
 
