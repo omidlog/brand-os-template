@@ -310,6 +310,7 @@ npm run brand:content -- reports [--week wk-2026-11-23]                         
 | Approved current week only; draft week counted; stable, self-verifying JSON; filters; en/fa/tr; bad arguments; every other profile, guest, owner context, unprofiled and cross-brand denied and logged; forged arguments; content strategy via `strategy_list` | `content-agent` "gate: a content-read agent sees only…" |
 | Brief contents: voice, claims, audience, resolved message, channel plan, competitive angle (no quote), creative preference ids (no drafts), RTL, restricted fact redacted with a canary | `content-agent` "a brief carries…" |
 | Stale pins (draft, superseded, hash-only), `needs_review` week withheld | `content-agent` "stale pins are refused…" |
+| A record edited to two approved revisions serves nothing; a pin reports `integrity_failed` | `content-agent` "a week record edited…" |
 | Reports: observation fields, duplicate, URL refusals, pin required, draft and stale weeks refused, skipped slot, week files unchanged, 0600 file, access log without URL, owner-only listing | `content-agent` "reports…" |
 | Mock Instagram agent over stdio MCP and `brand:query`; marketing token and guest denied; access log | `content-agent` "gate over stdio MCP and brand:query…" |
 | `brand:content reports` en/fa/tr, `--json`, older revision label, refused under an agent token | `content-agent` "brand:content reports…" |
