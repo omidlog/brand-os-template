@@ -4,10 +4,12 @@ import {
   ASSET_USES,
   readVerifiedAsset,
   runVisualDnaTool,
+  USE_SCOPES,
   VISUAL_DNA_LOCALES,
   visualDnaText,
   VisualDnaError,
   type AssetUse,
+  type UseScope,
   type VisualDnaLocale,
   type VisualDnaResult,
 } from '@brand-os/brand-core/visual-dna'
@@ -24,11 +26,14 @@ import {
 const HELP = `brand:visual-dna <command> [options]
 
   resolve [--ids <asset.id,...>] [--emotion e] [--stage s] [--use-case u] [--angle a]
-          [--project <project_id>] [--surface s] [--series s] [--lang en|fa|tr] [--json]
+          [--project <project_id>] [--surface s] [--series s] [--use-scope public|internal]
+          [--lang en|fa|tr] [--json]
       Verdict per reference: approved, withheld, missing or changed, with source, checksum, usage
       rights and the effective model_use. Metadata only. A missing pose or angle stays missing.
+      --use-scope (default public): internal-scope rights cover a portrait only for internal use.
 
-  read <asset.id> --for renderer|local_model|external_provider [--stdout] [--json]
+  read <asset.id> --for renderer|local_model|external_provider [--use-scope public|internal]
+       [--stdout] [--json]
       Owner only (refused while ${AGENT_TOKEN_ENV} is set). Checks one approved asset (safe path, no
       symlink, size, checksum on the bytes read, SVG gates) and that its model_use allows --for.
       Prints the verdict; --stdout writes the verified bytes to standard output instead. Nothing is
@@ -45,6 +50,12 @@ function lang(value: string | undefined): VisualDnaLocale {
   if (value === undefined) return 'en'
   if (!(VISUAL_DNA_LOCALES as readonly string[]).includes(value)) usage('--lang is en, fa or tr.')
   return value as VisualDnaLocale
+}
+
+function scope(value: string | undefined): UseScope {
+  if (value === undefined) return 'public'
+  if (!(USE_SCOPES as readonly string[]).includes(value)) usage('--use-scope is public or internal.')
+  return value as UseScope
 }
 
 function render(result: VisualDnaResult): string {
@@ -86,11 +97,13 @@ function main(): void {
         project: { type: 'string' },
         surface: { type: 'string' },
         series: { type: 'string' },
+        'use-scope': { type: 'string' },
         lang: { type: 'string' },
         json: { type: 'boolean', default: false },
       },
     })
     const locale = lang(values.lang)
+    const useScope = scope(values['use-scope'])
     // Same identity rule as the MCP server: a token comes from the environment only, never from argv.
     let ctx: AuthContext
     const token = process.env[AGENT_TOKEN_ENV]
@@ -103,7 +116,7 @@ function main(): void {
     const mascot = values.emotion || values.stage || values['use-case'] || values.angle ? { emotion: values.emotion, stage: values.stage, use_case: values['use-case'], angle: values.angle } : undefined
     const creative = values.project || values.surface || values.series ? { project_id: values.project, surface: values.surface, series: values.series } : undefined
     const assetIds = values.ids ? values.ids.split(',').map((id) => id.trim()).filter(Boolean) : undefined
-    const result = runVisualDnaTool(engine, ctx, { asset_ids: assetIds, mascot, creative, locale })
+    const result = runVisualDnaTool(engine, ctx, { asset_ids: assetIds, mascot, creative, use_scope: useScope, locale })
     console.log(values.json ? JSON.stringify(result, null, 2) : render(result))
     process.exit(result.status === 'ok' ? 0 : 1)
   }
@@ -112,7 +125,7 @@ function main(): void {
     const { values, positionals } = parseArgs({
       args: rest,
       allowPositionals: true,
-      options: { for: { type: 'string' }, stdout: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
+      options: { for: { type: 'string' }, 'use-scope': { type: 'string' }, stdout: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
     })
     if (process.env[AGENT_TOKEN_ENV]) {
       console.error(`owner_only: Reading asset bytes is a local owner action. Refusing while ${AGENT_TOKEN_ENV} is set.`)
@@ -121,7 +134,7 @@ function main(): void {
     if (positionals.length !== 1) usage('read takes exactly one asset id.')
     if (!values.for || !(ASSET_USES as readonly string[]).includes(values.for)) usage(`--for is required: ${ASSET_USES.join(', ')}.`)
     try {
-      const delivered = readVerifiedAsset(engine, operatorContext(slug), positionals[0]!, values.for as AssetUse)
+      const delivered = readVerifiedAsset(engine, operatorContext(slug), positionals[0]!, values.for as AssetUse, scope(values['use-scope']))
       const { bytes, ...verdict } = delivered
       if (values.stdout) {
         process.stdout.write(bytes)
