@@ -3,6 +3,9 @@
 ## Goal
 Describe lockups, clear space, and exclusions using approved logo facts and files.
 
+## Before this skill
+Deciding what the logo should be (create, keep, evolve or rebrand) is `agent-skills/logo-identity-strategist`. This skill starts from an approved master.
+
 ## Scope
 `brand.logo.*` and `brand/assets/logo`. Path checks reject `..`, symlinks, and active SVG.
 

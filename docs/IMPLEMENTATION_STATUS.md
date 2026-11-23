@@ -193,7 +193,7 @@ Branch `feat/identity-slice-a`. Guide and reuse map: `docs-internal/IDENTITY_INT
 | Studio wizard questions (en/fa/tr) | Done | Profile step; conditional depth; review and Edit and retry mirror the answers; server clears a stale depth. `tests/studio-identity-intake.test.ts`, browser journey. |
 | Privacy | Done | Not in facts, ledger, publication policy, MCP, `brand:query`, dashboard, public projection or Studio brand pages. |
 | Competitor research (Slice B) | Done | See the next section. |
-| Cross-functional context (Slice C), rebrand audit and logo brief (Slice D) | Not started | Separate PRs. |
+| Cross-functional context (Slice C), rebrand audit and logo brief (Slice D) | Done | Separate PRs; see the Slice C and Slice D sections below. |
 
 ## Competitive landscape (Identity Slice B)
 
@@ -222,7 +222,22 @@ Branch `feat/identity-slice-c`. Guide: `docs-internal/COMPETITIVE.md` (section "
 | Visual landscape assessment | Done | Visual comparison `unavailable` without cited visuals; similarity `not_assessed`; retain / evolve / rebrand / create routes guided by the unapproved intake hint. |
 | `brand:competitive context | memo | import-seo-names` | Done | en/fa/tr text; prints only; the SEO bridge runs only on command and never merges. `tests/competitive-cli.test.ts`. |
 | Fact mutation | None | `business.sales.pricing`, `business.marketing.*`, the SEO interview and SEO drafts are asserted unchanged. |
-| Rebrand audit and logo brief | Not started | Slice D. |
+| Rebrand audit and logo brief | Done | Slice D, below. |
+
+## Identity audit and logo brief (Identity Slice D)
+
+Branch `feat/identity-slice-d`. Guide: `docs-internal/IDENTITY_BRIEF.md`. Skill: `agent-skills/logo-identity-strategist`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Identity audit record | Done | `brand/.private/identity/audit.json`, owner-only, refused under an agent token; closed answers and equity choices with history; owner words and studies are Knowledge notes cited by id and revision. `tests/identity-brief.test.ts`. |
+| Diagnosis questions (en/fa/tr) | Done | Path, change reasons, observed vs preference, success, must-not-change, recognition evidence, uses, scripts, rollout; path-dependent skipping; `unknown` allowed. Typed record, not the shared interview bank. |
+| Equity preservation matrix | Done | preserve / refine / replace / evaluate / unknown per element; `measured_study` refused without a cited study note; must-not-change conflicts flagged. |
+| Logo brief (`buildIdentityBrief`, `renderBrief`) | Done | New, retain, evolve and rebrand paths; 2–3 routes with why / why not / risks / red lines / rubric; visual landscape only from the Slice C identity projection; uses and production checks without invented sizes; decision record; `authorizes: []`. |
+| Creative Learning reuse | Done | `logo` surface; brief lists variants, owner reasons by ref and selection (`approved_mark: false`). |
+| `npm run brand:identity` | Done | next, answer, equity, link-creative, brief, reviewed. `tests/identity-cli.test.ts`. |
+| Fact, logo or asset mutation | None | Tracked brand files and facts asserted unchanged in every journey. |
+| Logo drawing, trademark clearance, Figma, Studio view, agent access | Not started | Out of scope for the brief. |
 
 ## SVG checker, normalizer and asset approval
 
