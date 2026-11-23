@@ -163,6 +163,12 @@ Answer the structured color, type-scale and logo-size questions, approve them, t
 
 Throw messy ideas into the brand with `npm run brand:knowledge -- capture` (local and untracked by default), find them later in Persian, Turkish or English (`search`), link them, and turn part of one into **draft** proposals with verbatim quotations (`propose`, preview first). A note is never a brand fact: drafts still go through `brand:review`, `brand:approve` and `brand:publish`. `share` moves a safe note into `brand/knowledge/shared/` in this private repository, where Studio shows it read-only after merge. Restricted notes are encrypted. Guide: `docs-internal/KNOWLEDGE.md`; Claude Code skill: `agent-skills/knowledge-inbox/SKILL.md`.
 
+## Strategic coach
+
+`npm run brand:coach -- analyze --mode quality_review --question <id>` says whether a recorded answer can carry the weight the documents put on it, and why: an explainable status (`ready`, `needs_clarification`, `evidence_missing`, `needs_review`, `not_applicable`, `insufficient_context`) with at most two named deficits and one concrete next step — no score. `--mode follow_up` gives 0 or 1 clarifying question and prefers an existing interview question over writing a new one. `--mode consistency_review` reports the contradictions the interview rules already find. `next` coaches the answer you just gave; `--lang en|fa|tr`, `--json`.
+
+It is advisory and owner-local: it reads the interview and writes nothing — no answer, fact, approval, strategy, asset or cache file — and `authorizes` is always empty. Nothing calls a model. Restricted questions are refused, and the command is refused under an agent token. Guide: `docs-internal/STRATEGIC_COACH.md`.
+
 ## Studio
 
 One private Studio shows every brand at `/brands/<slug>` and creates new ones. It is a viewer plus a repository provisioner, not an editor:

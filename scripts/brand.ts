@@ -459,6 +459,13 @@ if (command === 'init') {
       week: { type: 'string' },
       slot: { type: 'string' },
       lang: { type: 'string' },
+      'task-type': { type: 'string' },
+      request: { type: 'string' },
+      mode: { type: 'string' },
+      count: { type: 'string' },
+      locale: { type: 'string' },
+      'output-format': { type: 'string' },
+      'scope-id': { type: 'string' },
       'include-unapproved': { type: 'boolean', default: false },
     },
   })
@@ -514,6 +521,43 @@ if (command === 'init') {
     strategy_get: async () => {
       const pin = values['pin-revision'] || values['pin-sha'] ? { revision: values['pin-revision'] ? Number(values['pin-revision']) : undefined, content_sha256: values['pin-sha'] } : undefined
       return (await import('@brand-os/brand-core/strategy')).runStrategyTool(root, engine.config().brand.slug, ctx, 'strategy_get', { strategy_id: values.id, pin })
+    },
+    /**
+     * Task Context Engine (docs-internal/TASK_CONTEXT.md). Read-only, one owner-issued token, one pack.
+     * `--request` runs the deterministic en/fa/tr classifier here in the CLI: the text is classified and dropped,
+     * never stored, logged or copied into the pack. An unclear request returns `need_task_type` instead of a guess.
+     */
+    task_context: () => {
+      let taskType = values['task-type']
+      let count = values.count
+      let channel = values.channel
+      const locale = (['en', 'fa', 'tr'] as const).find((item) => item === values.locale)
+      if (values.request) {
+        const intent = core.classifyTask(values.request, locale)
+        if (intent.status === 'need_task_type') {
+          return {
+            tool: 'task_context',
+            status: 'need_task_type',
+            brand_id: engine.config().brand.slug,
+            reason: `The request does not name one task (${intent.reason}). Ask for the task type instead of guessing: --task-type ${core.TASK_TYPES.join('|')}.`,
+            candidates: intent.candidates,
+            data: null,
+            authorizes: [],
+          }
+        }
+        taskType ??= intent.task_type
+        count ??= intent.deliverable_count === null ? undefined : String(intent.deliverable_count)
+        channel ??= intent.channel ?? undefined
+      }
+      return core.buildTaskContext(engine, ctx, {
+        task_type: taskType,
+        request_mode: values.mode,
+        channel,
+        deliverable_count: count,
+        locale: locale ?? values.locale,
+        output_format: values['output-format'],
+        scope_id: values['scope-id'],
+      })
     },
     // Content Bridge (content-read tokens): the same gate as the MCP tools. Reads only; reports go through MCP content_report.
     content_calendar: async () =>
