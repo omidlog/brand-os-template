@@ -1838,6 +1838,19 @@ fields:
       - brand/generated/drafts/business-marketing.md
     validator: non_empty
     related_ids: []
+  - id: business.marketing.paid_media
+    module: business-marketing
+    field_path: business.marketing.paid_media
+    label: Paid media
+    required: true
+    weight: 2
+    sensitivity: internal
+    question_ids:
+      - business.marketing.paid_media
+    documents:
+      - brand/generated/drafts/business-marketing.md
+    validator: one_of
+    related_ids: []
   - id: business.product.portfolio
     module: business-product
     field_path: business.product.portfolio
