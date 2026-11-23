@@ -102,9 +102,17 @@ if (command === 'init') {
       text: { type: 'string' },
       file: { type: 'string' },
       'dry-run': { type: 'boolean', default: false },
+      // Visual V3.1: list questions (repeating_entity). One item operation per call; see entityCommand below.
+      entity: { type: 'string' },
+      item: { type: 'string' },
+      field: { type: 'string', multiple: true },
+      links: { type: 'string' },
+      position: { type: 'string' },
     },
   })
-  if (values.assist) {
+  if (values.entity !== undefined) {
+    await entityCommand(values)
+  } else if (values.assist) {
     // Free-text turn: a configured model (or deterministic rules) proposes drafts. Nothing is approved.
     const { assistTurn, resolveProvider } = await import('@brand-os/brand-core')
     let text: string
@@ -806,6 +814,10 @@ if (command === 'init') {
   console.log(`Migrated ${migrated.from} -> ${migrated.to}. Fact values and module prose were not rewritten.`)
   if (migrated.mascot.changed.length > 0) console.log(`Mascot lifecycle: ${migrated.mascot.changed.length} catalog states moved to the lifecycle enum (${migrated.mascot.files.join(', ')}).`)
   if (migrated.mascot.downgraded.length > 0) console.log(`These states claimed approved without artwork and are now defined: ${migrated.mascot.downgraded.join(', ')}`)
+  // Visual V3.1: list questions. Free text becomes a draft or a change proposal for review; nothing is approved, and
+  // text that cannot be read as a list stays exactly as written and is flagged.
+  const { formatEntityMigration, migrateEntityAnswers } = await import('@brand-os/brand-core')
+  for (const line of formatEntityMigration(migrateEntityAnswers(engine))) console.log(line)
 } else if (command === 'reset') {
   const { values } = parseArgs({ args: rest, options: { confirm: { type: 'string' } } })
   if (values.confirm !== RESET_CONFIRMATION) {
@@ -889,6 +901,56 @@ function formatNext(report: NextReport): string {
   return lines.join('\n')
 }
 
+/**
+ * `brand:interview -- --question <id> --entity add|edit|move|remove|list …` for list questions (repeating_entity).
+ * Every write goes through the normal change flow: a draft, or a pending change proposal when the list is approved.
+ * Nothing is approved here.
+ */
+async function entityCommand(values: { question?: string; entity?: string; item?: string; field?: string[]; links?: string; position?: string; json?: boolean }): Promise<void> {
+  const { ENTITY_OPERATIONS, entityFormat, entityLines, entitySpec, readEntityList } = await import('@brand-os/brand-core')
+  const usage = 'Usage: brand:interview --question <list question id> --entity list | add --field name=… [--field key=…] [--links id,id] [--position N] | edit --item <id> [--field key=…] [--links id,id|none] | move --item <id> --position N | remove --item <id> [--json]'
+  const done = (ok: boolean, payload: Record<string, unknown>, text: string): never => {
+    if (values.json) console.log(JSON.stringify({ ok, ...payload }, null, 2))
+    else (ok ? console.log : console.error)(text)
+    process.exit(ok ? 0 : 1)
+  }
+  const operation = values.entity ?? ''
+  if (!values.question || (operation !== 'list' && !(ENTITY_OPERATIONS as readonly string[]).includes(operation))) {
+    console.error(usage)
+    process.exit(2)
+  }
+  const question = engine.question(values.question)
+  const spec = entitySpec(values.question)
+  if (!question || question.question_type !== 'repeating_entity' || !spec) done(false, { kind: 'error', question_id: values.question, message: 'not a list question' }, `${values.question} is not a list question. Nothing was recorded.`)
+  const fields: Record<string, string> = {}
+  for (const pair of values.field ?? []) {
+    const eq = pair.indexOf('=')
+    if (eq < 1) done(false, { kind: 'error', message: `--field ${pair}` }, `--field needs key=value, for example --field name="Independent cafés". Fields: ${spec!.fields.map((field) => field.key).join(', ')}.`)
+    fields[pair.slice(0, eq).trim()] = pair.slice(eq + 1)
+  }
+  const links = values.links === undefined ? undefined : values.links.trim().toLowerCase() === 'none' ? [] : values.links.split(/[,،\s]+/).filter(Boolean)
+  const position = values.position === undefined ? undefined : Number(values.position)
+  if (operation === 'list') {
+    const latest = engine.ledger().records.filter((record) => record.question_id === values.question && !record.superseded_by).at(-1)
+    const read = readEntityList(spec!, latest?.value ?? null)
+    const lines = read.state === 'items' ? entityLines(spec!, read.list) : read.state === 'legacy' ? ['Legacy free text (kept as written, not a list yet). Run npm run brand:migrate to propose a conversion.'] : ['No items yet.']
+    done(true, { kind: 'list', question_id: values.question, status: latest?.status ?? null, state: read.state, items: read.state === 'items' ? read.list.items : [], format: entityFormat(spec!) }, [`${values.question} (${latest?.status ?? 'unanswered'})`, ...lines, `Format: ${entityFormat(spec!)}`].join('\n'))
+  }
+  if (operation !== 'add' && !values.item) done(false, { kind: 'error', message: '--item is required' }, `--entity ${operation} needs --item <id>. ${usage}`)
+  if (position !== undefined && !Number.isInteger(position)) done(false, { kind: 'error', message: '--position must be a whole number' }, '--position must be a whole number.')
+  const op =
+    operation === 'add'
+      ? { op: 'add' as const, fields, links, position }
+      : operation === 'edit'
+        ? { op: 'edit' as const, id: values.item!, fields, links }
+        : operation === 'move'
+          ? { op: 'move' as const, id: values.item!, position: position ?? 0 }
+          : { op: 'remove' as const, id: values.item! }
+  const result = engine.entityOperation(values.question!, op)
+  const ok = result.kind === 'recorded' || result.kind === 'impact'
+  done(ok, { kind: result.kind, question_id: values.question, item_id: result.item_id ?? null, status: result.status ?? null, message: result.message }, ok ? `${result.item_id ?? ''}: ${result.message}` : result.message)
+}
+
 async function readAllStdin(): Promise<string> {
   const chunks: Buffer[] = []
   for await (const chunk of input) chunks.push(Buffer.from(chunk as Buffer))
@@ -918,6 +980,11 @@ async function interactive(): Promise<void> {
       console.log(prompt.text)
       console.log(`Why: ${question.why_it_matters}`)
       if (question.options) console.log(`Options: ${question.options.join(', ')}`)
+      if (question.question_type === 'repeating_entity') {
+        const { entityFormat, entitySpec } = await import('@brand-os/brand-core')
+        const spec = entitySpec(question.id)
+        if (spec) console.log(`List: ${entityFormat(spec)} Later edits: npm run brand:interview -- --question ${question.id} --entity add|edit|move|remove|list`)
+      }
       const raw = await rl.question('> ')
       const result = engine.submit(raw)
       console.log(result.message)

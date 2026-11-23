@@ -1,4 +1,5 @@
 import type { DocumentItem, DocumentModel, DocumentSection, ItemTag, StructuredValue } from '@brand-os/brand-core'
+import { entityOptionLabel, entitySpec } from '@brand-os/brand-core'
 import type { I18n, MessageKey } from '../i18n/index.js'
 import { escapeHtml, html, join, safeHex, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
@@ -145,12 +146,44 @@ function structured(i: I18n, value: StructuredValue): SafeHtml {
       return html`<ul class="relationship-list">${value.relationships.map(
         (rel) => html`<li><span class="badge badge-neutral">${rel.relation}</span> <span dir="auto">${rel.organization}</span> <span class="mono muted" dir="ltr">${rel.from || '?'} – ${rel.to || '…'}</span> <span class="muted">ownership: ${rel.ownership}</span></li>`,
       )}</ul>`
+    case 'repeating_entity':
+      return entityList(i, value)
   }
+}
+
+/**
+ * A repeating-entity answer (Visual V3.1) as a numbered list: name, detail and the localized choice label. Item ids
+ * and links are technical, so they sit behind a closed toggle (owner decision: no technical ids in the main view).
+ */
+export function entityList(i: I18n, value: Extract<StructuredValue, { type: 'repeating_entity' }>): SafeHtml {
+  const spec = entitySpec(value.question)
+  if (!spec) return html``
+  const choices = spec.fields.filter((field) => field.kind === 'choice')
+  return html`<div class="entity-block">
+    <p class="muted entity-count">${i.t('entity.items', { count: i.number(value.items.length) })}</p>
+    <ol class="entity-list">${value.items.map(
+      (item) => html`<li class="entity-item">
+        <p class="entity-name" dir="auto">${item.fields.name ?? ''}${choices
+          .filter((field) => item.fields[field.key] !== undefined)
+          .map((field) => html` <span class="badge badge-neutral">${entityOptionLabel(spec, field.key, item.fields[field.key]!, i.locale)}</span>`)}</p>
+        ${item.fields.detail ? html`<p class="entity-detail muted" dir="auto">${item.fields.detail}</p>` : ''}
+      </li>`,
+    )}</ol>
+    <details class="entity-ids">
+      <summary>${i.t('entity.idsToggle')}</summary>
+      <ul>${value.items.map((item) => html`<li><code class="mono" dir="ltr">${item.id}</code> <span dir="auto">${item.fields.name ?? ''}</span> <span class="muted">${i.t('entity.links')}:</span> ${item.links.length ? html`<code class="mono" dir="ltr">${item.links.join(', ')}</code>` : i.t('entity.noLinks')}</li>`)}</ul>
+      <p class="muted">${i.t('entity.editHint', { id: value.question })}</p>
+    </details>
+  </div>`
 }
 
 export function itemValue(i: I18n, item: DocumentItem): SafeHtml {
   if (item.withheld) return html`<p class="item-withheld">${icon('lock')}<span>${i.t('common.withheld')}</span> <span class="muted">${i.t('common.withheldNote')}</span></p>`
   if (item.structured) return structured(i, item.structured)
+  // A list question whose stored value is not a list: show the owner's text as written, flagged, never reshaped.
+  if (item.kind === 'repeating_entity' && item.value !== null && item.value !== '') {
+    return html`<p class="item-text" dir="auto">${String(item.value)}</p><p class="entity-legacy">${icon('alert')}<span>${i.t('entity.legacy')}</span></p>`
+  }
   if (item.value === null || item.value === '') return html`<p class="item-missing muted">${item.note ?? i.t('doc.missingValue')}</p>`
   return html`<p class="item-text" dir="auto">${String(item.value)}</p>`
 }

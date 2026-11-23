@@ -125,6 +125,15 @@ function structured(question: FieldQuestion, value: unknown): StructuredValue | 
   return isStructuredType(question.question_type) ? parseStructured(question.question_type, value) : null
 }
 
+/** Visual V3.1: a list question whose stored value is not a list. The text is kept and shown; this note flags it. */
+export const LEGACY_ENTITY_NOTE = 'Legacy free text, kept as written. Not a list of items yet; brand:migrate can propose a conversion for review.'
+
+function legacyNote(question: FieldQuestion, value: unknown, note: string | null): string | null {
+  if (question.question_type !== 'repeating_entity' || value === null || value === undefined || value === '') return note
+  if (structured(question, value)) return note
+  return note ? `${note} ${LEGACY_ENTITY_NOTE}` : LEGACY_ENTITY_NOTE
+}
+
 function missing(question: FieldQuestion, note: string, sources: string[] = []): DocumentItem {
   return {
     id: question.id,
@@ -152,7 +161,7 @@ function fromFact(question: FieldQuestion, fact: CanonicalFact, withheld: boolea
     source_ids: [fact.id, ...fact.source.answer_ids, ...(fact.revision_hash ? [`revision:${fact.revision_hash.slice(0, 16)}`] : [])],
     version: fact.version,
     withheld,
-    note: withheld ? 'Restricted. Approved, but the value is never shown in a document.' : null,
+    note: withheld ? 'Restricted. Approved, but the value is never shown in a document.' : legacyNote(question, fact.value, null),
     verification: null,
   }
 }
@@ -177,7 +186,7 @@ function fromDraft(question: FieldQuestion, answer: AnswerRecord): DocumentItem 
     source_ids: [question.id, answer.answer_id],
     version: null,
     withheld: restricted,
-    note: restricted ? `${note} Restricted value withheld.` : note,
+    note: restricted ? `${note} Restricted value withheld.` : legacyNote(question, answer.value, note),
     verification: null,
   }
 }

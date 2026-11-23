@@ -647,4 +647,11 @@ export const en = {
   'update.flash.pending': 'GitHub is slow. Studio is still preparing the pull request; refresh this page in a minute.',
   'update.flash.too_soon': 'Too many update requests. Wait a few minutes and try again.',
   'update.viewPull': 'View pull request #{number}',
+  // Visual V3.1: repeating-entity answers (read-only list).
+  'entity.items': '{count} items',
+  'entity.idsToggle': 'Ids and links',
+  'entity.links': 'Links',
+  'entity.noLinks': 'No links',
+  'entity.legacy': 'Legacy free text, kept exactly as written. It is not a list of items yet; run npm run brand:migrate to propose a conversion for the owner to review.',
+  'entity.editHint': 'Studio is read-only. The owner adds, edits, reorders or removes items in the brand repository with npm run brand:interview -- --question {id} --entity add|edit|move|remove; drafts and change proposals still need approval.',
 } as const

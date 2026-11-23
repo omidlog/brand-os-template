@@ -34,6 +34,7 @@ import { dispositionFor } from './dispositions.js'
 import { CONFIG_BINDINGS, isPersonalBrand, priorityRank } from './config-bindings.js'
 import { assertSlug, emptySession, personalInit, recordTemplate, syncManifest } from './init.js'
 import { identityIntakeRecord } from './identity-intake.js'
+import { applyEntityOperation, entitySpec, readEntityList, type EntityOperation } from './entities.js'
 
 export type { StepResult, ImpactReport, InitInput } from './engine-types.js'
 export { dispositionFor } from './dispositions.js'
@@ -312,7 +313,7 @@ export class InterviewEngine {
       raw: string
     },
   ): StepResult {
-    const normalized = normalizeAnswer(question, rawValue)
+    const normalized = normalizeAnswer(question, rawValue, this.context().answers.get(question.id)?.value ?? null)
     if (!normalized.ok) return { kind: 'error', questionId: question.id, message: normalized.message }
     return this.record(question, normalized.value, { ...meta, raw: meta.raw })
   }
@@ -370,7 +371,14 @@ export class InterviewEngine {
       }
     }
     if (latest?.status === 'approved') {
-      const proposal = this.requestChange(questionId, rawValue)
+      // A list is proposed in its canonical form, so approving the proposal keeps the item ids it was reviewed with.
+      let proposed = rawValue
+      if (question.question_type === 'repeating_entity') {
+        const checked = normalizeAnswer(question, rawValue, latest.value)
+        if (!checked.ok) return { kind: 'error', questionId, message: checked.message }
+        proposed = String(checked.value)
+      }
+      const proposal = this.requestChange(questionId, proposed)
       return {
         kind: 'impact',
         questionId,
@@ -393,7 +401,7 @@ export class InterviewEngine {
       this.afterWrite(question, answer)
       return { kind: 'recorded', questionId, status: disposition.status, impact, message: `Marked ${disposition.status}. No value was stored.` }
     }
-    const normalized = normalizeAnswer(question, rawValue)
+    const normalized = normalizeAnswer(question, rawValue, latest?.value ?? null)
     if (!normalized.ok) return { kind: 'error', questionId, message: normalized.message }
     if (latest) this.supersede(latest.answer_id)
     const answer = this.appendAnswer(question, normalized.value, {
@@ -439,6 +447,52 @@ export class InterviewEngine {
   }
 
   /** Null when the question applies; otherwise the reason it does not under the current config and answers. */
+  /**
+   * Add, edit, move or remove one item of a repeating-entity answer (Visual V3.1). The new list goes through the
+   * same change flow as any answer: a draft, or a pending change proposal when the list is approved. Nothing is
+   * approved here. The base is the latest recorded list; a legacy free-text value is refused (convert it first with
+   * `brand:migrate` or answer the whole list), so it is never overwritten by accident.
+   */
+  entityOperation(questionId: string, operation: EntityOperation): StepResult & { item_id?: string } {
+    const question = this.question(questionId)
+    if (!question) return { kind: 'error', message: `Unknown question ${questionId}.` }
+    const spec = entitySpec(questionId)
+    if (question.question_type !== 'repeating_entity' || !spec) return { kind: 'error', questionId, message: `${questionId} is not a list question.` }
+    const applicability = this.applicability(question)
+    if (applicability) return { kind: 'error', questionId, message: applicability }
+    const latest = this.context().answers.get(questionId)
+    const current = readEntityList(spec, latest?.value ?? null)
+    if (current.state === 'legacy') {
+      return { kind: 'error', questionId, message: `${questionId} holds legacy free text, not a list. Nothing was changed. Run npm run brand:migrate to propose a conversion, or answer the whole list with --answer.` }
+    }
+    const applied = applyEntityOperation(spec, current.state === 'items' ? current.list : null, operation)
+    if (!applied.ok) return { kind: 'error', questionId, message: applied.message }
+    const result = this.changeAnswer(questionId, applied.value.value)
+    return { ...result, item_id: applied.value.item_id }
+  }
+
+  /**
+   * `brand:migrate` only: records a list converted from legacy free text. A draft is superseded by a system draft
+   * that keeps the original text as its raw answer; an approved fact is never touched, a change proposal is filed
+   * for the owner instead. Returns what happened so the migration can report it.
+   */
+  recordEntityConversion(questionId: string, canonical: string, original: string): { outcome: 'draft' | 'proposal'; id: string } {
+    const question = this.question(questionId)
+    if (!question || question.question_type !== 'repeating_entity') throw new Error(`${questionId} is not a list question.`)
+    const latest = this.context().answers.get(questionId)
+    if (latest?.status === 'approved') return { outcome: 'proposal', id: this.requestChange(questionId, canonical).id }
+    if (latest) this.supersede(latest.answer_id)
+    const answer = this.appendAnswer(question, canonical, {
+      sourceType: 'system',
+      authority: 'unverified',
+      status: 'draft',
+      uncertainty: 'Converted from legacy free text by brand:migrate. The original text is kept as the raw answer and in the superseded record. Review before approving.',
+      raw: original,
+    })
+    this.afterWrite(question, answer)
+    return { outcome: 'draft', id: answer.answer_id }
+  }
+
   applicability(question: FieldQuestion): string | null {
     const ctx = this.context()
     if (disabledModule(question.id, ctx)) return `${question.id} belongs to a module that is turned off in brand.config.yaml.`

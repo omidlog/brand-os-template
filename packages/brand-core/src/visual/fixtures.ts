@@ -6,7 +6,7 @@ import type { VisualLang } from './i18n.js'
  * ILLUSTRATIVE / MOCK DATA. The golden example for the Business Model Canvas renderer.
  *
  * Every value below is invented for a fictional company so the renderer can be reviewed in every state (approved,
- * draft, stale, withheld, missing, not applicable, and two zones with no question yet). It is never read from or
+ * draft, stale, withheld, missing, not applicable, list items with links and an empty list zone). It is never read from or
  * written to a brand repository, never used as a default answer, and every document built from it has
  * `illustrative: true`, which the renderers stamp on every page.
  */
@@ -21,11 +21,47 @@ interface FixtureEntry {
   approved_at?: string
   review_due?: string
   note?: string
+  /** Visual V3.1: list items (repeating_entity). Ids, choice values and links are language-neutral. */
+  list?: Array<{ id: string; tags: Array<{ field: string; value: string }>; links: string[]; text: Record<VisualLang, { name: string; detail?: string }> }>
 }
 
 const APPROVED_AT = '2026-10-02T09:00:00.000Z'
 
 const FIXTURE: FixtureEntry[] = [
+  // Visual V3.1 list questions: approved segments, draft activities and cost items with links, resources missing
+  // (the designed empty list zone), and one link to an item that does not exist (unresolved).
+  {
+    id: 'business.model.segments',
+    label: 'Customer segments',
+    state: 'approved',
+    version: 1,
+    approved_at: APPROVED_AT,
+    list: [
+      { id: 'seg-1', tags: [{ field: 'priority', value: 'primary' }], links: [], text: { en: { name: 'Working adults changing jobs', detail: 'Ten minutes a day, on the phone' }, fa: { name: 'بزرگسالان شاغل در حال تغییر شغل', detail: 'روزی ده دقیقه، روی گوشی' }, tr: { name: 'İş değiştiren çalışan yetişkinler', detail: 'Günde on dakika, telefonda' } } },
+      { id: 'seg-2', tags: [{ field: 'priority', value: 'secondary' }], links: [], text: { en: { name: 'Employers buying team seats' }, fa: { name: 'کارفرمایانی که صندلی تیمی می‌خرند' }, tr: { name: 'Ekip koltuğu satın alan işverenler' } } },
+    ],
+  },
+  {
+    id: 'business.model.key_activities',
+    label: 'Key activities',
+    state: 'assumption',
+    note: 'Owner draft. Not approved.',
+    list: [
+      { id: 'act-1', tags: [{ field: 'category', value: 'production' }], links: ['seg-1', 'res-1'], text: { en: { name: 'Lesson production', detail: 'Weekly, reviewed by a teacher' }, fa: { name: 'تولید درس', detail: 'هفتگی، با بازبینی معلم' }, tr: { name: 'Ders üretimi', detail: 'Haftalık, öğretmen kontrolünde' } } },
+      { id: 'act-2', tags: [{ field: 'category', value: 'problem_solving' }], links: ['seg-2'], text: { en: { name: 'Partner onboarding' }, fa: { name: 'راه‌اندازی شریکان' }, tr: { name: 'Ortak katılımı' } } },
+    ],
+  },
+  { id: 'business.model.key_resources', label: 'Key resources', state: 'missing', note: 'Not answered yet.' },
+  {
+    id: 'business.model.cost_items',
+    label: 'Cost items',
+    state: 'assumption',
+    note: 'Owner draft. Not approved.',
+    list: [
+      { id: 'cost-1', tags: [{ field: 'behaviour', value: 'variable' }], links: ['act-1'], text: { en: { name: 'Content production' }, fa: { name: 'تولید محتوا' }, tr: { name: 'İçerik üretimi' } } },
+      { id: 'cost-2', tags: [{ field: 'behaviour', value: 'variable' }], links: [], text: { en: { name: 'Cloud hosting', detail: 'Grows with active learners' }, fa: { name: 'میزبانی ابری', detail: 'با یادگیرندگان فعال رشد می‌کند' }, tr: { name: 'Bulut barındırma', detail: 'Aktif öğrenciyle büyür' } } },
+    ],
+  },
   {
     id: 'business.partners.channels',
     label: 'Partners',
@@ -178,11 +214,13 @@ export function illustrativeBusinessModelCanvas(lang: VisualLang = 'en', audienc
       const approved = fixture.state === 'approved' || fixture.state === 'stale' || (fixture.state === 'withheld' && fixture.approved_at !== undefined)
       // The public edition of the fixture follows the same rule as a real brand: drafts are left out.
       const hidden = audience === 'public' && !approved
+      const items = hidden || !fixture.list ? null : fixture.list.map((item) => ({ id: item.id, name: item.text[lang].name, detail: item.text[lang].detail ?? null, tags: item.tags, links: item.links }))
       const entry: VisualEntry & { approved: boolean } = {
         id: fixture.id,
         label: fixture.label,
         state: hidden ? 'missing' : fixture.state,
-        value: hidden || !fixture.value ? null : fixture.value[lang],
+        value: items ? items.map((item) => item.name).join(' · ') : hidden || !fixture.value ? null : fixture.value[lang],
+        ...(items ? { items } : {}),
         sources: [`fixture:${fixture.id}`],
         version: approved ? (fixture.version ?? null) : null,
         approved_at: approved ? (fixture.approved_at ?? null) : null,

@@ -646,4 +646,11 @@ export const tr: Messages = {
   'update.flash.pending': 'GitHub yavaş. Studio pull request’i hâlâ hazırlıyor; bir dakika sonra sayfayı yenileyin.',
   'update.flash.too_soon': 'Çok fazla güncelleme isteği. Birkaç dakika bekleyip yeniden deneyin.',
   'update.viewPull': '#{number} numaralı pull request’i görüntüle',
+  // Visual V3.1: repeating-entity answers (read-only list).
+  'entity.items': '{count} öğe',
+  'entity.idsToggle': 'Kimlikler ve bağlantılar',
+  'entity.links': 'Bağlantılar',
+  'entity.noLinks': 'Bağlantı yok',
+  'entity.legacy': 'Eski serbest metin, yazıldığı gibi korunuyor. Henüz bir öğe listesi değil; sahibin incelemesi için bir dönüştürme önermek üzere npm run brand:migrate çalıştırın.',
+  'entity.editHint': 'Studio salt okunurdur. Sahip, öğeleri marka deposunda npm run brand:interview -- --question {id} --entity add|edit|move|remove ile ekler, düzenler, sıralar veya kaldırır; taslaklar ve değişiklik önerileri yine onay gerektirir.',
 }
