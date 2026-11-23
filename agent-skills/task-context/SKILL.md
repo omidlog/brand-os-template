@@ -38,6 +38,10 @@ sentence as `request`.
 7. Before you use an asset id from the pack (or a mascot pose) as a visual reference, check it once with `visual_dna`
    (`docs-internal/VISUAL_DNA.md`). Use only `approved` references; name `missing`, `withheld` and `changed` ones to
    the owner. `model_use` is not permission to send a file to any model, and you never receive file bytes over MCP.
+8. Before you produce files, call `production_readiness` once with the same task inputs (add `required_assets: ["logo"]`
+   only when the owner said the logo is a must). `not_ready`: name each blocker (check, rule owner, input) to the owner
+   and do not work around it; a task with no renderer gets a brief, not an invented artifact. `ready` only means no
+   deterministic blocker: the draft still goes to a person for review (`docs-internal/BRAND_RUNTIME.md`).
 
 ## Deliverable
 Your draft, the pack digest, the source ids and revisions you used, and the list of what is still missing, by question
@@ -46,6 +50,7 @@ id.
 ## Incorrect
 - Filling a `missing[]` id with a plausible value, or substituting a similar colour, asset, claim or mascot state.
 - Treating `readiness: ready` as "the posts are done", or ten on-demand posts as an approved calendar week.
+- Treating `production_ready: ready` as approval, a quality verdict or permission to publish.
 - Publishing, scheduling, spending or deploying because the pack was `ready`. `authorizes` is always empty.
 - Asking the owner to paste the brand voice when the pack already has it.
 

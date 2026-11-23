@@ -9,12 +9,21 @@ import {
   demoPack,
   loadApprovedLogo,
   openOwnerWorkspace,
+  packAssetIds,
+  parseRequiredAssets,
+  productionReadiness,
+  productionText,
+  readBatchDir,
   readPackFile,
   runSocialBatch,
   RuntimeError,
   writeBatch,
+  type ProductionReadiness,
+  type RequirableAsset,
   type SocialBatchResult,
 } from '@brand-os/brand-core/runtime'
+import { operatorContext } from '@brand-os/brand-core'
+import { MAX_ASSET_IDS, runVisualDnaTool } from '@brand-os/brand-core/visual-dna'
 
 /**
  * brand:runtime — the Brand Runtime, first vertical slice (`docs-internal/BRAND_RUNTIME.md`).
@@ -29,10 +38,16 @@ import {
  * task type, count, empty authorizes). It reads the pack file and nothing else, unless --root names the owner's own
  * checkout of the same brand: then the Coach is called and an approved logo may be embedded through the publication
  * gate. brand/ is never written.
+ *
+ * readiness --pack <file> prints the production-readiness projection (`docs-internal/BRAND_RUNTIME.md` § Production
+ * readiness): a separate view that never changes the pack's own `readiness`. With --root the pack's assets are checked
+ * through the Visual DNA resolver as the owner; with --batch the files a social-batch run wrote are re-checked on their
+ * bytes. Exit 0 when ready, 3 when not_ready. social-batch also writes production-readiness.json next to its summary.
  */
 
 const HELP = `brand:runtime social-batch (--demo | --pack <file> [--root <dir>]) --out <empty dir>
-                           [--final --font-file <ttf|otf>...] [--locale fa|en|tr] [--png] [--json]
+                           [--final --font-file <ttf|otf>...] [--locale fa|en|tr] [--require logo] [--png] [--json]
+brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require logo] [--locale fa|en|tr] [--json]
 
   --demo     use the SYNTHETIC DEMO brand (temp workspace, removed afterwards)
   --pack     a real brand's social_batch pack file: the output of
@@ -47,7 +62,13 @@ const HELP = `brand:runtime social-batch (--demo | --pack <file> [--root <dir>])
   --out      an empty or new directory outside any brand/ folder; nothing is written anywhere else
   --locale   with --demo: labels and direction (default fa). Approved copy is never translated.
   --png      also write PNG previews to <out>/previews (resvg; previews are not deliverables and not hashed)
-  --json     print the batch summary as JSON
+  --require  repeatable, owner task input: an asset this task must carry (logo). A required logo that is
+             missing, changed, withheld or unverifiable makes production not_ready. Optional assets never block
+  --json     print the batch summary (social-batch) or the projection (readiness) as JSON
+
+readiness   production readiness of a pack (separate from the pack's own context readiness). --root checks the
+            pack's assets through Visual DNA as the owner; --batch re-checks a social-batch output directory on its
+            bytes. --locale sets the labels (default: the pack's locale). Exit 0 ready, 3 not_ready.
 
 Every output is a draft for human review: authorizes is always empty.`
 
@@ -77,12 +98,13 @@ async function main(): Promise<void> {
     console.log(HELP)
     return
   }
+  if (command === 'readiness') return readiness(rest)
   if (command !== 'social-batch') usage(`Unknown command "${command}".`)
-  let values: { demo?: boolean; pack?: string; root?: string; 'as-of'?: string; final?: boolean; 'font-file'?: string[]; out?: string; locale?: string; png?: boolean; json?: boolean }
+  let values: { demo?: boolean; pack?: string; root?: string; 'as-of'?: string; final?: boolean; 'font-file'?: string[]; out?: string; locale?: string; require?: string[]; png?: boolean; json?: boolean }
   try {
     values = parseArgs({
       args: rest,
-      options: { demo: { type: 'boolean', default: false }, pack: { type: 'string' }, root: { type: 'string' }, 'as-of': { type: 'string' }, final: { type: 'boolean', default: false }, 'font-file': { type: 'string', multiple: true }, out: { type: 'string' }, locale: { type: 'string' }, png: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
+      options: { demo: { type: 'boolean', default: false }, pack: { type: 'string' }, root: { type: 'string' }, 'as-of': { type: 'string' }, final: { type: 'boolean', default: false }, 'font-file': { type: 'string', multiple: true }, out: { type: 'string' }, locale: { type: 'string' }, require: { type: 'string', multiple: true }, png: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
       allowPositionals: false,
       strict: true,
     }).values
@@ -96,16 +118,19 @@ async function main(): Promise<void> {
   const locale = values.locale ?? 'fa'
   if (locale !== 'fa' && locale !== 'en' && locale !== 'tr') usage(`--locale must be fa, en or tr (given ${locale}).`)
   if (!values.final && values['font-file']?.length) usage('--font-file applies to --final only.')
+  const required = requiredOf(values.require)
   const out = path.resolve(values.out)
   const final = values.final ? await createOutliner(values['font-file'] ?? []) : null
 
   let result: SocialBatchResult
+  let production: ProductionReadiness
   if (values.demo) {
     const demo = createDemoBrand()
     try {
       const pack = demoPack(demo, locale)
-      const { logo } = loadApprovedLogo(demo.root, pack)
+      const { logo, references } = loadApprovedLogo(demo.root, pack)
       result = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo, coach: demo.engine, now: DEMO_NOW, origin: 'demo', final })
+      production = productionReadiness({ pack, required_assets: required, references, batch: result })
     } finally {
       demo.cleanup()
     }
@@ -114,9 +139,12 @@ async function main(): Promise<void> {
     if (Number.isNaN(now.getTime())) usage('--as-of must be an ISO date.')
     const pack = readPackFile(values.pack!)
     const engine = values.root ? openOwnerWorkspace(values.root, pack) : null
-    const logo = engine ? loadApprovedLogo(engine.workspaceRoot(), pack).logo : null
-    result = runSocialBatch(pack, { demo: false, logo, coach: engine, now, origin: 'pack_file', final })
+    const loaded = engine ? loadApprovedLogo(engine.workspaceRoot(), pack) : null
+    result = runSocialBatch(pack, { demo: false, logo: loaded?.logo ?? null, coach: engine, now, origin: 'pack_file', final })
+    production = productionReadiness({ pack, required_assets: required, references: loaded ? loaded.references : null, batch: result })
   }
+  // An additive file next to the summary: batch-summary.json (runtime-batch/v1) is unchanged.
+  result.files.set('production-readiness.json', `${JSON.stringify(production, null, 2)}\n`)
   const written = writeBatch(out, result)
   const note = values.png ? await previews(out, result) : null
   if (values.json) {
@@ -132,9 +160,58 @@ async function main(): Promise<void> {
   for (const check of s.set_checks) console.log(`  set ${check.check_id.padEnd(24)} ${check.result}`)
   for (const layer of s.layers) console.log(`  layer ${layer.layer}: ${layer.called ? 'called' : `not called (${layer.skipped_reason})`}, ${layer.results.length} result(s)`)
   for (const warning of s.warnings) console.log(`  warn coach ${warning.question_id ?? 'brand'}: ${warning.status} (${warning.codes.join(', ')}) — advice, does not block`)
+  console.log(`production: ${production.production_ready} (${production.blockers.length} blocker(s); see production-readiness.json)`)
+  for (const blocker of production.blockers) console.log(`  blocked by ${blocker.check_id} [${blocker.rule_owner}] ${blocker.input}: ${blocker.code}`)
   console.log(`files: ${written.length} written to ${out}`)
   if (note) console.log(note)
   console.log('Drafts for human review. Nothing was published, scheduled, spent, deployed or approved; authorizes: [].')
+}
+
+function requiredOf(values: string[] | undefined): RequirableAsset[] {
+  const required = parseRequiredAssets(values ?? [])
+  if (required === null) usage('--require takes: logo.')
+  return required
+}
+
+/** brand:runtime readiness — the projection alone, pre-render or over a written batch. */
+function readiness(args: string[]): void {
+  let values: { pack?: string; root?: string; batch?: string; require?: string[]; locale?: string; json?: boolean }
+  try {
+    values = parseArgs({
+      args,
+      options: { pack: { type: 'string' }, root: { type: 'string' }, batch: { type: 'string' }, require: { type: 'string', multiple: true }, locale: { type: 'string' }, json: { type: 'boolean', default: false } },
+      allowPositionals: false,
+      strict: true,
+    }).values
+  } catch (error) {
+    usage(error instanceof Error ? error.message : String(error))
+  }
+  if (!values.pack) usage('readiness needs --pack <file> (the output of brand:query --tool task_context).')
+  if (values.locale && values.locale !== 'fa' && values.locale !== 'en' && values.locale !== 'tr') usage(`--locale must be fa, en or tr (given ${values.locale}).`)
+  const required = requiredOf(values.require)
+  const pack = readPackFile(values.pack)
+  let references = null
+  if (values.root) {
+    // Owner-local: openOwnerWorkspace refuses under an agent token and for another brand.
+    const engine = openOwnerWorkspace(values.root, pack)
+    const ids = packAssetIds(pack).slice(0, MAX_ASSET_IDS)
+    const dna = ids.length > 0 ? runVisualDnaTool(engine, operatorContext(pack.brand_id), { asset_ids: ids }) : null
+    references = dna === null ? [] : dna.status === 'ok' ? dna.references : null
+  }
+  const batch = values.batch ? readBatchDir(values.batch) : null
+  const locale = (values.locale as 'fa' | 'en' | 'tr' | undefined) ?? pack.task.locale
+  const result = productionReadiness({ pack, locale, required_assets: required, references, batch })
+  if (values.json) console.log(JSON.stringify(result, null, 2))
+  else {
+    const t = productionText(locale)
+    console.log(`${t.labels.production}: ${t.states[result.production_ready]} (${result.production_ready})  ${t.labels.stage}: ${result.stage}  ${t.labels.context}: ${result.context.readiness}  ${t.labels.renderer}: ${result.renderer.name ?? t.labels.none}`)
+    console.log(result.meaning)
+    for (const check of result.checks) {
+      console.log(`  [${t.verdicts[check.verdict]}]${check.blocks ? ` ${t.labels.blocks}` : ''} ${check.label} — ${t.labels.owner}: ${check.rule_owner}; ${t.labels.input}: ${check.input}`)
+    }
+    console.log(t.labels.human_review)
+  }
+  process.exitCode = result.production_ready === 'ready' ? 0 : 3
 }
 
 main().catch((error: unknown) => {
