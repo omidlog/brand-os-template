@@ -23,7 +23,7 @@ import type { InterviewProfile } from '../profiles.js'
 
 export const COACH_ENGINE_VERSION = 'coach/1'
 /** Bumped whenever a rule changes its verdict for the same input, so cached advice can be invalidated. */
-export const COACH_RULE_VERSION = 'coach-rules/2'
+export const COACH_RULE_VERSION = 'coach-rules/3'
 export const COACH_SCHEMA_VERSION = 1
 
 export const COACH_MODES = ['follow_up', 'quality_review', 'consistency_review'] as const
@@ -41,9 +41,10 @@ export const COACH_CRITERIA = ['relevance', 'specificity', 'completeness_for_out
 export type CoachCriterion = (typeof COACH_CRITERIA)[number]
 
 /**
- * Consistency verdicts. PR 1 emits `confirmed_conflict` only, and only from the existing deterministic
- * `findContradictions` rules. `potential_tension` (strategic trade-offs) and `needs_verification`
- * (evidence missing) are declared here and get their emitters with the narrow rule registry in PR 2.
+ * Consistency verdicts. `confirmed_conflict` comes only from the existing deterministic `findContradictions`
+ * rules. `potential_tension` (a strategic trade-off worth one question) and `needs_verification` (a sensitive
+ * claim without a current independent source) come only from the narrow registry in `coach/rules.ts`. A rule
+ * that could not run is reported as `not_tested` in `rule_checks`, never as silence.
  */
 export const COACH_CONSISTENCY_VERDICTS = ['confirmed_conflict', 'potential_tension', 'needs_verification'] as const
 export type CoachConsistencyVerdict = (typeof COACH_CONSISTENCY_VERDICTS)[number]
@@ -70,12 +71,18 @@ export const COACH_FINDING_CODES = [
   'evidence_owner_stated_only',
   'field_in_open_conflict',
   'meets_criteria',
+  // quality_review, personal facet rubrics (coach/facet-rubrics.ts)
+  'facet_ownership_separate',
+  'facet_companion_open',
+  'facet_claim_undated',
   // follow_up
   'follow_up_canonical',
   'follow_up_clarify',
   'follow_up_none',
   // consistency_review
   'consistency_rule',
+  'consistency_tension',
+  'consistency_verification',
   'consistency_none',
 ] as const
 export type CoachFindingCode = (typeof COACH_FINDING_CODES)[number]
@@ -199,6 +206,24 @@ export interface CoachResult {
   source_refs: CoachSourceRef[]
   /** Machine-readable notes about how the analysis ran (for example that no model was called). */
   notes: string[]
+  /**
+   * `consistency_review` only: one entry per rule, saying whether it fired, stayed silent, was explained by a
+   * guard, or was `not_tested` because an input is open. Ids only.
+   */
+  rule_checks?: CoachRuleCheckRecord[]
+}
+
+export const COACH_RULE_CHECK_KINDS = ['contradiction', 'tension', 'verification'] as const
+export const COACH_RULE_CHECK_OUTCOMES = ['confirmed_conflict', 'potential_tension', 'needs_verification', 'no_finding', 'not_tested'] as const
+export type CoachRuleCheckOutcome = (typeof COACH_RULE_CHECK_OUTCOMES)[number]
+export const COACH_RULE_CHECK_BASES = ['rule_fired', 'rule_silent', 'guard_matched', 'inputs_open'] as const
+
+export interface CoachRuleCheckRecord {
+  rule_id: string
+  kind: (typeof COACH_RULE_CHECK_KINDS)[number]
+  outcome: CoachRuleCheckOutcome
+  basis: (typeof COACH_RULE_CHECK_BASES)[number]
+  question_ids: string[]
 }
 
 // ---- output validation ----------------------------------------------------------------------------
@@ -207,6 +232,16 @@ const QUESTION_ID = /^[a-z0-9_]+(?:\.[a-z0-9_]+)+$/
 
 const SourceRefSchema = z
   .object({ kind: z.enum(COACH_SOURCE_KINDS), id: z.string().min(1).max(200), revision: z.string().min(1).max(40).optional() })
+  .strict()
+
+const RuleCheckSchema = z
+  .object({
+    rule_id: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80),
+    kind: z.enum(COACH_RULE_CHECK_KINDS),
+    outcome: z.enum(COACH_RULE_CHECK_OUTCOMES),
+    basis: z.enum(COACH_RULE_CHECK_BASES),
+    question_ids: z.array(z.string().regex(QUESTION_ID)).max(100),
+  })
   .strict()
 
 const FindingSchema = z
@@ -260,6 +295,7 @@ export const CoachResultSchema = z
     authorizes: z.tuple([]),
     source_refs: z.array(SourceRefSchema).max(200),
     notes: z.array(z.string().min(1).max(COACH_LIMITS.maxReasonChars)).max(20),
+    rule_checks: z.array(RuleCheckSchema).max(30).optional(),
   })
   .strict()
 

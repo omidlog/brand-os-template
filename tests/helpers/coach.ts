@@ -31,13 +31,13 @@ export interface CoachBrand {
  * A throwaway brand with the approval secret in place. `changeAnswer` is used rather than
  * `answerQuestion` so a test can answer a question whose prerequisite is deliberately left open.
  */
-export function coachBrand(opts: { slug?: string; personal?: boolean } = {}): CoachBrand {
+export function coachBrand(opts: { slug?: string; personal?: boolean; facets?: string[] } = {}): CoachBrand {
   const root = brandDir({
     slug: opts.slug ?? 'coach-demo',
     mutate: (config) => {
       if (!opts.personal) return
       const modules = config.modules as Record<string, unknown>
-      modules.personal = { enabled: true, facets: ['founder-executive', 'consultant-expert'], note: 'SYNTHETIC DEMO' }
+      modules.personal = { enabled: true, facets: opts.facets ?? ['founder-executive', 'consultant-expert'], note: 'SYNTHETIC DEMO' }
     },
   })
   return { root, engine: new InterviewEngine(root), proof: ensureApprovalSecret(root) }

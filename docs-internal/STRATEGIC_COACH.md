@@ -1,9 +1,11 @@
 # Strategic Coach & Answer Assurance
 
-> Status: **PR 1 — read-only deterministic core, plus the Coach UX moments.** Three modes work without a model,
-> and the coach speaks on its own at three moments (see [Rollout and automatic moments](#rollout-and-automatic-moments)),
-> including a read-only Studio Overview card. The narrow consistency rule registry, the five personal facet
-> rubrics, the optional provider and any richer panel are not built yet (see [What is not built yet](#what-is-not-built-yet)).
+> Status: **PR 1 — read-only deterministic core and the Coach UX moments, plus PR 2 rules (fixes pack GAP-08).**
+> Three modes work without a model, and the coach speaks on its own at three moments (see
+> [Rollout and automatic moments](#rollout-and-automatic-moments)), including a read-only Studio Overview card.
+> `consistency_review` separates `confirmed_conflict`, `potential_tension`, `needs_verification` and `not_tested`;
+> `quality_review` adds six personal facet rubrics. The optional provider and any richer panel are not built
+> (see [What is not built yet](#what-is-not-built-yet)).
 
 The coach is a thin advisory layer **on top of** the existing Brand OS interview. It reads what is already
 there and says what it notices. It is not a chatbot, not a second interview, and not a source of truth.
@@ -104,18 +106,50 @@ finding sets `requires_change_request: true` and the result notes that changing 
 
 With no `--question` it reviews the whole brand; with one it narrows to that field's conflicts.
 
-This version is an **adapter**: `findContradictions` in `packages/brand-core/src/contradictions.ts` stays
-the only implementation of those rules, and the coach reports what it returns, by id, unchanged. That is
-how "existing deterministic contradictions remain identical" holds by construction rather than by
-comparison. Verdicts:
+`findContradictions` in `packages/brand-core/src/contradictions.ts` stays the only implementation of the
+logical contradiction rules, and the coach reports what it returns, by id, unchanged. That is how "existing
+deterministic contradictions remain identical" holds by construction rather than by comparison. On top of it,
+a narrow registry in `packages/brand-core/src/coach/rules.ts` (PR 2, fixes pack GAP-08) adds two other
+verdicts. The verdicts never carry a number: no score, no percentage, no confidence.
 
-- `confirmed_conflict` — an open rule hit. Logical and evidence-supported, because the rule says so.
-- `potential_tension` and `needs_verification` are **declared in the contract and not emitted yet**. Each
-  result says so in `notes`, so silence is never read as "there is no strategic tension here". A luxury
-  positioning next to a low entry price is exactly the case that will become a `potential_tension` with an
-  explanatory question in PR 2 — and exactly the case that must *not* become a `confirmed_conflict`.
-  `tests/coach-core.test.ts` pins twelve such records (trade-offs, two markets, dated figures, explicit
-  dispositions, an honest `do-not-claim` on an unshipped product) as **not** conflicts.
+| Verdict | Comes from | Means | Finding |
+| --- | --- | --- | --- |
+| `confirmed_conflict` | `findContradictions` only | two records cannot both be true | `consistency_rule`, `needs_review`, `attention` |
+| `needs_verification` | registry: `evidence-claim-unverified`, `sensitive-claim-wording` | a claim that needs a source has no current independent one | `consistency_verification`, `evidence_missing`, `attention` |
+| `potential_tension` | registry: `premium-vs-lowest-price`, `availability-held-back` | both can be true, but they often pull apart; the coach asks one question | `consistency_tension`, `needs_clarification`, `advice`, with `suggested_question` |
+| `not_tested` | every rule, in `rule_checks` | an input is open, so the rule could not run | no finding; listed in `rule_checks` and printed |
+
+The result status is the worst verdict present: `needs_review` → `evidence_missing` → `needs_clarification`.
+
+**The registry rules.** Each declares its fields, its exact condition and its guards, and has positive and
+negative tests in `tests/coach-rules.test.ts`. Matching is whole-phrase, case-insensitive and NFKC-normalised
+across en/fa/tr, with the lexicon in `rules.ts`.
+
+| Rule | Fields | Fires when | Stays silent when (guard) |
+| --- | --- | --- | --- |
+| `premium-vs-lowest-price` | `brand.strategy.differentiation`, `brand.strategy.promise`, `business.offer.value_proposition`; `business.sales.pricing` | a positioning answer uses a premium word (premium, luxury, high-end, لوکس, ممتاز, lüks, seçkin, …) **and** the pricing answer calls the price cheapest / cheap / lowest / bargain (ارزان‌ترین, en ucuz, …) | the pricing answer names an entry tier, plan, starter, trial, launch offer, first month, student or nonprofit price (پلن, ورودی, ماه اول, giriş, başlangıç, paket, …). A plain figure never fires, and neither does "affordable": the coach cannot know what is cheap in a given market |
+| `availability-held-back` | `business.product.public_status`, `business.marketing.availability_claim` | the product is `available` while marketing may say only `coming-soon` or nothing (`do-not-claim`): a staged launch is allowed, so it is a question | any other pair. The reverse (`available` claim, `unshipped` product) is the existing confirmed conflict and is not re-implemented |
+| `evidence-claim-unverified` | every answered question with `publication_requires: verified_evidence` | `claimVerification` is `unverified` or `owner_stated` | an independent source has been verified with `brand:evidence`. Owner testimony alone never settles it |
+| `sensitive-claim-wording` | every other answered, non-restricted free-text question, except `brand.verbal.forbidden` and `personal.governance.public_claim_policy` (they list such words) | the answer asserts a guarantee, certification, accreditation, "number one", award or proof (تضمینی, گواهی‌شده, garantili, sertifikalı, …) and the field has no verified independent source | the term is negated in the three words before it ("we never promise guaranteed results", هرگز, بدون, نمی…) or followed by Turkish `değil` |
+
+**Sensitive claims stay unverified.** The coach reads the evidence register through `claimVerification` and
+never writes to it: a test adds a pending source and asserts the brand is byte-for-byte unchanged, and only
+the owner's `reviewEvidence(…, 'verified', proof)` on an independent source silences the finding.
+
+**No false conflict for a legitimate trade-off.** `tests/coach-core.test.ts` still pins twelve tense but
+legitimate records (premium next to an entry price, two markets, dated figures, dispositions, an honest
+`do-not-claim` on an unshipped product) as producing nothing. `tests/coach-rules.test.ts` adds eight pricing and
+market cases in en, fa and tr — a plain entry figure, "affordable" premium, two markets with two prices, a cheap
+student entry plan, a launch offer, a Persian cheap entry plan, a Turkish cheapest starter package, cheap
+pricing without a premium claim — and asserts no conflict **and** no tension for each. A tension never becomes
+`field_in_open_conflict` in `quality_review`; that criterion still reads `findContradictions` only.
+
+**`rule_checks`.** A `consistency_review` result carries one entry per rule (the four adapted
+`findContradictions` rules first): `outcome` (`confirmed_conflict`, `potential_tension`, `needs_verification`,
+`no_finding`, `not_tested`), `basis` (`rule_fired`, `rule_silent`, `guard_matched`, `inputs_open`) and the
+question ids involved. The printed result lists them under "Rules checked" in the result's locale, so silence
+from a rule that could not run is never read as "consistent". A tension outside the registered rules is not
+assessed; the result's `notes` says so.
 
 An empty brand is `insufficient_context`, not "consistent".
 
@@ -181,7 +215,7 @@ Findings:
    Read: question:business.customer.primary_segment, answer:ans-0002
 
 No model was called. Every finding is deterministic.
-engine coach/1 · rules coach-rules/2 · authorizes: []
+engine coach/1 · rules coach-rules/3 · authorizes: []
 ```
 
 (Line-wrapped here for the page; the command prints each field on one line.)
@@ -233,10 +267,29 @@ coach inherits facet scoping for free: a facet question that is not selected is 
 `evidence_support` criterion already fires on the personal claims that declare
 `publication_requires: verified_evidence`.
 
-What is **not** in PR 1: the per-facet prompts and quality checks the brief asks for (role versus
-ownership, client confidentiality and permission to name, platform-specific audience claims with source
-and date, sponsorship disclosure, portfolio ownership and usage rights, talk and publication evidence).
-Those are PR 2, and they must reuse `PERSONAL_CANONICAL_REFERENCES` rather than add fields.
+**Facet rubrics (PR 2, `packages/brand-core/src/coach/facet-rubrics.ts`).** Six narrow checks run inside
+`quality_review`, after the general rubric, only when `modules.personal.enabled` is true and the facet is
+selected. They reuse existing questions — `PERSONAL_CANONICAL_REFERENCES` and the facet modules' own fields —
+and add no field. When an existing question closes the gap, the finding links it in `canonical_question_id`.
+The result's `notes` lists `facet_rubrics_checked: …`.
+
+| Facet | Rubric | Assesses | Finding | Fires when |
+| --- | --- | --- | --- | --- |
+| founder-executive | `founder-role-not-ownership` | `personal.founder.ventures`, `personal.experience.roles` | `facet_ownership_separate` → `personal.experience.relationships` (`evidence_missing`) | the answer uses ownership words (owner, owns, ownership, stake, shareholder, مالک, سهام, sahibi, hisse, …). "Product owner" and similar role titles do not count |
+| consultant-expert | `consultant-client-permission` | engagements, methodology, highlights, testimonials | `facet_companion_open` → `personal.consulting.confidentiality` | the confidentiality rule is still open (not answered, not deferred, not a disposition) |
+| creator-educator | `creator-dated-audience-claim` | `personal.creator.metrics` | `facet_claim_undated` | the answer has no year (Gregorian 19xx/20xx or Solar Hijri 13xx/14xx, Persian digits folded) |
+| creator-educator | `creator-sponsorship-disclosure` | `personal.creator.sponsorship` | `facet_companion_open` → `personal.creator.disclosure` | the disclosure rule is still open |
+| artist-designer | `artist-portfolio-rights` | portfolio taxonomy, exhibitions | `facet_companion_open` → `personal.artist.usage_rights` | the usage-rights rule is still open |
+| speaker-author | `speaker-dated-history` | `personal.speaking.prior_talks`, `personal.author.publications` | `facet_claim_undated` | the answer has no year; "none" (هیچ, yok) is a valid answer and never fires |
+
+Sources for these claims stay the evidence register's job: the existing `evidence_support` criterion and the
+`evidence-claim-unverified` rule already report a missing source.
+
+**The automatic moments are unchanged.** The facet rubrics do not run in `follow_up`, and the moments
+(`coach/moments.ts`: interview, approve, Studio card) are built on `follow_up`, so what the owner sees
+automatically is exactly what it was before PR 2. A test asserts the follow-up is identical with and without
+the facet. Whether the moments should also surface facet rubrics and tensions is an owner decision (see
+`COACH_UX_DECISION.md`, "Deferred").
 
 The privacy boundary is unchanged and inherited: `personal-privacy.ts` refuses home address, personal
 phone, birth date, government id and family details on every personal write path. The coach adds a second
@@ -262,7 +315,8 @@ weight the documents put on it.
 
 ## Tests
 
-`tests/coach-core.test.ts` (31), `tests/coach-cli.test.ts` (8), `tests/coach-moments.test.ts` (5) and
+`tests/coach-core.test.ts` (31), `tests/coach-cli.test.ts` (8), `tests/coach-rules.test.ts` (12, the PR 2
+registry and facet rubrics with their no-false-positive cases), `tests/coach-moments.test.ts` (5) and
 `tests/coach-moments-cli.test.ts` (3), all in the brand suite (`npm test`, `npm run ci`), plus
 `tests/studio-coach.test.ts` (3) in the Studio suite. Fixtures are in `tests/helpers/coach.ts` and are **SYNTHETIC DEMO** data: no
 real brand, person, client or figure appears in them.
@@ -271,7 +325,7 @@ real brand, person, client or figure appears in them.
 
 | Increment | Scope |
 | --- | --- |
-| **PR 2** | the narrowly scoped rule registry (each rule declaring field ids, exact conditions, severity, en/fa/tr messages and evidence / time / market guards, with negative tests), the `potential_tension` and `needs_verification` emitters, and the five personal facet rubrics |
+| **PR 2** | **Done** (fixes pack GAP-08): the registry, the `potential_tension` / `needs_verification` emitters, `rule_checks` with `not_tested`, and the facet rubrics. Not done: more tension rules (each needs its own guards and negative tests first), surfacing them in the automatic moments (owner decision), a Studio view of `rule_checks` |
 | **PR 3** | an optional provider adapter behind the existing bounded `llm/` seam, to phrase a follow-up or suggest a tension only. Advisory, never authoritative; no provider configured falls back to today's behaviour. **Only if PR 2 shows a deterministic gap worth it** |
 | **PR 4** | a report appendix and richer panels. The narrow first step — the Studio Overview card on merged drafts — shipped with Coach UX (`COACH_UX_DECISION.md`). No Studio mutation, no chat, no model call in Studio |
 | Separately | a pilot measurement plan (relevance, correction rate, missed contradictions, false positives, time overhead, skipped suggestions) that records counts and codes only, never answer text |

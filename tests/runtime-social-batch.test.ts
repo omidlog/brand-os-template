@@ -177,6 +177,17 @@ test('a changed logo file is not embedded: the Visual DNA resolver reports it ch
     assert.equal(changed.logo, null)
     assert.equal(changed.considered[0]?.not_embedded_reason, 'visual_dna:changed:checksum_mismatch')
     assert.equal(changed.references[0]?.state, 'changed')
+    // The withheld logo is listed in every manifest with its reason code, never silently absent.
+    const withheld = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo: changed.logo, logoConsidered: changed.considered, coach: demo.engine, now: DEMO_NOW })
+    const bare = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo: null, coach: demo.engine, now: DEMO_NOW })
+    for (const manifest of withheld.manifests) {
+      assert.deepEqual(
+        manifest.assets.map((asset) => [asset.asset_id, asset.embedded, asset.sent_to_model, asset.not_embedded_reason]),
+        [[DEMO_LOGO_ID, false, false, 'visual_dna:changed:checksum_mismatch']],
+      )
+      assert.ok(validatePost(manifest), JSON.stringify(validatePost.errors))
+      assert.equal(withheld.files.get(manifest.file), bare.files.get(manifest.file), 'no logo drawn')
+    }
   } finally {
     fs.writeFileSync(file, original)
   }
@@ -195,6 +206,16 @@ test('writes land only in an empty output directory outside brand/', () => {
   const link = path.join(tempDir(), 'link')
   fs.symlinkSync(tempDir(), link)
   assert.throws(() => writeBatch(link, result), (error: unknown) => error instanceof RuntimeError && error.code === 'unsafe_output', 'symlink')
+  // A dangling link is still a link.
+  const dangling = path.join(tempDir(), 'dangling')
+  fs.symlinkSync(path.join(tempDir(), 'gone', 'nowhere'), dangling)
+  assert.throws(() => writeBatch(dangling, result), (error: unknown) => error instanceof RuntimeError && error.code === 'unsafe_output', 'dangling symlink')
+  // A linked parent that leads into a brand/ folder is refused before anything is created there.
+  const base = tempDir()
+  fs.mkdirSync(path.join(base, 'brand'))
+  fs.symlinkSync(path.join(base, 'brand'), path.join(base, 'via'))
+  assert.throws(() => writeBatch(path.join(base, 'via', 'out'), result), (error: unknown) => error instanceof RuntimeError && error.code === 'unsafe_output', 'linked parent into brand/')
+  assert.deepEqual(fs.readdirSync(path.join(base, 'brand')), [], 'nothing created under brand/')
   assert.equal(brandStatus(), brandBefore, "this repository's brand/ folder is unchanged")
 })
 

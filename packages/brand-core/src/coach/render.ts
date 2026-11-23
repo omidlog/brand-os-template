@@ -1,5 +1,5 @@
 import type { Locale } from '../i18n.js'
-import { coachUi, CRITERION_NAMES, STATUS_NAMES } from './i18n.js'
+import { coachUi, CRITERION_NAMES, RULE_OUTCOME_NAMES, STATUS_NAMES } from './i18n.js'
 import type { CoachFinding, CoachResult } from './model.js'
 
 /**
@@ -44,6 +44,14 @@ export function renderCoachResult(result: CoachResult): string {
   ]
   if (result.findings.length === 0) out.push(coachUi(locale, 'none'))
   result.findings.forEach((finding, index) => out.push(...renderFinding(finding, locale, index + 1)))
+  if (result.rule_checks && result.rule_checks.length > 0) {
+    out.push('', `${coachUi(locale, 'ruleChecks')}:`)
+    for (const check of result.rule_checks) {
+      const guard = check.basis === 'guard_matched' ? ` (${coachUi(locale, 'ruleGuard')})` : ''
+      const ids = check.question_ids.length > 0 ? ` — ${check.question_ids.join(', ')}` : ''
+      out.push(`- ${check.rule_id}: ${RULE_OUTCOME_NAMES[locale][check.outcome]}${guard}${ids}`)
+    }
+  }
   out.push('', coachUi(locale, 'noModel'), `engine ${result.engine_version} · rules ${result.rule_version} · authorizes: []`)
   return out.join('\n')
 }

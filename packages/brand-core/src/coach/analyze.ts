@@ -3,10 +3,12 @@ import type { FieldQuestion } from '../types.js'
 import { answerDigest, coachQuestion, contextDigest, openCoachContext, type CoachContext } from './context.js'
 import { answeredIds, consistencyFindings } from './consistency.js'
 import { chooseFollowUp } from './follow-up.js'
-import { CLARIFY_QUESTIONS, coachText, coachUi, CRITERION_NAMES, NO_FOLLOW_UP_TEXT } from './i18n.js'
+import { applyFacetRubrics } from './facet-rubrics.js'
+import { CLARIFY_QUESTIONS, coachText, coachUi, COACH_TENSION_RULES, CRITERION_NAMES, NO_FOLLOW_UP_TEXT, TENSION_QUESTIONS, type CoachTensionRule } from './i18n.js'
 import {
   COACH_ENGINE_VERSION,
   COACH_RULE_VERSION,
+  COACH_LIMITS,
   COACH_SCHEMA_VERSION,
   CoachError,
   validateCoachResult,
@@ -19,6 +21,7 @@ import {
   type CoachStatus,
 } from './model.js'
 import { assessAnswer, topFindings, type QualityAssessment, type QualityFinding } from './quality.js'
+import { registryReview } from './rules.js'
 
 /**
  * Assembling a `CoachResult`. One shape for all three modes, validated against the contract before it is
@@ -45,7 +48,8 @@ const SEVERITY: Record<CoachStatus, CoachSeverity> = {
 
 const NO_MODEL_NOTE = 'no_model_called: every finding in this result is deterministic'
 const ADVISORY_NOTE = 'advisory_only: this result changes no answer, fact, approval, strategy, calendar or asset'
-const PR1_CONSISTENCY_NOTE = 'potential_tension and needs_verification are not assessed in this version; silence here does not mean there is no strategic tension'
+const REGISTRY_NOTE =
+  'rules_registry: confirmed_conflict comes only from findContradictions; potential_tension and needs_verification come only from the registered rules in coach/rules.ts. A tension outside those rules is not tested, so silence does not mean there is none; see rule_checks'
 
 function findingId(mode: CoachMode, questionId: string | null, answerId: string | null, code: string): string {
   return [mode, questionId ?? 'brand', answerId ?? 'none', code].join(':')
@@ -68,7 +72,7 @@ function fromQualityFinding(mode: CoachMode, assessment: QualityAssessment, find
     verdict: null,
     question_id: assessment.question.id,
     related_question_ids: finding.relatedIds,
-    canonical_question_id: null,
+    canonical_question_id: finding.canonicalId ?? null,
     suggested_question: null,
     missing_dimension: finding.criterion,
     improves_outputs: outputs,
@@ -109,11 +113,13 @@ function dedupeRefs(refs: CoachSourceRef[]): CoachSourceRef[] {
 export function qualityReview(ctx: CoachContext, questionId: string, opts: CoachOptions = {}): CoachResult {
   const locale = opts.locale ?? 'en'
   const question = coachQuestion(ctx, questionId)
-  const assessment = assessAnswer(ctx, question, locale)
+  // The personal facet rubrics run here only, not in follow_up, so the automatic moments are unchanged.
+  const { assessment, applied } = applyFacetRubrics(ctx, assessAnswer(ctx, question, locale))
   const reported = topFindings(assessment)
   const findings = reported.map((finding) => fromQualityFinding('quality_review', assessment, finding, locale))
   const notes = [NO_MODEL_NOTE, ADVISORY_NOTE]
   if (assessment.checked.length > 0) notes.push(`criteria_checked: ${assessment.checked.join(', ')}`)
+  if (applied.length > 0) notes.push(`facet_rubrics_checked: ${applied.join(', ')}`)
   if (assessment.approved) notes.push('approved_fact: a change needs brand:interview change, brand:review and brand:approve')
   return validateCoachResult({
     ...shell(ctx, 'quality_review', locale, [questionId, ...findings.flatMap((finding) => finding.related_question_ids)]),
@@ -224,6 +230,11 @@ export function consistencyReview(ctx: CoachContext, questionId: string | null, 
   const question = questionId === null ? null : coachQuestion(ctx, questionId)
   const items = consistencyFindings(ctx, question?.id ?? null)
   const answered = answeredIds(ctx)
+  const registry = registryReview(ctx)
+  const registryItems = (question === null ? registry.findings : registry.findings.filter((item) => item.relatedIds.includes(question.id))).slice(
+    0,
+    Math.max(0, COACH_LIMITS.maxConsistencyFindings - items.length),
+  )
 
   const findings: CoachFinding[] = items.map((item) => {
     const text = coachText(locale, 'consistency_rule', { rule: item.contradiction.rule, ids: item.relatedIds.join(', ') })
@@ -249,7 +260,40 @@ export function consistencyReview(ctx: CoachContext, questionId: string | null, 
     }
   })
 
-  let status: CoachStatus = 'needs_review'
+  for (const item of registryItems) {
+    const ids = item.relatedIds.join(', ')
+    const tension = item.verdict === 'potential_tension'
+    const code = tension ? 'consistency_tension' : 'consistency_verification'
+    const text = coachText(locale, code, { rule: item.rule, ids })
+    const asks = tension && (COACH_TENSION_RULES as readonly string[]).includes(item.rule) ? TENSION_QUESTIONS[locale][item.rule as CoachTensionRule] : null
+    findings.push({
+      id: findingId('consistency_review', question?.id ?? null, null, `${code}:${item.rule}:${ids.replace(/, /g, '+')}`),
+      type: 'consistency',
+      code,
+      status: tension ? 'needs_clarification' : 'evidence_missing',
+      severity: tension ? 'advice' : 'attention',
+      criterion: tension ? 'clarity_coherence' : 'evidence_support',
+      verdict: item.verdict,
+      question_id: question?.id ?? null,
+      related_question_ids: item.relatedIds.filter((id) => ctx.byId.has(id)),
+      canonical_question_id: null,
+      suggested_question: asks,
+      missing_dimension: tension ? 'clarity_coherence' : 'evidence_support',
+      improves_outputs: [],
+      reason: text.reason,
+      improvement: text.improvement,
+      requires_change_request: item.relatedIds.some((id) => ctx.answers.get(id)?.status === 'approved'),
+      source_refs: item.sourceRefs,
+      origin: 'deterministic',
+    })
+  }
+
+  // Worst first, never a number: a confirmed conflict outranks a missing source, which outranks a question.
+  let status: CoachStatus = findings.some((finding) => finding.verdict === 'confirmed_conflict')
+    ? 'needs_review'
+    : findings.some((finding) => finding.verdict === 'needs_verification')
+      ? 'evidence_missing'
+      : 'needs_clarification'
   if (findings.length === 0) {
     status = answered.length === 0 ? 'insufficient_context' : 'ready'
     const text = coachText(locale, 'consistency_none', { count: String(answered.length) })
@@ -276,13 +320,14 @@ export function consistencyReview(ctx: CoachContext, questionId: string | null, 
   }
 
   return validateCoachResult({
-    ...shell(ctx, 'consistency_review', locale, question === null ? answered : [question.id, ...items.flatMap((item) => item.relatedIds)]),
+    ...shell(ctx, 'consistency_review', locale, question === null ? answered : [question.id, ...items.flatMap((item) => item.relatedIds), ...registryItems.flatMap((item) => item.relatedIds)]),
     question_id: question?.id ?? null,
     answer_ref: null,
     status,
     findings,
     source_refs: dedupeRefs([{ kind: 'profile', id: ctx.profileId }, ...findings.flatMap((finding) => finding.source_refs)]),
-    notes: [NO_MODEL_NOTE, ADVISORY_NOTE, PR1_CONSISTENCY_NOTE, 'rules_source: findContradictions (packages/brand-core/src/contradictions.ts), reported unchanged'],
+    notes: [NO_MODEL_NOTE, ADVISORY_NOTE, REGISTRY_NOTE, 'rules_source: findContradictions (packages/brand-core/src/contradictions.ts), reported unchanged'],
+    rule_checks: question === null ? registry.checks : registry.checks.filter((check) => check.question_ids.includes(question.id)),
   })
 }
 
