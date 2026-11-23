@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Fix: canonical question ids in legacy brand queries (BUG-01)
+
+### Fixed
+
+- `get_logo_rules` and `get_motion_guidelines` (MCP and `brand:query`) asked for `brand.logo.primary`, `brand.logo.clearspace` and `brand.motion.easing`, which no question owns, so they always reported those fields missing. They now read `brand.logo.masters|variants|clear_space|min_size|misuse` and `brand.motion.principles|duration|reduced`, the same ids as the Task Context `logo_rules` / `motion_rules` keys. The response envelope, permissions and missing/withheld markers are unchanged; each tool lists more ids. Easing curves and milliseconds remain tokens (`get_brand_tokens`).
+- Every named fact tool reads its ids from one exported map, `NAMED_FACT_TOOL_IDS`. Test: `tests/named-tool-ids.test.ts` (registry coverage, approved/draft/unanswered, guest, wrong profile, cross-brand, stdio MCP).
+- Skills `motion-designer` and `mascot-animator` name the real motion ids.
+
 ## Unreleased — Visual V2.2: competitor share path and comparison matrix
 
 ### Added
