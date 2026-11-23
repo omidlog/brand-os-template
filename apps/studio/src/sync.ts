@@ -4,7 +4,7 @@ import { writeAtomic } from '@brand-os/brand-core'
 import type { CommitSummary, GitHubClient, PullSummary } from './github/client.js'
 import { GitHubError } from './github/client.js'
 import { extractTarGz, studioPathAllowed } from './github/tar.js'
-import { buildProjection, ProjectionError, type StudioProjection } from './projection.js'
+import { buildProjection, IDENTITY_MASTER_RULE, ProjectionError, type StudioProjection } from './projection.js'
 import type { BrandRecord, Registry } from './registry.js'
 
 /**
@@ -181,8 +181,8 @@ export class SyncService {
       const head = await this.deps.github.getBranchHead(owner, name, repo.default_branch || branch)
       let projection = previous?.projection ?? null
       let previews = previous?.previews ?? {}
-      // A cache written before the knowledge, creative, calendar or visual projection existed is rebuilt once at the same commit.
-      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.visual === undefined || (projection.visual !== null && projection.visual.identity === undefined)) {
+      // A cache written before the knowledge, creative, calendar or visual projection (or the current master-logo rule) existed is rebuilt once at the same commit.
+      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.visual === undefined || (projection.visual !== null && projection.visual.identity?.master_rule !== IDENTITY_MASTER_RULE)) {
         const archive = await this.deps.github.getTarball(owner, name, head.sha)
         const checkout = path.join(work, 'checkout')
         extractTarGz(archive, { destRoot: checkout, include: studioPathAllowed })
