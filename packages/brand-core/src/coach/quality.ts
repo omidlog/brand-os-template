@@ -1,7 +1,7 @@
 import type { Locale } from '../i18n.js'
 import type { AnswerRecord, FieldQuestion } from '../types.js'
 import { answerText, conflictsFor, coachQuestion, isDisposition, liveAnswer, notApplicableReason, openLinked, verificationOf, type CoachContext } from './context.js'
-import { CRITERION_NAMES } from './i18n.js'
+import { coachUi, CRITERION_NAMES } from './i18n.js'
 import { contentWordCount, expectsMeasure, hasDigit, isFreeText, isPlaceholderValue, minWordsFor, QUALITY_THRESHOLDS, vagueMarkersIn } from './lexicon.js'
 import { COACH_LIMITS, type CoachCriterion, type CoachFindingCode, type CoachSourceRef, type CoachStatus } from './model.js'
 
@@ -73,7 +73,7 @@ export function assessAnswer(ctx: CoachContext, question: FieldQuestion, locale:
           code: 'question_not_applicable',
           criterion: null,
           status: 'not_applicable',
-          vars: { question: question.id, why: inapplicable, condition: question.skip_when ?? '—' },
+          vars: { question: question.id, why: coachUi(locale, inapplicable), condition: question.skip_when ?? '—' },
           relatedIds: [],
           sourceRefs: [...ref, { kind: 'config', id: inapplicable }],
         },
