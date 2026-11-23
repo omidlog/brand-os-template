@@ -135,7 +135,8 @@ function assetView(ws: KnowledgeWorkspace, variant: Variant): ReferenceItem['ass
   }
 }
 
-function preferenceView(ws: KnowledgeWorkspace, pref: CreativePreference): PreferenceItem {
+/** A preference with its effective state now (approval digest and cited notes checked). Also used by content briefs. */
+export function preferenceView(ws: KnowledgeWorkspace, pref: CreativePreference): PreferenceItem {
   const sources = pref.sources.map((ref) => ({ provenance: knowledgeRef(ref.id, ref.revision), source_state: sourceStatus(ws, ref).state }))
   let state: PreferenceItem['state'] = pref.state
   if (pref.state === 'approved') {

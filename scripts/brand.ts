@@ -524,7 +524,7 @@ if (command === 'init') {
   })
   const core = await import('@brand-os/brand-core')
   if (!['issue', 'list', 'revoke'].includes(action ?? '')) {
-    console.error('Usage: brand:agent-token issue --profile <internal-read|design|marketing|finance|knowledge-read|creative-read|strategy-seo-read|strategy-ads-read> --label <name> | list | revoke --id <agt_…>')
+    console.error('Usage: brand:agent-token issue --profile <internal-read|design|marketing|finance|knowledge-read|creative-read|strategy-seo-read|strategy-ads-read|content-read> --label <name> | list | revoke --id <agt_…>')
     console.error('The approval proof is read from BRAND_OS_APPROVAL_PROOF or a hidden prompt. It is never accepted on the command line.')
     process.exit(1)
   }

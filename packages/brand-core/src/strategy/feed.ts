@@ -21,8 +21,9 @@ import { approvedEntry, evaluate, scanRecords } from './store.js'
  * The read-only Strategy Feed (Spec Sprint 3): what a local execution agent may read of an approved strategy.
  *
  * - Answered only for an owner-issued token with a strategy profile of this brand: `strategy-seo-read` reads `seo`
- *   strategies, `strategy-ads-read` reads `paid_media` strategies. The profile is fixed by the token; no argument can
- *   choose a brand, role, profile, agent kind or revision state. Everyone else is denied.
+ *   strategies, `strategy-ads-read` reads `paid_media` strategies, `content-read` reads `content` strategies. The
+ *   profile is fixed by the token; no argument can choose a brand, role, profile, agent kind or revision state.
+ *   Everyone else is denied.
  * - Only the one approved revision whose effective status is `current` or `review_due` is served. Drafts, rejected,
  *   superseded, withdrawn, expired, not-yet-valid, needs-review and tampered revisions are never served; a draft v2
  *   stays invisible until the owner approves it, and the feed keeps serving v1 meanwhile.
@@ -39,7 +40,7 @@ export const STRATEGY_TOOLS = ['strategy_list', 'strategy_get'] as const
 export type StrategyTool = (typeof STRATEGY_TOOLS)[number]
 
 /** Token profile -> the one agent kind (and so the one strategy type) it reads. */
-export const STRATEGY_PROFILES: Partial<Record<AgentProfile, AgentKind>> = { 'strategy-seo-read': 'seo', 'strategy-ads-read': 'ads' }
+export const STRATEGY_PROFILES: Partial<Record<AgentProfile, AgentKind>> = { 'strategy-seo-read': 'seo', 'strategy-ads-read': 'ads', 'content-read': 'content' }
 
 const TYPE_OF_KIND: Record<AgentKind, StrategyType> = { seo: 'seo', ads: 'paid_media', content: 'content' }
 const SERVABLE: readonly EffectiveStatus[] = ['current', 'review_due']
@@ -145,7 +146,7 @@ export interface StrategyToolResult {
 export function strategyAccess(ctx: AuthContext, brandSlug: string): { allow: true; kind: AgentKind } | { allow: false; reason: string } {
   if (ctx.brand_id !== brandSlug) return { allow: false, reason: 'cross-brand' }
   const kind = ctx.role === 'agent' && ctx.profile ? STRATEGY_PROFILES[ctx.profile] : undefined
-  if (!kind) return { allow: false, reason: 'strategy tools need an owner-issued token with the strategy-seo-read or strategy-ads-read profile' }
+  if (!kind) return { allow: false, reason: 'strategy tools need an owner-issued token with the strategy-seo-read, strategy-ads-read or content-read profile' }
   return { allow: true, kind }
 }
 
@@ -240,7 +241,8 @@ export function verifyFeedDocument(doc: StrategyFeedDocument): boolean {
   return sha256Hex(canonicalJson({ ...doc, digests })) === feed_sha256
 }
 
-function cleanPin(pin: unknown): StrategyPin | null | undefined {
+/** A pin argument, checked: undefined when absent, null when malformed. Shared by the strategy and content tools. */
+export function cleanPin(pin: unknown): StrategyPin | null | undefined {
   if (pin === undefined || pin === null) return undefined
   if (typeof pin !== 'object' || Array.isArray(pin)) return null
   const { revision, content_sha256: sha } = pin as Record<string, unknown>
