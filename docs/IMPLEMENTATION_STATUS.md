@@ -425,7 +425,12 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 - **Done:** `brand:assurance snapshot | assess | verify` and `@brand-os/brand-core/assurance/workspace`. Approved facts (by `revision_hash`), internal research notes and open contradictions become the frozen input of the existing `assess()`. Reproducible digest, `--pin` / `verify` against a kept snapshot, restricted facts withheld below `restricted`, en/fa/tr output, stdout only, refused under `BRAND_OS_AGENT_TOKEN`, `authorizes: []`, never a certification. Guide: `docs-internal/ASSURANCE.md`.
 - **Not done:** a reviewer-judgment store (so PRR-08 keeps every real brand `not_scoreable`), independent evidence (every note is `owner_stated`), a canonical paid-media question (owner flag for now), observed maturity input, Studio view, MCP or agent access (deliberately none).
 
+## Owner review judgments for assurance scores (GAP-09 follow-up)
+
+- **Done:** `brand:assurance-review list | record` and `assurance/reviews.ts`. Owner-only, versioned judgment store in the brand workspace (`brand/.private/assurance/reviews/`, hash-chained revisions); the bridge uses a judgment while its basis is unchanged, so a real brand gets a completeness ratio once nothing else blocks. Stale judgments block again. Note text never leaves the private file. en/fa/tr. Guide: `docs-internal/ASSURANCE.md`, "Owner review judgments".
+- **Not done:** a Studio page for it (Studio stays read-only; CLI only), linking research notes to the evidence register (notes stay `owner_stated`), withdrawing a judgment without replacing it. (The canonical paid-media question and the company-vs-person subject are done in the next section.)
+
 ## GAP-09 follow-ups: paid-media question, company stays company
 
 - **Done (owner decisions 4 and 5, 2026-11-23):** interview question `business.marketing.paid_media` (en/fa/tr) is the source of `runs_paid_media` in `brand:assurance`; `--paid-media` is a deprecated fallback used only while the question has no approved answer. The personal module never makes a company brand a person: only `brand.profile: personal-brand` does, and a founder's personal brand is recorded separately in `snapshot.personal_brand`, outside the subject and the digest. Tests: `assurance-followups`, `assurance-cli`.
-- **Not done:** the owner review page (separate PR), linking notes to the evidence register (later PR), removing the deprecated `--paid-media` flag.
+- **Not done:** a Studio page for owner reviews (CLI only, see above), linking notes to the evidence register (later PR), removing the deprecated `--paid-media` flag.
