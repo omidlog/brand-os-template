@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
 import { SHARED_LANDSCAPE_PATH } from '@brand-os/brand-core/competitive'
-import { illustrativeLandscape } from '@brand-os/brand-core/visual'
+import { illustrativeLandscape, illustrativePositioning } from '@brand-os/brand-core/visual'
 import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
 import { teardown } from './helpers/cleanup.js'
@@ -48,7 +48,7 @@ before(async () => {
       'brand.color.roles': 'primary #123A73; onPrimary #FFFFFF; surface #F7F5F2; accent #D5FE00',
     })
     engine.answerQuestion('business.sales.pricing', 'DRAFT-PRICE-CANARY')
-    const json = JSON.stringify({ ...illustrativeLandscape(), brand_slug: SLUG }).replace(/([a-z-]+)\.example/g, '$1-fictional.app')
+    const json = JSON.stringify({ ...illustrativeLandscape(), positioning: illustrativePositioning(), brand_slug: SLUG }).replace(/([a-z-]+)\.example/g, '$1-fictional.app')
     fs.mkdirSync(path.dirname(path.join(root, SHARED_LANDSCAPE_PATH)), { recursive: true })
     fs.writeFileSync(path.join(root, SHARED_LANDSCAPE_PATH), json)
   })
@@ -150,6 +150,16 @@ test('competitor matrix: three widths, en and fa, light and dark: no overflow, c
         assert.ok(widths.scroll <= widths.client + 1, `${where}: page overflow ${widths.scroll} > ${widths.client} ${wide.join(' ')}`)
         assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-cmp-table tbody tr').length`), 4, where)
         assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-strip-item').length`), 4, where)
+        // V2.3: the positioning map plots the evidenced three and lists the unknown one in the margin.
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-pos-point').length`), 3, where)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-pos-margin li').length`), 1, where)
+        if (shots && width === 1440 && scheme === 'light') {
+          fs.mkdirSync(shots, { recursive: true })
+          await page.eval(`document.getElementById('cmp-map').scrollIntoView()`)
+          await settle()
+          await page.screenshot(path.join(shots, `positioning-${lang}-${width}.png`))
+          await page.eval('window.scrollTo(0, 0)')
+        }
         if (width === 1440) {
           assert.deepEqual(await structureIssues(), [], `${where}: structure`)
           assert.deepEqual(await contrastFailures('.vz-cmp'), [], `${where}: contrast`)
@@ -180,7 +190,7 @@ test('competitor print view: A4 portrait opener and an A4 landscape matrix page,
     assert.ok(boxes.some(([w, h]) => Math.abs(w - 595.28) < 2 && Math.abs(h - 841.89) < 2), `${lang}: an A4 portrait page`)
     assert.ok(boxes.some(([w, h]) => Math.abs(w - 841.89) < 2 && Math.abs(h - 595.28) < 2), `${lang}: an A4 landscape matrix page`)
     const pages = (text.match(/\/Type\s*\/Page(?![s\w])/g) ?? []).length
-    assert.ok(pages >= 4, `${lang}: opener, matrix, prices and sources (${pages})`)
+    assert.ok(pages >= 5, `${lang}: opener, matrix, prices, positioning map and sources (${pages})`)
     assert.ok(text.includes('/FontFile2') || text.includes('/FontFile'), `${lang}: fonts are embedded`)
     if (shots) fs.writeFileSync(path.join(shots, `competitors-print-${lang}.pdf`), pdf)
   }
