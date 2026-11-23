@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased — Fix: Visual identity shows the approved master logo
+
+### Fixed
+
+- The Visual identity chapter showed "awaiting asset" for a brand with an approved, previewable logo that was not tagged `master`. The master is now resolved deterministically: an asset named (exact asset id or manifest path) in the approved `brand.logo.masters` answer, else one tagged `logo` + `master`, else the only approved logo; several unnamed logos give a designed `ambiguous` state. Only approved, checksummed, previewable, non-example files qualify; the public edition still needs the file published. The internal edition marks a master that carries a `draft` tag or is not published. en/fa/tr.
+
+## Unreleased — Fix: canonical question ids in legacy brand queries (BUG-01)
+
+### Fixed
+
+- `get_logo_rules` and `get_motion_guidelines` (MCP and `brand:query`) asked for `brand.logo.primary`, `brand.logo.clearspace` and `brand.motion.easing`, which no question owns, so they always reported those fields missing. They now read `brand.logo.masters|variants|clear_space|min_size|misuse` and `brand.motion.principles|duration|reduced`, the same ids as the Task Context `logo_rules` / `motion_rules` keys. The response envelope, permissions and missing/withheld markers are unchanged; each tool lists more ids. Easing curves and milliseconds remain tokens (`get_brand_tokens`).
+- Every named fact tool reads its ids from one exported map, `NAMED_FACT_TOOL_IDS`. Test: `tests/named-tool-ids.test.ts` (registry coverage, approved/draft/unanswered, guest, wrong profile, cross-brand, stdio MCP).
+- Skills `motion-designer` and `mascot-animator` name the real motion ids.
+
+## Unreleased — Visual V2.2: competitor share path and comparison matrix
+
+### Added
+
+- `npm run brand:competitive -- share [--dry-run]` (owner decision D1): writes a quote-free, redacted landscape of owner-reviewed competitors to `brand/competitive/shared/landscape.json` for the owner to review and commit. Allow-list projection only (names, relationship, markets, verified domain, per-criterion state, short labels, source class/public host/date, public prices as recorded with rate labels). Never shared: quotes, note ids, claim keys, URLs, status reasons, unverified domains, hypotheses, owner or first-party source hosts. Idempotent; a removed competitor disappears. Refused under an agent token.
+- Studio: read-only "Competitor comparison matrix" page `/brands/<slug>/visual/competitors` and its print view (A4 portrait opener, A4 landscape matrix page) on the existing print path. New visual blocks `competitor_matrix` and `price_strip` in the renderer registry; designed empty and withheld states; en/fa/tr. Internal edition only. One banner link from the Business model page.
+- Studio's tar allowlist admits exactly `brand/competitive/shared/landscape.json` under `brand/competitive/`; the strict reader withholds the whole file on any unexpected field.
+- Tests: `competitive-share`, `visual-competitors`, `studio-visual-competitors`, `studio-visual-competitors-browser`.
+
+Nothing is ranked, scored or converted. No positioning map (V2.3). No framework or ISO claim.
+
 ## Unreleased — Assurance registry and assessable controls (Trust v2 PR-A)
 
 ### Added

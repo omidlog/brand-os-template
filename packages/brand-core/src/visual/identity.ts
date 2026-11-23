@@ -48,6 +48,8 @@ export interface LogoMasterCandidate {
   tags: string[]
   /** Template placeholders (tag `example`, an EXAMPLE licence) are never a master. */
   example: boolean
+  /** Manifest `path` and `preview` of the asset, matched exactly against the `brand.logo.masters` fact. */
+  paths?: string[]
   preview_key: string | null
   mime: string | null
   width: number | null
@@ -57,6 +59,12 @@ export interface LogoMasterCandidate {
 export interface IdentityOptions {
   now?: Date
   masters?: LogoMasterCandidate[]
+}
+
+/** The approved `brand.logo.masters` text, used only to resolve the master; it is never rendered. */
+function mastersReference(facts: Record<string, CanonicalFact>): string | null {
+  const fact = facts[LOGO_MASTERS_FACT]
+  return fact && fact.status === 'approved' && typeof fact.value === 'string' ? fact.value : null
 }
 
 const ROUND = (ratio: number) => Math.floor(ratio * 100) / 100
@@ -112,20 +120,65 @@ function base(input: { block_id: string; framework_id: string | null; entry: Vis
   }
 }
 
-/** Picks the master: approved, not an example, tagged `logo` and `master`, previewable; public needs it published. */
-export function pickMaster(candidates: LogoMasterCandidate[], audience: VisualAudience): { master: LogoMaster | null; state: LogoConstructionBlock['master_state'] } {
+/** The approved fact that names where the master logo lives (free text; asset ids and paths are matched exactly). */
+export const LOGO_MASTERS_FACT = 'brand.logo.masters'
+
+/**
+ * Tokens of the `brand.logo.masters` free text that could be an asset id or a manifest path. Split on whitespace,
+ * quotes, brackets and list punctuation; a trailing sentence `.` or `:` is dropped. Matching is exact, never fuzzy.
+ */
+export function masterReferenceTokens(text: string | null | undefined): string[] {
+  if (typeof text !== 'string' || !text) return []
+  const tokens: string[] = []
+  for (const raw of text.slice(0, 4000).split(/[\s,;()[\]{}<>"'`|]+/)) {
+    const token = raw.replace(/[.:]+$/, '').replace(/^\.\//, '')
+    if (token && !tokens.includes(token)) tokens.push(token)
+  }
+  return tokens
+}
+
+function referenceIndex(asset: LogoMasterCandidate, tokens: string[]): number {
+  const names = [asset.asset_id, ...(asset.paths ?? []).map((item) => item.replace(/^\.\//, ''))].filter(Boolean)
+  const hits = names.map((name) => tokens.indexOf(name)).filter((index) => index >= 0)
+  return hits.length ? Math.min(...hits) : -1
+}
+
+/**
+ * Picks the master, deterministically and never guessing. Only approved, non-example, previewable assets tagged
+ * `logo` qualify; the public edition also needs the asset published. Among those, in order:
+ * 1. the assets named (by exact asset id or manifest path) in the approved `brand.logo.masters` fact, first named wins;
+ * 2. assets tagged `master` (first by id);
+ * 3. the only approved logo. Several approved logos and none named or tagged: `ambiguous`, no master.
+ */
+export function pickMaster(candidates: LogoMasterCandidate[], audience: VisualAudience, reference: string | null = null): { master: LogoMaster | null; state: LogoConstructionBlock['master_state'] } {
   const logos = candidates.filter((asset) => asset.tags.includes('logo'))
   const real = logos.filter((asset) => !asset.example)
-  const masters = real.filter((asset) => asset.approved && asset.tags.includes('master') && (audience === 'internal' || asset.published))
-  const previewable = masters.filter((asset) => asset.preview_key && asset.mime).sort((a, b) => a.asset_id.localeCompare(b.asset_id))
-  const chosen = previewable[0]
-  if (chosen) {
-    return {
-      master: { asset_id: chosen.asset_id, name: chosen.name, version: chosen.version, preview_key: chosen.preview_key!, mime: chosen.mime!, width: chosen.width, height: chosen.height },
-      state: 'approved',
-    }
+  const eligible = real.filter((asset) => asset.approved && (audience === 'internal' || asset.published))
+  const previewable = (assets: LogoMasterCandidate[]) => assets.filter((asset) => asset.preview_key && asset.mime).sort((a, b) => a.asset_id.localeCompare(b.asset_id))
+  const choose = (chosen: LogoMasterCandidate, resolved_by: LogoMaster['resolved_by']) => {
+    const badges: LogoMaster['badges'] = []
+    if (audience === 'internal' && chosen.tags.includes('draft')) badges.push('draft_tag')
+    if (audience === 'internal' && !chosen.published) badges.push('internal_only')
+    const master: LogoMaster = { asset_id: chosen.asset_id, name: chosen.name, version: chosen.version, preview_key: chosen.preview_key!, mime: chosen.mime!, width: chosen.width, height: chosen.height, resolved_by, badges }
+    return { master, state: 'approved' as const }
   }
-  if (masters.length) return { master: null, state: 'not_previewable' }
+  const tokens = masterReferenceTokens(reference)
+  const named = eligible
+    .map((asset) => ({ asset, index: referenceIndex(asset, tokens) }))
+    .filter((item) => item.index >= 0)
+    .sort((a, b) => a.index - b.index || a.asset.asset_id.localeCompare(b.asset.asset_id))
+    .map((item) => item.asset)
+  const namedReady = named.filter((asset) => asset.preview_key && asset.mime)
+  if (namedReady[0]) return choose(namedReady[0], 'reference')
+  if (named.length) return { master: null, state: 'not_previewable' }
+  const tagged = eligible.filter((asset) => asset.tags.includes('master'))
+  const taggedReady = previewable(tagged)
+  if (taggedReady[0]) return choose(taggedReady[0], 'tag')
+  if (tagged.length) return { master: null, state: 'not_previewable' }
+  const ready = previewable(eligible)
+  if (ready.length === 1) return choose(ready[0]!, 'sole_logo')
+  if (ready.length > 1) return { master: null, state: 'ambiguous' }
+  if (eligible.length) return { master: null, state: 'not_previewable' }
   if (logos.length && !real.length) return { master: null, state: 'example_only' }
   return { master: null, state: 'missing' }
 }
@@ -140,6 +193,8 @@ export function identityDocument(input: {
   type: { entry: VisualEntry; structured: StructuredValue | null }
   logo: { entry: VisualEntry; structured: StructuredValue | null }
   masters: LogoMasterCandidate[]
+  /** Approved `brand.logo.masters` free text naming the master asset(s); null when not approved. */
+  masters_reference?: string | null
   scripts: Array<'en' | 'fa' | 'tr'>
 }): VisualDocument {
   const guide = frameworkRef('BRAND-IDENTITY-GUIDE')
@@ -165,7 +220,7 @@ export function identityDocument(input: {
   }
   const logoEntry = strict(input.logo.entry)
   const spec = drawable(logoEntry) && input.logo.structured?.type === 'logo_spec' ? { min_size_px: input.logo.structured.logo.min_size_px, clear_space: { ...input.logo.structured.logo.clear_space }, min_print_mm: input.logo.structured.logo.min_print_mm } : null
-  const { master, state } = pickMaster(input.masters, input.audience)
+  const { master, state } = pickMaster(input.masters, input.audience, input.masters_reference ?? null)
   const construction: LogoConstructionBlock = {
     ...base({ block_id: 'logo-construction', framework_id: guide.framework_id, entry: logoEntry, filled: spec !== null && master !== null, audience: input.audience, variant: 'logo.construction.v1' }),
     type: 'logo_construction',
@@ -250,6 +305,7 @@ export function buildVisualIdentity(engine: InterviewEngine, audience: DocumentA
     type: source(IDENTITY_QUESTIONS.type),
     logo: source(IDENTITY_QUESTIONS.logo),
     masters: options.masters ?? [],
+    masters_reference: mastersReference(facts),
     scripts: locales,
   })
 }
