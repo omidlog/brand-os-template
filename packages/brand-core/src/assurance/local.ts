@@ -8,3 +8,4 @@
  */
 export * from './workspace.js'
 export * from './workspace-text.js'
+export * from './reviews.js'

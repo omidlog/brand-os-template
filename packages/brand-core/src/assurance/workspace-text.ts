@@ -7,8 +7,9 @@
  * report itself is the existing `renderGapReport`; nothing about it is redone here.
  */
 
-import { fill, type AssuranceLang } from './i18n.js'
-import type { AssuranceSnapshot, MissingItem, MissingKind, SubjectSource, VerifyResult } from './workspace.js'
+import { CONTROL_TEXT, fill, type AssuranceLang } from './i18n.js'
+import type { AssuranceSnapshot, JudgmentState, MissingItem, MissingKind, ReviewItem, SubjectSource, VerifyResult } from './workspace.js'
+import type { Judgment, ReviewRevision } from './reviews.js'
 import type { FactPresence } from './assess.js'
 import type { SubjectField } from './controls.js'
 
@@ -77,6 +78,11 @@ export const BRIDGE_TEXT: Catalog = {
     fa: 'فایل تصویر لحظه‌ای قابل استفاده نبود: {reason}',
     tr: 'Anlık görüntü dosyası kullanılamadı: {reason}',
   },
+  invalid_review: {
+    en: 'A stored review judgment could not be used, so no snapshot was built: {reason}',
+    fa: 'یک داوری بازبینیِ ذخیره‌شده قابل استفاده نبود، پس تصویر لحظه‌ای ساخته نشد: {reason}',
+    tr: 'Kayıtlı bir inceleme kararı kullanılamadı, bu yüzden anlık görüntü oluşturulmadı: {reason}',
+  },
   unexpected: {
     en: 'Unexpected error ({name}). The bridge is read-only, so nothing about the brand changed.',
     fa: 'خطای پیش‌بینی‌نشده ({name}). این پل فقط‌خواندنی است، پس چیزی در برند تغییر نکرد.',
@@ -89,6 +95,11 @@ export const MISSING_KIND_TEXT: Record<MissingKind, T> = {
   fact: { en: 'No approved fact', fa: 'fact تأییدشده‌ای نیست', tr: 'Onaylı bilgi yok' },
   evidence: { en: 'No research note', fa: 'یادداشت پژوهشی نیست', tr: 'Araştırma notu yok' },
   reviewer_judgment: { en: 'A person must judge this control', fa: 'یک انسان باید این کنترل را داوری کند', tr: 'Bu kontrolü bir kişi değerlendirmeli' },
+  stale_judgment: {
+    en: 'The owner’s judgment is out of date: what it was about changed. Judge it again (brand:assurance-review)',
+    fa: 'داوری مالک کهنه شده است: چیزی که درباره‌اش بود تغییر کرده. دوباره داوری کنید (brand:assurance-review)',
+    tr: 'Sahibin kararı güncel değil: değerlendirdiği şey değişti. Yeniden değerlendirin (brand:assurance-review)',
+  },
   changed_source: { en: 'A cited source changed', fa: 'منبع ارجاع‌شده تغییر کرده', tr: 'Atıf yapılan kaynak değişti' },
 }
 
@@ -212,4 +223,165 @@ export function renderVerifyResult(result: VerifyResult, lang: AssuranceLang): s
   }
   lines.push('', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')
   return lines.join('\n')
+}
+
+// ---- owner review judgments (brand:assurance-review) ---------------------------------------------
+
+export const JUDGMENT_TEXT: Record<Judgment, T> = {
+  yes: { en: 'yes', fa: 'بله', tr: 'evet' },
+  partly: { en: 'partly', fa: 'تا حدی', tr: 'kısmen' },
+  no: { en: 'no', fa: 'خیر', tr: 'hayır' },
+}
+
+export const JUDGMENT_STATE_TEXT: Record<JudgmentState, T> = {
+  needs_judgment: { en: 'Needs your judgment', fa: 'به داوری شما نیاز دارد', tr: 'Kararınızı bekliyor' },
+  judged: { en: 'Judged, still current', fa: 'داوری شده و هنوز معتبر است', tr: 'Değerlendirildi, hâlâ geçerli' },
+  stale: { en: 'Judged, but out of date: judge it again', fa: 'داوری شده اما کهنه است: دوباره داوری کنید', tr: 'Değerlendirildi ama güncel değil: yeniden değerlendirin' },
+}
+
+/** The plain question each judgment control asks the owner. Every `reviewer_judgment` control has one. */
+export const REVIEW_PROMPT: Record<string, T> = {
+  'PRR-08': {
+    en: 'Is the differentiation claim actually backed by the cited evidence? Answer yes, partly or no, with a short note.',
+    fa: 'آیا ادعای تمایز واقعاً با شواهد ارجاع‌شده پشتیبانی می‌شود؟ با بله، تا حدی یا خیر و یک یادداشت کوتاه پاسخ دهید.',
+    tr: 'Farklılaşma iddiası atıf yapılan kanıtlarla gerçekten destekleniyor mu? Evet, kısmen veya hayır diye ve kısa bir notla yanıtlayın.',
+  },
+}
+
+export const REVIEW_TEXT: Catalog = {
+  title: { en: 'Owner review judgments — owner-local', fa: 'داوری‌های بازبینی مالک — فقط محلی', tr: 'Sahip inceleme kararları — yalnızca yerel' },
+  intro: {
+    en: 'These controls need a person’s judgment. Until each has a current one, the assessment gives no score.',
+    fa: 'این کنترل‌ها به داوری یک انسان نیاز دارند. تا وقتی هر کدام داوری معتبر نداشته باشد، ارزیابی امتیازی نمی‌دهد.',
+    tr: 'Bu kontroller bir kişinin kararını gerektirir. Her birinin geçerli bir kararı olana kadar değerlendirme puan vermez.',
+  },
+  none: { en: 'No control under this method needs a person’s judgment.', fa: 'هیچ کنترلی در این متد به داوری انسان نیاز ندارد.', tr: 'Bu yöntemde bir kişinin kararını gerektiren kontrol yok.' },
+  question: { en: 'Question', fa: 'پرسش', tr: 'Soru' },
+  state: { en: 'State', fa: 'وضعیت', tr: 'Durum' },
+  latest: { en: 'Judgment in force', fa: 'داوری جاری', tr: 'Geçerli karar' },
+  note: { en: 'Your note', fa: 'یادداشت شما', tr: 'Notunuz' },
+  revisions: { en: 'Recorded revisions', fa: 'نسخه‌های ثبت‌شده', tr: 'Kayıtlı sürümler' },
+  facts_now: { en: 'Facts it is about', fa: 'factهایی که درباره‌شان است', tr: 'İlgili bilgiler' },
+  notes_now: { en: 'Research notes it is about', fa: 'یادداشت‌های پژوهشی مربوط', tr: 'İlgili araştırma notları' },
+  no_notes: { en: 'none yet (capture one with brand:knowledge)', fa: 'هنوز هیچ (با brand:knowledge ثبت کنید)', tr: 'henüz yok (brand:knowledge ile ekleyin)' },
+  approved: { en: 'approved', fa: 'تأییدشده', tr: 'onaylı' },
+  not_approved: { en: 'not approved', fa: 'تأیید نشده', tr: 'onaylanmadı' },
+  owner_stated: {
+    en: 'Research notes count as the owner’s own statements, not independent evidence.',
+    fa: 'یادداشت‌های پژوهشی گفتهٔ خود مالک شمرده می‌شوند، نه شواهد مستقل.',
+    tr: 'Araştırma notları bağımsız kanıt değil, sahibin kendi beyanı sayılır.',
+  },
+  changed: { en: 'Changed since the judgment', fa: 'تغییرکرده از زمان داوری', tr: 'Karardan beri değişenler' },
+  conflicts: {
+    en: 'Open contradictions (reported before any judgment)',
+    fa: 'تناقض‌های باز (پیش از هر داوری گزارش می‌شوند)',
+    tr: 'Açık çelişkiler (her karardan önce raporlanır)',
+  },
+  how: {
+    en: 'Record one: npm run brand:assurance-review -- record --control {control} --judgment yes|partly|no --note "…" [--date YYYY-MM-DD]',
+    fa: 'ثبت داوری: ‎npm run brand:assurance-review -- record --control {control} --judgment yes|partly|no --note "…" [--date YYYY-MM-DD]‎',
+    tr: 'Kaydetmek için: npm run brand:assurance-review -- record --control {control} --judgment yes|partly|no --note "…" [--date YYYY-MM-DD]',
+  },
+  recorded: {
+    en: 'Recorded {control}: {judgment} on {date} (revision {revision}). Run brand:assurance assess to see the result.',
+    fa: 'برای {control} ثبت شد: {judgment} در {date} (نسخهٔ {revision}). برای دیدن نتیجه brand:assurance assess را اجرا کنید.',
+    tr: '{control} kaydedildi: {date} tarihinde {judgment} (sürüm {revision}). Sonucu görmek için brand:assurance assess çalıştırın.',
+  },
+  stored: {
+    en: 'Stored privately in brand/.private/assurance/reviews/ (gitignored, never read by agents, Studio or docs).',
+    fa: 'به‌طور خصوصی در brand/.private/assurance/reviews/ ذخیره شد (در git نیست و عامل‌ها، Studio و مستندات آن را نمی‌خوانند).',
+    tr: 'brand/.private/assurance/reviews/ içinde gizli olarak saklandı (git dışında; ajanlar, Studio ve belgeler okumaz).',
+  },
+  refused_agent: {
+    en: 'Review judgments are the owner’s own. Refusing while BRAND_OS_AGENT_TOKEN is set; no agent profile covers them.',
+    fa: 'داوری‌های بازبینی فقط مال مالک است. تا وقتی BRAND_OS_AGENT_TOKEN تنظیم است اجرا نمی‌شود؛ هیچ پروفایل عاملی آن را پوشش نمی‌دهد.',
+    tr: 'İnceleme kararları yalnızca sahibe aittir. BRAND_OS_AGENT_TOKEN ayarlıyken reddedilir; hiçbir ajan profili bunu kapsamaz.',
+  },
+  rejected: { en: 'Not recorded: {reason}', fa: 'ثبت نشد: {reason}', tr: 'Kaydedilmedi: {reason}' },
+  unexpected: {
+    en: 'Unexpected error ({name}). A judgment is written in one atomic step: either it was recorded in full or not at all. Run list to check.',
+    fa: 'خطای پیش‌بینی‌نشده ({name}). داوری در یک گام اتمی نوشته می‌شود: یا کامل ثبت شده یا اصلاً ثبت نشده. برای اطمینان list را اجرا کنید.',
+    tr: 'Beklenmeyen hata ({name}). Bir karar tek bir atomik adımda yazılır: ya tamamen kaydedildi ya da hiç kaydedilmedi. Kontrol için list çalıştırın.',
+  },
+}
+
+export const REVIEW_HELP: T = {
+  en: `brand:assurance-review <command> [options]   owner-local; refused while BRAND_OS_AGENT_TOKEN is set
+
+  list   [--as-of YYYY-MM-DD] [--show-notes] [--lang en|fa|tr] [--json]
+                     the controls that need a person's judgment, and where each stands
+  record --control <id> --judgment yes|partly|no --note "<short reason>" [--date YYYY-MM-DD]
+         [--expect <revision>|none] [--lang en|fa|tr] [--json]
+                     record your judgment; it is about the facts and research notes cited now,
+                     and goes out of date by itself when any of them changes
+
+Judgments are versioned in brand/.private/assurance/reviews/ (gitignored). A new judgment adds a
+revision; nothing is overwritten. The note stays there and never appears in a snapshot.
+This is an internal assessment, never a certification or a compliance statement; authorizes is always empty.`,
+  fa: `brand:assurance-review <command> [options]   فقط محلی برای مالک؛ تا وقتی BRAND_OS_AGENT_TOKEN تنظیم است اجرا نمی‌شود
+
+  list   [--as-of YYYY-MM-DD] [--show-notes] [--lang en|fa|tr] [--json]
+                     کنترل‌هایی که به داوری انسان نیاز دارند و وضعیت هر کدام
+  record --control <id> --judgment yes|partly|no --note "<دلیل کوتاه>" [--date YYYY-MM-DD]
+         [--expect <revision>|none] [--lang en|fa|tr] [--json]
+                     داوری خود را ثبت کنید؛ داوری دربارهٔ factها و یادداشت‌های پژوهشیِ کنونی است
+                     و با تغییر هر کدام خودبه‌خود کهنه می‌شود
+
+داوری‌ها با نسخه در brand/.private/assurance/reviews/ نگه داشته می‌شوند (بیرون از git). هر داوری تازه یک نسخه
+اضافه می‌کند و چیزی بازنویسی نمی‌شود. یادداشت همان‌جا می‌ماند و هرگز در تصویر لحظه‌ای نمی‌آید.
+این ارزیابی داخلی است و هرگز گواهی‌نامه یا اظهار انطباق نیست؛ authorizes همیشه خالی است.`,
+  tr: `brand:assurance-review <command> [options]   yalnızca sahibin yerel ortamı; BRAND_OS_AGENT_TOKEN ayarlıyken reddedilir
+
+  list   [--as-of YYYY-MM-DD] [--show-notes] [--lang en|fa|tr] [--json]
+                     bir kişinin kararını gerektiren kontroller ve her birinin durumu
+  record --control <id> --judgment yes|partly|no --note "<kısa gerekçe>" [--date YYYY-MM-DD]
+         [--expect <revision>|none] [--lang en|fa|tr] [--json]
+                     kararınızı kaydedin; karar şu an atıf yapılan bilgiler ve araştırma notları hakkındadır
+                     ve bunlardan biri değişince kendiliğinden güncelliğini yitirir
+
+Kararlar brand/.private/assurance/reviews/ içinde sürümlü tutulur (git dışında). Yeni karar bir sürüm
+ekler; hiçbir şeyin üzerine yazılmaz. Not orada kalır ve hiçbir anlık görüntüde görünmez.
+Bu bir iç değerlendirmedir; asla sertifika veya uyumluluk beyanı değildir; authorizes her zaman boştur.`,
+}
+
+/** The list of controls that need a judgment. Ids, states and dates; the note only if the owner asked. */
+export function renderReviewList(result: { brand_id: string; items: ReviewItem[] }, lang: AssuranceLang): string {
+  const lines: string[] = [`# ${REVIEW_TEXT.title![lang]}`, '', `> ${BRIDGE_TEXT.disclaimer![lang]}`, '', `- ${BRIDGE_TEXT.brand![lang]}: \`${result.brand_id}\``, '']
+  if (result.items.length === 0) {
+    lines.push(REVIEW_TEXT.none![lang], '')
+    return lines.join('\n')
+  }
+  lines.push(REVIEW_TEXT.intro![lang], '')
+  for (const entry of result.items) {
+    const label = CONTROL_TEXT[entry.control_id]?.label[lang] ?? entry.control_id
+    lines.push(`## ${entry.control_id} — ${label}`, '')
+    lines.push(`- ${REVIEW_TEXT.question![lang]}: ${REVIEW_PROMPT[entry.control_id]?.[lang] ?? CONTROL_TEXT[entry.control_id]?.intent[lang] ?? ''}`)
+    lines.push(`- ${REVIEW_TEXT.state![lang]}: **${JUDGMENT_STATE_TEXT[entry.state][lang]}**`)
+    if (entry.latest) {
+      lines.push(`- ${REVIEW_TEXT.latest![lang]}: ${JUDGMENT_TEXT[entry.latest.judgment][lang]} · ${entry.latest.reviewed_on} · \`${entry.latest.revision}\``)
+      if (entry.latest.note !== null) lines.push(`- ${REVIEW_TEXT.note![lang]}: ${entry.latest.note}`)
+    }
+    lines.push(`- ${REVIEW_TEXT.revisions![lang]}: ${entry.revisions}`)
+    lines.push(`- ${REVIEW_TEXT.facts_now![lang]}: ${entry.basis_now.facts.map((fact) => `\`${fact.id}\` (${fact.approved ? REVIEW_TEXT.approved![lang] : REVIEW_TEXT.not_approved![lang]})`).join(', ') || '—'}`)
+    lines.push(`- ${REVIEW_TEXT.notes_now![lang]}: ${entry.basis_now.notes.map((id) => `\`${id}\``).join(', ') || REVIEW_TEXT.no_notes![lang]}`)
+    if (entry.changed.length > 0) lines.push(`- ${REVIEW_TEXT.changed![lang]}: ${entry.changed.map((id) => `\`${id}\``).join(', ')}`)
+    if (entry.conflicts.length > 0) lines.push(`- ${REVIEW_TEXT.conflicts![lang]}: ${entry.conflicts.map((id) => `\`${id}\``).join(', ')}`)
+    lines.push(`- ${fill(REVIEW_TEXT.how![lang], { control: entry.control_id })}`, '')
+  }
+  lines.push(`> ${REVIEW_TEXT.owner_stated![lang]}`, '', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')
+  return lines.join('\n')
+}
+
+export function renderRecorded(result: { control_id: string; revision: ReviewRevision }, lang: AssuranceLang): string {
+  return [
+    fill(REVIEW_TEXT.recorded![lang], {
+      control: result.control_id,
+      judgment: JUDGMENT_TEXT[result.revision.judgment][lang],
+      date: result.revision.reviewed_on,
+      revision: result.revision.revision,
+    }),
+    REVIEW_TEXT.stored![lang],
+    BRIDGE_TEXT.disclaimer![lang],
+    '',
+  ].join('\n')
 }

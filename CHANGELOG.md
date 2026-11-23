@@ -13,6 +13,28 @@
 
 - The runtime reads its logo through the Visual DNA resolver (Visual DNA owner decision 6): `loadApprovedLogo` resolves the pack's logo ids as the owner process and reads the bytes with `readVerifiedAsset(…, 'renderer')`; a file that differs from the pack's pinned checksum is `pack_pin_differs`. Not-embedded reasons are now `visual_dna:<state>:<reason>` codes. The resolver's append-only access-log line is the only write under `brand/`. The runtime resolves with the default `use_scope: public` (#44), so a portrait with internal-only rights is never embedded. The synthetic demo logo records its licence.
 
+## Unreleased — Owner review judgments for assurance scores (GAP-09 follow-up)
+
+### Added
+
+- `npm run brand:assurance-review -- list | record`: owner-only. `list` shows the Assurance controls that need a person's judgment (today PRR-08) with their state, and `record --control PRR-08 --judgment yes|partly|no --note "…" [--date] [--expect]` records one. Refused under `BRAND_OS_AGENT_TOKEN`; no MCP tool, Studio route or agent profile reaches it. en/fa/tr text.
+- `assurance/reviews.ts`: judgments stored in `brand/.private/assurance/reviews/<control>.json` (brand workspace, gitignored, 0600, atomic, locked), as append-only hash-chained revisions. A tampered, foreign or symlinked history is refused.
+- Tests: `assurance-reviews`, `assurance-review-cli` (synthetic temp brands only).
+
+### Changed
+
+- The bridge (`brand-os.assurance-bridge/2`) reads the judgment in force on the `--as-of` day while what it judged (cited facts and research notes) is unchanged, so `brand:assurance assess` can give a score. A judgment whose basis changed is listed as `stale_judgment` (blocking). The snapshot carries the revision id, never the owner's note. Unconfirmed answers still lower the ratio; notes are still owner-stated; never a certification.
+## Unreleased — Coach UX: automatic, context-aware guidance
+
+### Added
+
+- `coach/moments.ts`: one policy for when the Strategic Coach speaks on its own (strategic id namespaces or evidence claims, free text or a measure, never restricted) with a closed list of silence reasons. Decision record `docs-internal/COACH_UX_DECISION.md`.
+- `brand:interview` prints at most one coach note after an important first answer (interactive and agent mode); `--json` gains an additive `coach` object.
+- `brand:approve` (and `--dry-run`) prints up to three coach notes on the batch's drafts before the proof prompt. Never blocks; JSON unchanged.
+- Studio Overview: a read-only "Before you approve: coach notes" card (en/fa/tr), hidden when empty. Screenshots in `docs/screenshots/coach-ux/`.
+- `BRAND_OS_COACH=off` silences the automatic moments for one shell.
+- Tests: `coach-moments`, `coach-moments-cli`, `studio-coach`.
+
 ## Unreleased — Visual V1.2: print engine (book_a4_portrait)
 
 ### Added
@@ -21,6 +43,7 @@
 - The Brand Book "Visual identity" print view is now an A4 portrait book: cover, imprint, contents with the printed page numbers and dotted leaders, running heads (book title verso, chapter recto), outer-edge folios (mirrored, with Persian digits, in fa), numbered notes on the page of their reference, tables continued with a repeated header, headings kept with what follows, no orphan page. New stylesheet `visual-book.css`; the canvas print output is unchanged byte for byte.
 - `npm run brand:export-visual`: owner-machine export of the identity book or the canvas to self-contained HTML and, with a local Chrome, PDF from a measured two-pass layout with an overflow check. Never inside `brand/` or `.private`, refused under an agent token. Studio stays GET-only.
 - Tests: `studio-visual-print-book`; book checks added to `studio-visual-browser` and `studio-visual-identity`.
+
 ## Unreleased — Visual DNA owner policy decisions and the `published` status fix
 
 ### Fixed
@@ -44,6 +67,7 @@
 ### Fixed
 
 - Assurance `completeness.blocked_by` reported every `needs_review` blocker as `source_changed`; it now names the control's own reason (for example `reviewer_required`).
+
 
 ## Unreleased — Visual DNA reference resolver (fixes pack PR-C, GAP-03)
 
@@ -81,6 +105,7 @@
 - `get_logo_rules` and `get_motion_guidelines` (MCP and `brand:query`) asked for `brand.logo.primary`, `brand.logo.clearspace` and `brand.motion.easing`, which no question owns, so they always reported those fields missing. They now read `brand.logo.masters|variants|clear_space|min_size|misuse` and `brand.motion.principles|duration|reduced`, the same ids as the Task Context `logo_rules` / `motion_rules` keys. The response envelope, permissions and missing/withheld markers are unchanged; each tool lists more ids. Easing curves and milliseconds remain tokens (`get_brand_tokens`).
 - Every named fact tool reads its ids from one exported map, `NAMED_FACT_TOOL_IDS`. Test: `tests/named-tool-ids.test.ts` (registry coverage, approved/draft/unanswered, guest, wrong profile, cross-brand, stdio MCP).
 - Skills `motion-designer` and `mascot-animator` name the real motion ids.
+
 
 ## Unreleased — Visual V2.2: competitor share path and comparison matrix
 
@@ -144,6 +169,7 @@ No command, Studio route, store, approval, MCP tool or agent scope was added. No
 - Nothing calls a model or the network in this version.
 - `schemas/coach-result.schema.json` (reference contract; the Zod schema in `packages/brand-core/src/coach/model.ts` stays authoritative). Guide: `docs-internal/STRATEGIC_COACH.md`. Tests: `coach-core` (25), `coach-cli` (7), with SYNTHETIC DEMO fixtures only.
 
+
 ## Unreleased — Visual V1.1 + V2.1: renderer registry and Brand Book "Visual identity" chapter
 
 ### Added
@@ -164,6 +190,7 @@ No command, Studio route, store, approval, MCP tool or agent scope was added. No
 ### Changed
 
 - The `brand:strategy review` note for a `content` strategy now says `content-read` agents read it (true since Slice C).
+
 
 ## Unreleased — Visual Blueprint P0: business model canvas
 
