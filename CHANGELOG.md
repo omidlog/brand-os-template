@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Fix: Visual identity shows the approved master logo
+
+### Fixed
+
+- The Visual identity chapter showed "awaiting asset" for a brand with an approved, previewable logo that was not tagged `master`. The master is now resolved deterministically: an asset named (exact asset id or manifest path) in the approved `brand.logo.masters` answer, else one tagged `logo` + `master`, else the only approved logo; several unnamed logos give a designed `ambiguous` state. Only approved, checksummed, previewable, non-example files qualify; the public edition still needs the file published. The internal edition marks a master that carries a `draft` tag or is not published. en/fa/tr.
+
 ## Unreleased — Assurance registry and assessable controls (Trust v2 PR-A)
 
 ### Added
