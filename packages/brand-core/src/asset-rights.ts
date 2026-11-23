@@ -44,14 +44,22 @@ export function rightsSubject(asset: RightsAsset): RightsSubject | null {
   return null
 }
 
-/** Why a rights-sensitive asset cannot be public, or null when rights allow it (or are not needed). */
-export function rightsBlocker(root: string, asset: RightsAsset, now = new Date()): string | null {
+/** The use a rights check is for. `public` is the default and what every publication gate asks. */
+export type RightsUse = 'public' | 'internal'
+
+/**
+ * Why a rights-sensitive asset cannot be used for `use`, or null when rights allow it (or are not needed).
+ * Public use needs public-scope rights. Internal use (owner decision 2026-11-23) is covered by public or internal
+ * scope; it never makes the asset public. Every caller that publishes keeps the default, `public`.
+ */
+export function rightsBlocker(root: string, asset: RightsAsset, now = new Date(), use: RightsUse = 'public'): string | null {
   const subject = rightsSubject(asset)
   if (!subject) return null
   const rights = asset.rights
   if (!rights || typeof rights !== 'object') return `${subject} asset has no rights record`
   if (rights.status !== 'granted') return `${subject} rights are ${typeof rights.status === 'string' ? rights.status : 'not granted'}`
-  if (rights.scope !== 'public') return `${subject} rights do not cover public use`
+  const covers = (scope: unknown): boolean => scope === 'public' || (use === 'internal' && scope === 'internal')
+  if (!covers(rights.scope)) return `${subject} rights do not cover ${use} use`
   if (typeof rights.holder !== 'string' || !rights.holder.trim()) return `${subject} rights name no holder`
   if (rights.expires !== undefined && rights.expires !== null) {
     if (typeof rights.expires !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(rights.expires)) return `${subject} rights expiry must be YYYY-MM-DD`
@@ -59,7 +67,7 @@ export function rightsBlocker(root: string, asset: RightsAsset, now = new Date()
   }
   if (rights.evidence_id !== undefined && rights.evidence_id !== null) {
     const item = readEvidence(root).find((entry) => entry.id === rights.evidence_id)
-    if (!item || item.kind !== 'permission' || item.scope !== 'public' || !isCurrent(item, now)) return `${subject} permission ${String(rights.evidence_id)} is not verified and current`
+    if (!item || item.kind !== 'permission' || !covers(item.scope) || !isCurrent(item, now)) return `${subject} permission ${String(rights.evidence_id)} is not verified and current`
   }
   return null
 }

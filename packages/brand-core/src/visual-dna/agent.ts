@@ -6,11 +6,13 @@ import {
   ASSET_ID_PATTERN,
   MAX_ASSET_IDS,
   REFERENCE_STATES,
+  USE_SCOPES,
   VISUAL_DNA_LOCALES,
   VISUAL_DNA_PERMISSIONS,
   VISUAL_DNA_SCHEMA,
   VISUAL_DNA_TOOL,
   type ReferenceState,
+  type UseScope,
   type VisualDnaLocale,
   type VisualDnaRequest,
   type VisualDnaResult,
@@ -33,6 +35,7 @@ export interface VisualDnaToolInput {
   asset_ids?: unknown
   mascot?: unknown
   creative?: unknown
+  use_scope?: unknown
   locale?: unknown
 }
 
@@ -57,6 +60,10 @@ export function parseVisualDnaInput(input: VisualDnaToolInput): { request: Visua
   if (input.locale !== undefined) {
     if (!(VISUAL_DNA_LOCALES as readonly unknown[]).includes(input.locale)) return { invalid: 'locale is en, fa or tr.' }
     request.locale = input.locale as VisualDnaLocale
+  }
+  if (input.use_scope !== undefined) {
+    if (!(USE_SCOPES as readonly unknown[]).includes(input.use_scope)) return { invalid: 'use_scope is public or internal.' }
+    request.use_scope = input.use_scope as UseScope
   }
   if (input.asset_ids !== undefined) {
     if (!Array.isArray(input.asset_ids) || input.asset_ids.length > MAX_ASSET_IDS) return { invalid: `asset_ids is a list of at most ${MAX_ASSET_IDS} manifest ids.` }
@@ -101,6 +108,7 @@ function refused(engine: InterviewEngine, ctx: AuthContext, status: 'denied' | '
     brand_id: engine.config().brand.slug,
     principal: { role: ctx.role, profile: ctx.profile ?? null },
     reason,
+    use_scope: 'public',
     locale,
     direction: locale === 'fa' ? 'rtl' : 'ltr',
     notice: [...visualDnaText(locale).notice],
