@@ -50,6 +50,22 @@ const LANGS = ['en', 'fa'] as const
 /** Rendering flags that make text rasterisation the same on every Linux machine with the same Chrome. */
 const DETERMINISTIC = ['--font-render-hinting=none', '--disable-lcd-text', '--disable-font-subpixel-positioning', '--force-color-profile=srgb', '--hide-scrollbars', '--allow-file-access-from-files']
 
+/** fonts-liberation, a dependency of the google-chrome package, wherever the distribution puts it. */
+const LIBERATION = ['/usr/share/fonts/truetype/liberation', '/usr/share/fonts/truetype/liberation2', '/usr/share/fonts/liberation', '/usr/share/fonts/liberation-sans'].filter((dir) => fs.existsSync(dir))
+
+/**
+ * A fontconfig that sees only the Liberation fonts. The pages draw with the bundled web fonts, but a character or a
+ * line box can still reach a system fallback, and the fallback differs between machines (the first CI run moved the
+ * Persian pages by about 3 %). With this file every machine falls back to the same faces.
+ */
+function isolatedFontconfig(dir: string): string {
+  const file = path.join(dir, 'fonts.conf')
+  const alias = (generic: string, family: string) => `<alias><family>${generic}</family><prefer><family>${family}</family></prefer></alias>`
+  fs.mkdirSync(path.join(dir, 'fc-cache'), { recursive: true })
+  fs.writeFileSync(file, `<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>${LIBERATION.map((d) => `<dir>${d}</dir>`).join('')}<cachedir>${path.join(dir, 'fc-cache')}</cachedir>${alias('sans-serif', 'Liberation Sans')}${alias('serif', 'Liberation Serif')}${alias('monospace', 'Liberation Mono')}</fontconfig>\n`)
+  return file
+}
+
 let browser: Browser
 let page: Page
 let work: string
@@ -62,6 +78,8 @@ before(async () => {
     const results = exportVisual({ root: ROOT, doc, langs: [...LANGS], edition: 'internal', profile: null, out: path.join(work, 'html'), fixture: true, pdf: false, chrome: null, log: () => {} })
     for (const result of results) files.set(`${doc}.${result.lang}`, result.html)
   }
+  // This test file runs in its own process, so the variable reaches only the Chrome instances it starts.
+  if (LIBERATION.length) process.env.FONTCONFIG_FILE = isolatedFontconfig(path.join(work, 'fontconfig'))
   browser = await Browser.launch(chrome, DETERMINISTIC)
   page = await browser.newPage()
 }, { timeout: 120_000 })
@@ -101,16 +119,19 @@ async function capture(selector: string): Promise<Image> {
   return downscale(decodePng(Buffer.from(result.data, 'base64')), SCALE)
 }
 
-/** Compares a capture with its baseline (one retry, so a frame caught mid-paint under load is not a failure). */
-async function expectMatches(name: string, selector: string): Promise<void> {
+/**
+ * Compares a capture with its baseline (one retry, so a frame caught mid-paint under load is not a failure).
+ * Returns the failure message, or null; the tests compare every page before failing, so one run reports them all.
+ */
+async function compare(name: string, selector: string): Promise<string | null> {
   const baselineFile = path.join(BASELINES, `${name}.png`)
   let actual = await capture(selector)
   if (UPDATE) {
     fs.mkdirSync(BASELINES, { recursive: true })
     fs.writeFileSync(baselineFile, encodePng(actual))
-    return
+    return null
   }
-  assert.ok(fs.existsSync(baselineFile), `no baseline ${path.relative(ROOT, baselineFile)}: run \`npm run visual:baselines\` and review the images before committing them`)
+  if (!fs.existsSync(baselineFile)) return `no baseline ${path.relative(ROOT, baselineFile)}: run \`npm run visual:baselines\` and review the images before committing them`
   const baseline = decodePng(fs.readFileSync(baselineFile))
   let diff = diffImages(baseline, actual, TOLERANCE)
   if (diff.ratio > MAX_CHANGED) {
@@ -118,32 +139,43 @@ async function expectMatches(name: string, selector: string): Promise<void> {
     actual = await capture(selector)
     diff = diffImages(baseline, actual, TOLERANCE)
   }
-  if (diff.ratio <= MAX_CHANGED) return
+  if (diff.ratio <= MAX_CHANGED) return null
   fs.mkdirSync(OUT, { recursive: true })
   const written = { actual: path.join(OUT, `${name}.actual.png`), baseline: path.join(OUT, `${name}.baseline.png`), diff: path.join(OUT, `${name}.diff.png`) }
   fs.writeFileSync(written.actual, encodePng(actual))
   fs.copyFileSync(baselineFile, written.baseline)
   fs.writeFileSync(written.diff, encodePng(diff.diff))
   const size = diff.sameSize ? '' : ` (size ${actual.width}×${actual.height}, baseline ${baseline.width}×${baseline.height})`
-  assert.fail(`${name}: ${(diff.ratio * 100).toFixed(2)}% of pixels changed (limit ${(MAX_CHANGED * 100).toFixed(2)}%)${size}.\n  diff: ${written.diff}\n  actual: ${written.actual}\n  baseline: ${written.baseline}\nIf the change is intended, run \`npm run visual:baselines\` and commit the new images.`)
+  return `${name}: ${(diff.ratio * 100).toFixed(2)}% of pixels changed (limit ${(MAX_CHANGED * 100).toFixed(2)}%)${size}.\n  diff: ${written.diff}\n  actual: ${written.actual}\n  baseline: ${written.baseline}`
 }
 
-test('reference screenshots: A4 book cover, contents and colour plate, en and fa', { skip }, async () => {
+function assertAllMatch(failures: Array<string | null>): void {
+  const found = failures.filter((item): item is string => item !== null)
+  assert.equal(found.length, 0, `${found.join('\n')}\nIf the change is intended, run \`npm run visual:baselines\` and commit the new images.`)
+}
+
+test('reference screenshots: A4 book cover, contents and colour plate, en and fa', { skip }, async (t) => {
+  const version = (await page.send('Browser.getVersion')) as { product?: string }
+  t.diagnostic(`${version.product ?? 'Chrome'}; fallback fonts: ${LIBERATION.length ? 'Liberation only' : 'system (fonts-liberation not found)'}`)
+  const failures: Array<string | null> = []
   for (const lang of LANGS) {
     await open(`identity.${lang}`, 794)
-    await expectMatches(`book-a4.cover.${lang}`, '#bk-p1')
-    await expectMatches(`book-a4.contents.${lang}`, '#bk-p3')
-    await expectMatches(`book-a4.chapter-colour.${lang}`, '#bk-p4')
+    failures.push(await compare(`book-a4.cover.${lang}`, '#bk-p1'))
+    failures.push(await compare(`book-a4.contents.${lang}`, '#bk-p3'))
+    failures.push(await compare(`book-a4.chapter-colour.${lang}`, '#bk-p4'))
   }
+  assertAllMatch(failures)
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })
 
 test('reference screenshots: A3 Business Model Canvas, en and fa', { skip }, async () => {
+  const failures: Array<string | null> = []
   for (const lang of LANGS) {
     // The printable width of A3 landscape (420 mm minus 2 × 14 mm margins), as in the print test.
     await open(`bmc.${lang}`, 1482)
-    await expectMatches(`bmc-a3.canvas.${lang}`, '.vz-page--canvas')
+    failures.push(await compare(`bmc-a3.canvas.${lang}`, '.vz-page--canvas'))
   }
+  assertAllMatch(failures)
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })
 
