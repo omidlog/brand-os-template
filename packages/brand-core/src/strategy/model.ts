@@ -37,9 +37,9 @@ export type RevisionState = (typeof REVISION_STATES)[number]
 export type EffectiveStatus = (typeof EFFECTIVE_STATUSES)[number]
 
 export const STRATEGY_ID = /^[a-z0-9][a-z0-9-]{2,47}$/
-const ITEM_ID = /^[a-z0-9][a-z0-9_.-]{0,39}$/
-const FACT_ID = /^[a-z0-9][a-z0-9_.-]{1,119}$/
-const LOCALE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/
+export const ITEM_ID = /^[a-z0-9][a-z0-9_.-]{0,39}$/
+export const FACT_ID = /^[a-z0-9][a-z0-9_.-]{1,119}$/
+export const LOCALE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/
 const CURRENCY = /^[A-Z]{3}$/
 
 export const STRATEGY_LIMITS = {
@@ -293,8 +293,12 @@ export function approvalDigest(input: { strategy_id: string; brand_slug: string;
   return sha256Hex(canonicalJson(input))
 }
 
-export function approvalSeal(secret: string, digest: string): string {
-  return crypto.createHmac('sha256', secret).update(`brand-os/strategy-approval/v1\n${digest}`).digest('hex')
+/**
+ * HMAC seal of an approval digest. `domain` separates what was approved (strategy revisions by default; the Content
+ * Bridge calendar seals weeks under its own domain), so a seal made for one kind never verifies as another.
+ */
+export function approvalSeal(secret: string, digest: string, domain = 'brand-os/strategy-approval/v1'): string {
+  return crypto.createHmac('sha256', secret).update(`${domain}\n${digest}`).digest('hex')
 }
 
 /** Digest of what a revision cites (facts and research notes, with revisions). Lets an agent detect a source change. */
