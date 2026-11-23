@@ -24,6 +24,8 @@
     "context",
     "sources",
     "assets",
+    "typography",
+    "export",
     "checks",
     "human_review_required",
     "authorizes",
@@ -243,6 +245,349 @@
               "string",
               "null"
             ]
+          }
+        }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "description": "The type drawn on the post: the approved brand.type.scale per slot (sizes × canvas_scale), or the renderer default, labelled as such. Weights come only from approved fontWeight tokens.",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "canvas_scale",
+        "slots",
+        "headline"
+      ],
+      "properties": {
+        "applied": {
+          "type": "boolean"
+        },
+        "canvas_scale": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "slots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "headline",
+            "label",
+            "body"
+          ],
+          "properties": {
+            "headline": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "role",
+                "family_stack",
+                "appended_generic",
+                "size_px",
+                "line_height",
+                "weight",
+                "family_source",
+                "size_source",
+                "line_height_source",
+                "weight_source"
+              ],
+              "properties": {
+                "role": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "family_stack": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "appended_generic": {
+                  "type": "boolean"
+                },
+                "size_px": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "line_height": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900
+                },
+                "family_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "size_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "line_height_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "weight_source": {
+                  "enum": [
+                    "approved_token",
+                    "renderer_default"
+                  ]
+                }
+              }
+            },
+            "label": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "role",
+                "family_stack",
+                "appended_generic",
+                "size_px",
+                "line_height",
+                "weight",
+                "family_source",
+                "size_source",
+                "line_height_source",
+                "weight_source"
+              ],
+              "properties": {
+                "role": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "family_stack": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "appended_generic": {
+                  "type": "boolean"
+                },
+                "size_px": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "line_height": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900
+                },
+                "family_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "size_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "line_height_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "weight_source": {
+                  "enum": [
+                    "approved_token",
+                    "renderer_default"
+                  ]
+                }
+              }
+            },
+            "body": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "role",
+                "family_stack",
+                "appended_generic",
+                "size_px",
+                "line_height",
+                "weight",
+                "family_source",
+                "size_source",
+                "line_height_source",
+                "weight_source"
+              ],
+              "properties": {
+                "role": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "family_stack": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "appended_generic": {
+                  "type": "boolean"
+                },
+                "size_px": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "line_height": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "weight": {
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 900
+                },
+                "family_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "size_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "line_height_source": {
+                  "enum": [
+                    "approved",
+                    "renderer_default"
+                  ]
+                },
+                "weight_source": {
+                  "enum": [
+                    "approved_token",
+                    "renderer_default"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "headline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start_px",
+            "drawn_px",
+            "reduced_to_fit"
+          ],
+          "properties": {
+            "start_px": {
+              "type": "number"
+            },
+            "drawn_px": {
+              "type": "number"
+            },
+            "reduced_to_fit": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "export": {
+      "type": "object",
+      "description": "draft: live, editable text. final: text converted to outlines locally with owner-supplied font files, recorded by file name and sha256 (never by path).",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "text",
+        "outliner",
+        "fonts"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "draft",
+            "final"
+          ]
+        },
+        "text": {
+          "enum": [
+            "live",
+            "outlined"
+          ]
+        },
+        "outliner": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "version"
+              ],
+              "properties": {
+                "name": {
+                  "const": "resvg-js"
+                },
+                "version": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "fonts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "file_name",
+              "sha256",
+              "families"
+            ],
+            "properties": {
+              "file_name": {
+                "type": "string",
+                "pattern": "^[^/\\\\]+$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "families": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }

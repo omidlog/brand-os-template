@@ -158,7 +158,15 @@ export function hasDigit(text: string): boolean {
   return /\d/.test(asciiDigits(text))
 }
 
+/**
+ * Facts that are short by design: a tagline or a brand promise is good *because* it is a few words. For these the
+ * specificity minimum is one content word (an empty answer still fires); the vague-term rule still applies, so
+ * "best quality, for everyone" is still flagged. Owner decision for the Brand Runtime slice (2026-11-23).
+ */
+export const SHORT_BY_DESIGN_IDS: ReadonlySet<string> = new Set(['brand.verbal.tagline', 'brand.strategy.promise'])
+
 export function minWordsFor(question: FieldQuestion): number {
+  if (SHORT_BY_DESIGN_IDS.has(question.id)) return 1
   if (question.question_type === 'long_text') return QUALITY_THRESHOLDS.longTextWords
   if (question.question_type === 'short_text') return QUALITY_THRESHOLDS.shortTextWords
   return 1

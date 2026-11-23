@@ -428,3 +428,9 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 
 - `npm run brand:runtime -- social-batch --demo --out <dir>`: a `social_batch` `task_context` pack for the SYNTHETIC DEMO brand (temp workspace) becomes ten deterministic SVG drafts, per-post manifests citing pack source ids and revisions, and a batch summary. Checks are calls into existing layers (SVG checker, publication gate, normalizer, Content Bridge claim guard, design-tokens contrast, Strategic Coach, Assurance). No model, no network, `authorizes: []`. Guide: `docs-internal/BRAND_RUNTIME.md`.
 - Asset records: optional `model_use` (`not_allowed` | `local_only` | `external_allowed`); absent means `not_allowed`.
+
+## Unreleased — Brand Runtime: `--pack`, approved type scale, Coach tagline exemption
+
+- `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
+- Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
+- Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
