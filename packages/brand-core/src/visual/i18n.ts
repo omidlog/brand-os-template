@@ -82,6 +82,7 @@ export interface VisualCatalog {
     printOnly: string
     detailsTitle: string
     detailsFields: string
+    sourceShort: string
   }
 }
 
@@ -186,6 +187,7 @@ const en: VisualCatalog = {
     printOnly: 'Studio is read-only: this view only prints what is already merged.',
     detailsTitle: 'Details and sources',
     detailsFields: 'Question ids',
+    sourceShort: 'Source',
   },
 }
 
@@ -290,6 +292,7 @@ const fa: VisualCatalog = {
     printOnly: 'Studio فقط‌خواندنی است: این نما فقط آنچه ادغام شده را چاپ می‌کند.',
     detailsTitle: 'جزئیات و منابع',
     detailsFields: 'شناسهٔ پرسش‌ها',
+    sourceShort: 'منبع',
   },
 }
 
@@ -394,6 +397,7 @@ const tr: VisualCatalog = {
     printOnly: 'Studio salt okunurdur: bu görünüm yalnızca birleştirilmiş olanı yazdırır.',
     detailsTitle: 'Ayrıntılar ve kaynaklar',
     detailsFields: 'Soru kimlikleri',
+    sourceShort: 'Kaynak',
   },
 }
 

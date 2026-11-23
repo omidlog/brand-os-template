@@ -6,7 +6,8 @@ import { html, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
 import type { BrandView, ViewContext } from './layout.js'
 import { brandHeader, brandShell } from './pages.js'
-import { canvasView, detailsView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
+import { renderBlock } from './visual-registry.js'
+import { detailsView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
 
 /**
  * The read-only "Business model" page and its print view. GET only: no form, no link that changes anything. The
@@ -56,7 +57,7 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
           ${summaryView(cat, doc, lang)}
         </div>
       </section>
-      ${canvasView(cat, canvas, { lang, mode: 'screen', showNext: true, idPrefix: 'bmc' })}
+      ${renderBlock(canvas, { cat, lang, mode: 'screen', doc, idPrefix: 'bmc', showNext: true, assetUrl: () => null })}
       ${legend(cat, ['approved', 'stale', 'assumption', 'recommendation', 'withheld', 'missing', 'not_applicable'])}
       ${detailsView(cat, canvas, html`${relationshipsPanel(cat)}${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'screen')}`, cat.text.editionInternalNote, true)}
     </div>`

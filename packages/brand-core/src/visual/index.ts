@@ -1,4 +1,7 @@
 export * from './model.js'
+export { FRAMEWORK_REGISTRY_PATH, FRAMEWORK_REGISTRY_SCHEMA_PATH, frameworkRegistryErrors, validateFrameworkRegistry } from './framework-registry.js'
+export type { FrameworkRegistry } from './framework-registry.js'
+export { BMC_FRAMEWORK, frameworkRef, frameworkRegistry } from './frameworks.js'
 export { BMC_ZONES, buildBusinessModelCanvas, canvasApplies, canvasDocument, entryFromItem, zoneState } from './bmc.js'
 export type { BmcOptions, BmcZoneSpec } from './bmc.js'
 export { fillVisual, isVisualLang, visualCatalog, VISUAL_LANGS } from './i18n.js'

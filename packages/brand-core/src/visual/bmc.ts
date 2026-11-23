@@ -4,8 +4,8 @@ import type { InterviewEngine } from '../engine.js'
 import type { PersonalFacet } from '../types.js'
 import { readEvidence } from '../evidence.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
+import { BMC_FRAMEWORK } from './frameworks.js'
 import {
-  BMC_FRAMEWORK,
   BMC_ZONE_IDS,
   emptyStatusSummary,
   VISUAL_SCHEMA,

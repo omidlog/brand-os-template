@@ -149,20 +149,3 @@ export interface VisualDocument {
 export function emptyStatusSummary(): Record<DataState, number> {
   return Object.fromEntries(DATA_STATES.map((state) => [state, 0])) as Record<DataState, number>
 }
-
-/**
- * Business Model Canvas registry entry. The nine-zone logic is drawn as an original layout; Strategyzer's own
- * artwork is not copied and no licence is implied. Claim: informed by, never "official" or "certified".
- */
-export const BMC_FRAMEWORK: FrameworkRef = {
-  framework_id: 'BMC',
-  title: 'Business Model Canvas',
-  kind: 'professional_framework',
-  authority: 'Alexander Osterwalder / Strategyzer',
-  edition: 'Strategyzer original (2010)',
-  source_url: 'https://www.strategyzer.com/library/the-business-model-canvas',
-  license_status: 'attribution-and-software-use-review',
-  permitted_claim: 'informed_by',
-  verified_on: null,
-  usage_note: 'Original Brand OS layout of the nine business model components. Not Strategyzer artwork; commercial embedding terms are under review.',
-}
