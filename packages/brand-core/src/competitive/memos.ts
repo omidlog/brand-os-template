@@ -193,7 +193,8 @@ function marketingMemo(ws: KnowledgeWorkspace, ctx: CompetitiveContext): Competi
   return { ...memo, kind: 'marketing_opportunity_memo' }
 }
 
-function rateLabel(row: PriceRow): PricingRow['rate_label'] {
+/** How to read one public price. Shared with the competitor share path (V2.2). */
+export function rateLabel(row: Pick<PriceRow, 'promotion' | 'billing_commitment' | 'billing_period'>): PricingRow['rate_label'] {
   if (row.promotion === 'promotional') return 'promotional'
   if (row.promotion === 'unknown') return 'promotion_unknown'
   if (row.billing_commitment === 'annual' && row.billing_period === 'month') return 'monthly_rate_billed_annually'
