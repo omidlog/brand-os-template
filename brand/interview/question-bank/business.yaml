@@ -921,6 +921,45 @@ questions:
     weight: 1
     sector_hints: []
     status: unanswered
+  - id: business.marketing.paid_media
+    module: business-marketing
+    field_path: business.marketing.paid_media
+    label: Paid media
+    prompt:
+      en: Does the brand run paid media now (paid ads, sponsored posts, paid search)? Choose undecided if
+        it is not settled.
+      fa: آیا برند اکنون تبلیغات پولی اجرا می‌کند (آگهی پولی، پست اسپانسری، جست‌وجوی پولی)؟ اگر هنوز روشن
+        نیست، undecided را انتخاب کنید.
+      tr: Marka şu anda ücretli medya kullanıyor mu (ücretli reklam, sponsorlu gönderi, ücretli arama)?
+        Henüz netleşmediyse undecided seçin.
+    why_it_matters: Paid-media measurement checks apply only when paid media runs. This is yes or no,
+      never a budget; the budget stays restricted.
+    question_type: single_choice
+    examples:
+      - "EXAMPLE ONLY: no"
+    options:
+      - undecided
+      - yes
+      - no
+    required_when: always
+    depends_on: []
+    priority: high
+    order: 128
+    sensitivity: internal
+    language:
+      - en
+      - fa
+      - tr
+    source_types: *a1
+    related_outputs:
+      - brand/generated/drafts/business-marketing.md
+    related_ids: []
+    completion_rule: one_of
+    allows_unknown: true
+    required: true
+    weight: 2
+    sector_hints: []
+    status: unanswered
   - id: business.product.portfolio
     module: business-product
     field_path: business.product.portfolio

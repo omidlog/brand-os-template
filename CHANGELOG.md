@@ -15,6 +15,19 @@
 
 - The canvas zones Key activities and Key resources are answered by the new list questions instead of a "no question yet" gap; Customer segments and Cost structure also read their list. `relationships` is `{ modeled: true, links }` when list items exist, else `{ modeled: false, reason: 'no_list_items' }`.
 
+## Unreleased — Production readiness and quality gate (fixes pack PR-E, GAP-05)
+
+### Added
+
+- `productionReadiness()` (`@brand-os/brand-core/runtime`): a separate `brand-os/production-readiness/v1` projection over a `task_context` pack. `TaskContextPack.readiness` keeps its meaning (context only) and is copied unchanged. `production_ready` is `ready` only when no deterministic rule blocks; it is not approval and carries no score; `human_review_required` is always true. Every check names its rule owner, input (ids and counts only), verdict and whether it blocks. Hard rules: pack digest, blocked context, no verified renderer (only `social_batch` has one), unsupported count/format/channel, missing approved copy, a banned claim (the content-bridge guard, shared with `postChecks` as `copyClaimConflicts`), and a logo the owner marked required that is missing, changed, withheld, not SVG or not verifiable. Optional assets never block. Artifact stage re-hashes every file, re-runs both SVG gates on the bytes, checks the pack pin and a required logo in every post, and lifts the runtime's own checks with their owners; non-hard runtime failures (contrast) become `needs_human_review`.
+- MCP tool `production_readiness` (strict schema; pre-render; builds the pack with `task_context` and asset verdicts with `visual_dna` under the same caller context; metadata only; guests, unprofiled agents and other brands denied first; one access-log line, ids only).
+- `brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require logo] [--locale fa|en|tr] [--json]` (exit 3 when not ready) and `--require logo` on `social-batch`, which also writes `production-readiness.json` (`batch-summary.json` is unchanged). en/fa/tr labels, fa RTL.
+- `schemas/production-readiness.schema.json`; guide section in `docs-internal/BRAND_RUNTIME.md`; `task-context` skill step 8. Tests: `production-readiness` (synthetic demo brand only); `audit` pins the tool.
+
+### Changed
+
+- The runtime reads its logo through the Visual DNA resolver (Visual DNA owner decision 6): `loadApprovedLogo` resolves the pack's logo ids as the owner process and reads the bytes with `readVerifiedAsset(…, 'renderer')`; a file that differs from the pack's pinned checksum is `pack_pin_differs`. Not-embedded reasons are now `visual_dna:<state>:<reason>` codes. The resolver's append-only access-log line is the only write under `brand/`. The runtime resolves with the default `use_scope: public` (#44), so a portrait with internal-only rights is never embedded. The synthetic demo logo records its licence.
+
 ## Unreleased — Owner review judgments for assurance scores (GAP-09 follow-up)
 
 ### Added
@@ -505,3 +518,15 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
 - Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
 - Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
+
+## Unreleased — GAP-09 follow-ups: paid-media interview question, company stays company
+
+### Added
+
+- Interview question `business.marketing.paid_media` (business marketing module, single choice `undecided` / `yes` / `no`, internal, en/fa/tr). It is in the question bank, field registry and marketing record.
+
+### Changed
+
+- `brand:assurance` reads `runs_paid_media` from the approved answer to `business.marketing.paid_media`. `--paid-media yes|no` is deprecated: it still works, but only while the question has no approved answer, and it prints an en/fa/tr notice on stderr. An approved answer always wins. A missing paid-media item now points at the question instead of the flag.
+- `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
+- Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.

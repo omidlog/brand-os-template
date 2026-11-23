@@ -428,6 +428,18 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 ## Owner review judgments for assurance scores (GAP-09 follow-up)
 
 - **Done:** `brand:assurance-review list | record` and `assurance/reviews.ts`. Owner-only, versioned judgment store in the brand workspace (`brand/.private/assurance/reviews/`, hash-chained revisions); the bridge uses a judgment while its basis is unchanged, so a real brand gets a completeness ratio once nothing else blocks. Stale judgments block again. Note text never leaves the private file. en/fa/tr. Guide: `docs-internal/ASSURANCE.md`, "Owner review judgments".
+- **Not done:** a Studio page for it (Studio stays read-only; CLI only), linking research notes to the evidence register (notes stay `owner_stated`), withdrawing a judgment without replacing it. (The canonical paid-media question and the company-vs-person subject are done in the next section.)
+
+## GAP-09 follow-ups: paid-media question, company stays company
+
+- **Done (owner decisions 4 and 5, 2026-11-23):** interview question `business.marketing.paid_media` (en/fa/tr) is the source of `runs_paid_media` in `brand:assurance`; `--paid-media` is a deprecated fallback used only while the question has no approved answer. The personal module never makes a company brand a person: only `brand.profile: personal-brand` does, and a founder's personal brand is recorded separately in `snapshot.personal_brand`, outside the subject and the digest. Tests: `assurance-followups`, `assurance-cli`.
+- **Not done:** a Studio page for owner reviews (CLI only, see above), linking notes to the evidence register (later PR), removing the deprecated `--paid-media` flag.
+
+## Production readiness and quality gate (fixes pack PR-E, GAP-05)
+
+- **Done:** `packages/brand-core/src/runtime/production.ts` (+ `production-agent.ts`, `production-i18n.ts`): a separate `brand-os/production-readiness/v1` projection over a `task_context` pack that never changes the pack's own `readiness`. Each check names its rule owner, input, verdict and whether it blocks; only objective rules block (pack digest, blocked context, no verified renderer or unsupported format/count, missing approved copy, banned claim, an owner-required logo that is missing / changed / withheld / unverifiable; at artifact stage also wrong file checksums, unsafe SVG bytes, an unpinned post, a required logo not embedded). Optional assets never block; taste and persuasion stay `needs_human_review` / `not_tested`; no score. MCP `production_readiness` (pre-render, same caller for `task_context` and `visual_dna`), `brand:runtime readiness` (`--root`, `--batch`, `--require logo`, exit 3 when not ready, en/fa/tr), `production-readiness.json` from `social-batch`. The runtime now reads its logo through the Visual DNA resolver (Visual DNA owner decision 6). Schema `production-readiness`. Tests: `production-readiness`.
+- **Not done:** renderers for any task other than `social_batch` (those tasks stay `renderer.available: fail`, briefs only), visual taste / similarity / persuasion checks (`needs_human_review` / `not_tested`), a signature over written batches (checksums detect changed files, not a determined local editor), asset bytes to agents (decision 5), contrast as a hard rule (owner question), the Studio view. Nothing is published, scheduled, spent, deployed or approved.
+
 - **Not done:** a Studio page for it (Studio stays read-only; CLI only), linking research notes to the evidence register (notes stay `owner_stated`), a canonical paid-media question, the company-vs-person subject, withdrawing a judgment without replacing it.
 
 ## Visual V3.1: repeating_entity question type and structured BMC (D3)
