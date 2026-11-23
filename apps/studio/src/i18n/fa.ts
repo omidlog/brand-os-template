@@ -230,6 +230,11 @@ export const fa: Messages = {
   'overview.group.business': 'کسب‌وکار',
   'overview.group.personal': 'شخصی',
   'overview.group.governance': 'حاکمیت',
+  'overview.coach.title': 'پیش از تأیید: یادداشت‌های مربی',
+  'overview.coach.hint': 'مشورتی، خوانده‌شده از پیش‌نویس‌های ادغام‌شده. هیچ‌چیز اینجا تأیید، مسدود یا تغییر نمی‌دهد و هیچ پاسخی نقل نمی‌شود. برای عمل به یادداشت، در Claude Code و در مخزن برند کار کنید.',
+  'overview.coach.more': '{count} پیش‌نویس دیگر هم یادداشت دارد.',
+  'overview.coach.run': 'در Claude Code',
+  'overview.coach.label': 'یادداشت‌های مربی روی پیش‌نویس‌ها',
 
   'doc.counts': 'وضعیت موارد',
   'doc.chapters': 'فصل‌ها',
