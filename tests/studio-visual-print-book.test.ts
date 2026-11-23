@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -9,7 +10,7 @@ import { BOOK_TEXT, bodyHeightMm, illustrativeBusinessModelCanvas, illustrativeV
 import { html, type SafeHtml } from '../apps/studio/src/views/html.js'
 import { printDocument } from '../apps/studio/src/views/visual.js'
 import { BOOK_BODY_MM, identityBookDocument, layoutIdentityBook, paginate, type BookSection } from '../apps/studio/src/views/visual-print-book.js'
-import { checkOutput, exportVisual, ExportError, findChrome } from '../scripts/export-visual.js'
+import { brandUncommitted, checkOutput, exportVisual, ExportError, findChrome } from '../scripts/export-visual.js'
 import { renderGolden } from '../scripts/visual-golden.js'
 
 /**
@@ -142,6 +143,12 @@ test('book: cover, imprint, contents with real page numbers, running heads and f
   assert.match(awaiting, /vz-await/)
   assert.doesNotMatch(awaiting, /#123A73/, 'a draft palette is never printed')
   assert.equal((book('en', 'complete', 'public').match(/class="bk-sheet /g) ?? []).length > 5, true)
+  // An export from a working copy with uncommitted brand/ changes does not claim the commit alone.
+  assert.doesNotMatch(book('en'), /bk-imprint-uncommitted/)
+  for (const lang of VISUAL_LANGS) {
+    const dirty = identityBookDocument({ doc: illustrativeVisualIdentity('internal', 'complete'), lang, commit: 'abcdef0123456789abcdef0123456789abcdef01', uncommitted: true, head: html``, toolbar: html``, assetUrl: () => null }).html.value
+    assert.ok(dirty.includes(`<span class="bk-imprint-uncommitted">${BOOK_TEXT[lang].imprintUncommitted}</span>`), `${lang}: imprint notes uncommitted changes`)
+  }
 })
 
 test('canvas A3 print: the renderer output is byte-for-byte unchanged, and the canvas golden carries no book CSS', () => {
@@ -177,6 +184,34 @@ test('brand:export-visual: writes HTML locally, refuses brand/ and .private, an 
   const bmc = exportVisual({ ...base, doc: 'bmc', langs: ['tr'], out })
   assert.match(fs.readFileSync(bmc[0]!.html, 'utf8'), /vz-page--canvas/)
   for (const bad of ['brand', 'brand/exports', path.join(tmp, '.private', 'x')]) assert.throws(() => checkOutput(root, bad), (error: unknown) => error instanceof ExportError && error.code === 'path', bad)
+  // A link cannot lead there either: the folder itself or a parent linked into brand/ or a .private folder.
+  fs.mkdirSync(path.join(tmp, 'real', '.private'), { recursive: true })
+  fs.symlinkSync(path.join(root, 'brand'), path.join(tmp, 'to-brand'))
+  fs.symlinkSync(path.join(tmp, 'real', '.private'), path.join(tmp, 'to-private'))
+  fs.symlinkSync(path.join(tmp, 'nowhere'), path.join(tmp, 'dangling'))
+  for (const bad of ['to-brand', 'to-brand/exports', 'to-private', 'to-private/new/folder']) assert.throws(() => checkOutput(root, path.join(tmp, bad)), (error: unknown) => error instanceof ExportError && error.code === 'path', `linked: ${bad}`)
+  assert.equal(checkOutput(root, path.join(tmp, 'fresh', 'out')), path.join(tmp, 'fresh', 'out'), 'a new folder outside brand/ is fine')
+  // A link left in the output folder in place of an output file is not followed.
+  const linked = path.join(tmp, 'linked-out')
+  fs.mkdirSync(linked)
+  fs.symlinkSync(path.join(tmp, 'victim.txt'), path.join(linked, 'identity.internal.en.html'))
+  assert.throws(() => exportVisual({ ...base, langs: ['en'], out: linked }), (error: unknown) => error instanceof ExportError && error.code === 'path')
+  assert.equal(fs.existsSync(path.join(tmp, 'victim.txt')), false, 'nothing written through the link')
+  // Uncommitted brand/ changes are detected (ignored files such as .private do not count).
+  const repo = path.join(tmp, 'repo')
+  fs.mkdirSync(path.join(repo, 'brand'), { recursive: true })
+  fs.writeFileSync(path.join(repo, '.gitignore'), '.private/\n')
+  fs.writeFileSync(path.join(repo, 'brand', 'facts.yaml'), 'a: 1\n')
+  const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd: repo, stdio: 'ignore' })
+  git('init', '-q')
+  git('add', '.')
+  git('commit', '-q', '-m', 'init')
+  assert.equal(brandUncommitted(repo), false, 'clean')
+  fs.mkdirSync(path.join(repo, 'brand', '.private'))
+  fs.writeFileSync(path.join(repo, 'brand', '.private', 'secret.yaml'), 'x: 1\n')
+  assert.equal(brandUncommitted(repo), false, 'an ignored .private file is not a change')
+  fs.writeFileSync(path.join(repo, 'brand', 'facts.yaml'), 'a: 2\n')
+  assert.equal(brandUncommitted(repo), true, 'an edited fact is')
   assert.throws(() => exportVisual({ ...base, out, profile: 'deck_16_9' }), (error: unknown) => error instanceof ExportError && error.code === 'planned')
   process.env[AGENT_TOKEN_ENV] = 'bos_at_test'
   try {

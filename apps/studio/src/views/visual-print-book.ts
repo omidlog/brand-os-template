@@ -166,6 +166,8 @@ export interface BookInput {
   doc: VisualDocument
   lang: VisualLang
   commit: string | null
+  /** The export read brand/ with changes not yet committed: the imprint says so next to the commit. */
+  uncommitted?: boolean
   head: SafeHtml
   toolbar: SafeHtml
   assetUrl: (key: string) => string | null
@@ -391,7 +393,7 @@ function imprint(input: BookInput, pageCount: number): SafeHtml {
       <div><dt>${b.imprintDocument}</dt><dd>${b.bookTitle} · ${cat.identity.chapterTitle}</dd></div>
       <div><dt>${b.imprintEdition}</dt><dd>${edition}</dd></div>
       <div><dt>${b.imprintAsOf}</dt><dd>${asOf ?? cat.text.asOfNone}</dd></div>
-      <div><dt>${b.imprintCommit}</dt><dd><code class="vz-code" dir="ltr">${input.commit ? input.commit.slice(0, 12) : '—'}</code></dd></div>
+      <div><dt>${b.imprintCommit}</dt><dd><code class="vz-code" dir="ltr">${input.commit ? input.commit.slice(0, 12) : '—'}</code>${input.commit && input.uncommitted ? html` <span class="bk-imprint-uncommitted">${b.imprintUncommitted}</span>` : ''}</dd></div>
       <div><dt>${b.imprintFormat}</dt><dd>${fillVisual(b.formatBook, { pages: digits(lang, pageCount) })}</dd></div>
       <div><dt>${b.imprintTypeset}</dt><dd>${b.typesetValue}</dd></div>
     </dl>

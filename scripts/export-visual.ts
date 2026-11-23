@@ -94,13 +94,52 @@ export function findChrome(): string | null {
   return candidates.filter((item): item is string => Boolean(item)).find((file) => fs.existsSync(file)) ?? null
 }
 
-/** The output folder must not be the brand's truth: not inside brand/, not inside any .private folder. */
+function lstatOrNull(file: string): fs.Stats | null {
+  try {
+    return fs.lstatSync(file)
+  } catch {
+    return null
+  }
+}
+
+/** The real path of `file`: the nearest existing ancestor resolved through links, plus the part not created yet. */
+function realTarget(file: string): string | null {
+  let existing = file
+  while (!lstatOrNull(existing) && path.dirname(existing) !== existing) existing = path.dirname(existing)
+  try {
+    return path.join(fs.realpathSync(existing), path.relative(existing, file))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The output folder must not be the brand's truth: not inside brand/, not inside any .private folder. Checked on the
+ * path as given and on its real path, so a link (the folder itself or a parent) cannot lead into either.
+ */
 export function checkOutput(root: string, out: string): string {
   const resolved = path.resolve(root, out)
-  const brand = path.resolve(root, 'brand')
-  const inside = (parent: string) => resolved === parent || resolved.startsWith(parent + path.sep)
-  if (inside(brand) || resolved.split(path.sep).includes('.private')) throw new ExportError('path', bookText('en').exportRefusedPath)
+  const refuse = (): never => {
+    throw new ExportError('path', bookText('en').exportRefusedPath)
+  }
+  const real = realTarget(resolved)
+  if (real === null) refuse()
+  const brands = [path.resolve(root, 'brand'), realTarget(path.resolve(root, 'brand'))].filter((dir): dir is string => dir !== null)
+  for (const candidate of [resolved, real!]) {
+    if (brands.some((brand) => candidate === brand || candidate.startsWith(brand + path.sep))) refuse()
+    if (candidate.split(path.sep).includes('.private')) refuse()
+  }
   return resolved
+}
+
+/** An output file must not be a link left in the output folder (writing would follow it). */
+function refuseLink(file: string): void {
+  if (lstatOrNull(file)?.isSymbolicLink()) throw new ExportError('path', bookText('en').exportRefusedPath)
+}
+
+function writeOutput(file: string, data: string): void {
+  refuseLink(file)
+  fs.writeFileSync(file, data)
 }
 
 /** visual.css (+ visual-book.css) with every font embedded, so the HTML opens anywhere, offline. */
@@ -131,23 +170,36 @@ function commitOf(root: string): string | null {
   return /^[0-9a-f]{40}$/.test(sha) ? sha : null
 }
 
+/**
+ * The export reads the working copy, not the commit: true when brand/ has changes git has not committed (tracked or
+ * new files; ignored ones such as .private do not count), so the imprint does not claim the commit alone.
+ */
+export function brandUncommitted(root: string): boolean {
+  const result = spawnSync('git', ['status', '--porcelain', '--', 'brand'], { cwd: root, encoding: 'utf8' })
+  return result.status === 0 && result.stdout.trim().length > 0
+}
+
 interface Source {
   doc: VisualDocument
   assetUrl: (key: string) => string | null
   commit: string | null
+  uncommitted: boolean
 }
 
 function loadSource(options: ExportOptions): Source {
   if (options.fixture) {
     const doc = options.doc === 'identity' ? illustrativeVisualIdentity(options.edition, 'complete') : illustrativeBusinessModelCanvas('en', options.edition)
-    return { doc, assetUrl: () => null, commit: null }
+    return { doc, assetUrl: () => null, commit: null, uncommitted: false }
   }
   const slug = new InterviewEngine(options.root).config().brand.slug
   const { projection, previews } = buildProjection(options.root, slug)
   const visual = projection.visual
   const doc = !visual ? null : options.doc === 'identity' ? (visual.identity?.[options.edition] ?? null) : visual.bmc.applies ? visual.bmc[options.edition] : null
   if (!doc) throw new ExportError('no_document', fillVisual(bookText(options.langs[0] ?? 'en').exportNoDocument, { doc: options.doc }))
-  return { doc, assetUrl: assetEmbedder(previews), commit: commitOf(options.root) }
+  const commit = commitOf(options.root)
+  const uncommitted = commit !== null && brandUncommitted(options.root)
+  if (uncommitted) options.log(bookText(options.langs[0] ?? 'en').exportUncommitted)
+  return { doc, assetUrl: assetEmbedder(previews), commit, uncommitted }
 }
 
 /** Chrome's serialized DOM after scripts ran and fonts loaded (virtual time), or null when Chrome failed. */
@@ -189,7 +241,7 @@ const CHECK = `document.fonts.ready.then(() => {
 
 /** Pass one of the book: render the galley, measure every flow in Chrome, return the heights (null on failure). */
 export function measureBook(chrome: string, input: BookInput, galleyFile: string): Heights | undefined {
-  fs.writeFileSync(galleyFile, withScript(identityBookGalley(input).value, MEASURE))
+  writeOutput(galleyFile, withScript(identityBookGalley(input).value, MEASURE))
   try {
     const result = readResult(dumpDom(chrome, galleyFile), 'bk-measure') as Record<string, number> | null
     return result ? new Map(Object.entries(result).filter(([, value]) => Number.isFinite(value))) : undefined
@@ -203,6 +255,7 @@ function withScript(page: string, script: string): string {
 }
 
 function printPdf(chrome: string, htmlFile: string, pdfFile: string): number | null {
+  refuseLink(pdfFile)
   execFileSync(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--no-pdf-header-footer', '--allow-file-access-from-files', `--print-to-pdf=${pdfFile}`, pathToFileURL(htmlFile).href], { stdio: 'ignore', timeout: 120_000 })
   const text = fs.readFileSync(pdfFile).toString('latin1')
   return (text.match(/\/Type\s*\/Page(?![s\w])/g) ?? []).length || null
@@ -225,6 +278,8 @@ export function exportVisual(options: ExportOptions): ExportedFile[] {
   const out = checkOutput(options.root, options.out)
   const source = loadSource(options)
   fs.mkdirSync(out, { recursive: true })
+  // Once the folder exists its real path is known: check again, in case a link appeared on the way.
+  checkOutput(options.root, out)
   const book = options.doc === 'identity'
   const head = html`<style>${trusted(embeddedStyles(book))}</style>`
   const chrome = options.pdf ? options.chrome : null
@@ -237,18 +292,18 @@ export function exportVisual(options: ExportOptions): ExportedFile[] {
     let page: SafeHtml
     let measured = 0
     if (book) {
-      const input = { doc, lang, commit: source.commit, head, toolbar: html``, assetUrl: source.assetUrl }
+      const input = { doc, lang, commit: source.commit, uncommitted: source.uncommitted, head, toolbar: html``, assetUrl: source.assetUrl }
       const heights = chrome ? measureBook(chrome, input, path.join(out, `.${name}.galley.html`)) : undefined
       if (heights) {
         measured = heights.size
         options.log(fillVisual(bookText(lang).exportMeasured, { count: measured }))
-      }
+      } else if (chrome) options.log(bookText(lang).exportMeasureFailed)
       page = identityBookDocument({ ...input, heights }).html
     } else {
       page = printDocument({ doc, lang, commit: source.commit, head, toolbar: html`` })
     }
     assertNoSecrets(page.value)
-    fs.writeFileSync(htmlFile, page.value)
+    writeOutput(htmlFile, page.value)
     options.log(fillVisual(bookText(lang).exportWrote, { file: shown(options.root, htmlFile) }))
     let pdf: string | null = null
     let pages: number | null = null
@@ -259,7 +314,7 @@ export function exportVisual(options: ExportOptions): ExportedFile[] {
       options.log(fillVisual(bookText(lang).exportWrote, { file: shown(options.root, pdf) }))
       if (book) {
         const checkFile = path.join(out, `.${name}.check.html`)
-        fs.writeFileSync(checkFile, withScript(page.value, CHECK))
+        writeOutput(checkFile, withScript(page.value, CHECK))
         overflow = (readResult(dumpDom(chrome, checkFile), 'bk-check') as number[] | null) ?? []
         fs.rmSync(checkFile, { force: true })
         for (const folio of overflow) options.log(fillVisual(bookText(lang).exportOverflow, { page: folio, file: path.basename(htmlFile) }))
