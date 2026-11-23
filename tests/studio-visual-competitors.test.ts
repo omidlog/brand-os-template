@@ -4,6 +4,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { SHARED_LANDSCAPE_PATH, type SharedLandscape } from '@brand-os/brand-core/competitive'
 import { illustrativeLandscape } from '@brand-os/brand-core/visual'
+import { studioPathAllowed } from '../apps/studio/src/github/tar.js'
 import { editOutsideStudio } from './helpers/edits.js'
 import { Client, startStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
@@ -152,4 +153,11 @@ test('sync: a cache written before the comparison existed is rebuilt at the same
   assert.equal(h.sync.get(req.slug).projection!.visual?.competitors, undefined)
   const after = await h.sync.refresh(req.slug)
   assert.equal(after.projection!.visual?.competitors?.document_kind, 'competitor_comparison')
+})
+
+test('tar allowlist: Studio admits exactly the one shared landscape file under brand/competitive', () => {
+  assert.equal(studioPathAllowed('brand/competitive/shared/landscape.json'), true)
+  for (const rel of ['brand/competitive/shared/other.json', 'brand/competitive/shared/landscape.json.bak', 'brand/competitive/candidates/cmp_x.json', 'brand/competitive/scope.json', 'brand/Competitive/shared/landscape.json', 'brand/competitive/shared/sub/landscape.json', 'brand/.private/competitive/candidates/cmp_1.json']) {
+    assert.equal(studioPathAllowed(rel), false, rel)
+  }
 })

@@ -15,7 +15,6 @@ import {
   type SharedLandscape,
 } from '@brand-os/brand-core/competitive'
 import { unavailableAdapter } from '@brand-os/brand-core/research'
-import { studioPathAllowed } from '../apps/studio/src/github/tar.js'
 import { MESSAGE_QUOTE, NOW, PRICE_QUOTE, record, source, VISUAL_QUOTE, wordflightSources } from './helpers/competitive.js'
 import { listTree, useTestKey, workspace } from './helpers/knowledge.js'
 
@@ -252,11 +251,4 @@ test('read: Studio keeps only listed fields; malformed, other-brand, symlinked o
   fs.writeFileSync(path.join(root, 'x.json'), JSON.stringify(good))
   fs.symlinkSync(path.join(root, 'x.json'), file)
   assert.deepEqual(readSharedLandscape(root, 'pilito'), { state: 'withheld', reason: 'symlink' })
-})
-
-test('tar allowlist: Studio admits exactly the one shared landscape file under brand/competitive', () => {
-  assert.equal(studioPathAllowed('brand/competitive/shared/landscape.json'), true)
-  for (const rel of ['brand/competitive/shared/other.json', 'brand/competitive/shared/landscape.json.bak', 'brand/competitive/candidates/cmp_x.json', 'brand/competitive/scope.json', 'brand/Competitive/shared/landscape.json', 'brand/competitive/shared/sub/landscape.json', 'brand/.private/competitive/candidates/cmp_1.json']) {
-    assert.equal(studioPathAllowed(rel), false, rel)
-  }
 })
