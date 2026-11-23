@@ -11,6 +11,7 @@ import { CONTROL_TEXT, fill, type AssuranceLang } from './i18n.js'
 import type { AssuranceSnapshot, JudgmentState, LinkItem, MissingItem, MissingKind, ReviewItem, SubjectSource, VerifyResult } from './workspace.js'
 import type { Judgment, ReviewRevision } from './reviews.js'
 import type { LinkRevision, LinkState } from './links.js'
+import type { EvidenceStatus } from '../evidence.js'
 import type { FactPresence } from './assess.js'
 import type { SubjectField } from './controls.js'
 
@@ -478,6 +479,14 @@ export const LINK_STATE_TEXT: Record<LinkState, T> = {
   rejected: { en: 'does not count: the owner rejected the entry', fa: 'حساب نمی‌شود: مالک این مدرک را رد کرده است', tr: 'sayılmaz: sahip kaydı reddetti' },
 }
 
+/** The evidence register's own status words, so a Persian or Turkish list does not show English tokens. */
+export const EVIDENCE_STATUS_TEXT: Record<EvidenceStatus, T> = {
+  pending: { en: 'pending', fa: 'در انتظار تأیید', tr: 'onay bekliyor' },
+  verified: { en: 'verified', fa: 'تأییدشده', tr: 'doğrulandı' },
+  rejected: { en: 'rejected', fa: 'ردشده', tr: 'reddedildi' },
+  withdrawn: { en: 'withdrawn', fa: 'پس‌گرفته‌شده', tr: 'geri çekildi' },
+}
+
 export const LINK_TEXT: Catalog = {
   title: { en: 'Evidence links for research notes — owner-local', fa: 'پیوند یادداشت‌های پژوهشی به شواهد — فقط محلی', tr: 'Araştırma notları için kanıt bağlantıları — yalnızca yerel' },
   intro: {
@@ -591,12 +600,12 @@ export function renderLinkList(result: { brand_id: string; items: LinkItem[] }, 
   lines.push(LINK_TEXT.intro![lang], '')
   for (const entry of result.items) {
     lines.push(`## \`${entry.note_id}\``, '')
-    lines.push(`- ${LINK_TEXT.questions![lang]}: ${entry.question_ids.map((id) => `\`${id}\``).join(', ') || '—'}`)
-    lines.push(`- ${LINK_TEXT.controls![lang]}: ${entry.control_ids.join(', ') || '—'}`)
+    lines.push(`- ${LINK_TEXT.questions![lang]}: ${entry.question_ids.map((id) => `\`${id}\``).join(comma(lang)) || '—'}`)
+    lines.push(`- ${LINK_TEXT.controls![lang]}: ${entry.control_ids.join(comma(lang)) || '—'}`)
     lines.push(`- ${LINK_TEXT.link![lang]}: ${entry.link ? `\`${entry.link.evidence_id}\` · ${entry.link.linked_on} · \`${entry.link.revision}\` · **${LINK_STATE_TEXT[entry.link.state][lang]}**` : LINK_TEXT.no_link![lang]}`)
     lines.push(`- ${LINK_TEXT.revisions![lang]}: ${entry.revisions}`)
-    const candidates = entry.candidates.map((candidate) => `\`${candidate.evidence_id}\` (\`${candidate.claim_id}\`, ${candidate.status}${candidate.independent_source ? '' : `, ${LINK_TEXT.testimony![lang]}`})`)
-    lines.push(`- ${LINK_TEXT.candidates![lang]}: ${candidates.join(', ') || LINK_TEXT.no_candidates![lang]}`)
+    const candidates = entry.candidates.map((candidate) => `\`${candidate.evidence_id}\` (\`${candidate.claim_id}\`${comma(lang)}${EVIDENCE_STATUS_TEXT[candidate.status][lang]}${candidate.independent_source ? '' : `${comma(lang)}${LINK_TEXT.testimony![lang]}`})`)
+    lines.push(`- ${LINK_TEXT.candidates![lang]}: ${candidates.join(comma(lang)) || LINK_TEXT.no_candidates![lang]}`)
     lines.push(`- ${fill(LINK_TEXT.how![lang], { note: entry.note_id })}`, '')
   }
   lines.push(`> ${LINK_TEXT.unconfirmed![lang]}`, '', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')

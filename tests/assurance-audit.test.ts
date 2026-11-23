@@ -10,6 +10,11 @@ import {
   BRIDGE_HELP,
   BRIDGE_TEXT,
   buildAssuranceSnapshot,
+  EVIDENCE_STATUS_TEXT,
+  LINK_HELP,
+  LINK_STATE_TEXT,
+  LINK_TEXT,
+  renderLinkList,
   renderSnapshotSummary,
   MISSING_KIND_TEXT,
   parseSnapshotFile,
@@ -105,8 +110,11 @@ test('Persian text uses واقعیت, not the English word fact', () => {
     ...Object.values(REVIEW_TEXT).map((entry) => entry.fa),
     ...Object.values(MISSING_KIND_TEXT).map((entry) => entry.fa),
     ...Object.values(SUBJECT_SOURCE_TEXT).map((entry) => entry.fa),
+    ...Object.values(LINK_TEXT).map((entry) => entry.fa),
+    ...Object.values(LINK_STATE_TEXT).map((entry) => entry.fa),
     BRIDGE_HELP.fa,
     REVIEW_HELP.fa,
+    LINK_HELP.fa,
   ]
   // Ids such as approved_fact or business.* stay as typed; only the bare word is checked.
   for (const text of persian) assert.ok(!/(^|[^_a-z.])facts?(?![_a-z.])/i.test(text.replace(/`[^`]*`/g, '')), text)
@@ -119,4 +127,28 @@ test('Persian lists use the Persian comma; other languages keep theirs', () => {
   assert.ok(fa.includes('، `business.sales.motion`'), 'fa subject line uses U+060C')
   assert.ok(!/`, `|\), `|[؀-ۿ], `/.test(fa), 'no Latin comma between Persian items')
   assert.ok(renderSnapshotSummary(snapshot, 'en').includes(', `business.sales.motion`'))
+})
+
+test('the evidence-link list uses the Persian comma and translated register statuses (main merge, GAP-09 links)', () => {
+  const item = {
+    note_id: 'kn_demo',
+    revision: 'r1',
+    question_ids: ['business.customer.primary_segment', 'business.offer.core'],
+    control_ids: ['PRR-03', 'PRR-08'],
+    link: null,
+    revisions: 0,
+    candidates: [
+      { evidence_id: 'ev-0001', claim_id: 'business.customer.primary_segment', status: 'pending' as const, independent_source: true },
+      { evidence_id: 'ev-0002', claim_id: 'business.customer.primary_segment', status: 'verified' as const, independent_source: false },
+    ],
+  }
+  const fa = renderLinkList({ brand_id: 'demo', items: [item] }, 'fa')
+  assert.ok(fa.includes('`business.customer.primary_segment`، `business.offer.core`'), 'questions')
+  assert.ok(fa.includes('PRR-03، PRR-08'), 'controls')
+  assert.ok(fa.includes(EVIDENCE_STATUS_TEXT.pending.fa) && fa.includes(EVIDENCE_STATUS_TEXT.verified.fa), 'statuses in Persian')
+  assert.ok(!/\b(pending|verified)\b/.test(fa), 'no English status token in Persian')
+  assert.ok(!/`, `|\), `|[؀-ۿ], /.test(fa), 'no Latin comma between Persian items')
+  const tr = renderLinkList({ brand_id: 'demo', items: [item] }, 'tr')
+  assert.ok(tr.includes(EVIDENCE_STATUS_TEXT.pending.tr) && tr.includes('PRR-03, PRR-08'))
+  assert.ok(renderLinkList({ brand_id: 'demo', items: [item] }, 'en').includes('(`business.customer.primary_segment`, pending)'))
 })
