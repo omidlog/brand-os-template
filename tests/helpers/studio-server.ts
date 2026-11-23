@@ -85,6 +85,32 @@ export async function startStudio(overrides: Partial<StudioConfig> = {}, githubO
 /** Accepted TOTP windows: each login in a test uses the next one so replay protection does not refuse it. */
 const DRIFTS = [0, 30_000, -30_000]
 let loginCount = 0
+/** TOTP steps already sent to each Studio server (by base URL); a server refuses a step it has seen as "reused". */
+const usedSteps = new Map<string, Set<number>>()
+
+/**
+ * A TOTP code for a step no earlier login to this server used (HTTP client or browser), so a browser
+ * sign-in after `Client.login()` cannot land on the step the client took when a 30 s boundary passes
+ * in between. Rotates through the accepted drifts; waits for the next step if all three are taken.
+ */
+export async function freshTotp(base: string): Promise<string> {
+  const used = usedSteps.get(base) ?? new Set<number>()
+  usedSteps.set(base, used)
+  for (;;) {
+    for (let tried = 0; tried < DRIFTS.length; tried += 1) {
+      loginCount += 1
+      const drift = DRIFTS[loginCount % 3]!
+      // The previous step's code is accepted only until the current step ends. Under load, the request
+      // can reach the server after that boundary and fail as "invalid", so never use it close to it.
+      if (drift < 0 && 30_000 - (Date.now() % 30_000) < 5_000) continue
+      const step = Math.floor((Date.now() + drift) / 30_000)
+      if (used.has(step)) continue
+      used.add(step)
+      return totpAt(TOTP_SECRET, step * 30_000)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 30_000 - (Date.now() % 30_000) + 50))
+  }
+}
 
 /** A tiny browser: cookie jar, manual redirects, Origin header on POST. */
 export class Client {
@@ -142,13 +168,7 @@ export class Client {
   async login(): Promise<void> {
     const token = await this.csrf('/login')
     // Each login uses a fresh TOTP step so replay protection does not reject repeated logins in one test.
-    loginCount += 1
-    const drift = DRIFTS[loginCount % 3]!
-    // The previous step's code is accepted only until the current step ends. Under load, the request
-    // can reach the server after that boundary and fail as "invalid", so never start one close to it.
-    const left = 30_000 - (Date.now() % 30_000)
-    if (drift < 0 && left < 5_000) await new Promise((resolve) => setTimeout(resolve, left + 50))
-    const code = totpAt(TOTP_SECRET, Date.now() + drift)
+    const code = await freshTotp(this.base)
     const res = await this.request('POST', '/login', { form: { _csrf: token, login: OWNER_LOGIN, password: OWNER_PASSWORD, totp: code, next: '/brands' } })
     if (res.status !== 303) throw new Error(`login failed: ${res.status} ${await res.text()}`)
   }
