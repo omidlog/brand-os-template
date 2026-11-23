@@ -112,7 +112,9 @@ export interface BatchSummary {
   task: { type: 'social_batch'; channel: 'instagram'; locale: TaskLocale; requested_count: number }
   status: 'drafted' | 'blocked'
   blockers: Array<{ code: string; detail: string }>
-  context: { pack_schema: string; pack_sha256: string; pack_readiness: string; pack_staleness: string; pack_verified: boolean; missing: string[] }
+  /** Advice that never blocks: Coach results that are not `ready`, by question id, status and finding codes. */
+  warnings: Array<{ layer: 'coach'; question_id: string | null; status: string; codes: string[]; blocks: false }>
+  context: { origin: 'demo' | 'pack_file'; pack_schema: string; pack_sha256: string; pack_readiness: string; pack_staleness: string; pack_verified: boolean; missing: string[] }
   posts: Array<{ post_id: string; file: string; manifest: string; sha256: string; angle: string; layout: string; checks: Record<CheckResult, number> }>
   set_checks: ReportedCheck[]
   layers: LayerReport[]

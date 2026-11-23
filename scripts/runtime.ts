@@ -7,6 +7,8 @@ import {
   DEMO_NOW,
   demoPack,
   loadApprovedLogo,
+  openOwnerWorkspace,
+  readPackFile,
   runSocialBatch,
   RuntimeError,
   writeBatch,
@@ -20,13 +22,25 @@ import {
  * pack as a content-read agent of that demo brand, renders ten SVG drafts with the deterministic renderer, calls the
  * existing quality layers and writes everything to --out. It never reads or writes this repository's brand/ folder,
  * calls no model and no network, and publishes, schedules, spends, deploys or approves nothing.
+ *
+ * social-batch --pack <file> renders a real brand's approved social_batch pack: the JSON `brand:query --tool
+ * task_context --task-type social_batch --count 10` printed. The pack is verified exactly like the demo pack (digest,
+ * task type, count, empty authorizes). It reads the pack file and nothing else, unless --root names the owner's own
+ * checkout of the same brand: then the Coach is called and an approved logo may be embedded through the publication
+ * gate. brand/ is never written.
  */
 
-const HELP = `brand:runtime social-batch --demo --out <empty dir> [--locale fa|en|tr] [--png] [--json]
+const HELP = `brand:runtime social-batch (--demo | --pack <file> [--root <dir>]) --out <empty dir> [--locale fa|en|tr] [--png] [--json]
 
-  --demo     required in this slice: use the SYNTHETIC DEMO brand (temp workspace, removed afterwards)
+  --demo     use the SYNTHETIC DEMO brand (temp workspace, removed afterwards)
+  --pack     a real brand's social_batch pack file: the output of
+             brand:query --tool task_context --task-type social_batch --count 10 [--locale fa]
+             verified like the demo pack; the pack's own task locale is used
+  --root     with --pack only, owner-local: the owner's checkout of the same brand. Enables the Coach and the
+             approved logo (publication gate + checksum). Read-only; refused under an agent token
+  --as-of    with --pack: ISO date for the Coach and the assessment (default: now)
   --out      an empty or new directory outside any brand/ folder; nothing is written anywhere else
-  --locale   labels and direction (default fa). Approved copy is never translated.
+  --locale   with --demo: labels and direction (default fa). Approved copy is never translated.
   --png      also write PNG previews to <out>/previews (resvg; previews are not deliverables and not hashed)
   --json     print the batch summary as JSON
 
@@ -59,46 +73,60 @@ async function main(): Promise<void> {
     return
   }
   if (command !== 'social-batch') usage(`Unknown command "${command}".`)
-  let values: { demo?: boolean; out?: string; locale?: string; png?: boolean; json?: boolean }
+  let values: { demo?: boolean; pack?: string; root?: string; 'as-of'?: string; out?: string; locale?: string; png?: boolean; json?: boolean }
   try {
     values = parseArgs({
       args: rest,
-      options: { demo: { type: 'boolean', default: false }, out: { type: 'string' }, locale: { type: 'string' }, png: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
+      options: { demo: { type: 'boolean', default: false }, pack: { type: 'string' }, root: { type: 'string' }, 'as-of': { type: 'string' }, out: { type: 'string' }, locale: { type: 'string' }, png: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
       allowPositionals: false,
       strict: true,
     }).values
   } catch (error) {
     usage(error instanceof Error ? error.message : String(error))
   }
-  if (!values.demo) usage('This slice runs only on the SYNTHETIC DEMO brand: pass --demo. Real brands are an open owner decision (docs-internal/BRAND_RUNTIME.md).')
+  if (values.demo === Boolean(values.pack)) usage('Pass exactly one of --demo (the SYNTHETIC DEMO brand) or --pack <file> (a real brand\'s task_context pack).')
   if (!values.out) usage('--out <dir> is required.')
+  if (values.demo && (values.root || values['as-of'])) usage('--root and --as-of apply to --pack only.')
+  if (values.pack && values.locale) usage('--locale applies to --demo only: a pack carries its own task locale (brand:query --locale).')
   const locale = values.locale ?? 'fa'
   if (locale !== 'fa' && locale !== 'en' && locale !== 'tr') usage(`--locale must be fa, en or tr (given ${locale}).`)
+  const out = path.resolve(values.out)
 
-  const demo = createDemoBrand()
-  try {
-    const pack = demoPack(demo, locale)
-    const { logo } = loadApprovedLogo(demo.root, pack)
-    const result = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo, coach: demo.engine, now: DEMO_NOW })
-    const out = path.resolve(values.out)
-    const written = writeBatch(out, result)
-    const note = values.png ? await previews(out, result) : null
-    if (values.json) {
-      console.log(JSON.stringify(result.summary, null, 2))
-      return
+  let result: SocialBatchResult
+  if (values.demo) {
+    const demo = createDemoBrand()
+    try {
+      const pack = demoPack(demo, locale)
+      const { logo } = loadApprovedLogo(demo.root, pack)
+      result = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo, coach: demo.engine, now: DEMO_NOW, origin: 'demo' })
+    } finally {
+      demo.cleanup()
     }
-    const s = result.summary
-    console.log(`${DEMO_BANNER}`)
-    console.log(`status: ${s.status}  posts: ${s.posts.length}  pack: ${s.context.pack_sha256.slice(0, 12)} (${s.context.pack_readiness}, ${s.context.pack_staleness})`)
-    for (const post of s.posts) console.log(`  ${post.post_id}  ${post.angle.padEnd(17)} ${post.layout.padEnd(9)} pass ${post.checks.pass}  warn ${post.checks.warn}  fail ${post.checks.fail}  ${post.sha256.slice(0, 12)}`)
-    for (const check of s.set_checks) console.log(`  set ${check.check_id.padEnd(24)} ${check.result}`)
-    for (const layer of s.layers) console.log(`  layer ${layer.layer}: ${layer.called ? 'called' : `not called (${layer.skipped_reason})`}, ${layer.results.length} result(s)`)
-    console.log(`files: ${written.length} written to ${out}`)
-    if (note) console.log(note)
-    console.log('Drafts for human review. Nothing was published, scheduled, spent, deployed or approved; authorizes: [].')
-  } finally {
-    demo.cleanup()
+  } else {
+    const now = values['as-of'] ? new Date(values['as-of']) : new Date()
+    if (Number.isNaN(now.getTime())) usage('--as-of must be an ISO date.')
+    const pack = readPackFile(values.pack!)
+    const engine = values.root ? openOwnerWorkspace(values.root, pack) : null
+    const logo = engine ? loadApprovedLogo(engine.workspaceRoot(), pack).logo : null
+    result = runSocialBatch(pack, { demo: false, logo, coach: engine, now, origin: 'pack_file' })
   }
+  const written = writeBatch(out, result)
+  const note = values.png ? await previews(out, result) : null
+  if (values.json) {
+    console.log(JSON.stringify(result.summary, null, 2))
+    return
+  }
+  const s = result.summary
+  if (s.demo) console.log(`${DEMO_BANNER}`)
+  console.log(`status: ${s.status}  posts: ${s.posts.length}  pack: ${s.context.pack_sha256.slice(0, 12)} (${s.context.origin}, ${s.context.pack_readiness}, ${s.context.pack_staleness})`)
+  for (const blocker of s.blockers) console.log(`  blocked: ${blocker.code}`)
+  for (const post of s.posts) console.log(`  ${post.post_id}  ${post.angle.padEnd(17)} ${post.layout.padEnd(9)} pass ${post.checks.pass}  warn ${post.checks.warn}  fail ${post.checks.fail}  ${post.sha256.slice(0, 12)}`)
+  for (const check of s.set_checks) console.log(`  set ${check.check_id.padEnd(24)} ${check.result}`)
+  for (const layer of s.layers) console.log(`  layer ${layer.layer}: ${layer.called ? 'called' : `not called (${layer.skipped_reason})`}, ${layer.results.length} result(s)`)
+  for (const warning of s.warnings) console.log(`  warn coach ${warning.question_id ?? 'brand'}: ${warning.status} (${warning.codes.join(', ')}) — advice, does not block`)
+  console.log(`files: ${written.length} written to ${out}`)
+  if (note) console.log(note)
+  console.log('Drafts for human review. Nothing was published, scheduled, spent, deployed or approved; authorizes: [].')
 }
 
 main().catch((error: unknown) => {
