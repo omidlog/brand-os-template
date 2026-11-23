@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { effectiveModelUse } from '@brand-os/asset-catalog'
 import { appendAccessLog } from '../access-log.js'
 import type { AuthContext } from '../auth.js'
 import { isPlaceholderValue } from '../content-bridge/sources.js'
@@ -228,7 +229,7 @@ function addAssets(builder: Builder, engine: InterviewEngine, ctx: AuthContext, 
       const value = item.value as Record<string, unknown>
       builder.item('creative', {
         key: `assets.${role}`,
-        value: { id: item.id, name: value.name ?? null, path: value.path ?? null, checksum_sha256: value.checksum_sha256 ?? null, license: value.license ?? null, usage: value.usage ?? null },
+        value: { id: item.id, name: value.name ?? null, path: value.path ?? null, checksum_sha256: value.checksum_sha256 ?? null, license: value.license ?? null, usage: value.usage ?? null, model_use: effectiveModelUse(value) },
         state: 'approved',
         source_id: item.id,
         source_revision: item.revision,

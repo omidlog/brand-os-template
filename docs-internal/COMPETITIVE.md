@@ -92,7 +92,7 @@ Every command is refused while `BRAND_OS_AGENT_TOKEN` is set. None of them uses 
 ## Privacy
 
 - Owner-only, local and gitignored.
-- No MCP tool, `brand:query` path, Studio page, public projection or docs build reads `brand/.private/competitive`. `tests/audit.test.ts` pins the MCP tool list.
+- No MCP tool, `brand:query` path, Studio page, public projection or docs build reads `brand/.private/competitive`. Studio reads only the redacted file the owner shares (see "Share path"). `tests/audit.test.ts` pins the MCP tool list.
 - A `knowledge-read` or any other agent token is refused by the owner-process check.
 
 ## Reuse map
@@ -151,9 +151,29 @@ Its state is `missing`, `candidate_only`, `evidence_insufficient` or `evidence_a
 
 **Reuse.** The landscape, research store, ref states and price checks are those of Slice B. The digest uses the Strategy Feed's `canonicalJson`/`sha256Hex`. Facts come from `readFacts`, SEO answers from `seo/answers.ts`, and the intake from `readIdentityIntake`. Drafts are printed, not stored, so there is no new record type.
 
+## Share path (Visual V2.2, owner decision D1)
+
+`npm run brand:competitive -- share [--dry-run]` is the only way competitor data leaves `brand/.private/competitive`. It writes one tracked file, `brand/competitive/shared/landscape.json`. The owner reviews the diff, commits it and merges it. Studio shows it on the read-only "Competitor comparison matrix" page (`/brands/<slug>/visual/competitors`) after the merge. Studio never writes it. Code: `competitive/share.ts`. Tests: `tests/competitive-share.test.ts`.
+
+**What is shared** (an allow-list, rebuilt field by field):
+
+- Only competitors with stored status `owner_reviewed`. Candidates, disputed and archived records are counted (`not_shared`), never named.
+- Per competitor: id, display name, relationship, geographic relevance, markets, and the domain only while a current source verifies it. Assessment is `owner_reviewed` or `needs_refresh`.
+- Per comparison criterion (`offer`, `audience`, `geography`, `public_price`, `public_message`, `visual_language`, `observable_channels`): the cell state (`observed | unverified | historical | conflicting | needs_review | unknown`), at most three short recorder labels, and source labels: who is speaking (source class), the public host for web sources, and the date the source was read.
+- Public prices as recorded: offer, amount, currency, market, period, commitment, tax, promotion, feature scope, a rate label and a state. `ranked: false`, `currency_conversion: 'none'`. Rows are grouped by currency, then by competitor name; the amount is never a sort key. A price whose source needs review is left out.
+
+**What is never shared:** quotes or excerpts; Knowledge note ids, revisions and claim keys; URLs and paths; status reasons; claimed but unverified domains; same-name reasons; gap texts; scope; the target-market fact; the research adapter state; hypotheses (`strength_hypothesis`, `weakness_hypothesis` and any `inference`); hosts of owner-testimony or first-party sources. A label or feature scope that contains a recorded quote (normalized, 20 characters or more) or that the Knowledge safety scan flags is dropped and counted in `withheld_text`. A competitor name the scan flags stops the share.
+
+**Determinism.** No run time is stored. `as_of` is the latest source date, and freshness is judged per day, so re-running gives the same bytes and an unchanged file is not rewritten. A competitor that is no longer owner-reviewed disappears on the next run. Refused under an agent token; a symlink at the target is refused.
+
+**Studio** (`readSharedLandscape`) admits only that exact path (tar allowlist). It checks the exact key set at every level, so any extra field, a ranked price list, a URL as a host, another brand's file, a symlink or secret-looking text withholds the whole file. The projection still passes `assertNoSecrets`.
+
+**Privacy note.** Competitor names and the shared labels become visible to everyone with read access to the brand repository.
+
 ## Not in this slice
 
 - An interview question such as "who do buyers compare us with". The gap checklist asks it, and the CLI records the answers as candidates.
 - The rebrand audit and logo brief (Slice D).
-- Studio views and agent access.
+- Agent access, and Studio views other than the shared comparison matrix (V2.2).
+- A positioning map (V2.3; needs the D2 axes record).
 - Live discovery or search.

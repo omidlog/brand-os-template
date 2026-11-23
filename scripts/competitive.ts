@@ -16,6 +16,7 @@ import {
   MEMO_PURPOSES,
   readCandidate,
   renderMemo,
+  shareLandscape,
   scanCandidates,
   setScope,
   setStatus,
@@ -61,6 +62,9 @@ const HELP = `brand:competitive <command> [options]
                                               a draft read against approved facts; prints, writes nothing
   import-seo-names [--dry-run]                add seo.competitors.named answers as unverified candidates
                                               (owner assumptions; existing names are reported, never merged)
+  share [--dry-run]                           write a quote-free, redacted landscape of owner-reviewed
+                                              competitors to brand/competitive/shared/landscape.json for
+                                              Studio's comparison matrix (you review and commit it)
 
 Dimensions: offer, audience, geography, public_price, public_message, visual_language, observable_channels,
 strength_hypothesis, weakness_hypothesis (the last two are inferences).
@@ -253,6 +257,18 @@ function run(ws: KnowledgeWorkspace, values: Values): void {
         out.interview === 'not_answered'
           ? 'seo.competitors.named is not answered (or is unknown). Nothing to import.'
           : [...out.results.map((r) => `${r.outcome.padEnd(10)} ${r.name}${r.competitor_id ? ` ${r.competitor_id}` : ''}${r.reason ? ` — ${r.reason}` : ''}`), 'Imported names are unverified candidates (owner assumptions), not search evidence.'].join('\n'),
+      )
+      return
+    }
+    case 'share': {
+      const out = shareLandscape(ws, { capability: selectAdapter({}).capability(ws.now()), dryRun: values['dry-run'] })
+      const doc = out.landscape
+      print(values, { ok: true, dry_run: values['dry-run'], path: out.path, written: out.written, changed: out.changed, landscape: doc }, () =>
+        [
+          `${values['dry-run'] ? 'Preview of' : out.written ? 'Wrote' : 'Unchanged:'} ${out.path}: ${doc.competitors.length} owner-reviewed competitor(s), ${doc.prices.rows.length} public price(s), listed, never ranked or converted.`,
+          `Not shared: ${doc.not_shared.candidates} candidate(s), ${doc.not_shared.disputed} disputed, ${doc.not_shared.archived} archived. ${doc.withheld_text} label(s) left out (quote match or safety scan).`,
+          'No quotes, note ids, URLs or reasons are in the file. Review the diff, then commit it; Studio shows it after the merge.',
+        ].join('\n'),
       )
       return
     }
