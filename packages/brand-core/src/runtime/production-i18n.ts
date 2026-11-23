@@ -48,7 +48,10 @@ export interface ProductionText {
   states: Record<'ready' | 'not_ready', string>
   verdicts: Record<ProductionVerdict, string>
   checks: Record<ProductionCheckId, string>
-  labels: { production: string; stage: string; context: string; renderer: string; blocks: string; owner: string; input: string; none: string; human_review: string }
+  labels: { production: string; stage: string; context: string; renderer: string; blocks: string; owner: string; input: string; none: string; human_review: string
+    /** social-batch: the drafts were written but production is not_ready, so the command exits 3 (PR-E owner decision 3). */
+    not_ready_exit: string
+  }
 }
 
 export const PRODUCTION_TEXT: Record<TaskLocale, ProductionText> = {
@@ -97,7 +100,7 @@ export const PRODUCTION_TEXT: Record<TaskLocale, ProductionText> = {
       'review.visual_taste': 'Visual taste and similarity',
       'review.semantic': 'Persuasion and meaning',
     },
-    labels: { production: 'production', stage: 'stage', context: 'context', renderer: 'renderer', blocks: 'blocks', owner: 'owner', input: 'input', none: 'none', human_review: 'Human review required. Nothing was approved, published, scheduled, spent or deployed; authorizes: [].' },
+    labels: { production: 'production', stage: 'stage', context: 'context', renderer: 'renderer', blocks: 'blocks', owner: 'owner', input: 'input', none: 'none', human_review: 'Human review required. Nothing was approved, published, scheduled, spent or deployed; authorizes: [].', not_ready_exit: 'The drafts were written, but production is not ready: exit code 3. See production-readiness.json.' },
   },
   fa: {
     notice: [
@@ -144,7 +147,7 @@ export const PRODUCTION_TEXT: Record<TaskLocale, ProductionText> = {
       'review.visual_taste': 'سلیقه و شباهت بصری',
       'review.semantic': 'اقناع و معنا',
     },
-    labels: { production: 'تولید', stage: 'مرحله', context: 'کانتکست', renderer: 'renderer', blocks: 'مانع', owner: 'مالک', input: 'ورودی', none: 'هیچ', human_review: 'بازبینی انسانی لازم است. هیچ چیزی تأیید، منتشر، زمان‌بندی، هزینه یا مستقر نشد؛ authorizes: [].' },
+    labels: { production: 'تولید', stage: 'مرحله', context: 'کانتکست', renderer: 'renderer', blocks: 'مانع', owner: 'مالک', input: 'ورودی', none: 'هیچ', human_review: 'بازبینی انسانی لازم است. هیچ چیزی تأیید، منتشر، زمان‌بندی، هزینه یا مستقر نشد؛ authorizes: [].', not_ready_exit: 'پیش‌نویس‌ها نوشته شدند، اما تولید آماده نیست: کد خروج ۳ (exit 3). production-readiness.json را ببینید.' },
   },
   tr: {
     notice: [
@@ -191,7 +194,7 @@ export const PRODUCTION_TEXT: Record<TaskLocale, ProductionText> = {
       'review.visual_taste': 'Görsel beğeni ve benzerlik',
       'review.semantic': 'İkna ve anlam',
     },
-    labels: { production: 'üretim', stage: 'aşama', context: 'bağlam', renderer: 'oluşturucu', blocks: 'engeller', owner: 'sahip', input: 'girdi', none: 'yok', human_review: 'İnsan incelemesi gerekli. Hiçbir şey onaylanmadı, yayınlanmadı, zamanlanmadı, harcanmadı veya dağıtılmadı; authorizes: [].' },
+    labels: { production: 'üretim', stage: 'aşama', context: 'bağlam', renderer: 'oluşturucu', blocks: 'engeller', owner: 'sahip', input: 'girdi', none: 'yok', human_review: 'İnsan incelemesi gerekli. Hiçbir şey onaylanmadı, yayınlanmadı, zamanlanmadı, harcanmadı veya dağıtılmadı; authorizes: [].', not_ready_exit: 'Taslaklar yazıldı, ancak üretim hazır değil: çıkış kodu 3. production-readiness.json dosyasına bakın.' },
   },
 }
 
