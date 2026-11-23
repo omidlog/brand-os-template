@@ -100,9 +100,9 @@ test('browser: the card renders in en and fa (RTL) without overflow or CSP probl
       await page.goto(`${s.url}/brands/${SLUG}?lang=${lang}`)
       await page.waitFor(`!!document.querySelector('.coach-card')`)
       await page.eval('document.fonts.ready.then(() => new Promise((r) => setTimeout(r, 500)))')
-      const dir = await page.eval<string>('document.documentElement.dir')
+      const dir: string = await page.eval<string>('document.documentElement.dir')
       assert.equal(dir, lang === 'fa' ? 'rtl' : 'ltr')
-      const fits = await page.eval<boolean>('document.documentElement.scrollWidth <= document.documentElement.clientWidth')
+      const fits: boolean = await page.eval<boolean>('document.documentElement.scrollWidth <= document.documentElement.clientWidth')
       assert.ok(fits, `${lang}: no horizontal overflow`)
       if (shots) {
         fs.mkdirSync(shots, { recursive: true })
