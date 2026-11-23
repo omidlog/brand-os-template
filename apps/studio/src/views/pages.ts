@@ -446,14 +446,14 @@ function syncBanners(ctx: ViewContext, view: BrandView, flash: string | null): S
   return join(out)
 }
 
-export function brandShell(ctx: ViewContext, view: BrandView, section: BrandSection, title: string, body: SafeHtml, flash: string | null): SafeHtml {
+export function brandShell(ctx: ViewContext, view: BrandView, section: BrandSection, title: string, body: SafeHtml, flash: string | null, extraHead?: SafeHtml): SafeHtml {
   const { i } = ctx
   const crumbs: Array<{ label: string; href?: string }> = [{ label: i.t('nav.myBrands'), href: '/brands' }, { label: view.record.display_name, href: `/brands/${view.record.slug}` }]
   if (section !== 'overview') crumbs.push({ label: title })
   const content = view.cached.projection
     ? body
     : emptyState({ icon: view.refreshing ? 'refresh' : 'alert', title: view.cached.status.last_error ? i.t('sync.errorTitle') : i.t('sync.never'), body: view.cached.status.last_error?.message ?? i.t('sync.checking'), action: refreshButton(ctx, view) })
-  return shell(ctx, { title: `${title} · ${view.record.display_name}`, crumbs, brand: { view, section }, content: html`${syncBanners(ctx, view, flash)}${content}` })
+  return shell(ctx, { title: `${title} · ${view.record.display_name}`, crumbs, brand: { view, section }, content: html`${syncBanners(ctx, view, flash)}${content}`, extraHead })
 }
 
 export function brandHeader(ctx: ViewContext, view: BrandView, title: string, subtitle: string): SafeHtml {

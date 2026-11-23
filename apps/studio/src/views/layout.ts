@@ -18,7 +18,7 @@ export interface ViewContext {
   now: number
 }
 
-export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'creative' | 'calendar' | 'history' | 'handoff'
+export type BrandSection = 'overview' | 'brand-book' | 'design' | 'assets' | 'business' | 'personal' | 'knowledge' | 'creative' | 'calendar' | 'history' | 'handoff' | 'visual'
 
 export interface BrandView {
   record: BrandRecord
@@ -33,6 +33,7 @@ const SECTIONS: Array<{ id: BrandSection; key: MessageKey; icon: IconName; path:
   { id: 'design', key: 'nav.design', icon: 'palette', path: '/design' },
   { id: 'assets', key: 'nav.assets', icon: 'image', path: '/assets' },
   { id: 'business', key: 'nav.business', icon: 'briefcase', path: '/business' },
+  { id: 'visual', key: 'nav.visual', icon: 'layers', path: '/visual' },
   { id: 'personal', key: 'nav.personal', icon: 'user', path: '/personal' },
   { id: 'knowledge', key: 'nav.knowledge', icon: 'idea', path: '/knowledge' },
   { id: 'creative', key: 'nav.creative', icon: 'sparkle', path: '/creative' },
@@ -51,6 +52,8 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'creative') return Boolean(projection?.creative && (projection.creative.total > 0 || projection.creative.withheld.length > 0))
     // Listed once the merged branch has shared calendar weeks (or files Studio withheld).
     if (section.id === 'calendar') return Boolean(projection?.calendar && (projection.calendar.total > 0 || projection.calendar.withheld.length > 0))
+    // Listed when the merged commit has a canvas that applies to this profile (a business, or a founder/consultant facet).
+    if (section.id === 'visual') return projection?.visual?.bmc.applies !== false
     return true
   })
 }

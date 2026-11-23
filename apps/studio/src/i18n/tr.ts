@@ -13,6 +13,7 @@ export const tr: Messages = {
   'nav.overview': 'Genel bakış',
   'nav.brandBook': 'Marka Kitabı',
   'nav.design': 'Tasarım Sistemi',
+  'nav.visual': 'İş modeli',
   'nav.assets': 'Varlıklar ve Maskot',
   'nav.business': 'İş Sistemi',
   'nav.personal': 'Kişisel Marka',
