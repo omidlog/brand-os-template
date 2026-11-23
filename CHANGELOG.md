@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Nontechnical agent onboarding (fixes pack GAP-11, docs and test only)
+
+### Added
+
+- `docs-internal/AGENT_ONBOARDING.md` (en), `AGENT_ONBOARDING.fa.md` (fa, RTL), `AGENT_ONBOARDING.tr.md` (tr): a plain-language owner guide to set up one fresh authorised agent over the existing local stdio MCP server and agent token: create the approval secret, issue a token (proof read from the secret file, never argv), connect Claude Code with `claude mcp add --scope local` (token never in history or the repo), verify, see what is refused, revoke.
+- `docs-internal/AGENT_ONBOARDING_HOSTED.md`: design note listing what a hosted remote MCP would need. **Not built**; needs an owner decision and a new security review.
+- Test `fresh-agent-setup`: walks the guide's commands as child processes in a temporary synthetic brand (secret, issue, `brand:query` check, stdio MCP read of allowed data, out-of-profile/restricted/forged arguments withheld, owner-only actions refused, revoke, restart fails closed), and checks that every `npm run` command and profile named in the three guides exists.
+
+No runtime behaviour, profile, tool or Studio route changed.
+
 ## Unreleased — Research notes linked to the evidence register (GAP-09 follow-up)
 
 ### Added
