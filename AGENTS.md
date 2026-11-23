@@ -71,6 +71,15 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - For a bio, LinkedIn text or other deliverable, call `draft_personal_content` (or `brand:query --tool draft_personal_content --query <deliverable> [--section <id>]`) and use only what it returns. The result is a draft for the owner to approve.
 - Portraits, case-study images, client logos and testimonials are public only with a granted public `rights` record. A missing asset is missing; never guess a URL.
 
+## Strategic coach
+
+`npm run brand:coach` reads the interview and gives advice (guide: `docs-internal/STRATEGIC_COACH.md`). It is derived and advisory: `authority` is `derived_advice`, `authorizes` is always empty, and it writes nothing — no answer, fact, approval, strategy, asset or cache.
+
+- `analyze --mode follow_up` gives 0 or 1 clarifying question. When it names a `canonical_question_id`, ask that existing question; do not write a new one. `unknown`, `skip`, `not relevant` and `decide later` are final, and one answer never gets a second follow-up.
+- `analyze --mode quality_review` gives an explainable status and at most two named deficits. It judges the recorded data, not the person, and there is no score. A deficit on an approved fact still needs propose → review → approve; `requires_change_request` says so.
+- `analyze --mode consistency_review` reports the existing deterministic contradictions by id. Strategic trade-offs are not assessed yet, so no conflict found is not a clean bill of health.
+- Restricted questions are refused, and every mode is refused while `BRAND_OS_AGENT_TOKEN` is set. No MCP tool or `brand_retrieve` kind exposes the coach; do not look for one.
+
 ## Knowledge Inbox
 
 `npm run brand:knowledge` keeps the owner's unstructured notes (guide: `docs-internal/KNOWLEDGE.md`). A note is an unapproved idea, never a brand fact, whoever wrote it.
@@ -99,6 +108,25 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - Cite approved facts and research notes only. Put budgets and amounts in `restricted`, which no agent receives. Do not hand-edit files under `brand/.private/strategy/records/`; an edit makes the revision `integrity_failed`.
 - As an execution agent with a `strategy-seo-read` or `strategy-ads-read` token, read through `strategy_list` / `strategy_get` and pin `revision` + `content_sha256`. On `stale_pin`, stop and re-read. Never treat the strategy as permission to act.
 - As a content agent with a `content-read` token, read `content_calendar`, then `content_brief` per slot with the week `pin`. Write only what the brief allows (its `must_avoid` holds the banned claims). On `stale_pin` or `not_found`, stop. After producing or publishing, call `content_report` with the pin and the https URL; it is an observation, not permission to publish. Skill: `agent-skills/content-planner/SKILL.md`; connecting an external bot: `docs-internal/CONTENT_AGENT_INTEGRATION.md`.
+
+## Task context
+
+Before drafting for a task — one visual, ten posts, a website, a product screen, an ad concept, an identity brief or a
+personal page — read the context instead of asking the owner to paste it again:
+
+`npm run brand:query -- --tool task_context --task-type <type> [--channel …] [--count …] [--locale en|fa|tr]`
+(guide: `docs-internal/TASK_CONTEXT.md`; `--request "<the owner's sentence>"` classifies the task deterministically).
+
+- It needs an owner-issued agent token of this brand. A guest gets `denied`; ask the owner for a token.
+- `readiness` is `ready`, `partial` or `blocked`. On `partial` work from what is there and name the gaps; on `blocked`
+  stop and hand the owner the question ids. Every entry in `missing[]` is an existing question id to ask — never fill
+  one in, and never substitute a similar asset, token, colour or claim for a missing one.
+- Apply `guardrails` as written, quote approved sentences unchanged, and cite `source_id` and `source_revision` in your
+  handoff. A pack is context, not permission: `authorizes` is empty and publishing, scheduling, spending and deploying
+  stay false. Assembling a brief produced no deliverable; say what you drafted and what is still missing.
+- An on-demand batch is not an approved calendar week. For approved slots use `content_calendar` and `content_brief`
+  with a pin; for an exact mascot pose use `brand_retrieve --kind mascot` with filters.
+- There is no `task_context` MCP tool yet. If the CLI is not available, say so instead of answering from memory.
 
 ## Brand OS Studio
 

@@ -289,6 +289,56 @@ Branch `feat/content-bridge-slice-d`. Guides: `docs-internal/CONTENT_BRIDGE.md`,
 | CLI journey demo (real output) | Done | Owner journey, mock agent via `brand:query`, report over MCP, `reports`, revoke. `tests/content-journey.test.ts` runs it and checks the documents name only real commands, tools and schemas. |
 | Hosted API, per-channel tokens, Studio view of reports | Not started | Not in the brief. |
 
+## Assurance registry and assessable controls (Trust v2 PR-A)
+
+Branch `feat/trust-v2-pr-a`. Guide: `docs-internal/ASSURANCE.md`. A pure library; no command, route, store, approval or agent scope.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Claim ladder and methodology registry | Done | Six levels that only go down; unverified editions and unchecked sources are at most `informed_by`; attestations by kind (review, certificate). One assessable method (our own); ISO entries are named only. `assurance/bridge.ts` checks the visual layer's `PermittedClaim` against the registry without changing it. |
+| Assessable controls (Positioning Readiness v1) | Done | 15 typed controls over existing question ids; applicability first, `unknown` never read as `no`; privacy classification at least the question's sensitivity. |
+| Deterministic evaluator | Done | Ten statuses; `not_scoreable` unless the denominator is real; changed source forces `needs_review`; restricted inputs withheld; per-domain maturity, no aggregate; byte-identical output for the same inputs. |
+| en/fa/tr text and gap report | Done | Every emitted code has text in three languages; `renderGapReport` prints no ratio when not scoreable. Synthetic fixtures only. |
+| Coverage matrix in docs | Done | `docs-internal/ASSURANCE.md`, checked against the code by `tests/assurance-i18n.test.ts`. |
+| Assessing a real brand, evidence lineage, Studio view, reports, decisions | Not started | PR-B onward. The evaluator has never run on a real workspace. |
+
+## Task Context Engine (Slice 1: core and CLI)
+
+Branch `feat/task-context-p0`. Preflight audit, permission and field-coverage matrices, and the guide:
+`docs-internal/TASK_CONTEXT.md`. Contract: `schemas/task-context.schema.json` (`brand-os/task-context/v1`).
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Preflight audit | Done | Reuse matrix (which existing reader owns each piece of context), permission matrix per agent profile and source, field coverage per pack key, two findings and the PR #25 overlap. No new store, no new profile. |
+| Pack contract | Done | `brand-os/task-context/v1` in draft-07, validated with Ajv in `tests/task-context.test.ts`. `$id` is an identifier; there is no hosted API. |
+| Task classifier | Done (deterministic) | `classifyTask`: en/fa/tr keywords, Persian/Arabic digits, channel words. Strong cues are task nouns; weak verbs decide nothing. Zero cues or a tie returns `need_task_type`. CLI only, no model, and the request text is never stored, logged or copied into the pack. |
+| Selectors and renderer | Done | Seven task recipes select a bounded key set over `brandRetrieve` (facts, hash-approved tokens, approved assets by role, approved mascot artwork), the Strategy Feed and `creative_context`. One caller context for every reader; nothing is merged across principals. |
+| Gaps, readiness, staleness | Done | Gaps carry an existing FieldQuestion id; an approved "TBD" is a gap, not a source. `blocked` only when no readable identity exists (or the module is off), `ready` when every requirement for the task is met, `partial` otherwise. `staleness` is `needs_review` when a served strategy is review-due. |
+| Digest | Done | `digests.context_sha256` over the canonical JSON of the pack without its digest; `verifyPack` recomputes it. Same sources, same digest. |
+| `brand:query --tool task_context` | Done | `--task-type`, `--request`, `--channel`, `--count`, `--locale`, `--mode`, `--output-format`, `--scope-id`. Needs an owner-issued token of this brand; guests, unprofiled agents and the owner process are denied. |
+| Writes | None | Reading a pack creates no file. `tests/task-context.test.ts` compares the whole `brand/` tree before and after. |
+| MCP tool, skill handoff | Not started | Next slice (P2): one gated stdio MCP tool with negative security tests, then the `task-context` skill and the preflight call in the social, UI and marketing skills. |
+| Calendar slots in the pack | Not started | Next slice: `scope_id` for an approved week, pinned `content_calendar` / `content_brief`, and `stale_pin`. Today a ten-post request is an on-demand draft brief, which is the required behaviour anyway. |
+| `task_context_validate`, Studio view | Not started | P2 and P4 of the plan. Studio stays read-only and untouched here. |
+
+## Strategic Coach & Answer Assurance (Coach PR 1)
+
+Branch `feat/coach-pr-1`. Guide: `docs-internal/STRATEGIC_COACH.md`. Contract: `schemas/coach-result.schema.json`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Data contract and output validation | Done | `CoachResult` with `schema_version`, `brand_id`, `mode`, `question_id`, `answer_ref` (ledger revision + digest), `analysis_scope` (profile, question ids, context digest), `locale`, `status`, `findings`, `generated_at`, `engine_version`, `rule_version`, `authority: derived_advice`, `authorizes: []` and `source_refs` as ids only. Validated with Zod before it is returned; `schemas/coach-result.schema.json` documents the same record and a test checks real results against both. `tests/coach-core.test.ts`. |
+| Read-only by construction | Done | The coach takes a `CoachSource` view of `InterviewEngine` that has no write method, reads contradictions from the pure `findContradictions` rather than the derived file, stores nothing and caches nothing. Every test snapshots the brand and asserts it is byte-for-byte unchanged. |
+| Eligibility and disposition guard | Done | A question the config or earlier answers turned off is `not_applicable`, not missing. `unknown`, `skip`, `not relevant` short-circuit to `not_applicable` with no deficits; `decide later` on a target counts as a decline. |
+| `quality_review` | Done | Six criteria (relevance, specificity, completeness for the documents it feeds, measurability, evidence support, clarity and internal coherence), explainable statuses (`ready`, `needs_clarification`, `evidence_missing`, `needs_review`, `not_applicable`, `insufficient_context`), at most two deficits, one concrete next step, no score. `measurability` applies only to questions that ask for a measure, so a qualitative brand answer is never penalised for having no numbers. An approved answer with a deficit sets `requires_change_request`. |
+| `follow_up` | Done | 0 or 1 question. An existing canonical question that closes the exact gap is linked by id (`canonical_question_id`) and never duplicated; a gap inside the answer gets one localized clarifying question. Pure in (question, answer revision), so one answer never spawns a second question, and `decide later` on the target ends it. `brand:coach next` coaches the last answered question. |
+| `consistency_review` | Partial (by design) | An adapter over the existing `findContradictions`: `confirmed_conflict` only, reported by id, rules unchanged. `potential_tension` and `needs_verification` are in the contract and **not emitted**; each result says so. Twelve tense-but-legitimate records (trade-offs, two markets, dated figures, explicit dispositions) are pinned as non-conflicts. The narrow rule registry is PR 2. |
+| Locales | Done | en, fa (RTL) and tr for every finding code, criterion, status, clarifying question and UI string, written as advice rather than translated labels. A missing entry fails `coachI18nErrors()` and a test. |
+| `npm run brand:coach` | Done | `analyze --mode follow_up\|quality_review\|consistency_review [--question <id>] [--lang en\|fa\|tr] [--json]` and `next`. Exit 0 / 1 (refusal or bad id, with a code) / 2 (usage). `tests/coach-cli.test.ts`. |
+| Privacy and access | Done | No finding ever quotes, paraphrases or digests the owner's words (canary-tested on JSON and printed text). Restricted questions are refused outright — no value, no digest, no length — on every stream. Every mode is denied while `BRAND_OS_AGENT_TOKEN` is set; no MCP tool and no `brand_retrieve` kind exposes the coach. A prompt-injection answer is tested as inert. |
+| Model | None | Nothing in this version calls a model or the network. Every finding is `origin: deterministic`; `model_suggestion` is reserved for PR 3. |
+| Personal facet rubrics, Studio or panel projection, optional provider, pilot measurement | Not started | PR 2, PR 3 and PR 4 in `docs-internal/STRATEGIC_COACH.md`. Facet *scoping* is already inherited from the condition engine; the per-facet prompts and checks are not written. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.
