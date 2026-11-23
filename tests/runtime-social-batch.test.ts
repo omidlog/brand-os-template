@@ -41,7 +41,7 @@ const repo = path.resolve(import.meta.dirname, '..')
 const ajv = new Ajv({ allErrors: true, strict: false })
 const validatePost = ajv.compile(JSON.parse(fs.readFileSync(path.join(repo, 'schemas/runtime-post-manifest.schema.json'), 'utf8')) as object)
 const validateBatch = ajv.compile(JSON.parse(fs.readFileSync(path.join(repo, 'schemas/runtime-batch.schema.json'), 'utf8')) as object)
-const brandStatus = (): string => execFileSync('git', ['status', '--porcelain', '--', 'brand'], { cwd: repo, encoding: 'utf8' })
+const brandStatus = (): string => execFileSync('git', ['--no-optional-locks', 'status', '--porcelain', '--', 'brand'], { cwd: repo, encoding: 'utf8' })
 const brandBefore = brandStatus()
 
 const demo = createDemoBrand()
