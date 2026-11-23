@@ -490,3 +490,8 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
 - Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
 - Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
+
+## Unreleased — Coach area audit
+
+- Strategic Coach: a scoped `consistency_review` no longer loses the field's own conflict when more than 20 conflicts are open; open ledger records and retired question ids are no longer counted as answered; `next` does not name a restricted last answer; fa/tr matching folds Arabic kaf/yeh and Turkish `İ`; the rendered criterion and the "does not apply" reason are localized. `COACH_RULE_VERSION` is now `coach-rules/2`, and Studio rebuilds a coach card cached under an older rule version.
+- Docs: `STRATEGIC_COACH.md` status and test counts, the silence-reason list in `COACH_UX_DECISION.md`, and the snapshot claim in `IMPLEMENTATION_STATUS.md` now match the code.
