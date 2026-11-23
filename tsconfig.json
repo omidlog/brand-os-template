@@ -17,6 +17,7 @@
     "paths": {
       "@brand-os/brand-core": ["packages/brand-core/src/index.ts"],
       "@brand-os/brand-core/competitive": ["packages/brand-core/src/competitive/index.ts"],
+      "@brand-os/brand-core/content-bridge": ["packages/brand-core/src/content-bridge/index.ts"],
       "@brand-os/brand-core/identity": ["packages/brand-core/src/identity/index.ts"],
       "@brand-os/brand-core/creative": ["packages/brand-core/src/creative/index.ts"],
       "@brand-os/brand-core/research": ["packages/brand-core/src/research/index.ts"],

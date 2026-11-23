@@ -68,6 +68,7 @@
     "brand:strategy": "tsx scripts/strategy.ts",
     "brand:competitive": "tsx scripts/competitive.ts",
     "brand:identity": "tsx scripts/identity.ts",
+    "brand:content": "tsx scripts/content.ts",
     "mcp:serve": "tsx scripts/mcp.ts",
     "studio:start": "tsx apps/studio/src/main.ts",
     "studio": "tsx apps/studio/src/cli.ts",
