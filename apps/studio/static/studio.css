@@ -780,3 +780,45 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .nav-section-label { margin: 0; padding: 6px var(--studio-space-3) 2px; font: var(--studio-type-overline); letter-spacing: 0.08em; text-transform: uppercase; color: var(--studio-color-text-tertiary); }
 [dir="rtl"] .nav-section-label { letter-spacing: 0; text-transform: none; }
 .nav-section-list { display: grid; gap: 1px; }
+
+/* ---- Visual V4.1: Command Center strip (R4) and Publishing gallery. Appended; nothing above reordered. ---- */
+.cc-strip { display: flex; flex-direction: column; gap: var(--studio-space-4); }
+.cc-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--studio-space-3); }
+.cc-tile { display: flex; flex-direction: column; gap: var(--studio-space-1); padding: var(--studio-space-3) var(--studio-space-4); border: 1px solid var(--studio-color-border-subtle); border-radius: var(--studio-radius-md); background: var(--studio-color-bg-subtle); color: var(--studio-color-text-primary); text-decoration: none; border-inline-start-width: 4px; }
+a.cc-tile:hover { background: var(--studio-color-bg-hover); }
+.cc-tile--success { border-inline-start-color: var(--studio-color-status-approved); }
+.cc-tile--warning { border-inline-start-color: var(--studio-color-status-draft); }
+.cc-tile--danger { border-inline-start-color: var(--studio-color-status-danger); }
+.cc-tile--neutral { border-inline-start-color: var(--studio-color-border-strong); }
+.cc-tile-label { font: var(--studio-type-label); display: flex; align-items: center; gap: var(--studio-space-1); color: var(--studio-color-text-secondary); }
+.cc-tile-value { font: var(--studio-type-display); font-size: 28px; font-variant-numeric: tabular-nums; }
+.cc-sub { font: var(--studio-type-overline); text-transform: uppercase; letter-spacing: 0.06em; color: var(--studio-color-text-secondary); }
+.cc-map { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--studio-space-2); }
+.cc-map-row { display: grid; grid-template-columns: minmax(9rem, 14rem) minmax(0, 1fr) auto; align-items: center; gap: var(--studio-space-3); }
+.cc-map-name { font: var(--studio-type-label); }
+.cc-map-cells { display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; }
+.cc-map-text { color: var(--studio-color-text-secondary); white-space: nowrap; }
+.cc-cell { display: inline-block; inline-size: 14px; block-size: 14px; border-radius: 3px; border: 1px solid var(--studio-color-border-strong); background: transparent; flex: none; }
+.cc-cell--complete { background: var(--studio-color-status-approved); border-color: var(--studio-color-status-approved); }
+.cc-cell--partial { background: linear-gradient(135deg, var(--studio-color-status-draft) 50%, transparent 50%); border-color: var(--studio-color-status-draft); }
+.cc-cell--withheld { background: repeating-linear-gradient(45deg, var(--studio-color-status-neutral) 0 2px, transparent 2px 5px); }
+.cc-cell--not_applicable { border-style: dashed; opacity: 0.6; }
+.cc-legend { display: flex; flex-wrap: wrap; gap: var(--studio-space-4); }
+.cc-legend-item { display: inline-flex; align-items: center; gap: var(--studio-space-1); }
+.pub-profile-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--studio-space-4); margin: 0; }
+.pub-profile dt { font: var(--studio-type-label); display: flex; align-items: center; gap: var(--studio-space-1); }
+.pub-profile dd { margin: var(--studio-space-1) 0 0; }
+.pub-table th[scope="row"] { white-space: nowrap; }
+.pub-cell { vertical-align: top; min-inline-size: 11rem; }
+.pub-cell > * + * { margin-block-start: var(--studio-space-1); }
+.pub-counts { color: var(--studio-color-text-secondary); font-variant-numeric: tabular-nums; }
+.pub-redacted { display: inline-flex; align-items: center; gap: 2px; }
+.pub-redacted .icon { inline-size: 12px; block-size: 12px; }
+.pub-cell--blocked { background: var(--studio-color-bg-subtle); }
+@media (max-width: 1100px) { .cc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .cc-tiles, .pub-profile-list { grid-template-columns: minmax(0, 1fr); }
+  .cc-map-row { grid-template-columns: minmax(0, 1fr); gap: var(--studio-space-1); }
+  .cc-map-text { white-space: normal; }
+}
+@media print { .cc-strip { break-inside: avoid; } }

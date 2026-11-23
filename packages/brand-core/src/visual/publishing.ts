@@ -430,7 +430,9 @@ export function buildPublishingGallery(engine: InterviewEngine, input: Publishin
         cells.push({ ...base, readiness: 'empty', shown: 0, gaps: 0, paper: null })
         continue
       }
-      const counts = countVisual(result.document)
+      // A comparison with no shared competitors is only the own-brand row: nothing to compare, so it is empty.
+      const unshared = result.document.blocks.some((block) => block.type === 'competitor_matrix' && block.share_state !== 'shared')
+      const counts = unshared ? { shown: 0, gaps: 0 } : countVisual(result.document)
       const notApplicable =
         (type === 'business_model_canvas' && input.bmc?.applies === false) ||
         (type === 'mascot_atlas' && result.document.blocks.some((block) => block.type === 'mascot_atlas' && !block.module_enabled))

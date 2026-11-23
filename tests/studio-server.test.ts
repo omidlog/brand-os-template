@@ -537,7 +537,7 @@ test('V2.4: brand pages live at stable paths, grouped by intent; old flat paths 
       assert.equal(res.status, 301, from)
       assert.equal(res.headers.get('location'), `/brands/acme-learning${to}`, from)
     }
-    for (const pathname of ['/brand/book', '/brand/design-system', '/brand/assets', '/strategy/business-plan', '/market/marketing-plan', '/governance/history', '/governance/github', '/strategy/business-model', '/brand/book/visual-identity', '/market/competitors']) {
+    for (const pathname of ['/brand/book', '/brand/design-system', '/brand/assets', '/strategy/business-plan', '/market/marketing-plan', '/governance/history', '/governance/github', '/strategy/business-model', '/brand/book/visual-identity', '/market/competitors', '/governance/publishing']) {
       assert.equal((await owner.get(`/brands/acme-learning${pathname}`)).status, 200, pathname)
     }
     // A redirect never confirms a brand: an unregistered slug is 404 for the owner and a sign-in redirect for a guest,
@@ -564,7 +564,7 @@ test('V2.4: brand pages live at stable paths, grouped by intent; old flat paths 
       ['market', 'Market &amp; Content'],
       ['governance', 'Publishing &amp; Governance'],
     ])
-    for (const label of ['Overview', 'Business Model Canvas', 'Business plan', 'Brand Book', 'Design System', 'Assets &amp; Mascot', 'Marketing plan', 'Competitor analysis', 'History &amp; Review', 'GitHub &amp; Claude Code']) {
+    for (const label of ['Command Center', 'Business Model Canvas', 'Business plan', 'Brand Book', 'Design System', 'Assets &amp; Mascot', 'Marketing plan', 'Competitor analysis', 'Publishing gallery', 'History &amp; Review', 'GitHub &amp; Claude Code']) {
       assert.ok(nav.includes(`<span>${label}</span>`), label)
     }
     assert.match(nav, /<a class="nav-link nav-sub is-active" href="\/brands\/acme-learning\/brand\/book" aria-current="page">/)

@@ -6,8 +6,10 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { applyInit, ensureApprovalSecret, InterviewEngine, writeStarterWorkspace } from '@brand-os/brand-core'
 import { buildNamedDocument } from '@brand-os/brand-core'
+import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import {
   buildBusinessModelCanvas,
+  buildCompetitorComparison,
   buildMascotAtlas,
   buildPublishingGallery,
   buildVisualIdentity,
@@ -189,7 +191,7 @@ test('the gallery lists every document type × profile, blocks what a profile ma
     bmc: { applies: true, internal: leakyCanvas(buildBusinessModelCanvas(engine, 'internal')), public: buildBusinessModelCanvas(engine, 'public') },
     identity: { internal: buildVisualIdentity(engine, 'internal'), public: buildVisualIdentity(engine, 'public') },
     mascot: { internal: buildMascotAtlas(engine, 'internal'), public: buildMascotAtlas(engine, 'public') },
-    competitors: null,
+    competitors: buildCompetitorComparison(engine, readSharedLandscape(engine.workspaceRoot(), 'publishing-brand')),
   })
   assert.equal(gallery.cells.length, PUBLISHING_DOCUMENT_TYPES.length * EXPORT_PROFILES.length)
   const cell = (type: string, profile: ExportProfile) => gallery.cells.find((item) => item.document_type === type && item.profile === profile)!
