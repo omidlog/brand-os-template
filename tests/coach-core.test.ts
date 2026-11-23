@@ -73,7 +73,9 @@ test('contract: every mode returns a valid, advisory-only result in en, fa and t
       assert.ok(result.notes.some((note) => note.startsWith('no_model_called')), 'the result states that no model was called')
       assert.ok(result.findings.every((finding) => finding.origin === 'deterministic'), 'every finding is deterministic')
       // Meaningful locale text, not an English fallback.
-      if (locale !== 'en') assert.ok(/[^\u0000-\u007f]/.test(result.findings[0]!.reason), `${locale} reason is localized`)
+      if (locale !== 'en') {
+        assert.ok([...result.findings[0]!.reason].some((char) => (char.codePointAt(0) ?? 0) > 127), `${locale} reason is localized`)
+      }
       assert.ok(renderCoachResult(result).length > 0)
     }
     assert.equal(contract(coachNext(brand.engine, { locale }), `next ${locale}`).mode, 'follow_up')
