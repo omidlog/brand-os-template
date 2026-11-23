@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Visual V1.1 + V2.1: renderer registry and Brand Book "Visual identity" chapter
+
+### Added
+
+- Renderer registry (`views/visual-registry.ts`) and shared visual primitives (`views/visual-primitives.ts`): state chip, legend, ghost geometry, source footnote, mini-map. No visual change to the canvas.
+- Framework registry `.brand-os/frameworks.yaml` with `schemas/framework-registry.schema.json`, validated by `npm run validate` (no certification claims; checked claims need a date). Business Model Canvas, WCAG 2 contrast ratio and the Brand OS identity chapter are registered.
+- Brand Book "Visual identity" chapter in Studio (`/brands/<slug>/visual/identity`, print view `/print`, `?edition=public`): colour palette with declared combinations and a computed WCAG 2 contrast grid, typography specimen in en/fa/tr, logo construction from the approved master asset (tags `logo` + `master`). Drafts are never drawn; each plate has a designed "awaiting approved asset" state. Ids only under "Details and sources" and in the print appendix. en/fa/tr.
+- Golden examples for the chapter (complete and awaiting) in `npm run visual:golden`.
+
 ## Unreleased — Content planner skill and agent integration guide (Content Bridge Slice D)
 
 ### Added

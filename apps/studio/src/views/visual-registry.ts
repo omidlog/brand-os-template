@@ -1,6 +1,7 @@
 import type { BusinessModelCanvasBlock, VisualBlock, VisualCatalog, VisualDocument, VisualLang } from '@brand-os/brand-core/visual'
 import type { SafeHtml } from './html.js'
 import { canvasView, citationTable } from './visual.js'
+import { colorPaletteView, identitySources, logoConstructionView, typographySpecimenView } from './visual-identity.js'
 
 /**
  * Renderer registry (Visual Blueprint V1.1): one renderer per block type. The map is typed over every
@@ -29,10 +30,14 @@ function canvasOf(doc: VisualDocument): BusinessModelCanvasBlock | null {
 const RENDERERS: RendererMap = {
   business_model_canvas: (block, ctx) => canvasView(ctx.cat, block, { lang: ctx.lang, mode: ctx.mode, showNext: ctx.showNext, idPrefix: ctx.idPrefix }),
   citation_list: (block, ctx) => {
+    if (ctx.doc.document_kind === 'visual_identity') return identitySources(block, ctx)
     const canvas = canvasOf(ctx.doc)
     if (!canvas) throw new Error('A citation list needs the block it cites.')
     return citationTable(ctx.cat, block, canvas, ctx.lang, ctx.mode === 'print')
   },
+  color_palette: colorPaletteView,
+  typography_specimen: typographySpecimenView,
+  logo_construction: logoConstructionView,
 }
 
 export function renderBlock(block: VisualBlock, ctx: BlockContext): SafeHtml {

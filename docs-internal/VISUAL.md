@@ -19,6 +19,16 @@ Core: `packages/brand-core/src/visual/` (`@brand-os/brand-core/visual`). Studio:
 - **Shared primitives** `apps/studio/src/views/visual-primitives.ts`: state chip, legend, ghost geometry (`lines`, `swatches`, `specimen`, `mark`), source footnote (plain label, version, date; never a field id), topology mini-map. Every block uses these instead of its own copy.
 - **Framework registry** `.brand-os/frameworks.yaml` (template-owned) with `schemas/framework-registry.schema.json`. `npm run validate` checks the schema and the claim rules (`visual/framework-registry.ts`): no `externally_certified`; `aligned_with` / `verified_against` need `verified_on`; `original_professional_template` only for Brand OS layouts; no certification or compliance wording. Metadata only, never a fact. Renderers read the copy that ships with the template code (`frameworkRef(id)`).
 
+## Brand Book "Visual identity" chapter (V2.1)
+
+`visual/identity.ts` builds a `visual_identity` document from three facts and the asset manifest: `brand.color.roles`, `brand.type.scale`, `brand.logo.min_size`, plus the master asset. Rules:
+
+- **Approved only.** A plate is drawn from an approved fact (or approved and past review, labelled stale). A draft or withheld value is not even carried in the document (`value: null`); the plate shows the designed "awaiting approved asset" page with the reason and, for the owner, the next step.
+- **Master asset.** The logo plate needs an approved, checksummed, non-example manifest asset tagged `logo` and `master` (published, for the public edition). Template example placeholders never count. The file is shown through the existing asset route; its proportions come from the SVG viewBox or PNG header, otherwise a square frame is drawn and the note says so.
+- **Measured contrast.** Ratios are computed with the WCAG 2 formula (`@brand-os/design-tokens` `contrastRatio`), compared exactly, displayed rounded down. Combinations are only those the role names declare (`onPrimary` on `primary`); the grid measures every pair up to ten colours. A ratio is not an accessibility audit.
+- **Type.** Specimens are SVG text at true CSS-pixel size. A family Studio bundles (Inter, Rajdhani, Vazirmatn, all OFL) is drawn with the bundled file; other families render if installed on the device, otherwise the fallback. Persian lines fall back to Vazirmatn.
+- **Layout.** Editorial book: chapter opener with contents, numbered plates, hairline rules. The print view uses a named A4 portrait page (`@page vz-book`) on the existing browser print path; the V1.2 book engine (page-numbered TOC, running heads) is not built.
+
 ## Adding a visual
 
 1. Add a block type to `visual/model.ts` (additive; bump nothing unless an existing field changes meaning).

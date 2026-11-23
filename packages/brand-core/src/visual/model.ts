@@ -125,12 +125,79 @@ export interface CitationListBlock extends BlockBase {
   items: Array<{ id: string; label: string; state: DataState; version: number | null; approved_at: string | null }>
 }
 
-export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock
+/** One measured foreground/background pair. Thresholds are compared with the exact ratio, never a rounded one. */
+export interface ContrastPair {
+  foreground: string
+  background: string
+  /** WCAG 2 contrast ratio rounded down to two decimals (display only). */
+  ratio: number
+  /** ≥ 4.5 (normal text), ≥ 3 (large text), ≥ 7 (enhanced). A measurement of two colours, not an audit. */
+  aa_normal: boolean
+  aa_large: boolean
+  aaa_normal: boolean
+}
+
+/**
+ * Brand Book "Visual identity": the colour palette. Drawn only from the approved `brand.color.roles` fact; a draft,
+ * a withheld value or a gap leaves `colors` empty and the renderer shows the designed "awaiting" page.
+ */
+export interface ColorPaletteBlock extends BlockBase {
+  type: 'color_palette'
+  /** The fact the palette is drawn from. `value` is null unless approved (or approved and review overdue). */
+  source: VisualEntry
+  colors: Array<{ role: string; hex: string; rgb: [number, number, number] }>
+  /** Combinations the roles declare by name (`onPrimary` on `primary`), measured. */
+  combinations: ContrastPair[]
+  /** Every ordered pair, for the contrast grid; null when there are too many colours to draw legibly. */
+  grid: { roles: string[]; ratios: number[][] } | null
+}
+
+export interface TypeRole {
+  role: string
+  family: string
+  fallback: string[]
+  size_px: number | null
+  line_height: number | null
+}
+
+/** Brand Book "Visual identity": type roles from the approved `brand.type.scale` fact, set in en/fa/tr specimens. */
+export interface TypographySpecimenBlock extends BlockBase {
+  type: 'typography_specimen'
+  source: VisualEntry
+  roles: TypeRole[]
+  /** Languages the specimen is set in (the brand's supported locales among en/fa/tr). */
+  scripts: Array<'en' | 'fa' | 'tr'>
+}
+
+/** The approved master logo file: an approved, checksummed, non-example manifest asset tagged `logo` and `master`. */
+export interface LogoMaster {
+  asset_id: string
+  name: string
+  version: string | null
+  /** Studio preview key (content hash). The file itself is served only by the existing asset route. */
+  preview_key: string
+  mime: string
+  /** Intrinsic size when it could be read (SVG viewBox/width/height, PNG header); null otherwise. */
+  width: number | null
+  height: number | null
+}
+
+export interface LogoConstructionBlock extends BlockBase {
+  type: 'logo_construction'
+  /** `brand.logo.min_size` (structured logo_spec). Value null unless approved. */
+  source: VisualEntry
+  spec: { min_size_px: number; clear_space: { value: number; unit: 'px' | 'x' }; min_print_mm: number | null } | null
+  master: LogoMaster | null
+  /** Why there is no master: none registered, only template examples, or approved files that cannot be previewed. */
+  master_state: 'approved' | 'missing' | 'example_only' | 'not_previewable'
+}
+
+export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock | ColorPaletteBlock | TypographySpecimenBlock | LogoConstructionBlock
 
 export interface VisualDocument {
   schema: typeof VISUAL_SCHEMA
   schema_version: 1
-  document_kind: 'business_model_canvas'
+  document_kind: 'business_model_canvas' | 'visual_identity'
   brand_id: string
   brand_name: string
   audience: VisualAudience

@@ -5,7 +5,8 @@ import { after, before, test } from 'node:test'
 import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
 import { teardown } from './helpers/cleanup.js'
-import { approve, editOutsideStudio } from './helpers/edits.js'
+import { parse, stringify } from 'yaml'
+import { addApprovedAsset, approve, editOutsideStudio } from './helpers/edits.js'
 import { Client, OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
 
@@ -22,6 +23,7 @@ if (!chrome && process.env.STUDIO_E2E_REQUIRED === '1') throw new Error('STUDIO_
 const skip = chrome ? false : 'no Chrome/Chromium found (set CHROME_PATH); browser E2E skipped'
 const shots = process.env.STUDIO_E2E_SCREENSHOTS ? path.resolve(process.env.STUDIO_E2E_SCREENSHOTS) : null
 const SLUG = 'acme-learning'
+const MARK = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"><rect width="300" height="100" rx="8" fill="#123A73"/><text x="150" y="64" font-size="40" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif">ACME</text></svg>')
 
 let browser: Browser
 let s: RunningStudio
@@ -44,7 +46,18 @@ before(async () => {
       'business.model.revenue': 'Monthly and annual subscriptions.',
       'business.marketing.channels': 'App stores, short video, partner newsletters.',
       'business.finance.costs': 'CANARY-RESTRICTED-COSTS',
+      // Visual identity chapter (V2.1): approved colour, type and logo rule.
+      'brand.color.roles': 'primary #123A73; onPrimary #FFFFFF; surface #F7F5F2; onSurface #1B1F24; accent #D5FE00; onAccent #121212',
+      'brand.type.scale': 'display: Rajdhani, Arial Narrow, sans-serif @ 48px/1.05; body: Inter, system-ui, sans-serif @ 16px/1.55',
+      'brand.logo.min_size': 'min-size: 24px; clear-space: 0.5x; min-print: 10mm',
     })
+    addApprovedAsset(root, { id: 'asset.logo.master', name: 'Acme master mark', file: 'brand/assets/logo/master.svg', data: MARK })
+    const manifestFile = path.join(root, 'brand/assets/asset-manifest.yaml')
+    const manifest = parse(fs.readFileSync(manifestFile, 'utf8')) as { assets: Array<Record<string, unknown>> }
+    const master = manifest.assets.find((asset) => asset.id === 'asset.logo.master')!
+    master.tags = ['logo', 'master']
+    master.mime = 'image/svg+xml'
+    fs.writeFileSync(manifestFile, stringify(manifest))
     engine.answerQuestion('business.sales.pricing', 'زبان فارسی: هفتهٔ اول رایگان، سپس یک پلن پولی.')
   })
   await s.studio.sync.refresh(SLUG)
@@ -203,6 +216,56 @@ test('print view: the browser engine prints an A3-landscape PDF, canvas on page 
     assert.equal(pages, 2, `${lang}: canvas and sources on two pages`)
     assert.ok(text.includes('/FontFile2') || text.includes('/FontFile'), `${lang}: fonts are embedded`)
     if (shots) fs.writeFileSync(path.join(shots, `visual-print-${lang}-${edition}.pdf`), pdf)
+  }
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
+
+test('Visual identity chapter: five widths, en and fa, light and dark: no overflow, clean CSP, accessible, AA contrast', { skip }, async () => {
+  for (const lang of ['en', 'fa'] as const) {
+    await page.goto(`${s.url}/brands/${SLUG}/visual/identity?lang=${lang}`)
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
+      for (const width of [1920, 1440, 1024, 768, 390]) {
+        await page.viewport(width, 900, width < 500)
+        await page.goto(`${s.url}/brands/${SLUG}/visual/identity`)
+        await settle()
+        const where = `identity ${lang} ${scheme} ${width}px`
+        const widths = await overflow()
+        const wide = widths.scroll > widths.client + 1 ? await page.eval<string[]>(`[...document.querySelectorAll('main *')].filter((el) => !el.closest('.vz-grid-wrap') && el.getBoundingClientRect().right > document.documentElement.clientWidth + 1).slice(0, 6).map((el) => el.tagName + '.' + (el.className.baseVal ?? el.className))`) : []
+        assert.ok(widths.scroll <= widths.client + 1, `${where}: page overflow ${widths.scroll} > ${widths.client} ${wide.join(' ')}`)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-plate').length`), 3, where)
+        assert.ok(await page.eval<boolean>(`document.querySelector('.vz-construct image').getBoundingClientRect().width > 0`), `${where}: the approved master is drawn`)
+        if (width === 1440) {
+          assert.deepEqual(await structureIssues(), [], `${where}: structure`)
+          assert.deepEqual(await contrastFailures('.vz-book'), [], `${where}: contrast`)
+        }
+        if (shots && [1440, 390].includes(width)) {
+          fs.mkdirSync(shots, { recursive: true })
+          await page.screenshot(path.join(shots, `identity-${lang}-${scheme}-${width}.png`))
+        }
+      }
+    }
+  }
+  await page.send('Emulation.setEmulatedMedia', { features: [] })
+  await page.viewport(1440, 900)
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
+
+test('Visual identity print view: A4 portrait PDF with the chapter opener, plates and appendix', { skip }, async () => {
+  for (const lang of ['en', 'fa'] as const) {
+    await page.goto(`${s.url}/brands/${SLUG}/visual/identity?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/visual/identity/print`)
+    await settle()
+    const result = await page.send('Page.printToPDF', { preferCSSPageSize: true, printBackground: true }, 60_000)
+    const pdf = Buffer.from(String(result.data), 'base64')
+    const text = pdf.toString('latin1')
+    const box = text.match(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/)
+    assert.ok(box, 'a media box')
+    assert.ok(Math.abs(Number(box[1]) - 595.28) < 2 && Math.abs(Number(box[2]) - 841.89) < 2, `${lang}: A4 portrait, got ${box[1]}×${box[2]}`)
+    const pages = (text.match(/\/Type\s*\/Page(?![s\w])/g) ?? []).length
+    assert.ok(pages >= 5, `${lang}: at least opener, three plates and the appendix (${pages})`)
+    assert.ok(text.includes('/FontFile2') || text.includes('/FontFile'), `${lang}: fonts are embedded`)
+    if (shots) fs.writeFileSync(path.join(shots, `identity-print-${lang}.pdf`), pdf)
   }
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })
