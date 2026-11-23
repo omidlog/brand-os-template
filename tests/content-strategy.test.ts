@@ -71,6 +71,7 @@ test('missing facts are explicit gaps; nothing is invented and nothing is writte
   for (const role of ['voice', 'claims', 'audience', 'messaging', 'pillars', 'channels', 'offers', 'cta', 'languages']) assert.ok(fields.includes(`${role}:not_approved`), role)
   assert.ok(!fields.includes('objective:not_approved'), 'business.marketing.objective is approved in the fixture')
   assert.ok(fields.includes('channels:owner_decision'))
+  assert.match(draft.gaps.find((gap) => gap.field === 'channels' && gap.reason === 'owner_decision')!.text, /approve business\.marketing\.channels, brand\.social\.channels with/)
   assert.deepEqual(draft.block.pillars, [])
   assert.deepEqual(draft.block.channels, [])
   assert.deepEqual(draft.block.voice_rules, { do: [], dont: [] }, 'the proposer never writes voice')

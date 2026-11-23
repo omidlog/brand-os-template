@@ -140,7 +140,8 @@ export function buildContentStrategy(ws: KnowledgeWorkspace, opts: ContentStrate
   const detected = CONTENT_CHANNELS.filter((channel) => mentions.has(channel))
   const chosen = opts.channels?.length ? [...new Set(opts.channels)] : detected
   if (!opts.channels?.length && detected.length) notes.push(fill(NOTES.channels_detected![lang], { list: detected.join(', ') }))
-  if (!chosen.length) gaps.push({ field: 'channels', reason: 'owner_decision', fact_ids: channelFacts.map((r) => r.fact_id) })
+  // Name the channel questions whatever their state, so the message always says what to answer.
+  if (!chosen.length) gaps.push({ field: 'channels', reason: 'owner_decision', fact_ids: reports.filter((r) => r.role === 'channels' && r.state !== 'restricted').map((r) => r.fact_id) })
   const channels: ContentChannelPlan[] = chosen.map((channel) => {
     const refs = mentions.get(channel) ?? []
     if (opts.channels?.length && !refs.length) notes.push(fill(NOTES.channel_not_in_facts![lang], { channel }))
