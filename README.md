@@ -127,7 +127,7 @@ Agents read the brand through `npm run mcp:serve` or `npm run brand:query`. Iden
 - A valid token: the owner-chosen profile (`internal-read`, `design`, `marketing`, `finance`). Approved items in that profile's modules, published or not. Drafts are never returned.
 - An unknown, revoked or other-brand token: the server exits. It never falls back to guest.
 
-Issue a token with `npm run brand:agent-token -- issue --profile internal-read --label "laptop agent"`. It is printed once and stored hashed in `brand/.private/agent-tokens.json` (gitignored). Every profile is read-only, and restricted values come back as `withheld` for every profile, including `finance`. Reads are logged to `brand/.private/access-log.jsonl` without values. See `docs-internal/AI_CONNECTORS.md` and `docs-internal/adr/0003-agent-access.md`.
+Issue a token with `npm run brand:agent-token -- issue --profile internal-read --label "laptop agent"`. It is printed once and stored hashed in `brand/.private/agent-tokens.json` (gitignored). Every profile is read-only, and restricted values come back as `withheld` for every profile, including `finance`. Reads are logged to `brand/.private/access-log.jsonl` without values. Step-by-step owner guide (en, fa, tr): `docs-internal/AGENT_ONBOARDING.md`. See `docs-internal/AI_CONNECTORS.md` and `docs-internal/adr/0003-agent-access.md`.
 
 ## Personal brands
 
@@ -182,6 +182,8 @@ It stays silent on factual or non-strategic questions (names, choices, colours, 
 `npm run brand:assurance -- assess --as-of <YYYY-MM-DD> [--lang fa]` checks your approved facts against Brand OS's own Positioning Readiness method and lists what is missing. Whether you run paid media comes from the interview question `business.marketing.paid_media` (`--paid-media` is deprecated). The personal module never turns a company brand into a person. It is owner-local and read-only, prints a reproducible snapshot digest (`verify --snapshot <file>` checks a kept one), gives no score while anything blocking is missing, and is an internal assessment — never a certification or a compliance statement. Guide: `docs-internal/ASSURANCE.md`.
 
 Some controls need your own judgment (today PRR-08: is the differentiation claim backed by the evidence?). `npm run brand:assurance-review -- list` shows them, and `record --control PRR-08 --judgment yes|partly|no --note "…"` records yours privately in `brand/.private/assurance/reviews/`. Once nothing else blocks, `assess` gives a score. A judgment goes out of date by itself when the facts or research notes it was about change.
+
+Research notes count as your own statements. `npm run brand:assurance-link -- list` shows them with the evidence-register entries for the same questions, and `link --note kn_… --evidence ev-NNNN` links one privately in `brand/.private/assurance/evidence-links/`. The note then counts as independent evidence while that entry is verified (`brand:evidence verify`), not owner testimony and not past its review date, and while the note is unchanged. Unapproved answers still lower the score.
 
 ## Studio
 

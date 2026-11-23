@@ -87,6 +87,8 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 
 `npm run brand:assurance-review` records the owner's own judgment on controls only a person can decide (PRR-08). It is refused under an agent token too. Never record, suggest or paraphrase a judgment for the owner, and never read `brand/.private/assurance/`.
 
+`npm run brand:assurance-link` lets the owner link a research note to an evidence-register entry so the assessment counts the note as independent evidence while that entry is verified and current. It is refused under an agent token. Recording evidence with `brand:evidence add` stays open to agents, but never link, verify or describe a note as independent for the owner.
+
 ## Knowledge Inbox
 
 `npm run brand:knowledge` keeps the owner's unstructured notes (guide: `docs-internal/KNOWLEDGE.md`). A note is an unapproved idea, never a brand fact, whoever wrote it.

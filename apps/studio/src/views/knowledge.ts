@@ -3,7 +3,7 @@ import type { MessageKey } from '../i18n/index.js'
 import { badge, banner, code, copyBlock, emptyState, externalLink, shortSha } from './components.js'
 import { html, join, safeGitHubUrl, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
-import type { BrandView, ViewContext } from './layout.js'
+import { brandPath, type BrandSection, type BrandView, type ViewContext } from './layout.js'
 import { brandHeader, brandShell } from './pages.js'
 
 /**
@@ -35,10 +35,10 @@ export function parseKnowledgeQuery(params: URLSearchParams): KnowledgeQuery {
   }
 }
 
-const SECTION_FOR_GROUP: Record<string, string> = { brand: 'brand-book', business: 'business', personal: 'personal' }
+const SECTION_FOR_GROUP: Record<string, BrandSection> = { brand: 'brand-book', business: 'business', personal: 'personal' }
 
 function base(view: BrandView): string {
-  return `/brands/${view.record.slug}/knowledge`
+  return brandPath(view.record.slug, 'knowledge')
 }
 
 function href(view: BrandView, params: Record<string, string | null>): string {
@@ -202,7 +202,7 @@ export function knowledgeNotePage(ctx: ViewContext, view: BrandView, note: Studi
         const section = question.module ? SECTION_FOR_GROUP[groups.get(question.module) ?? ''] : undefined
         const reachable = section && (section !== 'personal' || p.personal)
         const label = question.known ? html`<span dir="auto">${question.label}</span> ${code(question.id, 'muted small')}` : html`${code(question.id, 'small')} ${badge(i.t('knowledge.unknownQuestion'), 'warning', 'alert')}`
-        return html`<li>${question.known && reachable ? html`<a href="/brands/${view.record.slug}/${section}">${label}</a>` : label}</li>`
+        return html`<li>${question.known && reachable ? html`<a href="${brandPath(view.record.slug, section)}">${label}</a>` : label}</li>`
       })}</ul>`
     : html`<p class="muted small">${i.t('knowledge.questionsEmpty')}</p>`
   const body = html`<p><a href="${base(view)}" class="link-sm">${i.t('knowledge.back')}</a></p>

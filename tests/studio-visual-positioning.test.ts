@@ -183,12 +183,12 @@ test('Studio: the positioning map on the comparison page and its print view, fro
     await s.studio.sync.settled()
 
     // 1. Nothing shared: the map's designed empty state sits on the same page; no new link anywhere.
-    let page = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    let page = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Positioning map/)
     assert.match(page.text, /No positioning axes shared yet/)
-    const canvas = await owner.page(`/brands/${SLUG}/visual`)
-    assert.equal((canvas.text.match(new RegExp(`href="/brands/${SLUG}/visual/competitors"`, 'g')) ?? []).length, 1, 'still one link')
+    const canvas = await owner.page(`/brands/${SLUG}/strategy/business-model`)
+    assert.equal((canvas.text.split('<main')[1]!.match(new RegExp(`href="/brands/${SLUG}/market/competitors"`, 'g')) ?? []).length, 1, 'still one link')
 
     // 2. The owner commits a shared file with axes, plus private records that must never reach Studio.
     editOutsideStudio(s, SLUG, (_engine, root) => {
@@ -201,7 +201,7 @@ test('Studio: the positioning map on the comparison page and its print view, fro
       write('brand/competitive/shared/axes.json', JSON.stringify({ rationale: DECOY }))
     })
     await s.studio.sync.refresh(SLUG)
-    page = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    page = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.equal(page.text.includes(DECOY), false, 'no private or extra file reaches Studio')
     assert.match(page.text, /class="vz-pos-svg"/)
     assert.match(page.text, /Kestrel &lt;i&gt;x&lt;\/i&gt;/, 'names are escaped')
@@ -214,20 +214,20 @@ test('Studio: the positioning map on the comparison page and its print view, fro
     assert.equal(/\sstyle="/.test(page.text), false)
 
     // 3. Print: opener, landscape matrix, prices, the map plate, sources.
-    const print = await owner.page(`/brands/${SLUG}/visual/competitors/print`)
+    const print = await owner.page(`/brands/${SLUG}/market/competitors/print`)
     assert.equal(print.res.status, 200)
     assert.equal((print.text.match(/class="vz-page vz-page--book/g) ?? []).length, 5)
     assert.match(print.text, /vz-page--pos/)
     assert.equal(print.text.includes('axes set'), false)
 
     // 4. Persian and Turkish.
-    await owner.get(`/brands/${SLUG}/visual/competitors?lang=fa`)
-    const fa = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    await owner.get(`/brands/${SLUG}/market/competitors?lang=fa`)
+    const fa = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /نقشهٔ جایگاه‌یابی/)
-    await owner.get(`/brands/${SLUG}/visual/competitors?lang=tr`)
-    assert.match((await owner.page(`/brands/${SLUG}/visual/competitors`)).text, /Konumlandırma haritası/)
-    await owner.get(`/brands/${SLUG}/visual/competitors?lang=en`)
+    await owner.get(`/brands/${SLUG}/market/competitors?lang=tr`)
+    assert.match((await owner.page(`/brands/${SLUG}/market/competitors`)).text, /Konumlandırma haritası/)
+    await owner.get(`/brands/${SLUG}/market/competitors?lang=en`)
 
     // 5. A tampered positioning section (a smuggled rationale) withholds the whole file.
     editOutsideStudio(s, SLUG, (_engine, root) => {
@@ -236,7 +236,7 @@ test('Studio: the positioning map on the comparison page and its print view, fro
       fs.writeFileSync(path.join(root, SHARED_LANDSCAPE_PATH), JSON.stringify(doc))
     })
     await s.studio.sync.refresh(SLUG)
-    page = await owner.page(`/brands/${SLUG}/visual/competitors`)
+    page = await owner.page(`/brands/${SLUG}/market/competitors`)
     assert.equal(page.text.includes(DECOY), false)
     assert.equal(page.text.includes('vz-pos-svg'), false)
     assert.match(page.text, /The shared file was not shown/)
