@@ -14,7 +14,7 @@ import {
 } from '@brand-os/brand-core'
 import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
-import { buildBusinessModelCanvas, canvasApplies, type VisualDocument } from '@brand-os/brand-core/visual'
+import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import type { SvgIssueCode } from '@brand-os/asset-catalog'
@@ -147,6 +147,11 @@ export interface StudioProjection {
 
 export interface StudioVisualProjection {
   bmc: { applies: boolean; internal: VisualDocument; public: VisualDocument }
+  /**
+   * Brand Book "Visual identity" chapter (V2.1): colour palette, typography and logo construction from approved facts
+   * and the approved master asset only. Absent in caches written before it existed; sync rebuilds those.
+   */
+  identity?: { internal: VisualDocument; public: VisualDocument }
 }
 
 export class ProjectionError extends Error {
@@ -222,10 +227,11 @@ function projectCreative(root: string, slug: string): StudioCreativeProjection |
 }
 
 /** The visual documents; a failure here must not take down the brand view either. */
-function projectVisual(engine: InterviewEngine): StudioVisualProjection | null {
+function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[]): StudioVisualProjection | null {
   try {
     const visual: StudioVisualProjection = {
       bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
+      identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }) },
     }
     assertNoSecrets(visual)
     return visual
@@ -314,6 +320,9 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
   // wrong checksum is still refused.
   const manifest = readYaml<{ assets?: Array<Record<string, unknown>> }>(root, 'brand/assets/asset-manifest.yaml', {})
   const previews: PreviewFile[] = []
+  // Logo assets offered to the Visual identity chapter; the core builder decides which (if any) is the master.
+  const logoCandidates: LogoMasterCandidate[] = []
+  const sizes = new Map<string, { width: number; height: number } | null>()
   const assets: ProjectionAsset[] = (manifest.assets ?? []).slice(0, 2000).flatMap((asset) => {
     if (typeof asset.id !== 'string' || typeof asset.path !== 'string') return []
     const status = typeof asset.status === 'string' ? asset.status : 'unknown'
@@ -332,7 +341,9 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     else {
       const inspected = inspectAssetForPublication(root, asset.path, checksum)
       if (inspected.ok) {
-        preview_key = checksum ?? createHash('sha256').update(fs.readFileSync(inspected.realPath)).digest('hex')
+        const bytes = fs.readFileSync(inspected.realPath)
+        preview_key = checksum ?? createHash('sha256').update(bytes).digest('hex')
+        sizes.set(preview_key, imageSize(bytes, mime))
         previews.push({ key: preview_key, source: inspected.realPath, mime })
       } else {
         unavailable_reason = inspected.reason === 'missing' ? 'not_present' : inspected.reason === 'checksum' ? 'checksum' : 'unsafe'
@@ -343,6 +354,22 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
       }
     }
     const tags = Array.isArray(asset.tags) ? asset.tags.filter((tag): tag is string => typeof tag === 'string') : []
+    if (tags.includes('logo')) {
+      const size = preview_key ? (sizes.get(preview_key) ?? null) : null
+      logoCandidates.push({
+        asset_id: asset.id.slice(0, 200),
+        name: (typeof asset.name === 'string' ? asset.name : asset.id).slice(0, 200),
+        version: typeof asset.version === 'string' ? asset.version.slice(0, 40) : null,
+        approved,
+        published,
+        tags: tags.slice(0, 50),
+        example: tags.includes('example') || /example/i.test(asset.id) || /EXAMPLE/.test(String(asset.license ?? '')),
+        preview_key: approved ? preview_key : null,
+        mime: approved && preview_key ? mime : null,
+        width: size?.width ?? null,
+        height: size?.height ?? null,
+      })
+    }
     const kind = asset.path.split('/')[2] ?? tags[0] ?? 'asset'
     return [
       {
@@ -438,7 +465,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
-    visual: projectVisual(engine),
+    visual: projectVisual(engine, logoCandidates),
   }
   assertNoSecrets(projection)
   return { projection, previews }

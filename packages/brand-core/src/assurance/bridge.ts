@@ -28,6 +28,7 @@ export const PERMITTED_CLAIM_LEVEL: Record<PermittedClaim, ClaimLevel> = {
 /** Visual `framework_id` → registry `method_id`. */
 export const VISUAL_FRAMEWORK_METHOD: Record<string, string> = {
   BMC: 'strategyzer.bmc',
+  'WCAG-CONTRAST': 'w3c.wcag-2.2',
 }
 
 export interface FrameworkClaimCheck {

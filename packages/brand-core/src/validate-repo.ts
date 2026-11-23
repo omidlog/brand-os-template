@@ -15,6 +15,7 @@ import { canonicalReferenceErrors } from './personal.js'
 import { profileErrors, profileExists } from './profiles.js'
 import { llmConfigErrors } from './llm/provider.js'
 import type { BrandConfig, FieldQuestion } from './types.js'
+import { frameworkRegistryErrors } from './visual/framework-registry.js'
 
 export interface ValidationReport {
   ok: boolean
@@ -59,6 +60,9 @@ export function validateRepo(root: string): ValidationReport {
   }
   validateMascot(root, errors)
   errors.push(...validateAssets(root))
+  const registry = frameworkRegistryErrors(root)
+  errors.push(...registry.errors)
+  warnings.push(...registry.warnings)
   const compiled = compileTokens(root)
   errors.push(...compiled.errors)
   const builtCss = path.join(root, 'packages', 'design-tokens', 'dist', 'tokens.css')

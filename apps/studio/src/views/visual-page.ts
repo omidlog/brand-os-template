@@ -1,12 +1,14 @@
-import type { BusinessModelCanvasBlock, VisualLang } from '@brand-os/brand-core/visual'
+import type { BusinessModelCanvasBlock, CitationListBlock, VisualDocument, VisualLang } from '@brand-os/brand-core/visual'
 import { fillVisual, visualCatalog } from '@brand-os/brand-core/visual'
 import { studioAssets } from '../static-assets.js'
 import { banner, emptyState } from './components.js'
-import { html, type SafeHtml } from './html.js'
+import { html, join, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
 import type { BrandView, ViewContext } from './layout.js'
 import { brandHeader, brandShell } from './pages.js'
-import { canvasView, detailsView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
+import { renderBlock } from './visual-registry.js'
+import { chapterOpener, frameworkNote, identityPrintDocument } from './visual-identity.js'
+import { detailsView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
 
 /**
  * The read-only "Business model" page and its print view. GET only: no form, no link that changes anything. The
@@ -56,7 +58,7 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
           ${summaryView(cat, doc, lang)}
         </div>
       </section>
-      ${canvasView(cat, canvas, { lang, mode: 'screen', showNext: true, idPrefix: 'bmc' })}
+      ${renderBlock(canvas, { cat, lang, mode: 'screen', doc, idPrefix: 'bmc', showNext: true, assetUrl: () => null })}
       ${legend(cat, ['approved', 'stale', 'assumption', 'recommendation', 'withheld', 'missing', 'not_applicable'])}
       ${detailsView(cat, canvas, html`${relationshipsPanel(cat)}${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'screen')}`, cat.text.editionInternalNote, true)}
     </div>`
@@ -82,4 +84,75 @@ export function visualPrintPage(ctx: ViewContext, view: BrandView, edition: 'int
     head: html`<link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="${studioAssets.url('visual.css')}"><script src="${studioAssets.url('visual.js')}" defer></script>`,
     toolbar,
   })
+}
+
+/** Approved previews are served by the existing asset route (session-only, GET). */
+function assetUrlFor(slug: string): (key: string) => string | null {
+  return (key) => (/^[0-9a-f]{64}$/.test(key) ? `/brands/${slug}/assets/file/${key}` : null)
+}
+
+/**
+ * Brand Book "Visual identity" chapter (V2.1): read-only. The page shows the internal edition; every plate is drawn
+ * from approved data only, or is the designed "awaiting approved asset" page. Ids are in the details disclosure.
+ */
+export function identityPage(ctx: ViewContext, view: BrandView, flash: string | null): SafeHtml {
+  const lang = ctx.i.locale as VisualLang
+  const cat = visualCatalog(lang)
+  const t = cat.identity
+  const p = view.cached.projection
+  const shell = (body: SafeHtml) => brandShell(ctx, view, 'brand-book', t.chapterTitle, body, flash, extraHead())
+  if (!p) return shell(html``)
+  const visual = p.visual
+  if (visual === undefined) return shell(banner({ tone: 'info', body: cat.text.pending }))
+  if (visual === null || !visual.identity) return shell(banner({ tone: 'warning', body: cat.text.unavailable }))
+  const doc: VisualDocument = visual.identity.internal
+  const base = `/brands/${view.record.slug}/visual/identity`
+  const blockCtx = { cat, lang, mode: 'screen' as const, doc, idPrefix: 'vi', showNext: true, assetUrl: assetUrlFor(view.record.slug) }
+  const plates = doc.blocks.filter((block) => block.type !== 'citation_list')
+  const citations = doc.blocks.find((block): block is CitationListBlock => block.type === 'citation_list')
+  const body = html`<div class="vz-screen vz-book">
+      <div class="vz-toolbar">
+        <p class="vz-edition-line"><span class="vz-edition vz-edition--internal">${cat.text.editionInternal}</span></p>
+        <div class="vz-actions">
+          <a class="btn btn-secondary btn-sm" href="${base}/print">${icon('book')}<span>${cat.text.openPrint}</span></a>
+          <a class="btn btn-ghost btn-sm" href="${base}/print?edition=public">${icon('globe')}<span>${cat.text.openPrintPublic}</span></a>
+        </div>
+      </div>
+      ${chapterOpener(blockCtx, true)}
+      ${join(plates.map((block) => renderBlock(block, blockCtx)))}
+      <details class="vz-details">
+        <summary class="vz-details-summary">${icon('chevron', 'vz-details-icon')}<span>${cat.text.detailsTitle}</span></summary>
+        <div class="vz-details-body">
+          <p class="vz-details-lead">${cat.text.editionInternalNote}</p>
+          ${legend(cat, ['approved', 'stale', 'assumption', 'withheld', 'missing'])}
+          <div class="vz-panels">${citations ? renderBlock(citations, blockCtx) : ''}${join(doc.framework_refs.map((ref) => frameworkNote(cat, ref, 'screen', lang)))}</div>
+        </div>
+      </details>
+    </div>`
+  return shell(body)
+}
+
+/** Print view of the chapter (A4 portrait). Read-only; the only control is the browser's own print command. */
+export function identityPrintPage(ctx: ViewContext, view: BrandView, edition: 'internal' | 'public'): SafeHtml | null {
+  const lang = ctx.i.locale as VisualLang
+  const cat = visualCatalog(lang)
+  const identity = view.cached.projection?.visual?.identity
+  if (!identity) return null
+  const doc = edition === 'public' ? identity.public : identity.internal
+  const toolbar = html`<nav class="vz-print-toolbar" aria-label="${cat.identity.printTitle}">
+    <a class="vz-print-back" href="/brands/${view.record.slug}/visual/identity">${icon('chevron', 'vz-back-icon')}<span>${cat.identity.backToChapter}</span></a>
+    <p class="vz-print-hint">${cat.text.printOnly}</p>
+    <button type="button" class="vz-print-button" data-print hidden>${cat.text.printButton}</button>
+  </nav>`
+  return identityPrintDocument(
+    {
+      doc,
+      lang,
+      commit: view.cached.status.sha,
+      head: html`<link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="${studioAssets.url('visual.css')}"><script src="${studioAssets.url('visual.js')}" defer></script>`,
+      toolbar,
+      assetUrl: assetUrlFor(view.record.slug),
+    },
+    (block, blockCtx) => renderBlock(block, { ...blockCtx, idPrefix: 'p' }),
+  )
 }

@@ -1,6 +1,7 @@
 import { normalizeCommand, SVG_ISSUE_CODES } from '@brand-os/asset-catalog'
 import { CHANGE_DEPTHS, IDENTITY_INTENTS, LOGO_PRESENCE } from '@brand-os/brand-core'
 import type { DocumentKind, IdentityField } from '@brand-os/brand-core'
+import { isVisualLang, visualCatalog } from '@brand-os/brand-core/visual'
 import type { MessageKey } from '../i18n/index.js'
 import type { ProjectionAsset, ProjectionToken, StudioProjection } from '../projection.js'
 import type { BrandRecord, ProvisionRequest } from '../registry.js'
@@ -607,7 +608,13 @@ export function brandBookPage(ctx: ViewContext, view: BrandView, flash: string |
   const { i } = ctx
   const p = view.cached.projection
   const doc = p?.documents['brand-book']
-  return brandShell(ctx, view, 'brand-book', i.t('book.title'), p ? html`${brandHeader(ctx, view, i.t('book.title'), i.t('book.subtitle'))}${doc ? documentView(i, doc, 'book') : ''}` : html``, flash)
+  return brandShell(ctx, view, 'brand-book', i.t('book.title'), p ? html`${brandHeader(ctx, view, i.t('book.title'), i.t('book.subtitle'))}${p.visual?.identity ? identityChapterLink(ctx, view.record.slug) : ''}${doc ? documentView(i, doc, 'book') : ''}` : html``, flash)
+}
+
+/** A link from the Brand Book page to its Visual identity chapter (V2.1). Additive: the page is not restructured. */
+function identityChapterLink(ctx: ViewContext, slug: string): SafeHtml {
+  const t = visualCatalog(isVisualLang(ctx.i.locale) ? ctx.i.locale : 'en').identity
+  return banner({ tone: 'info', title: t.openChapter, body: t.openChapterHint, actions: html`<a class="btn btn-secondary btn-sm" href="/brands/${slug}/visual/identity">${icon('layers')}<span>${t.openChapter}</span></a>` })
 }
 
 function tokenState(ctx: ViewContext, token: ProjectionToken): SafeHtml {

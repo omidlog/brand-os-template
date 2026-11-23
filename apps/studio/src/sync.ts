@@ -182,7 +182,7 @@ export class SyncService {
       let projection = previous?.projection ?? null
       let previews = previous?.previews ?? {}
       // A cache written before the knowledge, creative, calendar or visual projection existed is rebuilt once at the same commit.
-      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.visual === undefined) {
+      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.visual === undefined || (projection.visual !== null && projection.visual.identity === undefined)) {
         const archive = await this.deps.github.getTarball(owner, name, head.sha)
         const checkout = path.join(work, 'checkout')
         extractTarGz(archive, { destRoot: checkout, include: studioPathAllowed })

@@ -170,4 +170,6 @@ test('bridge: every visual claim maps onto the ladder, and the BMC page claims n
   // A framework the registry does not know is never ok.
   assert.equal(checkFrameworkClaim({ ...BMC_FRAMEWORK, framework_id: 'UNKNOWN' }).ok, false)
   for (const methodId of Object.values(VISUAL_FRAMEWORK_METHOD)) assert.ok(methodById(methodId), `${methodId} must be in the registry`)
+  // The identity chapter's contrast grid cites WCAG 2 at informed_by, which the unchecked W3C entry allows.
+  assert.deepEqual(checkFrameworkClaim({ ...BMC_FRAMEWORK, framework_id: 'WCAG-CONTRAST' }), { framework_id: 'WCAG-CONTRAST', method_id: 'w3c.wcag-2.2', page_claim: 'informed_by', allowed: 'informed_by', ok: true })
 })

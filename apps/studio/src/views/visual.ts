@@ -2,6 +2,9 @@ import type { BmcZone, BusinessModelCanvasBlock, CitationListBlock, DataState, F
 import { fillVisual, visualCatalog } from '@brand-os/brand-core/visual'
 import { html, join, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
+import { dateOnly, ghostChart, illustrativeStamp, legend, miniMap as mapView, STATE_META, stateChip, two } from './visual-primitives.js'
+
+export { dateOnly, illustrativeStamp, legend, stateChip } from './visual-primitives.js'
 
 /**
  * Renderers for semantic visual documents (Visual Blueprint P0). One renderer, two compositions: the Studio page
@@ -10,37 +13,10 @@ import { icon, type IconName } from './icons.js'
  * `html` template; there is no inline style or script (strict CSP), only classes from `static/visual.css`.
  */
 
-const STATE_META: Record<DataState, { tone: string; icon: IconName }> = {
-  approved: { tone: 'approved', icon: 'checkCircle' },
-  stale: { tone: 'stale', icon: 'history' },
-  assumption: { tone: 'draft', icon: 'clock' },
-  recommendation: { tone: 'suggestion', icon: 'sparkle' },
-  missing: { tone: 'missing', icon: 'circle' },
-  withheld: { tone: 'withheld', icon: 'lock' },
-  conflicting: { tone: 'conflict', icon: 'alert' },
-  not_applicable: { tone: 'na', icon: 'skip' },
-}
-
 const ZONE_ICON: Record<BmcZone['state'], IconName> = { complete: 'checkCircle', partial: 'clock', missing: 'circle', withheld: 'lock', not_applicable: 'skip' }
-
-export function stateChip(cat: VisualCatalog, state: DataState): SafeHtml {
-  const meta = STATE_META[state]
-  return html`<span class="vz-chip vz-chip--${meta.tone}">${icon(meta.icon)}<span>${cat.state[state]}</span></span>`
-}
 
 function zoneChip(cat: VisualCatalog, state: BmcZone['state']): SafeHtml {
   return html`<span class="vz-zchip vz-zchip--${state}">${icon(ZONE_ICON[state])}<span>${cat.zoneState[state]}</span></span>`
-}
-
-function two(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
-function dateOnly(iso: string | null, lang: VisualLang): string | null {
-  if (!iso) return null
-  const at = Date.parse(iso)
-  if (!Number.isFinite(at)) return null
-  return new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeZone: 'UTC' }).format(at)
 }
 
 export interface CanvasOptions {
@@ -96,7 +72,7 @@ function zoneView(cat: VisualCatalog, zone: BmcZone, opts: CanvasOptions): SafeH
     </header>
     <p class="vz-zone-prompt">${title.prompt}</p>
     ${gap
-      ? html`<div class="vz-gap"><span class="vz-gap-ghost" aria-hidden="true"></span><p class="vz-gap-title">${cat.text.gapTitle}</p></div>`
+      ? ghostChart({ title: cat.text.gapTitle })
       : html`<ul class="vz-entries">${zone.entries.map((entry) => entryView(cat, entry))}</ul>`}
   </article>`
 }
@@ -134,34 +110,26 @@ export function canvasView(cat: VisualCatalog, block: BusinessModelCanvasBlock, 
   return html`<div class="vz-scroll" tabindex="0" role="region" aria-label="${cat.text.canvasTitle}">${grid}</div>`
 }
 
-/** A topology-faithful mini-map: the 30-second read of which zones are filled. Each zone links to its cell. */
-export function miniMap(cat: VisualCatalog, block: BusinessModelCanvasBlock, idPrefix: string, linked: boolean): SafeHtml {
-  // Canonical 10×3 grid: x, y, width, height in grid units.
-  const geometry: Record<string, [number, number, number, number]> = {
-    key_partners: [0, 0, 2, 2],
-    key_activities: [2, 0, 2, 1],
-    key_resources: [2, 1, 2, 1],
-    value_propositions: [4, 0, 2, 2],
-    customer_relationships: [6, 0, 2, 1],
-    channels: [6, 1, 2, 1],
-    customer_segments: [8, 0, 2, 2],
-    cost_structure: [0, 2, 5, 1],
-    revenue_streams: [5, 2, 5, 1],
-  }
-  const unitX = 20
-  const unitY = 16
-  const cells = block.zones.map((zone) => {
-    const [x, y, w, h] = geometry[zone.zone_id] ?? [0, 0, 1, 1]
-    const label = `${two(zone.order)} ${cat.zone[zone.zone_id].title}: ${cat.zoneState[zone.state]}`
-    const shape = html`<rect class="vz-map-cell vz-map--${zone.state}" x="${x * unitX + 1}" y="${y * unitY + 1}" width="${w * unitX - 2}" height="${h * unitY - 2}" rx="1.5"/><text class="vz-map-num" x="${x * unitX + 4}" y="${y * unitY + 9}">${two(zone.order)}</text>`
-    return linked ? html`<a href="#${idPrefix}-zone-${zone.zone_id}" aria-label="${label}"><title>${label}</title>${shape}</a>` : html`<g role="img" aria-label="${label}">${shape}</g>`
-  })
-  if (!linked) return html`<svg class="vz-map" viewBox="0 0 200 48" role="img" aria-label="${cat.text.zoneIndex}" dir="ltr">${cells}</svg>`
-  return html`<nav class="vz-map-nav" aria-label="${cat.text.zoneIndex}"><svg class="vz-map" viewBox="0 0 200 48" dir="ltr" focusable="false">${cells}</svg></nav>`
+/** Canonical 10×3 Business Model Canvas geometry for the mini-map: x, y, width, height in grid units. */
+const BMC_GEOMETRY: Record<string, [number, number, number, number]> = {
+  key_partners: [0, 0, 2, 2],
+  key_activities: [2, 0, 2, 1],
+  key_resources: [2, 1, 2, 1],
+  value_propositions: [4, 0, 2, 2],
+  customer_relationships: [6, 0, 2, 1],
+  channels: [6, 1, 2, 1],
+  customer_segments: [8, 0, 2, 2],
+  cost_structure: [0, 2, 5, 1],
+  revenue_streams: [5, 2, 5, 1],
 }
 
-export function legend(cat: VisualCatalog, states: DataState[]): SafeHtml {
-  return html`<ul class="vz-legend" aria-label="${cat.text.statusLegend}">${states.map((state) => html`<li>${stateChip(cat, state)}</li>`)}</ul>`
+/** A topology-faithful mini-map: the 30-second read of which zones are filled. Each zone links to its cell. */
+export function miniMap(cat: VisualCatalog, block: BusinessModelCanvasBlock, idPrefix: string, linked: boolean): SafeHtml {
+  const cells = block.zones.map((zone) => {
+    const [x, y, w, h] = BMC_GEOMETRY[zone.zone_id] ?? [0, 0, 1, 1]
+    return { key: zone.zone_id, x, y, w, h, num: two(zone.order), state: zone.state, label: `${two(zone.order)} ${cat.zone[zone.zone_id].title}: ${cat.zoneState[zone.state]}`, href: `#${idPrefix}-zone-${zone.zone_id}` }
+  })
+  return mapView(cat.text.zoneIndex, cells, { cols: 10, rows: 3, unitX: 20, unitY: 16 }, linked)
 }
 
 export function summaryView(cat: VisualCatalog, doc: VisualDocument, lang: VisualLang): SafeHtml {
@@ -212,11 +180,6 @@ export function citationTable(cat: VisualCatalog, block: CitationListBlock, canv
       })}</tbody>
     </table>
   </section>`
-}
-
-export function illustrativeStamp(cat: VisualCatalog, doc: VisualDocument): SafeHtml {
-  if (!doc.illustrative) return html``
-  return html`<p class="vz-mock" role="note"><strong>${cat.text.illustrative}</strong> <span>${cat.text.illustrativeNote}</span></p>`
 }
 
 function blocks(doc: VisualDocument): { canvas: BusinessModelCanvasBlock; citations: CitationListBlock } {

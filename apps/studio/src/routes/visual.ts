@@ -1,7 +1,7 @@
 import { redirect } from '../http.js'
 import { brandIsReady } from '../sync.js'
 import type { BrandView } from '../views/layout.js'
-import { visualPage, visualPrintPage } from '../views/visual-page.js'
+import { identityPage, identityPrintPage, visualPage, visualPrintPage } from '../views/visual-page.js'
 import type { Handler, StudioCore } from './context.js'
 
 /**
@@ -21,9 +21,11 @@ export function visualRoutes(core: StudioCore): { visual: Handler } {
     const brand: BrandView = { record, cached, stale: sync.isStale(record.slug, cached.status), refreshing: sync.isRefreshing(record.slug) }
     const flash = ctx.url.searchParams.get('sync')
     const flashValue = flash === 'synced' || flash === 'failed' || flash === 'too-soon' ? flash : null
-    if (match[2] !== 'print') return render(ctx, 200, visualPage(view(ctx), brand, flashValue))
+    // match[2]: the Brand Book "Visual identity" chapter (V2.1); match[3]: its print view.
+    const identity = match[2] === 'identity'
+    if (match[3] !== 'print') return render(ctx, 200, identity ? identityPage(view(ctx), brand, flashValue) : visualPage(view(ctx), brand, flashValue))
     const edition = ctx.url.searchParams.get('edition') === 'public' ? 'public' : 'internal'
-    const page = visualPrintPage(view(ctx), brand, edition)
+    const page = identity ? identityPrintPage(view(ctx), brand, edition) : visualPrintPage(view(ctx), brand, edition)
     if (!page) return notFound(ctx)
     render(ctx, 200, page)
   }

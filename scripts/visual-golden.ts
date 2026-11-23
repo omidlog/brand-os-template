@@ -1,7 +1,7 @@
 /**
  * Golden examples for the visual renderers (Visual Blueprint P0).
  *
- * Renders the ILLUSTRATIVE / MOCK DATA business model canvas fixture through the same print renderer Studio uses,
+ * Renders the ILLUSTRATIVE / MOCK DATA business model canvas and Visual identity chapter fixtures through the same print renderer Studio uses,
  * in en, fa and tr and in the internal and public editions, as self-contained HTML files. When Chrome is installed
  * it also prints each file to PDF (A3 landscape) and, when `pdftoppm` exists, renders PNG previews for visual QA.
  *
@@ -13,9 +13,11 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { illustrativeBusinessModelCanvas, VISUAL_LANGS, type VisualLang } from '@brand-os/brand-core/visual'
+import { illustrativeBusinessModelCanvas, illustrativeVisualIdentity, VISUAL_LANGS, type IdentityFixtureVariant, type VisualLang } from '@brand-os/brand-core/visual'
 import { html, trusted } from '../apps/studio/src/views/html.js'
 import { printDocument } from '../apps/studio/src/views/visual.js'
+import { identityPrintDocument } from '../apps/studio/src/views/visual-identity.js'
+import { renderBlock } from '../apps/studio/src/views/visual-registry.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const STATIC = path.join(ROOT, 'apps', 'studio', 'static')
@@ -50,6 +52,21 @@ export function renderGolden(lang: VisualLang, edition: 'internal' | 'public'): 
   return printDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html`` }).value
 }
 
+/** The Visual identity chapter fixture (V2.1), A4 portrait. The mock master is a labelled frame, not a file. */
+export function renderIdentityGolden(lang: VisualLang, edition: 'internal' | 'public', variant: IdentityFixtureVariant): string {
+  const doc = illustrativeVisualIdentity(edition, variant)
+  return identityPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html``, assetUrl: () => null }, (block, ctx) => renderBlock(block, { ...ctx, idPrefix: 'p' })).value
+}
+
+function print(chrome: string | null, png: boolean, out: string, name: string): void {
+  if (!chrome) return
+  const file = path.join(out, `${name}.html`)
+  const pdf = path.join(out, `${name}.pdf`)
+  execFileSync(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--no-pdf-header-footer', '--allow-file-access-from-files', `--print-to-pdf=${pdf}`, pathToFileURL(file).href], { stdio: 'ignore', timeout: 120_000 })
+  console.log(`wrote ${path.relative(ROOT, pdf)}`)
+  if (png) execFileSync('pdftoppm', ['-png', '-r', '50', pdf, path.join(out, name)], { stdio: 'ignore' })
+}
+
 function main(): void {
   const out = path.resolve(arg('--out') ?? path.join(ROOT, 'dist', 'visual-golden'))
   fs.mkdirSync(out, { recursive: true })
@@ -61,11 +78,13 @@ function main(): void {
       const file = path.join(out, `${name}.html`)
       fs.writeFileSync(file, renderGolden(lang, edition))
       console.log(`wrote ${path.relative(ROOT, file)}`)
-      if (!chrome) continue
-      const pdf = path.join(out, `${name}.pdf`)
-      execFileSync(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--no-pdf-header-footer', '--allow-file-access-from-files', `--print-to-pdf=${pdf}`, pathToFileURL(file).href], { stdio: 'ignore', timeout: 120_000 })
-      console.log(`wrote ${path.relative(ROOT, pdf)}`)
-      if (png) execFileSync('pdftoppm', ['-png', '-r', '50', pdf, path.join(out, name)], { stdio: 'ignore' })
+      print(chrome, Boolean(png), out, name)
+      for (const variant of ['complete', 'awaiting'] as const) {
+        const identity = `identity-illustrative.${variant}.${edition}.${lang}`
+        fs.writeFileSync(path.join(out, `${identity}.html`), renderIdentityGolden(lang, edition, variant))
+        console.log(`wrote ${path.relative(ROOT, path.join(out, `${identity}.html`))}`)
+        print(chrome, Boolean(png), out, identity)
+      }
     }
   }
   if (!chrome) console.log('No Chrome found (set CHROME_PATH) or --no-pdf given: HTML only. Open a file and use Print, A3 landscape.')
