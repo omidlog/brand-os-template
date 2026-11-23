@@ -111,7 +111,7 @@
 .vz-gap-title { margin: 30px 0 4px; font-weight: 600; font-size: 12px; color: var(--vz-text-2); }
 .vz-gap-body { margin: 0; font-size: 12px; color: var(--vz-text-3); }
 
-.vz-next { margin-block-start: auto; padding-block-start: 8px; border-block-start: 1px dashed var(--vz-rule); font-size: 11.5px; }
+.vz-next { margin-block-start: 4px; padding-block-start: 8px; border-block-start: 1px dashed var(--vz-rule); font-size: 11.5px; }
 .vz-next-title { margin: 0 0 4px; display: flex; align-items: center; gap: 4px; font-weight: 600; color: var(--vz-text-2); }
 .vz-next-icon { width: 12px; height: 12px; }
 [dir="rtl"] .vz-next-icon { transform: scaleX(-1); }
@@ -124,7 +124,7 @@
 .vz-related-hint { display: block; }
 
 /* ---------- Studio page composition ---------- */
-.vz-screen { display: flex; flex-direction: column; gap: 20px; }
+.vz-screen { display: flex; flex-direction: column; gap: 20px; min-inline-size: 0; }
 .vz-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .vz-edition-line { margin: 0; max-width: 72ch; font-size: 13px; }
 .vz-edition { display: inline-block; padding: 2px 10px; border-radius: 999px; font: 600 11px/1.6 var(--vz-display); letter-spacing: 0.08em; text-transform: uppercase; background: var(--vz-ink); color: #f9fafb; }
@@ -146,7 +146,7 @@
 .vz-summary-item { display: flex; flex-direction: column-reverse; gap: 4px; }
 .vz-summary-item dt { margin: 0; }
 .vz-summary-item dd { margin: 0; font: 700 34px/1 var(--vz-display); color: var(--vz-text); font-variant-numeric: tabular-nums; }
-.vz-scroll { overflow-x: auto; overscroll-behavior-x: contain; border-radius: 4px; }
+.vz-scroll { overflow-x: auto; overscroll-behavior-x: contain; border-radius: 4px; contain: inline-size; }
 .vz-scroll:focus-visible { outline: 2px solid var(--vz-violet); outline-offset: 3px; }
 .vz-scroll .vz-bmc { min-inline-size: 1040px; }
 .vz-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
@@ -208,7 +208,7 @@
 .vz-print-meta div { display: flex; flex-direction: column; gap: 1mm; }
 .vz-print-meta dt { color: var(--vz-text-3); text-transform: uppercase; letter-spacing: 0.1em; font: 600 7.5pt/1.2 var(--vz-display); }
 .vz-print-meta dd { margin: 0; }
-.vz-page .vz-bmc { grid-template-rows: minmax(68mm, auto) minmax(68mm, auto) minmax(40mm, auto); break-inside: avoid; }
+.vz-page .vz-bmc { grid-template-rows: minmax(64mm, auto) minmax(64mm, auto) minmax(38mm, auto); break-inside: avoid; }
 .vz-page .vz-zone { padding: 3.2mm 3.2mm 3.6mm; font-size: 8.6pt; line-height: 1.42; gap: 1.8mm; }
 .vz-page .vz-zone-num { font-size: 15pt; }
 .vz-page .vz-zone-title { font-size: 10.5pt; }

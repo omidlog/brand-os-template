@@ -1,6 +1,7 @@
 import { latestAnswers } from '../completeness.js'
 import { itemFor, type DocumentAudience, type DocumentItem, type ItemContext } from '../documents/model.js'
 import type { InterviewEngine } from '../engine.js'
+import type { PersonalFacet } from '../types.js'
 import { readEvidence } from '../evidence.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
 import {
@@ -44,7 +45,7 @@ export const BMC_ZONES: readonly BmcZoneSpec[] = [
 ]
 
 /** Personal brands get a canvas only when a facet runs a business. */
-const BUSINESS_FACETS = ['founder', 'consultant']
+const BUSINESS_FACETS: readonly PersonalFacet[] = ['founder-executive', 'consultant-expert']
 
 const MAX_VALUE = 2000
 
@@ -193,7 +194,7 @@ export function canvasApplies(engine: InterviewEngine): boolean {
   const config = engine.config()
   const personal = config.modules.personal?.enabled === true || config.brand.profile === 'personal-brand'
   if (!personal) return true
-  const facets: string[] = [...(config.modules.personal?.facets ?? [])]
+  const facets: readonly PersonalFacet[] = config.modules.personal?.facets ?? []
   return facets.some((facet) => BUSINESS_FACETS.includes(facet))
 }
 
