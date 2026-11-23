@@ -42,7 +42,7 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
 
     const page = await owner.page(`/brands/${SLUG}/visual`)
     assert.equal(page.res.status, 200)
-    assert.match(page.text, /Business model canvas/)
+    assert.match(page.text, /Business Model Canvas/)
     assert.match(page.text, /Internal edition/)
     assert.equal((page.text.match(/class="vz-zone vz-zone--/g) ?? []).length, 9, 'exactly nine zones')
     for (const zone of ['key_partners', 'key_activities', 'key_resources', 'value_propositions', 'customer_relationships', 'channels', 'customer_segments', 'cost_structure', 'revenue_streams']) {
@@ -111,7 +111,7 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     const faPrint = await owner.page(`/brands/${SLUG}/visual/print`)
     assert.match(faPrint.text, /<html lang="fa" dir="rtl">/)
     await owner.get(`/brands/${SLUG}/visual?lang=tr`)
-    assert.match((await owner.page(`/brands/${SLUG}/visual`)).text, /İş modeli kanvası/)
+    assert.match((await owner.page(`/brands/${SLUG}/visual`)).text, /İş Modeli Kanvası/)
   } finally {
     await s.close()
   }

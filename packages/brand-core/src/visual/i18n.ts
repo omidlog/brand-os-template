@@ -80,6 +80,8 @@ export interface VisualCatalog {
     unavailable: string
     printButton: string
     printOnly: string
+    detailsTitle: string
+    detailsFields: string
   }
 }
 
@@ -122,7 +124,7 @@ const en: VisualCatalog = {
     'business.model.cost_items': 'List the main cost categories, fixed or variable, without amounts.',
   },
   text: {
-    canvasTitle: 'Business model canvas',
+    canvasTitle: 'Business Model Canvas',
     canvasKicker: 'Strategy · Business model',
     editionInternal: 'Internal edition',
     editionPublic: 'Public edition',
@@ -176,12 +178,14 @@ const en: VisualCatalog = {
     openPrintPublic: 'Print view (public)',
     backToCanvas: 'Back to the canvas',
     notApplicableTitle: 'Not used for this profile',
-    notApplicableBody: 'A personal brand gets a business model canvas only with the founder or consultant facet.',
-    runningHead: 'Brand OS · Business model canvas',
+    notApplicableBody: 'A personal brand gets a Business Model Canvas only with the founder or consultant facet.',
+    runningHead: 'Brand OS · Business Model Canvas',
     pending: 'This commit was synced before the canvas existed. Press Refresh to build it.',
     unavailable: 'The canvas could not be built from this commit. The rest of the brand is unaffected.',
     printButton: 'Print or save as PDF',
     printOnly: 'Studio is read-only: this view only prints what is already merged.',
+    detailsTitle: 'Details and sources',
+    detailsFields: 'Question ids',
   },
 }
 
@@ -284,6 +288,8 @@ const fa: VisualCatalog = {
     unavailable: 'بوم از این کامیت ساخته نشد. بقیهٔ برند تحت تأثیر نیست.',
     printButton: 'چاپ یا ذخیره به‌صورت PDF',
     printOnly: 'Studio فقط‌خواندنی است: این نما فقط آنچه ادغام شده را چاپ می‌کند.',
+    detailsTitle: 'جزئیات و منابع',
+    detailsFields: 'شناسهٔ پرسش‌ها',
   },
 }
 
@@ -326,7 +332,7 @@ const tr: VisualCatalog = {
     'business.model.cost_items': 'Ana maliyet kalemlerini, sabit veya değişken, tutar vermeden listeleyin.',
   },
   text: {
-    canvasTitle: 'İş modeli kanvası',
+    canvasTitle: 'İş Modeli Kanvası',
     canvasKicker: 'Strateji · İş modeli',
     editionInternal: 'İç sürüm',
     editionPublic: 'Kamuya açık sürüm',
@@ -381,11 +387,13 @@ const tr: VisualCatalog = {
     backToCanvas: 'Kanvasa dön',
     notApplicableTitle: 'Bu profil için kullanılmıyor',
     notApplicableBody: 'Kişisel marka, iş modeli kanvasını yalnızca kurucu veya danışman yönüyle alır.',
-    runningHead: 'Brand OS · İş modeli kanvası',
+    runningHead: 'Brand OS · İş Modeli Kanvası',
     pending: 'Bu commit kanvas eklenmeden önce eşitlendi. Oluşturmak için Yenile’ye basın.',
     unavailable: 'Kanvas bu commit’ten oluşturulamadı. Markanın geri kalanı etkilenmedi.',
     printButton: 'Yazdır veya PDF olarak kaydet',
     printOnly: 'Studio salt okunurdur: bu görünüm yalnızca birleştirilmiş olanı yazdırır.',
+    detailsTitle: 'Ayrıntılar ve kaynaklar',
+    detailsFields: 'Soru kimlikleri',
   },
 }
 
