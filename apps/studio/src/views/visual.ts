@@ -52,7 +52,7 @@ export interface CanvasOptions {
   idPrefix: string
 }
 
-function entryView(cat: VisualCatalog, entry: VisualEntry, opts: CanvasOptions): SafeHtml {
+function entryView(cat: VisualCatalog, entry: VisualEntry): SafeHtml {
   const meta = STATE_META[entry.state]
   const body =
     entry.state === 'withheld'
@@ -64,14 +64,14 @@ function entryView(cat: VisualCatalog, entry: VisualEntry, opts: CanvasOptions):
           : html`<p class="vz-entry-value" dir="auto">${entry.value}</p>`
   return html`<li class="vz-entry vz-entry--${meta.tone}">
     ${body}
-    <p class="vz-entry-meta"><span class="vz-entry-label" dir="auto">${entry.label}</span>${stateChip(cat, entry.state)}${entry.version !== null ? html`<span class="vz-entry-version">${fillVisual(cat.text.version, { version: entry.version })}</span>` : ''}${opts.mode === 'screen' ? html`<code class="vz-code" dir="ltr">${entry.id}</code>` : ''}</p>
+    <p class="vz-entry-meta"><span class="vz-entry-label" dir="auto">${entry.label}</span>${stateChip(cat, entry.state)}${entry.version !== null ? html`<span class="vz-entry-version">${fillVisual(cat.text.version, { version: entry.version })}</span>` : ''}</p>
   </li>`
 }
 
 function nextList(cat: VisualCatalog, zone: BmcZone): SafeHtml {
   if (!zone.next_questions.length) return html``
   return html`<div class="vz-next">
-    <p class="vz-next-title">${icon('chevron', 'vz-next-icon')}<span>${cat.text.nextQuestions}</span></p>
+    <p class="vz-next-title"><span>${cat.text.nextQuestions}</span></p>
     <ul>${zone.next_questions.map((q) =>
       q.kind === 'proposed'
         ? html`<li class="vz-next-item vz-next-item--proposed"><span class="vz-next-kind">${cat.text.proposedQuestion}</span><span class="vz-next-prompt">${cat.proposed[q.id] ?? ''}</span><code class="vz-code" dir="ltr">${q.id}</code></li>`
@@ -80,6 +80,10 @@ function nextList(cat: VisualCatalog, zone: BmcZone): SafeHtml {
   </div>`
 }
 
+/**
+ * The canvas cell itself carries only the reading: title, the canonical prompt and the entries. Question ids, the
+ * questions still to answer and related answers live in the collapsible details (screen) or on print page 2.
+ */
 function zoneView(cat: VisualCatalog, zone: BmcZone, opts: CanvasOptions): SafeHtml {
   const title = cat.zone[zone.zone_id]
   const id = `${opts.idPrefix}-zone-${zone.zone_id}`
@@ -92,13 +96,33 @@ function zoneView(cat: VisualCatalog, zone: BmcZone, opts: CanvasOptions): SafeH
     </header>
     <p class="vz-zone-prompt">${title.prompt}</p>
     ${gap
-      ? html`<div class="vz-gap"><span class="vz-gap-ghost" aria-hidden="true"></span><p class="vz-gap-title">${cat.text.gapTitle}</p><p class="vz-gap-body">${cat.text.gapBody}</p></div>`
-      : html`<ul class="vz-entries">${zone.entries.map((entry) => entryView(cat, entry, opts))}</ul>`}
-    ${opts.showNext ? nextList(cat, zone) : ''}
-    ${opts.showNext && opts.mode === 'screen' && zone.related.length
-      ? html`<p class="vz-related"><span>${cat.text.related}:</span> ${join(zone.related.map((rid) => html`<code class="vz-code" dir="ltr">${rid}</code>`), ' ')} <span class="vz-related-hint">${cat.text.relatedHint}</span></p>`
-      : ''}
+      ? html`<div class="vz-gap"><span class="vz-gap-ghost" aria-hidden="true"></span><p class="vz-gap-title">${cat.text.gapTitle}</p></div>`
+      : html`<ul class="vz-entries">${zone.entries.map((entry) => entryView(cat, entry))}</ul>`}
   </article>`
+}
+
+/**
+ * "Details and sources" for the Studio page: everything technical or explanatory that would crowd the canvas.
+ * Closed by default; the same facts are on print page 2.
+ */
+export function detailsView(cat: VisualCatalog, block: BusinessModelCanvasBlock, panels: SafeHtml, editionNote: string, showNext: boolean): SafeHtml {
+  const zones = block.zones.filter((zone) => zone.entries.length || zone.next_questions.length || zone.related.length)
+  return html`<details class="vz-details">
+    <summary class="vz-details-summary">${icon('chevron', 'vz-details-icon')}<span>${cat.text.detailsTitle}</span></summary>
+    <div class="vz-details-body">
+      <p class="vz-details-lead">${editionNote} ${cat.text.gapBody}</p>
+      <p class="vz-muted vz-small">${cat.text.zoneIndexHint}</p>
+      <ol class="vz-details-zones">${zones.map((zone) => html`<li class="vz-details-zone">
+        <p class="vz-details-zone-title"><span class="vz-zone-ref">${two(zone.order)}</span> ${cat.zone[zone.zone_id].title}</p>
+        ${zone.entries.length ? html`<p class="vz-details-ids"><span class="vz-muted">${cat.text.detailsFields}:</span> ${join(zone.entries.map((entry) => html`<code class="vz-code" dir="ltr">${entry.id}</code>`), ' ')}</p>` : ''}
+        ${showNext ? nextList(cat, zone) : ''}
+        ${showNext && zone.related.length
+          ? html`<p class="vz-related"><span>${cat.text.related}:</span> ${join(zone.related.map((rid) => html`<code class="vz-code" dir="ltr">${rid}</code>`), ' ')} <span class="vz-related-hint">${cat.text.relatedHint}</span></p>`
+          : ''}
+      </li>`)}</ol>
+      <div class="vz-panels">${panels}</div>
+    </div>
+  </details>`
 }
 
 /** The nine-zone canvas. The grid keeps the canonical topology in every language (text inside follows the locale). */
@@ -253,7 +277,7 @@ ${input.toolbar}
     ${canvasView(cat, canvas, { lang, mode: 'print', showNext: false, idPrefix: 'p' })}
     <div class="vz-print-under">
       ${legend(cat, ['approved', 'stale', 'assumption', 'withheld', 'missing', 'not_applicable'])}
-      <p class="vz-attrib"><span class="vz-claim-kind">${cat.claim.informed_by}</span> <span dir="ltr">Business Model Canvas · Strategyzer</span> · ${internal ? cat.text.editionInternalNote : cat.text.editionPublicNote}</p>
+      <p class="vz-attrib"><span class="vz-claim-kind">${cat.claim.informed_by}</span> <span dir="ltr">Business Model Canvas · Strategyzer</span></p>
     </div>
     ${foot(cat.text.pageCanvas, 1)}
   </section>
@@ -265,7 +289,7 @@ ${input.toolbar}
         ${citationTable(cat, citations, canvas, lang, true)}
       </div>
       <div class="vz-side">
-        <section class="vz-panel"><h2 class="vz-panel-title">${cat.text.summaryTitle}</h2>${summaryView(cat, doc, lang)}${miniMap(cat, canvas, 'p', false)}</section>
+        <section class="vz-panel"><h2 class="vz-panel-title">${cat.text.summaryTitle}</h2>${summaryView(cat, doc, lang)}${miniMap(cat, canvas, 'p', false)}<p class="vz-muted vz-edition-note">${internal ? cat.text.editionInternalNote : cat.text.editionPublicNote} ${cat.text.gapBody}</p></section>
         ${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'print')}
         ${relationshipsPanel(cat)}
         ${internal ? html`<section class="vz-panel"><h2 class="vz-panel-title">${cat.text.nextQuestions}</h2><ul class="vz-next-all">${canvas.zones

@@ -6,7 +6,7 @@ import { html, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
 import type { BrandView, ViewContext } from './layout.js'
 import { brandHeader, brandShell } from './pages.js'
-import { canvasView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
+import { canvasView, detailsView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
 
 /**
  * The read-only "Business model" page and its print view. GET only: no form, no link that changes anything. The
@@ -40,7 +40,7 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
   const body = html`${header}
     <div class="vz-screen">
       <div class="vz-toolbar">
-        <p class="vz-edition-line"><span class="vz-edition vz-edition--internal">${cat.text.editionInternal}</span> <span class="vz-muted">${cat.text.editionInternalNote}</span></p>
+        <p class="vz-edition-line"><span class="vz-edition vz-edition--internal">${cat.text.editionInternal}</span></p>
         <div class="vz-actions">
           <a class="btn btn-secondary btn-sm" href="${base}/print">${icon('book')}<span>${cat.text.openPrint}</span></a>
           <a class="btn btn-ghost btn-sm" href="${base}/print?edition=public">${icon('globe')}<span>${cat.text.openPrintPublic}</span></a>
@@ -50,7 +50,6 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
         <div class="vz-overview-map">
           <p class="vz-overline">${cat.text.zoneIndex}</p>
           ${miniMap(cat, canvas, 'bmc', true)}
-          <p class="vz-muted vz-small">${cat.text.zoneIndexHint}</p>
         </div>
         <div class="vz-overview-summary">
           <p class="vz-overline">${cat.text.summaryTitle} · ${asOf ? fillVisual(cat.text.asOf, { date: asOf }) : cat.text.asOfNone}</p>
@@ -59,10 +58,7 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
       </section>
       ${canvasView(cat, canvas, { lang, mode: 'screen', showNext: true, idPrefix: 'bmc' })}
       ${legend(cat, ['approved', 'stale', 'assumption', 'recommendation', 'withheld', 'missing', 'not_applicable'])}
-      <div class="vz-panels">
-        ${relationshipsPanel(cat)}
-        ${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'screen')}
-      </div>
+      ${detailsView(cat, canvas, html`${relationshipsPanel(cat)}${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'screen')}`, cat.text.editionInternalNote, true)}
     </div>`
   return shell(body)
 }
