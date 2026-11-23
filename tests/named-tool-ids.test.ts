@@ -97,7 +97,7 @@ test('every id a named fact tool reads is an existing question and registry id',
     }
   }
   // The ids that caused BUG-01 do not exist, and no named tool asks for them again.
-  const referenced = new Set(Object.values(NAMED_FACT_TOOL_IDS).flat())
+  const referenced = new Set<string>(Object.values(NAMED_FACT_TOOL_IDS).flat())
   for (const id of LEGACY_IDS) {
     assert.ok(!bank.has(id), `${id} should still be absent from the bank`)
     assert.ok(!referenced.has(id), `${id} must not be requested`)
