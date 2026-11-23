@@ -111,8 +111,8 @@ does not go stale.
 ## 7. Audit findings worth an owner decision
 
 1. **Task Context PR #29 is the prerequisite.** Review and merge (or reject) it before any Runtime code. Its own
-   findings still stand: `get_logo_rules` / `get_motion_guidelines` ask for ids the question bank does not have, and
-   there is no "list readable assets" reader.
+   findings: `get_logo_rules` / `get_motion_guidelines` asked for ids the question bank does not have (fixed, BUG-01,
+   see `docs-internal/TASK_CONTEXT.md` finding 1), and there is no "list readable assets" reader (still open).
 2. **No model/provider-use right exists on assets.** Proposed default: absent ⇒ not allowed to leave the machine.
 3. **Mascot reference sets are not modelled.** Do not invent canonical views; the owner must register and approve them.
 4. **Two open PRs define "quality" differently** (Coach answer quality, Trust controls). Pick one vocabulary before

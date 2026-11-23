@@ -103,12 +103,14 @@ Personal rows count only when `modules.personal.enabled` is true; mascot rows on
 
 ## Findings from the audit
 
-1. **`get_logo_rules` and `get_motion_guidelines` ask for ids that do not exist.** They request
-   `brand.logo.primary`, `brand.logo.clearspace`, `brand.motion.easing`; the bank has `brand.logo.masters`,
-   `brand.logo.clear_space`, `brand.motion.principles`, `brand.motion.duration`. Both tools therefore always report
-   those fields missing, even for a brand that answered and approved them. Task-context does not inherit the bug (it
-   uses the real ids and a test pins every id against the bank), and the two legacy tools are left alone here: fixing
-   them changes existing tool output and belongs in its own small PR. **Owner decision needed.**
+1. **Fixed (BUG-01): `get_logo_rules` and `get_motion_guidelines` asked for ids that do not exist.** They requested
+   `brand.logo.primary`, `brand.logo.clearspace`, `brand.motion.easing`, so both tools always reported those fields
+   missing, even for a brand that answered and approved them. Every named fact tool now reads its ids from
+   `NAMED_FACT_TOOL_IDS` in `packages/brand-core/src/query.ts`; logo and motion use the same ids as the `logo_rules`
+   and `motion_rules` keys here (`brand.logo.masters|variants|clear_space|min_size|misuse`,
+   `brand.motion.principles|duration|reduced`). The response envelope is unchanged; each tool now lists more ids.
+   Easing curves and milliseconds are tokens (`get_brand_tokens`), not facts. `tests/named-tool-ids.test.ts` pins
+   every id against the question bank and the field registry.
 2. **There is no "list the assets I may read" reader.** `brandRetrieve(kind: 'asset')` answers by id only. Task-context
    collects candidate ids from `brand/assets/asset-manifest.yaml` and then asks `brandRetrieve` for them, so the
    authorization, rights, checksum and SVG gates still decide every item and nothing unreadable is disclosed. A

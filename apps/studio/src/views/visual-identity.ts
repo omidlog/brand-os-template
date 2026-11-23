@@ -313,7 +313,7 @@ export function logoConstructionView(block: LogoConstructionBlock, ctx: Identity
     }
     if (!block.master) {
       reasons.push({ text: t.awaitingMaster[block.master_state === 'approved' ? 'missing' : block.master_state], state: null })
-      steps.push(t.stepMaster)
+      steps.push(block.master_state === 'ambiguous' ? t.stepMasterAmbiguous : t.stepMaster)
     }
     return html`<section class="vz-plate vz-plate--logo" id="${id}" aria-labelledby="${id}-t">${head}${awaiting(ctx, { variant: 'mark', title: t.awaitingLogoTitle, body: t.awaitingLogoBody, reasons, steps })}</section>`
   }
@@ -326,6 +326,10 @@ export function logoConstructionView(block: LogoConstructionBlock, ctx: Identity
     ? html`<img class="vz-min-img" src="${url}" alt="${master.name}" height="${spec.min_size_px}" decoding="async">`
     : html`<svg class="vz-min-img" viewBox="0 0 ${Math.round((master.width && master.height ? master.width / master.height : 1) * spec.min_size_px)} ${spec.min_size_px}" height="${spec.min_size_px}" width="${Math.round((master.width && master.height ? master.width / master.height : 1) * spec.min_size_px)}" role="img" aria-label="${t.mockMark}"><rect class="vz-mockmark-min" width="100%" height="100%"/></svg>`
   const known = master.width !== null && master.height !== null
+  // Internal edition only (the core leaves badges empty in public): a draft tag or an unpublished file is said plainly.
+  const badges = ctx.doc.audience === 'internal' && master.badges.length
+    ? html`<span class="vz-master-badges">${master.badges.map((badge) => html`<span class="vz-chip vz-chip--draft vz-master-badge" data-badge="${badge}">${t.masterBadge[badge]}</span>`)}</span>`
+    : ''
   return html`<section class="vz-plate vz-plate--logo" id="${id}" aria-labelledby="${id}-t">
     ${head}
     <div class="vz-logo-layout">
@@ -335,7 +339,7 @@ export function logoConstructionView(block: LogoConstructionBlock, ctx: Identity
           <div><dt>${t.clearSpace}</dt><dd>${clearLabel}</dd></div>
           <div><dt>${t.minSize}</dt><dd>${fillVisual(t.sizeLabel, { size: n.format(spec.min_size_px) })}</dd></div>
           <div><dt>${t.minPrint}</dt><dd>${spec.min_print_mm !== null ? html`<bdi dir="ltr">${n.format(spec.min_print_mm)} mm</bdi>` : t.notSet}</dd></div>
-          <div><dt>${t.masterFile}</dt><dd dir="auto">${master.name}${master.version ? html` <span class="vz-muted" dir="ltr">v${master.version}</span>` : ''}</dd></div>
+          <div><dt>${t.masterFile}</dt><dd dir="auto">${master.name}${master.version ? html` <span class="vz-muted" dir="ltr">v${master.version}</span>` : ''}${badges}</dd></div>
         </dl>
         <figure class="vz-min"><div class="vz-min-stage">${minimum}</div><figcaption class="vz-note">${t.drawnAtMin}</figcaption></figure>
       </div>

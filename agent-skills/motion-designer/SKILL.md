@@ -7,10 +7,10 @@ Document brand motion separately from mascot acting.
 Motion identity module and token motion file. Durations in the EXAMPLE token file are not approved until hashed in `approvals.yaml`.
 
 ## Tools
-`get_motion_guidelines`, `get_brand_tokens`.
+`get_motion_guidelines` (approved `brand.motion.principles`, `brand.motion.duration`, `brand.motion.reduced`), `get_brand_tokens` (approved easing and millisecond tokens).
 
 ## Required inputs
-Approved duration and easing. Reduced motion is a required alternative once a duration exists.
+Approved motion principles and duration feel (facts), and approved easing and duration tokens. Reduced motion is a required alternative once a duration exists.
 
 ## Process
 1. Read published motion facts.
