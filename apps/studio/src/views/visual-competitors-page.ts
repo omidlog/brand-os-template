@@ -4,7 +4,7 @@ import { studioAssets } from '../static-assets.js'
 import { banner } from './components.js'
 import { html, join, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
-import type { BrandView, ViewContext } from './layout.js'
+import { brandPath, type BrandView, type ViewContext } from './layout.js'
 import { brandShell } from './pages.js'
 import { comparisonDetails, comparisonOpener, comparisonPrintDocument, comparisonSources, type ComparisonContext } from './visual-competitors.js'
 import { renderBlock } from './visual-registry.js'
@@ -24,13 +24,13 @@ export function competitorsPage(ctx: ViewContext, view: BrandView, flash: string
   const cat = visualCatalog(lang)
   const t = competitorText(lang)
   const p = view.cached.projection
-  const shell = (body: SafeHtml) => brandShell(ctx, view, 'visual', t.title, body, flash, extraHead())
+  const shell = (body: SafeHtml) => brandShell(ctx, view, 'competitors', t.title, body, flash, extraHead())
   if (!p) return shell(html``)
   const visual = p.visual
   if (visual === undefined) return shell(banner({ tone: 'info', body: cat.text.pending }))
   if (visual === null || !visual.competitors) return shell(banner({ tone: 'warning', body: cat.text.unavailable }))
   const doc = visual.competitors
-  const base = `/brands/${view.record.slug}/visual/competitors`
+  const base = brandPath(view.record.slug, 'competitors')
   const blockCtx = { cat, lang, mode: 'screen' as const, doc, idPrefix: 'cmp', showNext: true, assetUrl: () => null }
   const cctx: ComparisonContext = { cat, lang, mode: 'screen', doc, showNext: true }
   const body = html`<div class="vz-screen vz-book vz-cmp">
@@ -61,7 +61,7 @@ export function competitorsPrintPage(ctx: ViewContext, view: BrandView): SafeHtm
   const doc = view.cached.projection?.visual?.competitors
   if (!doc) return null
   const toolbar = html`<nav class="vz-print-toolbar" aria-label="${t.printTitle}">
-    <a class="vz-print-back" href="/brands/${view.record.slug}/visual/competitors">${icon('chevron', 'vz-back-icon')}<span>${t.backToMatrix}</span></a>
+    <a class="vz-print-back" href="${brandPath(view.record.slug, 'competitors')}">${icon('chevron', 'vz-back-icon')}<span>${t.backToMatrix}</span></a>
     <p class="vz-print-hint">${cat.text.printOnly}</p>
     <button type="button" class="vz-print-button" data-print hidden>${cat.text.printButton}</button>
   </nav>`
@@ -80,5 +80,5 @@ export function competitorsPrintPage(ctx: ViewContext, view: BrandView): SafeHtm
 /** The one link into the page, shown on the Business model page. */
 export function competitorsBanner(lang: VisualLang, slug: string): SafeHtml {
   const t = competitorText(lang)
-  return banner({ tone: 'info', title: t.bannerTitle, body: t.bannerBody, actions: html`<a class="btn btn-secondary btn-sm" href="/brands/${slug}/visual/competitors">${icon('layers')}<span>${t.bannerLink}</span></a>` })
+  return banner({ tone: 'info', title: t.bannerTitle, body: t.bannerBody, actions: html`<a class="btn btn-secondary btn-sm" href="${brandPath(slug, 'competitors')}">${icon('layers')}<span>${t.bannerLink}</span></a>` })
 }

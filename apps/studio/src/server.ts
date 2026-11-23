@@ -5,7 +5,7 @@ import { BodyTooLarge, first, parseCookies, parseForm, readBody, redirect, secur
 import { i18n, isLocale, type Locale } from './i18n/index.js'
 import { accountRoutes } from './routes/account.js'
 import { authRoutes } from './routes/auth.js'
-import { BRAND_SECTIONS, brandRoutes } from './routes/brands.js'
+import { BRAND_SECTIONS, brandRoutes, LEGACY_PATHS } from './routes/brands.js'
 import { createCore, type RequestContext, type Route, type RouteInfo, type StudioDeps } from './routes/context.js'
 import { requestGuards } from './routes/guards.js'
 import { provisioningRoutes } from './routes/provisioning.js'
@@ -48,7 +48,7 @@ export function createStudio(deps: StudioDeps): {
 
   const { loginForm, login, logout } = authRoutes(core, { clientIp, sameOrigin })
 
-  const { home, brands, refresh, openUpdatePull, assetFile, brandPage } = brandRoutes(core)
+  const { home, brands, refresh, openUpdatePull, assetFile, brandPage, legacyRedirect } = brandRoutes(core)
 
   const { newBrandForm, repoCheck, createBrand, provisioningStatus, provisioningJson, retryProvisioning, discardForm, discardProvisioning } = provisioningRoutes(core)
 
@@ -84,8 +84,10 @@ export function createStudio(deps: StudioDeps): {
       handle: openUpdatePull,
     },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
-    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/visual(?:/(identity|competitors))?(?:/(print))?$`), auth: 'session', handle: visual },
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(strategy/business-model|brand/book/visual-identity|market/competitors)(?:/(print))?$`), auth: 'session', handle: visual },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}(?:/(${BRAND_SECTIONS.join('|')}))?$`), auth: 'session', handle: brandPage },
+    // Old flat paths (before Visual V2.4): 301 to the stable path, for one release.
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(${LEGACY_PATHS.join('|')})$`), auth: 'session', handle: legacyRedirect },
   ]
 
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {

@@ -168,7 +168,7 @@ test('owner journey in a real browser: sign in, step through the wizard, watch p
 test('every brand page renders cleanly, without overflow, at desktop, tablet and mobile widths', { skip }, async () => {
   editOutsideStudio(s, 'acme-learning', (engine, root) => approve(engine, root, { 'brand.strategy.purpose': 'Learning should feel possible.' }))
   await s.studio.sync.refresh('acme-learning')
-  const pages = ['', '/brand-book', '/design', '/assets', '/business', '/history', '/handoff']
+  const pages = ['', '/brand/book', '/brand/design-system', '/brand/assets', '/strategy/business-plan', '/governance/history', '/governance/github']
   for (const [width, height, mobile] of [[1440, 900, false], [1024, 768, false], [390, 844, true]] as const) {
     await page.viewport(width, height, mobile)
     for (const section of pages) {
@@ -184,7 +184,7 @@ test('every brand page renders cleanly, without overflow, at desktop, tablet and
   await page.viewport(1440, 900)
   for (const section of pages) {
     await page.goto(`${s.url}/brands/acme-learning${section}`)
-    await capture(`brand${section.replace('/', '-') || '-overview'}`)
+    await capture(`brand${section.replaceAll('/', '-') || '-overview'}`)
   }
   for (const other of ['brands', 'account']) {
     await page.goto(`${s.url}/${other}`)
@@ -261,7 +261,7 @@ test('the omidataei.com identity: self-hosted fonts, the logo on sign-in and in 
 
   for (const scheme of ['light', 'dark'] as const) {
     await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
-    for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/design', '/brands/acme-learning/history', '/brands/new', '/account']) {
+    for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/brand/design-system', '/brands/acme-learning/governance/history', '/brands/new', '/account']) {
       await page.goto(`${s.url}${pathname}`)
       assert.deepEqual(await contrastFailures(), [], `${scheme} ${pathname}: text contrast`)
     }
@@ -295,7 +295,7 @@ test('keyboard: skip link first, visible focus, and the mobile drawer opens, tra
   assert.notEqual(outline, 'none', 'focused controls show a focus ring')
 
   await page.viewport(390, 844, true)
-  await page.goto(`${s.url}/brands/acme-learning/handoff`)
+  await page.goto(`${s.url}/brands/acme-learning/governance/github`)
   const offscreen = await page.eval<boolean>(`(() => { const r = document.getElementById('sidebar').getBoundingClientRect(); return r.right <= 0 || r.left >= innerWidth || getComputedStyle(document.getElementById('sidebar')).visibility === 'hidden' })()`)
   assert.equal(offscreen, true, 'the sidebar is a closed drawer on mobile')
   await page.click('[data-drawer-open]')
@@ -337,10 +337,10 @@ test('Persian mirrors the layout right-to-left while code, SHAs and URLs stay le
   assert.ok(directions.length > 0 && directions.every((dir) => dir === 'ltr'), 'code stays left-to-right inside RTL')
   const align = await page.eval<string>(`getComputedStyle(document.querySelector('h1')).textAlign`)
   assert.ok(align === 'start' || align === 'right', `headings align to the start (right) in RTL, got ${align}`)
-  for (const section of ['', '/brand-book', '/design', '/handoff']) {
+  for (const section of ['', '/brand/book', '/brand/design-system', '/governance/github']) {
     await page.goto(`${s.url}/brands/acme-learning${section}`)
     await assertNoOverflow(`fa ${section || '/'}`)
-    await capture(`fa-brand${section.replace('/', '-') || '-overview'}`)
+    await capture(`fa-brand${section.replaceAll('/', '-') || '-overview'}`)
   }
   await page.goto(`${s.url}/brands/new`)
   await capture('fa-wizard')
@@ -433,7 +433,7 @@ test('the browser enforces the CSP: an injected inline script never runs and no 
   const origins = new Set<string>()
   page.on('Network.requestWillBeSent', (params) => origins.add(new URL((params.request as { url: string }).url).origin))
   await page.send('Network.enable')
-  for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/design', '/brands/acme-learning/assets', '/brands/acme-learning/handoff', '/account']) await page.goto(`${s.url}${pathname}`)
+  for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/brand/design-system', '/brands/acme-learning/brand/assets', '/brands/acme-learning/governance/github', '/account']) await page.goto(`${s.url}${pathname}`)
   assert.deepEqual([...origins], [s.url], 'only the Studio origin is contacted')
   // Even if markup were injected, the CSP (script-src 'self', no inline) stops it from executing.
   await page.eval(`(() => { const el = document.createElement('div'); el.innerHTML = '<img src=x onerror="window.__pwned=1">'; document.body.appendChild(el); const sc = document.createElement('script'); sc.textContent = 'window.__pwned2 = 1'; document.body.appendChild(sc) })()`)
@@ -464,7 +464,7 @@ test('Knowledge page: shared notes render without overflow, accessibly and with 
   await page.send('Network.enable')
   for (const lang of ['en', 'fa'] as const) {
     await page.viewport(1440, 900)
-    await page.goto(`${s.url}/brands/acme-learning/knowledge?lang=${lang}`)
+    await page.goto(`${s.url}/brands/acme-learning/market/knowledge?lang=${lang}`)
     for (const [width, height, mobile] of [[1440, 900, false], [1024, 768, false], [390, 844, true]] as const) {
       await page.viewport(width, height, mobile)
       for (const pathname of ['/knowledge', `/knowledge?note=${id}`, `/knowledge?note=${other}`, '/knowledge?q=kakadu', '/knowledge?tag=mascot']) {
@@ -477,10 +477,10 @@ test('Knowledge page: shared notes render without overflow, accessibly and with 
       }
     }
     await page.viewport(1440, 900)
-    await page.goto(`${s.url}/brands/acme-learning/knowledge?note=${id}`)
+    await page.goto(`${s.url}/brands/acme-learning/market/knowledge?note=${id}`)
     assert.equal(await page.eval<number>('document.querySelectorAll(".note-body img, .note-body a[href^=\'http\']").length'), 0, 'note markup is text')
     await capture(`${lang}-knowledge-note`)
-    await page.goto(`${s.url}/brands/acme-learning/knowledge`)
+    await page.goto(`${s.url}/brands/acme-learning/market/knowledge`)
     await capture(`${lang}-knowledge`)
     if (lang === 'fa') assert.equal(await page.eval<string>('document.documentElement.dir'), 'rtl')
   }

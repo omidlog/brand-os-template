@@ -22,15 +22,16 @@ export function visualRoutes(core: StudioCore): { visual: Handler } {
     const brand: BrandView = { record, cached, stale: sync.isStale(record.slug, cached.status), refreshing: sync.isRefreshing(record.slug) }
     const flash = ctx.url.searchParams.get('sync')
     const flashValue = flash === 'synced' || flash === 'failed' || flash === 'too-soon' ? flash : null
-    // match[2]: the Brand Book "Visual identity" chapter (V2.1); match[3]: its print view.
-    // match[2] === 'competitors': the competitor comparison matrix (V2.2), internal edition only.
-    if (match[2] === 'competitors') {
+    // match[2]: the stable path (Visual V2.4); match[3]: its print view.
+    // market/competitors: the competitor comparison matrix (V2.2), internal edition only.
+    if (match[2] === 'market/competitors') {
       if (match[3] !== 'print') return render(ctx, 200, competitorsPage(view(ctx), brand, flashValue))
       const printed = competitorsPrintPage(view(ctx), brand)
       if (!printed) return notFound(ctx)
       return render(ctx, 200, printed)
     }
-    const identity = match[2] === 'identity'
+    // brand/book/visual-identity: the Brand Book "Visual identity" chapter (V2.1); strategy/business-model: the canvas.
+    const identity = match[2] === 'brand/book/visual-identity'
     if (match[3] !== 'print') return render(ctx, 200, identity ? identityPage(view(ctx), brand, flashValue) : visualPage(view(ctx), brand, flashValue))
     const edition = ctx.url.searchParams.get('edition') === 'public' ? 'public' : 'internal'
     const page = identity ? identityPrintPage(view(ctx), brand, edition) : visualPrintPage(view(ctx), brand, edition)
