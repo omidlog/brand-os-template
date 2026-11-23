@@ -10,6 +10,16 @@
 
 - A stale pack is no longer rendered: with `--root`, `brand:runtime social-batch --pack` stops with `stale_pack` before writing when an approved fact the pack cites changed or is no longer approved, and `brand:runtime readiness` adds the blocking check `context.source_drift`. Without `--root` nothing changes. (`packSourceDrift`, found by the acceptance harness.)
 
+## Unreleased — Nontechnical agent onboarding (fixes pack GAP-11, docs and test only)
+
+### Added
+
+- `docs-internal/AGENT_ONBOARDING.md` (en), `AGENT_ONBOARDING.fa.md` (fa, RTL), `AGENT_ONBOARDING.tr.md` (tr): a plain-language owner guide to set up one fresh authorised agent over the existing local stdio MCP server and agent token: create the approval secret, issue a token (proof read from the secret file, never argv), connect Claude Code with `claude mcp add --scope local` (token never in history or the repo), verify, see what is refused, revoke.
+- `docs-internal/AGENT_ONBOARDING_HOSTED.md`: design note listing what a hosted remote MCP would need. **Not built**; needs an owner decision and a new security review.
+- Test `fresh-agent-setup`: walks the guide's commands as child processes in a temporary synthetic brand (secret, issue, `brand:query` check, stdio MCP read of allowed data, out-of-profile/restricted/forged arguments withheld, owner-only actions refused, revoke, restart fails closed), and checks that every `npm run` command and profile named in the three guides exists.
+
+No runtime behaviour, profile, tool or Studio route changed.
+
 ## Unreleased — Research notes linked to the evidence register (GAP-09 follow-up)
 
 ### Added
@@ -598,6 +608,12 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
 - Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
 - Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
+
+## Unreleased — Coach area audit
+
+- Strategic Coach: a scoped `consistency_review` no longer loses the field's own conflict when more than 20 conflicts are open; open ledger records and retired question ids are no longer counted as answered; `next` does not name a restricted last answer; fa/tr matching folds Arabic kaf/yeh and Turkish `İ`; the rendered criterion and the "does not apply" reason are localized. `COACH_RULE_VERSION` is now `coach-rules/2`, and Studio rebuilds a coach card cached under an older rule version.
+- Docs: `STRATEGIC_COACH.md` status and test counts, the silence-reason list in `COACH_UX_DECISION.md`, and the snapshot claim in `IMPLEMENTATION_STATUS.md` now match the code.
+- Merged with GAP-08 (Coach rules and facet rubrics). Both changes had moved `COACH_RULE_VERSION` to `coach-rules/2` independently; the combined rules are now `coach-rules/3`, so advice cached under either `/2` is rebuilt.
 
 ## Unreleased — GAP-09 follow-ups: paid-media interview question, company stays company
 

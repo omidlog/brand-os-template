@@ -1,9 +1,11 @@
 # Strategic Coach & Answer Assurance
 
-> Status: **PR 1 — read-only deterministic core, plus PR 2 rules (fixes pack GAP-08).** Three modes work
-> without a model. `consistency_review` separates `confirmed_conflict`, `potential_tension`,
-> `needs_verification` and `not_tested`; `quality_review` adds six personal facet rubrics. The optional
-> provider is not built (see [What is not built yet](#what-is-not-built-yet)).
+> Status: **PR 1 — read-only deterministic core and the Coach UX moments, plus PR 2 rules (fixes pack GAP-08).**
+> Three modes work without a model, and the coach speaks on its own at three moments (see
+> [Rollout and automatic moments](#rollout-and-automatic-moments)), including a read-only Studio Overview card.
+> `consistency_review` separates `confirmed_conflict`, `potential_tension`, `needs_verification` and `not_tested`;
+> `quality_review` adds six personal facet rubrics. The optional provider and any richer panel are not built
+> (see [What is not built yet](#what-is-not-built-yet)).
 
 The coach is a thin advisory layer **on top of** the existing Brand OS interview. It reads what is already
 there and says what it notices. It is not a chatbot, not a second interview, and not a source of truth.
@@ -213,7 +215,7 @@ Findings:
    Read: question:business.customer.primary_segment, answer:ans-0002
 
 No model was called. Every finding is deterministic.
-engine coach/1 · rules coach-rules/2 · authorizes: []
+engine coach/1 · rules coach-rules/3 · authorizes: []
 ```
 
 (Line-wrapped here for the page; the command prints each field on one line.)
@@ -313,8 +315,10 @@ weight the documents put on it.
 
 ## Tests
 
-`tests/coach-core.test.ts` (25), `tests/coach-cli.test.ts` (7) and `tests/coach-rules.test.ts` (12, the PR 2
-registry and facet rubrics with their no-false-positive cases), all in the brand suite (`npm test`, `npm run ci`). Fixtures are in `tests/helpers/coach.ts` and are **SYNTHETIC DEMO** data: no
+`tests/coach-core.test.ts` (31), `tests/coach-cli.test.ts` (8), `tests/coach-rules.test.ts` (12, the PR 2
+registry and facet rubrics with their no-false-positive cases), `tests/coach-moments.test.ts` (5) and
+`tests/coach-moments-cli.test.ts` (3), all in the brand suite (`npm test`, `npm run ci`), plus
+`tests/studio-coach.test.ts` (3) in the Studio suite. Fixtures are in `tests/helpers/coach.ts` and are **SYNTHETIC DEMO** data: no
 real brand, person, client or figure appears in them.
 
 ## What is not built yet

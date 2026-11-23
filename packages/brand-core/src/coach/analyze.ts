@@ -4,7 +4,7 @@ import { answerDigest, coachQuestion, contextDigest, openCoachContext, type Coac
 import { answeredIds, consistencyFindings } from './consistency.js'
 import { chooseFollowUp } from './follow-up.js'
 import { applyFacetRubrics } from './facet-rubrics.js'
-import { CLARIFY_QUESTIONS, coachText, COACH_TENSION_RULES, CRITERION_NAMES, NO_FOLLOW_UP_TEXT, TENSION_QUESTIONS, type CoachTensionRule } from './i18n.js'
+import { CLARIFY_QUESTIONS, coachText, coachUi, COACH_TENSION_RULES, CRITERION_NAMES, NO_FOLLOW_UP_TEXT, TENSION_QUESTIONS, type CoachTensionRule } from './i18n.js'
 import {
   COACH_ENGINE_VERSION,
   COACH_RULE_VERSION,
@@ -228,8 +228,7 @@ export function followUpReview(ctx: CoachContext, questionId: string, opts: Coac
 export function consistencyReview(ctx: CoachContext, questionId: string | null, opts: CoachOptions = {}): CoachResult {
   const locale = opts.locale ?? 'en'
   const question = questionId === null ? null : coachQuestion(ctx, questionId)
-  const all = consistencyFindings(ctx)
-  const items = question === null ? all : all.filter((item) => item.contradiction.fields.includes(question.id))
+  const items = consistencyFindings(ctx, question?.id ?? null)
   const answered = answeredIds(ctx)
   const registry = registryReview(ctx)
   const registryItems = (question === null ? registry.findings : registry.findings.filter((item) => item.relatedIds.includes(question.id))).slice(
@@ -355,7 +354,9 @@ export function coachNext(source: CoachSource, opts: CoachOptions = {}): CoachRe
   const lastId = ctx.lastAnsweredId
   const question = lastId ? ctx.byId.get(lastId) : undefined
   if (!question || question.sensitivity === 'restricted') {
-    const text = coachText(locale, 'answer_missing', { question: lastId ?? 'the interview' })
+    // No id is named here: a restricted last answer does have a live answer (so "<id> has no live answer" would be
+    // false), and an id the bank no longer has cannot be answered with --question. The next step is generic.
+    const text = { reason: coachText(locale, 'answer_missing', { question: coachUi(locale, 'theInterview') }).reason, improvement: coachUi(locale, 'nextNoAnswer') }
     return validateCoachResult({
       ...shell(ctx, 'follow_up', locale, []),
       question_id: null,
