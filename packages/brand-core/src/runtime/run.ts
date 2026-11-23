@@ -21,6 +21,7 @@ import {
   type UsedAsset,
   type UsedSource,
 } from './model.js'
+import type { Outliner } from './outline.js'
 import { assertPackShape } from './pack.js'
 import { planSocialBatch } from './plan.js'
 import { logoMarkup, renderPost, type EmbeddedLogo } from './render.js'
@@ -45,6 +46,11 @@ export interface SocialBatchOptions {
   now: Date
   /** Where the pack came from: the synthetic demo, or a pack file from `brand:query --tool task_context`. */
   origin?: 'demo' | 'pack_file'
+  /**
+   * Final export: convert text to outlines with the owner's font files (`createOutliner`). Absent: drafts keep live,
+   * editable text. Final mode needs an approved type scale, so the outlined families are the approved ones.
+   */
+  final?: Outliner | null
 }
 
 export interface SocialBatchResult {
@@ -125,6 +131,17 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
   if (pack.authorizes.length !== 0 || Object.values(pack.permissions).some(Boolean)) throw new RuntimeError('invalid_pack', 'A pack never authorizes anything.')
 
   const plan = planSocialBatch(pack)
+  if (opts.final && plan.posts.length > 0 && !plan.type.applied) {
+    throw new RuntimeError('refused', 'Final export outlines the approved type, and this pack has no approved brand.type.scale. Drafts (without --final) still render.')
+  }
+  const finalFamilies = [...new Set(Object.values(plan.type.slots).map((slot) => slot.family_stack[0]!))].sort()
+  const exportInfo: PostManifest['export'] = opts.final ? opts.final.report() : { mode: 'draft', text: 'live', outliner: null, fonts: [] }
+  const typography = (headline: { start: number; size: number; reduced: boolean }): PostManifest['typography'] => ({
+    applied: plan.type.applied,
+    canvas_scale: plan.type.canvas_scale,
+    slots: plan.type.slots,
+    headline: { start_px: headline.start, drawn_px: headline.size, reduced_to_fit: headline.reduced },
+  })
   const packSha = pack.digests.context_sha256!
   const embedded: EmbeddedLogo | null = opts.logo ? logoMarkup(opts.logo.asset_id, opts.logo.svg) : null
   const logoAssets: UsedAsset[] = opts.logo
@@ -134,7 +151,8 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
   const files = new Map<string, string>()
   const manifests: PostManifest[] = []
   for (const post of plan.posts) {
-    const rendered = renderPost(plan, post, { demo: opts.demo, logo: embedded })
+    const draft = renderPost(plan, post, { demo: opts.demo, logo: embedded })
+    const rendered = opts.final ? { ...draft, svg: opts.final.outline(draft.svg, finalFamilies) } : draft
     const sha256 = sha256Hex(rendered.svg)
     const file = `posts/${post.post_id}.svg`
     const manifest: PostManifest = {
@@ -154,8 +172,10 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
       bytes: Buffer.byteLength(rendered.svg, 'utf8'),
       renderer: { name: RUNTIME_RENDERER, version: RUNTIME_RENDERER_VERSION, model: null, network: false },
       context: { pack_schema: pack.schema, pack_sha256: packSha, task_type: 'social_batch' },
-      sources: dedupeSources([post.message_source, post.brand_source, post.cta_source, plan.palette.source]),
+      sources: dedupeSources([post.message_source, post.brand_source, post.cta_source, plan.palette.source, plan.type.source, ...plan.type.weight_sources]),
       assets: logoAssets,
+      typography: typography(rendered.headline),
+      export: exportInfo,
       checks: postChecks(pack, plan, post, rendered),
       human_review_required: true,
       authorizes: [],

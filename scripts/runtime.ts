@@ -3,6 +3,7 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import {
   createDemoBrand,
+  createOutliner,
   DEMO_BANNER,
   DEMO_NOW,
   demoPack,
@@ -30,7 +31,8 @@ import {
  * gate. brand/ is never written.
  */
 
-const HELP = `brand:runtime social-batch (--demo | --pack <file> [--root <dir>]) --out <empty dir> [--locale fa|en|tr] [--png] [--json]
+const HELP = `brand:runtime social-batch (--demo | --pack <file> [--root <dir>]) --out <empty dir>
+                           [--final --font-file <ttf|otf>...] [--locale fa|en|tr] [--png] [--json]
 
   --demo     use the SYNTHETIC DEMO brand (temp workspace, removed afterwards)
   --pack     a real brand's social_batch pack file: the output of
@@ -39,6 +41,9 @@ const HELP = `brand:runtime social-batch (--demo | --pack <file> [--root <dir>])
   --root     with --pack only, owner-local: the owner's checkout of the same brand. Enables the Coach and the
              approved logo (publication gate + checksum). Read-only; refused under an agent token
   --as-of    with --pack: ISO date for the Coach and the assessment (default: now)
+  --final    final export: convert text to outlines (drafts keep live, editable text). Needs an approved
+             brand.type.scale and --font-file for every approved first family; nothing is substituted
+  --font-file  repeatable, with --final: a local TTF/OTF of an approved family (recorded by name + sha256)
   --out      an empty or new directory outside any brand/ folder; nothing is written anywhere else
   --locale   with --demo: labels and direction (default fa). Approved copy is never translated.
   --png      also write PNG previews to <out>/previews (resvg; previews are not deliverables and not hashed)
@@ -73,11 +78,11 @@ async function main(): Promise<void> {
     return
   }
   if (command !== 'social-batch') usage(`Unknown command "${command}".`)
-  let values: { demo?: boolean; pack?: string; root?: string; 'as-of'?: string; out?: string; locale?: string; png?: boolean; json?: boolean }
+  let values: { demo?: boolean; pack?: string; root?: string; 'as-of'?: string; final?: boolean; 'font-file'?: string[]; out?: string; locale?: string; png?: boolean; json?: boolean }
   try {
     values = parseArgs({
       args: rest,
-      options: { demo: { type: 'boolean', default: false }, pack: { type: 'string' }, root: { type: 'string' }, 'as-of': { type: 'string' }, out: { type: 'string' }, locale: { type: 'string' }, png: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
+      options: { demo: { type: 'boolean', default: false }, pack: { type: 'string' }, root: { type: 'string' }, 'as-of': { type: 'string' }, final: { type: 'boolean', default: false }, 'font-file': { type: 'string', multiple: true }, out: { type: 'string' }, locale: { type: 'string' }, png: { type: 'boolean', default: false }, json: { type: 'boolean', default: false } },
       allowPositionals: false,
       strict: true,
     }).values
@@ -90,7 +95,9 @@ async function main(): Promise<void> {
   if (values.pack && values.locale) usage('--locale applies to --demo only: a pack carries its own task locale (brand:query --locale).')
   const locale = values.locale ?? 'fa'
   if (locale !== 'fa' && locale !== 'en' && locale !== 'tr') usage(`--locale must be fa, en or tr (given ${locale}).`)
+  if (!values.final && values['font-file']?.length) usage('--font-file applies to --final only.')
   const out = path.resolve(values.out)
+  const final = values.final ? await createOutliner(values['font-file'] ?? []) : null
 
   let result: SocialBatchResult
   if (values.demo) {
@@ -98,7 +105,7 @@ async function main(): Promise<void> {
     try {
       const pack = demoPack(demo, locale)
       const { logo } = loadApprovedLogo(demo.root, pack)
-      result = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo, coach: demo.engine, now: DEMO_NOW, origin: 'demo' })
+      result = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo, coach: demo.engine, now: DEMO_NOW, origin: 'demo', final })
     } finally {
       demo.cleanup()
     }
@@ -108,7 +115,7 @@ async function main(): Promise<void> {
     const pack = readPackFile(values.pack!)
     const engine = values.root ? openOwnerWorkspace(values.root, pack) : null
     const logo = engine ? loadApprovedLogo(engine.workspaceRoot(), pack).logo : null
-    result = runSocialBatch(pack, { demo: false, logo, coach: engine, now, origin: 'pack_file' })
+    result = runSocialBatch(pack, { demo: false, logo, coach: engine, now, origin: 'pack_file', final })
   }
   const written = writeBatch(out, result)
   const note = values.png ? await previews(out, result) : null
@@ -119,6 +126,7 @@ async function main(): Promise<void> {
   const s = result.summary
   if (s.demo) console.log(`${DEMO_BANNER}`)
   console.log(`status: ${s.status}  posts: ${s.posts.length}  pack: ${s.context.pack_sha256.slice(0, 12)} (${s.context.origin}, ${s.context.pack_readiness}, ${s.context.pack_staleness})`)
+  console.log(`export: ${result.manifests[0]?.export.mode ?? (final ? 'final' : 'draft')} (${final ? 'text outlined with the supplied fonts' : 'live, editable text'})`)
   for (const blocker of s.blockers) console.log(`  blocked: ${blocker.code}`)
   for (const post of s.posts) console.log(`  ${post.post_id}  ${post.angle.padEnd(17)} ${post.layout.padEnd(9)} pass ${post.checks.pass}  warn ${post.checks.warn}  fail ${post.checks.fail}  ${post.sha256.slice(0, 12)}`)
   for (const check of s.set_checks) console.log(`  set ${check.check_id.padEnd(24)} ${check.result}`)

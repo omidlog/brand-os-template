@@ -54,6 +54,7 @@ export const DEMO_FACTS: Array<[string, string]> = [
   ['brand.verbal.forbidden', 'تضمین موفقیت؛ بهترین اپ ایران؛ یک‌شبه مسلط شو'],
   ['business.marketing.availability_claim', 'do-not-claim'],
   ['brand.color.roles', 'primary #1B2A4A; onPrimary #FFFFFF; surface #F6F1E7; ink #14171F; accent #F2B705'],
+  ['brand.type.scale', 'display: Vazirmatn, Tahoma, sans-serif @ 44px/1.25; label: Vazirmatn, Tahoma, sans-serif @ 16px/1.3; body: Vazirmatn, Tahoma, sans-serif @ 18px/1.4'],
 ]
 
 /** A synthetic geometric mark: three stacked cards. Static, script-free, passes both SVG gates. */

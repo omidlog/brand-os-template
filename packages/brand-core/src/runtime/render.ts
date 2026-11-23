@@ -1,6 +1,7 @@
 import type { TaskLocale } from '../task-context/model.js'
 import { POST_FORMAT, SOCIAL_BATCH_COUNT } from './model.js'
 import { scriptDirection, type Angle, type BatchPlan, type Palette, type PostPlan } from './plan.js'
+import { fontFamilyValue } from './type.js'
 
 /**
  * The deterministic HTML/SVG post renderer. Pure: plan in, SVG text out. No model, no network, no clock, no random
@@ -55,11 +56,6 @@ export const POST_LABELS: Record<TaskLocale, Record<Angle | 'draft' | 'demo', st
   },
 }
 
-const FONTS: Record<'ltr' | 'rtl', string> = {
-  ltr: "Inter, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif",
-  rtl: "Vazirmatn, 'Noto Sans Arabic', Tahoma, sans-serif",
-}
-
 const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹'
 
 export function localDigits(value: string, locale: TaskLocale): string {
@@ -92,14 +88,21 @@ export function wrapText(text: string, fontSize: number, width: number, maxLines
   return { lines, fits: lines.length <= maxLines && !tooLong }
 }
 
-/** Largest headline size from a fixed ladder that fits; the smallest size is used (and flagged) when none fits. */
-export function fitHeadline(text: string, width: number, maxLines: number): { size: number; lines: string[]; fits: boolean } {
-  for (const size of [96, 84, 72, 64, 56, 48]) {
+const HEADLINE_LADDER = [96, 84, 72, 64, 56, 48] as const
+const HEADLINE_MIN = 44
+
+/**
+ * Largest headline size that fits, starting at `start` (the approved headline size, or 96 by default) and stepping
+ * down the fixed ladder; the smallest size is used (and flagged) when none fits. `reduced` says the start did not fit.
+ */
+export function fitHeadline(text: string, width: number, maxLines: number, start = 96): { size: number; lines: string[]; fits: boolean; reduced: boolean } {
+  const sizes = [start, ...HEADLINE_LADDER.filter((size) => size < start)]
+  for (const size of sizes) {
     const wrapped = wrapText(text, size, width, maxLines)
-    if (wrapped.fits) return { size, ...wrapped }
+    if (wrapped.fits) return { size, ...wrapped, reduced: size !== start }
   }
-  const smallest = wrapText(text, 44, width, maxLines)
-  return { size: 44, ...smallest }
+  const size = Math.min(start, HEADLINE_MIN)
+  return { size, ...wrapText(text, size, width, maxLines), reduced: size !== start }
 }
 
 export interface EmbeddedLogo {
@@ -140,7 +143,8 @@ export interface RenderedPost {
   svg: string
   /** Every foreground/background pair actually drawn, by role, for the contrast check. */
   pairs: Array<{ foreground: string; background: string; text: 'large' | 'body' }>
-  headline: { size: number; lines: number; fits: boolean }
+  /** `start` is the approved (or default) headline size; `size` what was drawn. */
+  headline: { size: number; start: number; lines: number; fits: boolean; reduced: boolean }
 }
 
 export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolean; logo: EmbeddedLogo | null }): RenderedPost {
@@ -154,9 +158,10 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
   // Renderer-independent RTL: no `direction` attribute (resvg and browsers anchor it differently). Instead each RTL
   // line is anchored at its right edge and wrapped in RLE…PDF, so neutral punctuation lands where a reader expects.
   type Anchor = 'start' | 'end' | 'middle'
-  const attrs = (anchor: Anchor = 'start'): string => `font-family="${escapeXml(FONTS[direction])}" text-anchor="${anchor}" fill="${fg}"`
+  const { headline: headType, label: labelType, body: bodyType } = plan.type.slots
+  const family = (stack: string[]): string => `font-family="${escapeXml(fontFamilyValue(stack))}"`
+  const attrs = (stack: string[], anchor: Anchor = 'start'): string => `${family(stack)} text-anchor="${anchor}" fill="${fg}"`
   const lead: Anchor = rtl ? 'end' : 'start'
-  const textAttrs = attrs(lead)
   const pairs: RenderedPost['pairs'] = [{ foreground: post.colors.foreground, background: post.colors.background, text: 'large' }]
 
   const body: string[] = []
@@ -189,24 +194,26 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
       break
   }
 
-  const headline = fitHeadline(post.message, headlineWidth, 6)
-  const lineHeight = Math.round(headline.size * 1.22)
-  body.push(`<text x="${startX}" y="${headlineTop - 110}" font-size="34" font-weight="600" letter-spacing="${rtl ? 0 : 2}" ${textAttrs} fill-opacity="0.85">${escapeXml(bidi(labels[post.angle]))}</text>`)
-  body.push(textBlock(headline.lines, startX, headlineTop, headline.size, lineHeight, `font-weight="700" ${textAttrs}`))
+  const headline = fitHeadline(post.message, headlineWidth, 6, headType.size_px)
+  const lineHeight = Math.round(headline.size * headType.line_height)
+  body.push(`<text x="${startX}" y="${headlineTop - 110}" font-size="${labelType.size_px}" font-weight="${labelType.weight}" letter-spacing="${rtl ? 0 : 2}" ${attrs(labelType.family_stack, lead)} fill-opacity="0.85">${escapeXml(bidi(labels[post.angle]))}</text>`)
+  body.push(textBlock(headline.lines, startX, headlineTop, headline.size, lineHeight, `font-weight="${headType.weight}" ${attrs(headType.family_stack, lead)}`))
 
   // Footer: brand name and the approved CTA, both from the pack. A missing one is simply absent.
   const footerY = H - 210
   deco.push(`<rect x="${MARGIN}" y="${footerY - 70}" width="${contentWidth}" height="2" fill="${fg}" opacity="0.35"/>`)
   if (post.cta) {
-    const cta = wrapText(post.cta, 36, contentWidth - 180, 2)
-    body.push(textBlock(cta.lines, startX, footerY, 36, 46, `font-weight="600" ${textAttrs}`))
+    const cta = wrapText(post.cta, bodyType.size_px, contentWidth - 180, 2)
+    body.push(textBlock(cta.lines, startX, footerY, bodyType.size_px, Math.round(bodyType.size_px * bodyType.line_height), `font-weight="${bodyType.weight}" ${attrs(bodyType.family_stack, lead)}`))
     pairs.push({ foreground: post.colors.foreground, background: post.colors.background, text: 'body' })
   }
   if (post.brand_name) {
-    body.push(`<text x="${startX}" y="${H - 110}" font-size="30" font-weight="700" ${textAttrs}>${escapeXml(bidi(post.brand_name))}</text>`)
+    // The sign-off: body family and size, at the headline weight.
+    body.push(`<text x="${startX}" y="${H - 110}" font-size="${Math.min(bodyType.size_px, 36)}" font-weight="${headType.weight}" ${attrs(bodyType.family_stack, lead)}>${escapeXml(bidi(post.brand_name))}</text>`)
   }
+  // Chrome (counter, draft stamp): label family at fixed sizes, so the stamp stays legible whatever the scale.
   const counter = localDigits(`${String(post.index).padStart(2, '0')}/${SOCIAL_BATCH_COUNT}`, locale)
-  body.push(`<text x="${rtl ? MARGIN : W - MARGIN}" y="${H - 110}" font-size="28" ${attrs(rtl ? 'start' : 'end')} fill-opacity="0.8">${escapeXml(counter)}</text>`)
+  body.push(`<text x="${rtl ? MARGIN : W - MARGIN}" y="${H - 110}" font-size="28" ${attrs(labelType.family_stack, rtl ? 'start' : 'end')} fill-opacity="0.8">${escapeXml(counter)}</text>`)
 
   // The logo, when an approved and verified one exists, top corner opposite the reading start.
   const logo = opts.logo
@@ -215,7 +222,7 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
 
   // The draft stamp is part of the artwork, so a screenshot cannot lose it.
   const stamp = [labels.draft, ...(opts.demo ? [labels.demo] : [])].join(' · ')
-  body.push(`<text x="${W / 2}" y="${H - 44}" font-size="22" ${attrs('middle')} fill-opacity="0.7">${escapeXml(bidi(stamp))}</text>`)
+  body.push(`<text x="${W / 2}" y="${H - 44}" font-size="22" ${attrs(labelType.family_stack, 'middle')} fill-opacity="0.7">${escapeXml(bidi(stamp))}</text>`)
 
   const title = `${labels[post.angle]} — ${post.post_id}`
   const svg = [
@@ -233,5 +240,5 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
     `</svg>`,
     '',
   ].join('\n')
-  return { svg, pairs, headline: { size: headline.size, lines: headline.lines.length, fits: headline.fits } }
+  return { svg, pairs, headline: { size: headline.size, start: headType.size_px, lines: headline.lines.length, fits: headline.fits, reduced: headline.reduced } }
 }

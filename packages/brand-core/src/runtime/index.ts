@@ -9,3 +9,7 @@ export type { ApprovedLogo, SocialBatchOptions, SocialBatchResult } from './run.
 export { createDemoBrand, DEMO_BANNER, DEMO_BRAND_SLUG, DEMO_FACTS, DEMO_LOGO_ID, DEMO_LOGO_SVG, DEMO_NOW, demoPack } from './demo.js'
 export type { DemoBrand } from './demo.js'
 export { assertPackShape, MAX_PACK_BYTES, openOwnerWorkspace, readPackFile } from './pack.js'
+export { CANVAS_SCALE, DEFAULT_STACKS, fontFamilyValue, SLOT_ROLES, typeSpecOf } from './type.js'
+export type { SlotType, TypeSlot, TypeSpec } from './type.js'
+export { createOutliner, drawnCodepoints, MAX_FONT_BYTES, readFontFile } from './outline.js'
+export type { FontFile, Outliner } from './outline.js'
