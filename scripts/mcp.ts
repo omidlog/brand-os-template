@@ -36,6 +36,7 @@ import {
 } from '@brand-os/brand-core'
 import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
 import { runContentTool } from '@brand-os/brand-core/content-bridge'
+import { REQUIRABLE_ASSETS, runProductionReadinessTool } from '@brand-os/brand-core/runtime'
 import { runStrategyTool } from '@brand-os/brand-core/strategy'
 import { MAX_ASSET_IDS, runVisualDnaTool, VISUAL_DNA_LOCALES } from '@brand-os/brand-core/visual-dna'
 
@@ -141,6 +142,32 @@ server.registerTool(
     }),
   },
   async (args) => text(runTaskContextTool(engine, caller, args, { taskTypeHint: 'task_type' })),
+)
+
+// Production readiness (see runtime/production-agent.ts and docs-internal/BRAND_RUNTIME.md § Production readiness):
+// a separate, pre-render projection over the task_context pack, with asset verdicts from visual_dna, under the same
+// caller context. It does not change task_context readiness. Metadata only; nothing is rendered, read as bytes,
+// written, approved, published, scheduled or spent.
+server.registerTool(
+  'production_readiness',
+  {
+    description:
+      'Call after task_context when you are about to produce files, to learn whether production can start. Builds the same pack task_context would (same inputs, same token) and returns a separate production_ready: ready|not_ready, with each check naming its rule owner, input, verdict and whether it blocks. Only objective rules block: pack digest, blocked context, no verified renderer or unsupported format/count for the task, missing approved copy, a banned claim, and a logo the owner marked required (required_assets: ["logo"]) that is missing, changed, withheld or not verifiable. Optional assets never block. Visual taste and persuasion are needs_human_review or not_tested; there is no score. ready is not approval: a person reviews every draft. Only social_batch has a renderer today; other tasks are briefs. Asset verdicts are metadata only, never file bytes. authorizes is always empty. Needs an owner-issued agent token of this brand; others get denied.',
+    inputSchema: z
+      .object({
+        task_type: z.enum(TASK_TYPES).optional(),
+        request: z.string().max(500).optional(),
+        channel: z.string().max(20).optional(),
+        deliverable_count: z.number().int().min(1).max(MAX_DELIVERABLE_COUNT).optional(),
+        locale: z.enum(TASK_LOCALES).optional(),
+        request_mode: z.enum(REQUEST_MODES).optional(),
+        output_format: z.string().max(40).optional(),
+        scope_id: z.string().max(40).optional(),
+        required_assets: z.array(z.enum(REQUIRABLE_ASSETS)).max(REQUIRABLE_ASSETS.length).optional(),
+      })
+      .strict(),
+  },
+  async (args) => text(runProductionReadinessTool(engine, caller, args)),
 )
 
 // Knowledge tools: read and preview only, shared notes only, knowledge-read profile only (see knowledge/agent.ts).
