@@ -8,6 +8,7 @@ import type { BrandView, ViewContext } from './layout.js'
 import { brandHeader, brandShell } from './pages.js'
 import { renderBlock } from './visual-registry.js'
 import { chapterOpener, frameworkNote, identityPrintDocument } from './visual-identity.js'
+import { competitorsBanner } from './visual-competitors-page.js'
 import { detailsView, frameworkPanel, legend, miniMap, printDocument, relationshipsPanel, summaryView } from './visual.js'
 
 /**
@@ -61,6 +62,7 @@ export function visualPage(ctx: ViewContext, view: BrandView, flash: string | nu
       ${renderBlock(canvas, { cat, lang, mode: 'screen', doc, idPrefix: 'bmc', showNext: true, assetUrl: () => null })}
       ${legend(cat, ['approved', 'stale', 'assumption', 'recommendation', 'withheld', 'missing', 'not_applicable'])}
       ${detailsView(cat, canvas, html`${relationshipsPanel(cat)}${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'screen')}`, cat.text.editionInternalNote, true)}
+      ${competitorsBanner(lang, view.record.slug)}
     </div>`
   return shell(body)
 }

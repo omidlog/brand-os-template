@@ -2,6 +2,7 @@ import { redirect } from '../http.js'
 import { brandIsReady } from '../sync.js'
 import type { BrandView } from '../views/layout.js'
 import { identityPage, identityPrintPage, visualPage, visualPrintPage } from '../views/visual-page.js'
+import { competitorsPage, competitorsPrintPage } from '../views/visual-competitors-page.js'
 import type { Handler, StudioCore } from './context.js'
 
 /**
@@ -22,6 +23,13 @@ export function visualRoutes(core: StudioCore): { visual: Handler } {
     const flash = ctx.url.searchParams.get('sync')
     const flashValue = flash === 'synced' || flash === 'failed' || flash === 'too-soon' ? flash : null
     // match[2]: the Brand Book "Visual identity" chapter (V2.1); match[3]: its print view.
+    // match[2] === 'competitors': the competitor comparison matrix (V2.2), internal edition only.
+    if (match[2] === 'competitors') {
+      if (match[3] !== 'print') return render(ctx, 200, competitorsPage(view(ctx), brand, flashValue))
+      const printed = competitorsPrintPage(view(ctx), brand)
+      if (!printed) return notFound(ctx)
+      return render(ctx, 200, printed)
+    }
     const identity = match[2] === 'identity'
     if (match[3] !== 'print') return render(ctx, 200, identity ? identityPage(view(ctx), brand, flashValue) : visualPage(view(ctx), brand, flashValue))
     const edition = ctx.url.searchParams.get('edition') === 'public' ? 'public' : 'internal'

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Visual V2.2: competitor share path and comparison matrix
+
+### Added
+
+- `npm run brand:competitive -- share [--dry-run]` (owner decision D1): writes a quote-free, redacted landscape of owner-reviewed competitors to `brand/competitive/shared/landscape.json` for the owner to review and commit. Allow-list projection only (names, relationship, markets, verified domain, per-criterion state, short labels, source class/public host/date, public prices as recorded with rate labels). Never shared: quotes, note ids, claim keys, URLs, status reasons, unverified domains, hypotheses, owner or first-party source hosts. Idempotent; a removed competitor disappears. Refused under an agent token.
+- Studio: read-only "Competitor comparison matrix" page `/brands/<slug>/visual/competitors` and its print view (A4 portrait opener, A4 landscape matrix page) on the existing print path. New visual blocks `competitor_matrix` and `price_strip` in the renderer registry; designed empty and withheld states; en/fa/tr. Internal edition only. One banner link from the Business model page.
+- Studio's tar allowlist admits exactly `brand/competitive/shared/landscape.json` under `brand/competitive/`; the strict reader withholds the whole file on any unexpected field.
+- Tests: `competitive-share`, `visual-competitors`, `studio-visual-competitors`, `studio-visual-competitors-browser`.
+
+Nothing is ranked, scored or converted. No positioning map (V2.3). No framework or ISO claim.
+
 ## Unreleased — Assurance registry and assessable controls (Trust v2 PR-A)
 
 ### Added
