@@ -57,6 +57,7 @@ before(async () => {
   await page.type('#password', OWNER_PASSWORD)
   await page.type('#totp', await freshTotp(s.url))
   await page.navigation(() => page.click('button[type=submit]'))
+  assert.notEqual(await page.eval<string>('location.pathname'), '/login', 'the browser signed in')
 }, { timeout: 180_000 })
 
 after(async () => {
