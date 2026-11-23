@@ -12,6 +12,7 @@ import {
   readTemplateRecord,
   rightsBlocker,
 } from '@brand-os/brand-core'
+import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -130,6 +131,11 @@ export interface StudioProjection {
    * not be read. Absent in caches written before this field existed; sync rebuilds those.
    */
   creative?: StudioCreativeProjection | null
+  /**
+   * Approved content calendar weeks the owner shared (`brand/content-calendar/shared/wk-*.json`) on this commit.
+   * Null when they could not be read. Absent in caches written before this field existed; sync rebuilds those.
+   */
+  calendar?: StudioCalendarProjection | null
 }
 
 export class ProjectionError extends Error {
@@ -177,6 +183,17 @@ function projectKnowledge(engine: InterviewEngine): StudioKnowledgeProjection | 
     const knowledge = buildStudioKnowledge(engine)
     assertNoSecrets(knowledge)
     return knowledge
+  } catch {
+    return null
+  }
+}
+
+/** Shared calendar weeks; a malformed folder must not take down the brand view either. */
+function projectCalendar(root: string, slug: string): StudioCalendarProjection | null {
+  try {
+    const calendar = buildStudioCalendar(root, slug)
+    assertNoSecrets(calendar)
+    return calendar
   } catch {
     return null
   }
@@ -395,6 +412,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     personal: personal ? { facets, documents: personalDocs } : null,
     knowledge: projectKnowledge(engine),
     creative: projectCreative(root, engine.config().brand.slug),
+    calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
   }
   assertNoSecrets(projection)

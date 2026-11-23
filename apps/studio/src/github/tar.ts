@@ -167,8 +167,20 @@ export function studioCreativePathAllowed(relative: string): boolean {
   return SHARED_DECISION.test(relative)
 }
 
+/**
+ * `brand/content-calendar/` may only contribute weeks the owner explicitly shared with `brand:content share`:
+ * `brand/content-calendar/shared/wk-YYYY-MM-DD.json`, one level deep. Drafts and week records live under
+ * `brand/.private/content` and are excluded above; anything else committed under `brand/content-calendar/` stays out.
+ */
+const SHARED_WEEK = /^brand\/content-calendar\/shared\/wk-\d{4}-\d{2}-\d{2}\.json$/
+
+export function studioCalendarPathAllowed(relative: string): boolean {
+  return SHARED_WEEK.test(relative)
+}
+
 export function studioPathAllowed(relative: string): boolean {
   if (!relative.startsWith('brand/')) return false
+  if (relative.toLowerCase().startsWith('brand/content-calendar/') || relative.toLowerCase() === 'brand/content-calendar') return studioCalendarPathAllowed(relative)
   if (relative.toLowerCase().startsWith('brand/creative/') || relative.toLowerCase() === 'brand/creative') return studioCreativePathAllowed(relative)
   // Checked first: nothing below may re-admit a knowledge path.
   if (relative.toLowerCase().startsWith('brand/knowledge/') || relative.toLowerCase() === 'brand/knowledge') return studioKnowledgePathAllowed(relative)
