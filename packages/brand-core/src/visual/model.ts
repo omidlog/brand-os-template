@@ -169,7 +169,10 @@ export interface TypographySpecimenBlock extends BlockBase {
   scripts: Array<'en' | 'fa' | 'tr'>
 }
 
-/** The approved master logo file: an approved, checksummed, non-example manifest asset tagged `logo` and `master`. */
+/**
+ * The approved master logo file: an approved, checksummed, non-example manifest asset tagged `logo`, resolved in this
+ * order: named in the approved `brand.logo.masters` fact, tagged `master`, or the only approved previewable logo.
+ */
 export interface LogoMaster {
   asset_id: string
   name: string
@@ -180,6 +183,10 @@ export interface LogoMaster {
   /** Intrinsic size when it could be read (SVG viewBox/width/height, PNG header); null otherwise. */
   width: number | null
   height: number | null
+  /** How the master was found: named in `brand.logo.masters`, tagged `master`, or the only approved logo. */
+  resolved_by: 'reference' | 'tag' | 'sole_logo'
+  /** Internal edition only (always empty in public): the file still carries a `draft` tag, or it is not published. */
+  badges: Array<'draft_tag' | 'internal_only'>
 }
 
 export interface LogoConstructionBlock extends BlockBase {
@@ -188,8 +195,11 @@ export interface LogoConstructionBlock extends BlockBase {
   source: VisualEntry
   spec: { min_size_px: number; clear_space: { value: number; unit: 'px' | 'x' }; min_print_mm: number | null } | null
   master: LogoMaster | null
-  /** Why there is no master: none registered, only template examples, or approved files that cannot be previewed. */
-  master_state: 'approved' | 'missing' | 'example_only' | 'not_previewable'
+  /**
+   * Why there is no master: none registered, only template examples, approved files that cannot be previewed, or
+   * several approved logos and none named in `brand.logo.masters` (the builder never guesses between them).
+   */
+  master_state: 'approved' | 'missing' | 'example_only' | 'not_previewable' | 'ambiguous'
 }
 
 export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock | ColorPaletteBlock | TypographySpecimenBlock | LogoConstructionBlock
