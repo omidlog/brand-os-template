@@ -75,6 +75,7 @@
     "brand:acceptance": "tsx scripts/acceptance.ts",
     "brand:assurance": "tsx scripts/assurance.ts",
     "brand:assurance-review": "tsx scripts/assurance-review.ts",
+    "brand:assurance-link": "tsx scripts/assurance-link.ts",
     "visual:golden": "tsx scripts/visual-golden.ts",
     "visual:baselines": "tsx scripts/visual-baselines.ts",
     "brand:export-visual": "tsx scripts/export-visual.ts",
