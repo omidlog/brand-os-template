@@ -75,6 +75,7 @@
     "brand:assurance": "tsx scripts/assurance.ts",
     "brand:assurance-review": "tsx scripts/assurance-review.ts",
     "visual:golden": "tsx scripts/visual-golden.ts",
+    "visual:baselines": "tsx scripts/visual-baselines.ts",
     "brand:export-visual": "tsx scripts/export-visual.ts",
     "mcp:serve": "tsx scripts/mcp.ts",
     "studio:start": "tsx apps/studio/src/main.ts",

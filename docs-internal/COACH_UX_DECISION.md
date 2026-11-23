@@ -130,8 +130,10 @@ gains one additive `coach` key; the approve JSON is untouched).
 - `brand:next` / `brand:status` summaries ("3 drafts have a coach note") — useful but a second place for the
   same note; revisit after the owner has used the three moments.
 - Advising on **pending change proposals** (needs the Coach to read the proposed text through the change flow).
-- PR 2 rule work (potential tensions, personal facet rubrics) — the moments will surface them automatically
-  once they exist, with no UX change.
+- PR 2 rule work (potential tensions, personal facet rubrics) now exists (fixes pack GAP-08) but is **not** wired
+  into the moments: the moments are built on `follow_up`, which the facet rubrics and the consistency registry do
+  not touch, so the automatic notes are unchanged. Whether they should surface is an owner decision, taken together
+  with the questions below.
 - A Studio History & Review page column, and a docs `/dashboard` panel.
 - Any per-brand persistent "dismiss" state. Not needed: the first-revision rule already prevents repeats without
   storage.
