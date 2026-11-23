@@ -15,6 +15,8 @@ import {
 import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
+import { buildCompetitorComparison } from '@brand-os/brand-core/visual'
+import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import type { SvgIssueCode } from '@brand-os/asset-catalog'
@@ -152,6 +154,12 @@ export interface StudioVisualProjection {
    * and the approved master asset only. Absent in caches written before it existed; sync rebuilds those.
    */
   identity?: { internal: VisualDocument; public: VisualDocument }
+  /**
+   * Competitor comparison matrix and price strip (V2.2): owner-reviewed competitors from the shared landscape file
+   * (`brand/competitive/shared/landscape.json`) and the own-brand row from approved facts. Internal only. Absent in
+   * caches written before it existed; sync rebuilds those.
+   */
+  competitors?: VisualDocument
 }
 
 export class ProjectionError extends Error {
@@ -232,6 +240,7 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[]):
     const visual: StudioVisualProjection = {
       bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
       identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }) },
+      competitors: buildCompetitorComparison(engine, readSharedLandscape(engine.workspaceRoot(), engine.config().brand.slug)),
     }
     assertNoSecrets(visual)
     return visual
