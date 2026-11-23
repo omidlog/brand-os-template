@@ -102,7 +102,7 @@ const EN: Table = {
   },
   consistency_tension: {
     reason: 'Rule {rule}: {ids} can both be true, but they often pull in different directions. This is a possible trade-off, not a contradiction, and nothing is wrong unless you decide it is.',
-    improvement: 'Answer the question below in one sentence, or leave it as it is: a deliberate trade-off is a valid decision.',
+    improvement: 'Answer the suggested question in one sentence, or leave it as it is: a deliberate trade-off is a valid decision.',
   },
   consistency_verification: {
     reason: 'Rule {rule}: {ids} makes a claim that needs a source, and the evidence register holds no current independent source for it. The claim stays unverified; the coach cannot verify anything.',
@@ -193,7 +193,7 @@ const FA: Table = {
   },
   consistency_tension: {
     reason: 'قاعدهٔ {rule}: {ids} می‌توانند هم‌زمان درست باشند، اما اغلب در دو جهت مختلف می‌کشند. این یک بده‌بستان احتمالی است، نه تناقض، و تا شما تصمیم نگیرید چیزی نادرست نیست.',
-    improvement: 'به پرسش زیر در یک جمله پاسخ دهید، یا همین‌طور بگذارید بماند: بده‌بستانِ آگاهانه یک تصمیم معتبر است.',
+    improvement: 'به پرسش پیشنهادی در یک جمله پاسخ دهید، یا همین‌طور بگذارید بماند: بده‌بستانِ آگاهانه یک تصمیم معتبر است.',
   },
   consistency_verification: {
     reason: 'قاعدهٔ {rule}: {ids} ادعایی دارد که منبع می‌خواهد، و در دفتر شواهد هیچ منبع مستقل و به‌روزی برای آن نیست. این ادعا تأییدنشده می‌ماند؛ مربی نمی‌تواند چیزی را تأیید کند.',
@@ -284,7 +284,7 @@ const TR: Table = {
   },
   consistency_tension: {
     reason: '{rule} kuralı: {ids} aynı anda doğru olabilir, ancak çoğu zaman farklı yönlere çeker. Bu bir çelişki değil, olası bir ödünleşimdir; siz öyle karar vermedikçe yanlış bir şey yok.',
-    improvement: 'Aşağıdaki soruyu tek cümleyle yanıtlayın ya da olduğu gibi bırakın: bilinçli bir ödünleşim geçerli bir karardır.',
+    improvement: 'Önerilen soruyu tek cümleyle yanıtlayın ya da olduğu gibi bırakın: bilinçli bir ödünleşim geçerli bir karardır.',
   },
   consistency_verification: {
     reason: '{rule} kuralı: {ids} kaynak gerektiren bir iddia içeriyor ve kanıt kaydında bunun için güncel, bağımsız bir kaynak yok. İddia doğrulanmamış kalır; koç hiçbir şeyi doğrulayamaz.',
