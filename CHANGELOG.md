@@ -22,6 +22,22 @@ No runtime behaviour, profile, tool or Studio route changed.
 
 - The bridge (`brand-os.assurance-bridge/3`) counts a linked note as `independent` while the register entry qualifies on the `--as-of` day (verified, not owner testimony, same question, not past its review date) and the note is unchanged; otherwise `owner_stated`. The snapshot lists `evidence_links` (ids and a state); a new non-blocking gap `independent_evidence` points at `brand:assurance-link`. A qualifying link makes a PRR-08 judgment stale. Unapproved answers still lower the ratio; never a certification.
 
+## Unreleased — Visual V4.2: full Brand Book and Business Report PDF
+
+### Added
+
+- `npm run brand:export-visual -- --doc brand-book|business-report`: the full Brand Book and the Business Report as A4 portrait books on the V1.2 engine (cover, imprint, contents with real folios, running heads, numbered notes), en/fa/tr, internal and public editions, HTML and digital PDF. Persian mirrors the book and uses Persian digits for folios and chapter numbers.
+- Core `visual/full-book.ts` (`BookDocument`, `composeBook`, `buildBook`): chapters from the Brand Book and business plan sections, the "Visual identity" plates and the Business Model Canvas. Approved values only: drafts print as labels, recommendations are dropped, restricted values (finance figures) are never printed in any edition; the public edition shows no draft or restricted mark.
+- Designed "not yet available" pages for chapters with nothing approved, planned chapters (Motion, Applications) and chapters that print on their own today (Mascot atlas, Competitive landscape). Nothing is invented.
+- en/fa/tr text for the books, including fa/tr field labels for every printed question (`visual/i18n-full-book.ts`); ILLUSTRATIVE / MOCK DATA fixture `illustrativeBook`.
+- Studio projection `visual.books` (read by the export command; no new Studio route).
+- Visual QA: 10 new baselines (Brand Book cover, contents, Strategy; Business Report contents, Executive summary; en and fa), overflow and RTL checks, and PDF read-back checks (contents point at printed pages, folios, embedded fonts, Vazirmatn on fa pages, no draft or restricted value).
+
+### Changed
+
+- The book engine is generic (`renderBook`, `layoutBook`, `bookGalley`); the identity book's output is byte-identical. Plate heads accept a book-wide number. A contents page with more than seven entries uses compact rows.
+
+
 ## Unreleased — Coach contradiction and facet rubrics (fixes pack GAP-08)
 
 ### Added
@@ -616,6 +632,17 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:assurance` reads `runs_paid_media` from the approved answer to `business.marketing.paid_media`. `--paid-media yes|no` is deprecated: it still works, but only while the question has no approved answer, and it prints an en/fa/tr notice on stderr. An approved answer always wins. A missing paid-media item now points at the question instead of the flag.
 - `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
 - Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.
+
+## Unreleased — Audit: Trust area fixes (Assurance / GAP-09)
+
+### Fixed
+
+- `brand:assurance-review record` refuses a judgment note that looks like a credential (the Knowledge credential check). The note is stored in plain text; nothing is written and the text is never echoed.
+- `brand:assurance snapshot|assess --pin` refuses a snapshot kept for another brand or method (`invalid_pin`) instead of reporting its revisions as changed sources.
+- `brand:assurance verify` explains, in en/fa/tr, a digest change with no changed cited source (an answer approved, a research note added, or a judgment recorded for that day).
+- Persian text of the bridge and review commands uses «واقعیت» instead of the English word "fact", and the Persian comma «،» in lists.
+- `docs-internal/ASSURANCE.md`: an owner `yes` replaces PRR-08's evidence minimum; a same-day judgment changes that day's snapshot; dates are UTC days. Tests: `assurance-audit`.
+- After merging main (GAP-09 evidence links): `brand:assurance-link list` in Persian uses the Persian comma «،» and shows the register status (pending, verified, rejected, withdrawn) in en/fa/tr instead of the English token. `verify` with `--pin` keeps both the brand/method check and the evidence-link comparison.
 
 ## Unreleased — Audit: Runtime area fixes
 

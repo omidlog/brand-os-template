@@ -5,7 +5,7 @@
  * approved master embedded) and, when a local Chrome is available, a PDF. Studio never writes files; this command
  * is the only writer, and it writes only into the output folder (default dist/visual-export, which git ignores).
  *
- *   npm run brand:export-visual -- [--doc identity|bmc] [--lang en|fa|tr|all] [--edition internal|public]
+ *   npm run brand:export-visual -- [--doc identity|bmc|brand-book|business-report] [--lang en|fa|tr|all] [--edition internal|public]
  *                                  [--profile book_a4_portrait|canvas_a3_landscape|deck_16_9]
  *                                  [--out <dir>] [--fixture] [--no-pdf]
  *
@@ -26,11 +26,14 @@ import { AGENT_TOKEN_ENV, InterviewEngine } from '@brand-os/brand-core'
 import {
   bookText,
   fillVisual,
+  fullBookText,
+  illustrativeBook,
   illustrativeBusinessModelCanvas,
   illustrativeVisualIdentity,
   isVisualLang,
   PRINT_PROFILE_SPECS,
   VISUAL_LANGS,
+  type BookDocument,
   type PaperProfile,
   type VisualDocument,
   type VisualLang,
@@ -39,6 +42,7 @@ import { assertNoSecrets, buildProjection, type PreviewFile } from '../apps/stud
 import { html, trusted, type SafeHtml } from '../apps/studio/src/views/html.js'
 import { printDocument } from '../apps/studio/src/views/visual.js'
 import { identityBookDocument, identityBookGalley, type BookInput, type Heights } from '../apps/studio/src/views/visual-print-book.js'
+import { fullBookDocument, fullBookGalley } from '../apps/studio/src/views/visual-print-full.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const STATIC = path.join(ROOT, 'apps', 'studio', 'static')
@@ -47,10 +51,12 @@ const MAX_ASSET_BYTES = 8 * 1024 * 1024
 
 const HELP = `brand:export-visual [options]
 
-  --doc identity|bmc            identity: Brand Book "Visual identity" chapter (default); bmc: Business Model Canvas
+  --doc <doc>                   identity: Brand Book "Visual identity" chapter (default); bmc: Business Model Canvas;
+                                brand-book: the full Brand Book; business-report: the Business Report
   --lang en|fa|tr|all           language of the labels (default: all of en, fa, tr the brand supports)
   --edition internal|public     internal (default) or the public edition (approved and published only)
-  --profile <id>                book_a4_portrait (identity), canvas_a3_landscape (bmc); deck_16_9 is planned
+  --profile <id>                book_a4_portrait (identity, brand-book, business-report), canvas_a3_landscape (bmc);
+                                deck_16_9 is planned
   --out <dir>                   output folder (default dist/visual-export); never inside brand/ or .private
   --fixture                     render the ILLUSTRATIVE / MOCK DATA fixture instead of this repository
   --no-pdf                      HTML only (no Chrome needed)
@@ -66,9 +72,19 @@ export class ExportError extends Error {
   }
 }
 
+export const EXPORT_DOCS = ['identity', 'bmc', 'brand-book', 'business-report'] as const
+export type ExportDoc = (typeof EXPORT_DOCS)[number]
+
+/** The full books (Visual V4.2) and the projection key they are read from. */
+const FULL_BOOKS = { 'brand-book': 'brand_book', 'business-report': 'business_report' } as const
+type FullDoc = keyof typeof FULL_BOOKS
+function isFullDoc(doc: ExportDoc): doc is FullDoc {
+  return doc in FULL_BOOKS
+}
+
 export interface ExportOptions {
   root: string
-  doc: 'identity' | 'bmc'
+  doc: ExportDoc
   langs: VisualLang[]
   edition: 'internal' | 'public'
   profile: PaperProfile | null
@@ -180,26 +196,39 @@ export function brandUncommitted(root: string): boolean {
 }
 
 interface Source {
-  doc: VisualDocument
+  doc: VisualDocument | null
+  book: BookDocument | null
   assetUrl: (key: string) => string | null
   commit: string | null
   uncommitted: boolean
 }
 
+/** The commit the export read and whether brand/ had uncommitted changes (logged once, so the owner sees it). */
+function committed(options: ExportOptions): { commit: string | null; uncommitted: boolean } {
+  const commit = commitOf(options.root)
+  const uncommitted = commit !== null && brandUncommitted(options.root)
+  if (uncommitted) options.log(bookText(options.langs[0] ?? 'en').exportUncommitted)
+  return { commit, uncommitted }
+}
+
 function loadSource(options: ExportOptions): Source {
+  const full = isFullDoc(options.doc) ? FULL_BOOKS[options.doc] : null
   if (options.fixture) {
+    if (full) return { doc: null, book: illustrativeBook(full, 'en', options.edition), assetUrl: () => null, commit: null, uncommitted: false }
     const doc = options.doc === 'identity' ? illustrativeVisualIdentity(options.edition, 'complete') : illustrativeBusinessModelCanvas('en', options.edition)
-    return { doc, assetUrl: () => null, commit: null, uncommitted: false }
+    return { doc, book: null, assetUrl: () => null, commit: null, uncommitted: false }
   }
   const slug = new InterviewEngine(options.root).config().brand.slug
   const { projection, previews } = buildProjection(options.root, slug)
   const visual = projection.visual
+  if (full) {
+    const book = visual?.books?.[full]?.[options.edition] ?? null
+    if (!book) throw new ExportError('no_document', fillVisual(bookText(options.langs[0] ?? 'en').exportNoDocument, { doc: options.doc }))
+    return { doc: null, book, assetUrl: assetEmbedder(previews), ...committed(options) }
+  }
   const doc = !visual ? null : options.doc === 'identity' ? (visual.identity?.[options.edition] ?? null) : visual.bmc.applies ? visual.bmc[options.edition] : null
   if (!doc) throw new ExportError('no_document', fillVisual(bookText(options.langs[0] ?? 'en').exportNoDocument, { doc: options.doc }))
-  const commit = commitOf(options.root)
-  const uncommitted = commit !== null && brandUncommitted(options.root)
-  if (uncommitted) options.log(bookText(options.langs[0] ?? 'en').exportUncommitted)
-  return { doc, assetUrl: assetEmbedder(previews), commit, uncommitted }
+  return { doc, book: null, assetUrl: assetEmbedder(previews), ...committed(options) }
 }
 
 /** Chrome's serialized DOM after scripts ran and fonts loaded (virtual time), or null when Chrome failed. */
@@ -241,7 +270,12 @@ const CHECK = `document.fonts.ready.then(() => {
 
 /** Pass one of the book: render the galley, measure every flow in Chrome, return the heights (null on failure). */
 export function measureBook(chrome: string, input: BookInput, galleyFile: string): Heights | undefined {
-  writeOutput(galleyFile, withScript(identityBookGalley(input).value, MEASURE))
+  return measureGalley(chrome, identityBookGalley(input).value, galleyFile)
+}
+
+/** Measures any book galley (identity chapter or full book) in Chrome. */
+export function measureGalley(chrome: string, galley: string, galleyFile: string): Heights | undefined {
+  writeOutput(galleyFile, withScript(galley, MEASURE))
   try {
     const result = readResult(dumpDom(chrome, galleyFile), 'bk-measure') as Record<string, number> | null
     return result ? new Map(Object.entries(result).filter(([, value]) => Number.isFinite(value))) : undefined
@@ -269,18 +303,19 @@ function shown(root: string, file: string): string {
 
 export function exportVisual(options: ExportOptions): ExportedFile[] {
   if (process.env[AGENT_TOKEN_ENV]) throw new ExportError('agent_token', bookText('en').exportRefusedAgent)
-  const profile = options.profile ?? (options.doc === 'identity' ? 'book_a4_portrait' : 'canvas_a3_landscape')
+  const bookLike = options.doc !== 'bmc'
+  const profile = options.profile ?? (bookLike ? 'book_a4_portrait' : 'canvas_a3_landscape')
   const spec = PRINT_PROFILE_SPECS[profile]
   const t = bookText(options.langs[0] ?? 'en')
   if (spec.status === 'planned') throw new ExportError('planned', fillVisual(t.exportPlanned, { profile }))
-  const expected = options.doc === 'identity' ? 'book_a4_portrait' : 'canvas_a3_landscape'
+  const expected = bookLike ? 'book_a4_portrait' : 'canvas_a3_landscape'
   if (profile !== expected) throw new ExportError('usage', `--profile ${profile} does not apply to --doc ${options.doc} (use ${expected}).`)
   const out = checkOutput(options.root, options.out)
   const source = loadSource(options)
   fs.mkdirSync(out, { recursive: true })
   // Once the folder exists its real path is known: check again, in case a link appeared on the way.
   checkOutput(options.root, out)
-  const book = options.doc === 'identity'
+  const book = bookLike
   const head = html`<style>${trusted(embeddedStyles(book))}</style>`
   const chrome = options.pdf ? options.chrome : null
   if (!chrome) options.log(t.exportNoChrome)
@@ -288,10 +323,20 @@ export function exportVisual(options: ExportOptions): ExportedFile[] {
   for (const lang of options.langs) {
     const name = `${options.doc}.${options.edition}.${lang}`
     const htmlFile = path.join(out, `${name}.html`)
-    const doc = options.fixture && !book ? illustrativeBusinessModelCanvas(lang, options.edition) : source.doc
     let page: SafeHtml
     let measured = 0
-    if (book) {
+    if (source.book) {
+      // Full Brand Book / Business Report (V4.2). Fixture values are invented per language, like the canvas fixture.
+      const full = options.fixture && isFullDoc(options.doc) ? illustrativeBook(FULL_BOOKS[options.doc], lang, options.edition) : source.book
+      const input = { book: full, lang, commit: source.commit, uncommitted: source.uncommitted, head, toolbar: html``, assetUrl: source.assetUrl }
+      const heights = chrome ? measureGalley(chrome, fullBookGalley(input).value, path.join(out, `.${name}.galley.html`)) : undefined
+      if (heights) {
+        measured = heights.size
+        options.log(fillVisual(bookText(lang).exportMeasured, { count: measured }))
+      } else if (chrome) options.log(bookText(lang).exportMeasureFailed)
+      page = fullBookDocument({ ...input, heights }).html
+    } else if (book) {
+      const doc = source.doc!
       const input = { doc, lang, commit: source.commit, uncommitted: source.uncommitted, head, toolbar: html``, assetUrl: source.assetUrl }
       const heights = chrome ? measureBook(chrome, input, path.join(out, `.${name}.galley.html`)) : undefined
       if (heights) {
@@ -300,6 +345,7 @@ export function exportVisual(options: ExportOptions): ExportedFile[] {
       } else if (chrome) options.log(bookText(lang).exportMeasureFailed)
       page = identityBookDocument({ ...input, heights }).html
     } else {
+      const doc = options.fixture ? illustrativeBusinessModelCanvas(lang, options.edition) : source.doc!
       page = printDocument({ doc, lang, commit: source.commit, head, toolbar: html`` })
     }
     assertNoSecrets(page.value)
@@ -357,14 +403,14 @@ function main(): number {
   try {
     const root = path.resolve(values.root ?? process.cwd())
     const doc = values.doc ?? 'identity'
-    if (doc !== 'identity' && doc !== 'bmc') throw new ExportError('usage', `--doc must be identity or bmc (got ${doc}).`)
+    if (!(EXPORT_DOCS as readonly string[]).includes(doc)) throw new ExportError('usage', fillVisual(fullBookText('en').exportUnknownDoc, { doc }))
     const edition = values.edition ?? 'internal'
     if (edition !== 'internal' && edition !== 'public') throw new ExportError('usage', `--edition must be internal or public (got ${edition}).`)
     const profile = values.profile ?? null
     if (profile !== null && !(profile in PRINT_PROFILE_SPECS)) throw new ExportError('usage', `--profile must be one of ${Object.keys(PRINT_PROFILE_SPECS).join(', ')}.`)
     exportVisual({
       root,
-      doc,
+      doc: doc as ExportDoc,
       langs: langsFor(root, values.lang, Boolean(values.fixture)),
       edition,
       profile: profile as PaperProfile | null,

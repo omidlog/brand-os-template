@@ -19,7 +19,7 @@
  * 2. **A judgment is about what was there.** Each revision records its basis: the ids and revisions of
  *    the facts and research notes the control cites at that moment. If any of them changes, the judgment
  *    is stale and is not used: the control is blocking again until the owner judges it anew.
- * 3. **A note is required** and stays in this private file. The snapshot carries only a reference to
+ * 3. **A note is required** and stays in this private file. A note that looks like a credential is refused. The snapshot carries only a reference to
  *    the revision, never the note text.
  * 4. **Dates only go forward.** A revision's `reviewed_on` may not be in the future and may not be earlier
  *    than the previous revision's, so a snapshot `--as-of` an earlier day is reproduced by the revisions
@@ -31,6 +31,7 @@
 import path from 'node:path'
 import { AGENT_TOKEN_ENV } from '../agent-tokens.js'
 import { KnowledgeError } from '../knowledge/model.js'
+import { credentialFindings } from '../knowledge/safety.js'
 import { dirUsable, safeRead, withLock, writeVaultFile, type KnowledgeWorkspace } from '../knowledge/workspace.js'
 import { canonicalJson, sha256Hex } from '../strategy/model.js'
 import type { ReviewableStatus } from './controls.js'
@@ -134,6 +135,9 @@ export function cleanNote(value: unknown): string {
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(note)) throw new AssuranceReviewError('invalid_input', 'The note has control characters.')
   if ([...note].length > REVIEW_LIMITS.maxNoteChars) throw new AssuranceReviewError('invalid_input', `The note is longer than ${REVIEW_LIMITS.maxNoteChars} characters.`)
+  // The note is stored in plain text, like a Knowledge note, so the same credential check applies. Kinds only; never the text.
+  const credentials = credentialFindings(note)
+  if (credentials.length > 0) throw new AssuranceReviewError('invalid_input', `The note looks like it contains ${credentials.join(', ')}. A judgment note never holds a secret. Nothing was written.`)
   return note
 }
 
