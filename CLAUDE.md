@@ -32,3 +32,5 @@ Skills for specific work:
 - `docs-internal/IDENTITY_BRIEF.md` before touching `brand:identity` (owner-only identity audit and logo brief; a brief or concept selection never approves a logo; skill `agent-skills/logo-identity-strategist/SKILL.md`)
 
 Claude Code can read this checkout only after the folder is open in a permitted session. A chat product does not automatically see this private repository.
+
+Brand Runtime: read `docs-internal/BRAND_RUNTIME.md` before touching `packages/brand-core/src/runtime` or `brand:runtime` (drafts only, copy is approved pack text, quality checks are calls into existing layers, `authorizes: []`).

@@ -70,6 +70,7 @@
     "brand:competitive": "tsx scripts/competitive.ts",
     "brand:identity": "tsx scripts/identity.ts",
     "brand:content": "tsx scripts/content.ts",
+    "brand:runtime": "tsx scripts/runtime.ts",
     "visual:golden": "tsx scripts/visual-golden.ts",
     "brand:export-visual": "tsx scripts/export-visual.ts",
     "mcp:serve": "tsx scripts/mcp.ts",
