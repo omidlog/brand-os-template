@@ -25,7 +25,7 @@ import {
   type TaskType,
 } from '@brand-os/brand-core'
 import { approveRevision, proposeRevision } from '@brand-os/brand-core/strategy'
-import { approveFacts, AUDIENCE, BUDGET_FACT_CANARY, contentBrand, OFFER, PROMISE, VOICE, type ContentBrand } from './helpers/content.js'
+import { approveFacts, AUDIENCE, BUDGET_FACT_CANARY, contentBrand, PROMISE, VOICE, type ContentBrand } from './helpers/content.js'
 import { brandDir, listTree, useTestKey } from './helpers/knowledge.js'
 import { adsProposal, BUDGET_CANARY, DRAFT_CANARY, RESTRICTED_NOTE_CANARY } from './helpers/strategy.js'
 
