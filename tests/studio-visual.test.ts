@@ -118,7 +118,7 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     }
 
     // The business plan shows the list read-only: names first, ids and links behind a toggle, no write form.
-    const business = await owner.page(`/brands/${SLUG}/business`)
+    const business = await owner.page(`/brands/${SLUG}/strategy/business-plan`)
     assert.equal(business.res.status, 200)
     assert.match(business.text, /class="entity-name" dir="auto">Independent cafés/)
     assert.match(business.text, /<summary>Ids and links<\/summary>/)
