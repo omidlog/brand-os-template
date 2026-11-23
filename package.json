@@ -62,6 +62,7 @@
     "brand:evidence": "tsx scripts/brand.ts evidence",
     "brand:retract": "tsx scripts/brand.ts retract",
     "brand:reset": "tsx scripts/brand.ts reset",
+    "brand:coach": "tsx scripts/coach.ts",
     "brand:knowledge": "tsx scripts/knowledge.ts",
     "brand:creative": "tsx scripts/creative.ts",
     "brand:seo": "tsx scripts/seo.ts",

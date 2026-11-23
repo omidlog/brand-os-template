@@ -38,6 +38,7 @@ export const SCRIPT_GROUPS: ScriptGroup[] = [
       ['brand:publish', 'Publish approved facts (or --unpublish them).'],
       ['brand:retract', 'Remove an approved claim and unpublish it (owner step).'],
       ['brand:evidence', 'Add, verify or withdraw evidence for a claim.'],
+      ['brand:coach', 'Get advisory coaching on one answer: a follow-up question, a quality status or the open contradictions.'],
       ['brand:doctor', 'Find problems in the brand repository and say how to fix them.'],
     ],
   },
