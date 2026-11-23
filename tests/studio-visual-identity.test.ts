@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
@@ -113,6 +114,59 @@ test('Studio: the Visual identity chapter is read-only, approved-only, designed 
     assert.match(fa.text, /class="vz-construct" viewBox="[^"]+" role="img" aria-label="[^"]+" dir="ltr"/, 'the construction drawing keeps its geometry')
     await owner.get(`/brands/${SLUG}/visual/identity?lang=tr`)
     assert.match((await owner.page(`/brands/${SLUG}/visual/identity`)).text, /Görsel kimlik/)
+  } finally {
+    await s.close()
+  }
+})
+
+test('Studio: an approved logo named in brand.logo.masters (no master tag, tagged draft, internal) is drawn internally only', async () => {
+  const slug = 'pilito-shaped'
+  const s = await startStudio()
+  try {
+    const owner = new Client(s.url)
+    await owner.login()
+    const csrf = await owner.csrf('/brands/new')
+    await owner.request('POST', '/brands/new', { form: { _csrf: csrf, name: 'Pilito Shaped', slug, profile: 'business', default_locale: 'en', locales: ['en', 'fa'], owner: OWNER, repo: slug } })
+    await s.studio.provisioning.settled()
+    await s.studio.sync.settled()
+    const wordmark = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160"><rect width="640" height="160" fill="#0B6E4F"/></svg>')
+    const checksum = crypto.createHash('sha256').update(wordmark).digest('hex')
+    editOutsideStudio(s, slug, (engine, root) => {
+      approve(engine, root, {
+        'brand.logo.min_size': 'min-size: 80px; clear-space: 0.4x',
+        'brand.logo.masters': 'This repository: brand/assets/logo/pilito-wordmark.svg (asset.logo.pilito-wordmark). No Figma master recorded.',
+      })
+      addApprovedAsset(root, { id: 'asset.logo.pilito-wordmark', name: 'Pilito wordmark', file: 'brand/assets/logo/pilito-wordmark.svg', data: wordmark })
+      // A second approved logo: without the brand.logo.masters reference the choice would be ambiguous.
+      addApprovedAsset(root, { id: 'asset.logo.pilito-symbol', name: 'Pilito symbol', file: 'brand/assets/logo/pilito-symbol.svg', data: MARK })
+      const file = path.join(root, 'brand/assets/asset-manifest.yaml')
+      const manifest = parse(fs.readFileSync(file, 'utf8')) as { assets: Array<Record<string, unknown>> }
+      for (const asset of manifest.assets.filter((item) => String(item.id).startsWith('asset.logo.pilito-'))) {
+        asset.mime = 'image/svg+xml'
+        asset.preview = asset.path
+      }
+      manifest.assets.find((asset) => asset.id === 'asset.logo.pilito-wordmark')!.tags = ['logo', 'wordmark', 'draft']
+      fs.writeFileSync(file, stringify(manifest))
+    })
+    await s.studio.sync.refresh(slug)
+    const page = await owner.page(`/brands/${slug}/visual/identity`)
+    assert.equal(page.res.status, 200)
+    assert.ok(page.text.includes(`<image href="/brands/${slug}/assets/file/${checksum}"`), 'the named wordmark is drawn in the construction')
+    assert.ok(page.text.includes(`<img class="vz-min-img" src="/brands/${slug}/assets/file/${checksum}"`), 'and at its minimum size')
+    assert.match(page.text, /0\.4 × mark height/)
+    assert.match(page.text, /80 px/)
+    assert.match(page.text, /data-badge="draft_tag">Tagged draft</)
+    assert.match(page.text, /data-badge="internal_only">Internal · not published</)
+    assert.doesNotMatch(page.text, /Logo construction is waiting/)
+    const pub = await owner.page(`/brands/${slug}/visual/identity/print?edition=public`)
+    assert.equal(pub.res.status, 200)
+    assert.equal(pub.text.includes(checksum), false, 'an internal, unpublished logo never reaches the public edition')
+    assert.equal(pub.text.includes('Tagged draft'), false)
+    await owner.get(`/brands/${slug}/visual/identity?lang=fa`)
+    const fa = await owner.page(`/brands/${slug}/visual/identity`)
+    assert.match(fa.text, /<html lang="fa" dir="rtl">/)
+    assert.ok(fa.text.includes(`<image href="/brands/${slug}/assets/file/${checksum}"`))
+    assert.match(fa.text, /برچسب پیش‌نویس/)
   } finally {
     await s.close()
   }

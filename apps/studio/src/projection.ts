@@ -364,6 +364,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
         published,
         tags: tags.slice(0, 50),
         example: tags.includes('example') || /example/i.test(asset.id) || /EXAMPLE/.test(String(asset.license ?? '')),
+        paths: [asset.path, asset.preview].filter((item): item is string => typeof item === 'string' && item.length > 0).map((item) => item.slice(0, 500)),
         preview_key: approved ? preview_key : null,
         mime: approved && preview_key ? mime : null,
         width: size?.width ?? null,
