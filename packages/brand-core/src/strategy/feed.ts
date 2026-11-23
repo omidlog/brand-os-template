@@ -41,7 +41,7 @@ export type StrategyTool = (typeof STRATEGY_TOOLS)[number]
 /** Token profile -> the one agent kind (and so the one strategy type) it reads. */
 export const STRATEGY_PROFILES: Partial<Record<AgentProfile, AgentKind>> = { 'strategy-seo-read': 'seo', 'strategy-ads-read': 'ads' }
 
-const TYPE_OF_KIND: Record<AgentKind, StrategyType> = { seo: 'seo', ads: 'paid_media' }
+const TYPE_OF_KIND: Record<AgentKind, StrategyType> = { seo: 'seo', ads: 'paid_media', content: 'content' }
 const SERVABLE: readonly EffectiveStatus[] = ['current', 'review_due']
 
 export const STRATEGY_FEED_NOTICE = [
@@ -149,8 +149,11 @@ export function strategyAccess(ctx: AuthContext, brandSlug: string): { allow: tr
   return { allow: true, kind }
 }
 
-/** The approved revision this kind may read now, with its evaluation; null when none is servable. */
-function servable(ws: KnowledgeWorkspace, record: StrategyRecord, now: Date) {
+/**
+ * The approved revision servable now (`current` or `review_due`), with its evaluation; null entry when none is.
+ * Shared by the feed and the owner's content strategy projection, so both apply one rule.
+ */
+export function servable(ws: KnowledgeWorkspace, record: StrategyRecord, now: Date) {
   let entry
   try {
     entry = approvedEntry(record)
