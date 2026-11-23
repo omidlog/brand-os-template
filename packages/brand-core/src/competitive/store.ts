@@ -83,7 +83,7 @@ function usable(ws: KnowledgeWorkspace, dir: string): boolean {
   }
 }
 
-function readJson<T extends { kind: string; brand_slug: string }>(ws: KnowledgeWorkspace, file: string, kind: string): T | null {
+export function readJson<T extends { kind: string; brand_slug: string }>(ws: KnowledgeWorkspace, file: string, kind: string): T | null {
   if (!usable(ws, path.dirname(file))) return null
   let raw: Buffer | null
   try {
@@ -104,7 +104,7 @@ function readJson<T extends { kind: string; brand_slug: string }>(ws: KnowledgeW
   return doc
 }
 
-function writeJson(ws: KnowledgeWorkspace, file: string, doc: unknown): void {
+export function writeJson(ws: KnowledgeWorkspace, file: string, doc: unknown): void {
   try {
     writeVaultFile(ws, file, `${JSON.stringify(doc, null, 2)}\n`, true)
   } catch (error) {
@@ -113,7 +113,7 @@ function writeJson(ws: KnowledgeWorkspace, file: string, doc: unknown): void {
   }
 }
 
-function locked<T>(ws: KnowledgeWorkspace, name: string, run: () => T): T {
+export function locked<T>(ws: KnowledgeWorkspace, name: string, run: () => T): T {
   try {
     return withLock(ws, name, run)
   } catch (error) {

@@ -45,3 +45,24 @@ export {
   validSharedLandscape,
 } from './share.js'
 export type { RateLabel, SharedCell, SharedCellState, SharedCompetitor, SharedCriterion, SharedLandscape, SharedLandscapeRead, SharedPrice, SharedPriceState, SharedSource } from './share.js'
+export type { SharedAxis, SharedPlacement, SharedPositioning } from './share.js'
+export {
+  addPosition,
+  AXES_RECORD_PATH,
+  AXIS_KEYS,
+  OWN_SUBJECT,
+  PLACEMENT_STATES,
+  placementOf,
+  POSITION_BANDS,
+  POSITION_STALE_DAYS,
+  positioningLandscape,
+  POSITIONING_LANGS,
+  POSITIONING_LIMITS,
+  POSITIONS_RECORD_PATH,
+  readAxes,
+  readPositions,
+  removePosition,
+  setAxes,
+  validateAxes,
+} from './positioning.js'
+export type { AddPositionInput, AxesRecord, AxisDefinition, AxisKey, LocalizedLabel, Placement, PlacementSource, PlacementState, PositionBand, PositionRecord, PositionView } from './positioning.js'
