@@ -4,7 +4,7 @@ import path from 'node:path'
 import { checkSvg, effectiveModelUse, svgPublicationIssues, type ModelUse } from '@brand-os/asset-catalog'
 import { canonicalJson, sha256Hex } from '../strategy/model.js'
 import { verifyPack, type TaskContextPack, type TaskLocale, type TaskType } from '../task-context/model.js'
-import type { ReferenceReason, ReferenceState, VisualReference } from '../visual-dna/model.js'
+import { ASSET_ID_PATTERN, type ReferenceReason, type ReferenceState, type VisualReference } from '../visual-dna/model.js'
 import { bannedRules, copyClaimConflicts } from './gate.js'
 import { POST_FORMAT, RUNTIME_PERMISSIONS, RUNTIME_RENDERER, RUNTIME_RENDERER_VERSION, RuntimeError, SOCIAL_BATCH_COUNT, type BatchSummary, type CheckResult, type PostManifest, type ReportedCheck } from './model.js'
 import { planSocialBatch } from './plan.js'
@@ -185,9 +185,15 @@ function packAssets(pack: TaskContextPack): Array<{ id: string; role: string; pi
   return out
 }
 
-/** The asset ids of a pack that Visual DNA should resolve, in pack order. */
+/**
+ * The asset ids of a pack that Visual DNA should resolve, in pack order. Only ids `visual_dna` accepts: one id it would
+ * refuse (a manifest id with a space or a slash) must not void the verdicts of every other asset. Such an asset stays
+ * `not_tested`, which blocks only when it is a required logo.
+ */
 export function packAssetIds(pack: TaskContextPack): string[] {
-  return packAssets(pack).map((asset) => asset.id)
+  return packAssets(pack)
+    .map((asset) => asset.id)
+    .filter((id) => ASSET_ID_PATTERN.test(id))
 }
 
 function assetVerdicts(pack: TaskContextPack, references: VisualReference[] | null, required: RequirableAsset[]): AssetVerdict[] {

@@ -14,6 +14,7 @@ import {
   DEMO_NOW,
   demoPack,
   loadApprovedLogo,
+  packAssetIds,
   planSocialBatch,
   productionReadiness,
   readBatchDir,
@@ -145,6 +146,24 @@ test('bad SHA: a pack changed after task_context built it, or a logo file change
   const stale = productionReadiness({ pack: stalePin, references: loaded.references, required_assets: ['logo'] })
   assert.equal(stale.asset_delivery.references[0]?.reason, 'pack_pin_differs')
   assert.equal(stale.production_ready, 'not_ready')
+})
+
+test('an asset id visual_dna would refuse does not void the other verdicts: it stays not_tested', () => {
+  const odd = repack((copy) => {
+    const item = copy.sections.creative.find((entry) => entry.key === 'assets.logo')!
+    copy.sections.creative.push({ ...item, key: 'assets.icon', source_id: 'icon with space', value: { ...(item.value as Record<string, unknown>), id: 'icon with space' } })
+  })
+  assert.deepEqual(packAssetIds(odd), [DEMO_LOGO_ID], 'only ids visual_dna accepts are sent')
+  const result = productionReadiness({ pack: odd, references: loaded.references, required_assets: ['logo'] })
+  valid(result)
+  assert.deepEqual(
+    result.asset_delivery.references.map((asset) => [asset.asset_id, asset.state]),
+    [
+      [DEMO_LOGO_ID, 'approved'],
+      ['icon with space', 'not_tested'],
+    ],
+  )
+  assert.equal(result.production_ready, 'ready', 'an optional asset that was not tested never blocks')
 })
 
 test('blocked usage rights and a missing required logo are deterministic blockers; not verifiable is not a pass', () => {
