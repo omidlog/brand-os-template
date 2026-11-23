@@ -8,6 +8,7 @@ import { findNote, type LoadedNote } from '../knowledge/store.js'
 import { dirUsable, ensureDir, safeRead, withLock, writeVaultFile, type KnowledgeWorkspace } from '../knowledge/workspace.js'
 import { approvalProofMatches, approvalSecretPath } from '../private-store.js'
 import {
+  contentBlockFactIds,
   approvalDigest,
   approvalSeal,
   contentDigest,
@@ -28,6 +29,7 @@ import {
   type ProposalInput,
   type RevisionEntry,
   type StrategyContent,
+  type StrategyRef,
   type StrategyOrigin,
   type StrategyRecord,
   type StrategyRevision,
@@ -191,6 +193,38 @@ export function evidenceState(ws: KnowledgeWorkspace, ref: EvidenceRef): RefStat
   return loaded.revision === ref.revision ? 'current' : 'changed'
 }
 
+/**
+ * An approved SEO or paid-media strategy cited by a content strategy: current while that exact revision is the one
+ * served (current or review_due); changed when another revision replaced it; missing when nothing is served.
+ */
+export function strategyRefState(ws: KnowledgeWorkspace, ref: StrategyRef, now: Date = ws.now()): RefState {
+  let record: StrategyRecord
+  try {
+    record = loadRecord(ws, ref.strategy_id)
+  } catch (error) {
+    if (error instanceof StrategyError) return 'missing'
+    throw error
+  }
+  // Only SEO and paid-media strategies can be cited, so evaluation never recurses into another content strategy.
+  if (record.type === 'content') return 'missing'
+  let entry: RevisionEntry | null
+  try {
+    entry = approvedEntry(record)
+  } catch {
+    return 'missing'
+  }
+  if (!entry) return 'missing'
+  if (entry.revision !== ref.revision || entry.content_sha256 !== ref.content_sha256) return 'changed'
+  const status = evaluate(ws, record, entry, now).status
+  return status === 'current' || status === 'review_due' ? 'current' : 'missing'
+}
+
+function resolveStrategyRef(ws: KnowledgeWorkspace, ref: StrategyRef): StrategyRef {
+  const state = strategyRefState(ws, ref)
+  if (state === 'current') return ref
+  throw new StrategyError(state === 'changed' ? 'stale_source' : 'refused', `Strategy ${ref.strategy_id}@${ref.revision} is ${state === 'changed' ? 'no longer the approved revision' : 'not an approved, valid SEO or paid-media strategy of this brand'}. Cite the revision served now.`)
+}
+
 function resolveFacts(ws: KnowledgeWorkspace, ids: string[]): FactRef[] {
   const facts = readFacts(ws.root, 'approved', ws.brandSlug)
   return ids.map((id) => {
@@ -251,6 +285,16 @@ export function proposeRevision(ws: KnowledgeWorkspace, input: { strategy_id: st
     if (rec.agent_kinds.length === 0) throw new StrategyError('invalid_input', `Recommendation ${rec.id} names no agent_kinds. Name who may receive it (${TYPE_AGENT[proposal.type]}).`)
     return { ...rec, evidence_refs: evidence }
   })
+  if (proposal.content_strategy) {
+    for (const fact of contentBlockFactIds(proposal.content_strategy)) {
+      if (!factRefs.some((ref) => ref.id === fact)) throw new StrategyError('invalid_input', `content_strategy cites fact ${fact}, which is not in fact_refs.`)
+    }
+    // A content strategy is read by content agents (Slice C). Restricted facts such as the budget never enter it.
+    const facts = readFacts(ws.root, 'approved', ws.brandSlug)
+    const restricted = factRefs.filter((ref) => facts[ref.id]?.classification === 'restricted').map((ref) => ref.id)
+    if (restricted.length) throw new StrategyError('refused', `A content strategy cannot cite restricted facts (${restricted.join(', ')}). Nothing was written.`)
+    for (const ref of proposal.content_strategy.strategy_refs) resolveStrategyRef(ws, ref)
+  }
   const { fact_ids: _facts, evidence: _evidence, ...rest } = proposal
   void _facts
   void _evidence
@@ -285,14 +329,27 @@ export function proposeRevision(ws: KnowledgeWorkspace, input: { strategy_id: st
 export interface RefReport {
   facts: Array<FactRef & { state: RefState }>
   evidence: Array<EvidenceRef & { state: RefState }>
+  /** Cited SEO / paid-media strategies (content strategies only; empty otherwise). */
+  strategies: Array<StrategyRef & { state: RefState }>
 }
 
-export function refReport(ws: KnowledgeWorkspace, content: StrategyContent): RefReport {
+export function refReport(ws: KnowledgeWorkspace, content: StrategyContent, now: Date = ws.now()): RefReport {
   const facts = readFacts(ws.root, 'approved', ws.brandSlug)
   return {
     facts: content.fact_refs.map((ref) => ({ ...ref, state: factState(ws, ref, facts) })),
     evidence: content.evidence_refs.map((ref) => ({ ...ref, state: evidenceState(ws, ref) })),
+    strategies: (content.content_strategy?.strategy_refs ?? []).map((ref) => ({ ...ref, state: strategyRefState(ws, ref, now) })),
   }
+}
+
+/** Human-readable list of cited sources that are not current. */
+function staleRefs(refs: RefReport, style: 'state' | 'paren'): string[] {
+  const fmt = (label: string, state: RefState) => (style === 'state' ? `${label} is ${state}` : `${label} (${state})`)
+  return [
+    ...refs.facts.filter((ref) => ref.state !== 'current').map((ref) => fmt(`fact ${ref.id}`, ref.state)),
+    ...refs.evidence.filter((ref) => ref.state !== 'current').map((ref) => fmt(`research ${ref.note_id}`, ref.state)),
+    ...refs.strategies.filter((ref) => ref.state !== 'current').map((ref) => fmt(`strategy ${ref.strategy_id}@${ref.revision}`, ref.state)),
+  ]
 }
 
 function readSecret(ws: KnowledgeWorkspace): string | null {
@@ -341,8 +398,8 @@ export function evaluate(ws: KnowledgeWorkspace, record: StrategyRecord, entry: 
   const c = revision.content
   if (at < c.valid_from) return { status: 'not_yet_valid', reasons: [`Valid from ${c.valid_from}.`], refs: null, revision }
   if (at >= c.valid_until) return { status: 'expired', reasons: [`Expired at ${c.valid_until}. Propose and approve a new revision.`], refs: null, revision }
-  const refs = refReport(ws, c)
-  const changed = [...refs.facts.filter((ref) => ref.state !== 'current').map((ref) => `fact ${ref.id} is ${ref.state}`), ...refs.evidence.filter((ref) => ref.state !== 'current').map((ref) => `research ${ref.note_id} is ${ref.state}`)]
+  const refs = refReport(ws, c, now)
+  const changed = staleRefs(refs, 'state')
   if (changed.length) return { status: 'needs_review', reasons: [...changed, 'A cited source changed after approval. The approved bytes are unchanged; the owner must review and approve a new revision.'], refs, revision }
   if (at >= c.review_due_at) return { status: 'review_due', reasons: [`Review was due at ${c.review_due_at}. Still valid until ${c.valid_until}.`], refs, revision }
   return { status: 'current', reasons: [], refs, revision }
@@ -425,6 +482,7 @@ export function reviewRevision(ws: KnowledgeWorkspace, input: { strategy_id: str
   }
   for (const ref of refs.facts) if (ref.state !== 'current') blockers.push(`Fact ${ref.id} is ${ref.state} since it was cited.`)
   for (const ref of refs.evidence) if (ref.state !== 'current') blockers.push(`Research note ${ref.note_id} is ${ref.state} since it was cited.`)
+  for (const ref of refs.strategies) if (ref.state !== 'current') blockers.push(`Strategy ${ref.strategy_id}@${ref.revision} is ${ref.state} since it was cited.`)
   if (ws.now().toISOString() >= revision.content.valid_until) blockers.push('valid_until has passed.')
   const c = revision.content
   return {
@@ -446,7 +504,9 @@ export function reviewRevision(ws: KnowledgeWorkspace, input: { strategy_id: str
     blockers,
     approve_with: `npm run brand:strategy -- approve --id ${record.strategy_id} --revision ${entry.revision} --expect-sha ${entry.content_sha256}`,
     notice: [
-      'Approving makes this revision the one agents with a matching strategy profile can read. It authorizes no ad, spend, publication or website change.',
+      record.type === 'content'
+        ? 'Approving makes this the content strategy the owner projection (brand:content show) serves. No agent profile reads content strategies yet. It authorizes no post, publication, schedule, ad or spend.'
+        : 'Approving makes this revision the one agents with a matching strategy profile can read. It authorizes no ad, spend, publication or website change.',
       base ? `On approval, revision ${base.revision} becomes superseded. It stays on disk for audit.` : 'This is the first revision of this strategy.',
       'Restricted fields are never sent to an agent.',
     ],
@@ -486,7 +546,7 @@ export function approveRevision(ws: KnowledgeWorkspace, input: { strategy_id: st
     const now = ws.now().toISOString()
     if (now >= revision.content.valid_until) throw new StrategyError('refused', 'valid_until has passed. An expired strategy cannot be approved.')
     const refs = refReport(ws, revision.content)
-    const stale = [...refs.facts.filter((ref) => ref.state !== 'current').map((ref) => `fact ${ref.id} (${ref.state})`), ...refs.evidence.filter((ref) => ref.state !== 'current').map((ref) => `research ${ref.note_id} (${ref.state})`)]
+    const stale = staleRefs(refs, 'paren')
     if (stale.length) throw new StrategyError('stale_source', `Cited sources changed since the proposal: ${stale.join(', ')}. Propose a new revision. Nothing was approved.`)
     const eventId = newApprovalEventId()
     const digest = approvalDigest({ strategy_id: id, brand_slug: record.brand_slug, revision: number, content_sha256: revision.content_sha256, event_id: eventId, approved_at: now })

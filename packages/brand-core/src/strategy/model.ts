@@ -17,11 +17,15 @@ import { parseKnowledgeRef } from '../knowledge/proposals.js'
 
 export const STRATEGY_SCHEMA_VERSION = 1
 
-export const STRATEGY_TYPES = ['seo', 'paid_media'] as const
+/**
+ * `content` (Content Bridge Slice A) is the brand's content strategy: pillars, channel roles, cadence, languages and
+ * the approved facts that carry voice, audience, messaging and claims. No token profile reads it yet (Slice C).
+ */
+export const STRATEGY_TYPES = ['seo', 'paid_media', 'content'] as const
 /** The execution-agent kinds a recommendation can be handed to. Fixed by the agent's token profile, never an argument. */
-export const AGENT_KINDS = ['seo', 'ads'] as const
+export const AGENT_KINDS = ['seo', 'ads', 'content'] as const
 /** Which agent kind may read which strategy type. One slice per kind. */
-export const TYPE_AGENT: Record<StrategyType, AgentKind> = { seo: 'seo', paid_media: 'ads' }
+export const TYPE_AGENT: Record<StrategyType, AgentKind> = { seo: 'seo', paid_media: 'ads', content: 'content' }
 
 export const REVISION_STATES = ['draft', 'approved', 'rejected', 'superseded', 'withdrawn'] as const
 /** Computed at read time from the stored state, the dates and the cited sources. Never stored. */
@@ -50,6 +54,11 @@ export const STRATEGY_LIMITS = {
   maxEvidenceRefs: 40,
   maxRevisions: 200,
   maxFileBytes: 512 * 1024,
+  maxPillars: 12,
+  maxChannels: 14,
+  maxGaps: 80,
+  maxStrategyRefs: 10,
+  maxCadence: 60,
 } as const
 
 export class StrategyError extends Error {
@@ -136,6 +145,80 @@ export interface StrategyContent {
   open_questions: string[]
   restricted: RestrictedBlock | null
   origin: StrategyOrigin
+  /**
+   * Only on `content` strategies, required there. Absent (not null) on every other type, so revisions written before
+   * Content Bridge Slice A hash exactly as before.
+   */
+  content_strategy?: ContentStrategyBlock
+}
+
+// ---- content strategy block (Content Bridge Slice A) ------------------------------------------------------
+
+export const CONTENT_CHANNELS = ['instagram', 'x', 'linkedin', 'facebook', 'tiktok', 'youtube', 'threads', 'telegram', 'pinterest', 'newsletter', 'blog', 'website', 'podcast', 'other'] as const
+export const CONTENT_FORMATS = ['reel', 'carousel', 'post', 'thread', 'story', 'article', 'email', 'short_video', 'video', 'live'] as const
+/** Which approved facts carry which part of the content strategy. The facts are cited, never restated. */
+export const CONTENT_SOURCE_ROLES = ['voice', 'claims', 'audience', 'messaging', 'pillars', 'channels', 'offers', 'cta', 'languages', 'objective'] as const
+/**
+ * not_approved: no approved fact covers this. placeholder: the approved fact says TBD, none or unknown.
+ * owner_decision: facts cannot decide it (cadence, formats, a channel's role); the owner writes it before approving.
+ */
+export const CONTENT_GAP_REASONS = ['not_approved', 'placeholder', 'owner_decision'] as const
+
+export type ContentChannel = (typeof CONTENT_CHANNELS)[number]
+export type ContentFormat = (typeof CONTENT_FORMATS)[number]
+export type ContentSourceRole = (typeof CONTENT_SOURCE_ROLES)[number]
+export type ContentGapReason = (typeof CONTENT_GAP_REASONS)[number]
+
+export interface ContentPillar {
+  id: string
+  /** Short name the owner approves. The proposer takes it from the approved pillars fact; it must cite that fact. */
+  name: string
+  fact_refs: string[]
+}
+
+export interface ContentChannelPlan {
+  channel: ContentChannel
+  /** What this channel is for. Null until the owner decides (a gap). */
+  role: string | null
+  formats: ContentFormat[]
+  /** Planned posts per week or month. Null means not decided, never a guess. */
+  cadence: { per: 'week' | 'month'; target: number } | null
+  /** Subset of the strategy languages; empty means all of them. */
+  languages: string[]
+  /** Pillar ids this channel carries; empty means all of them. */
+  pillars: string[]
+  fact_refs: string[]
+}
+
+/** An approved SEO or paid-media strategy revision this content strategy builds on, pinned like a fact. */
+export interface StrategyRef {
+  strategy_id: string
+  revision: number
+  content_sha256: string
+}
+
+export interface ContentGap {
+  field: string
+  reason: ContentGapReason
+  fact_ids: string[]
+}
+
+export interface ContentStrategyBlock {
+  schema: 1
+  /** Languages content is written in (locale codes). */
+  languages: string[]
+  pillars: ContentPillar[]
+  channels: ContentChannelPlan[]
+  /** Approved fact ids per role. Their values are resolved at read time (the voice rules projection). */
+  sources: Record<ContentSourceRole, string[]>
+  /** Owner-written additions to the voice facts. The proposer leaves these empty: it never invents voice. */
+  voice_rules: { do: string[]; dont: string[] }
+  vocabulary: { prefer: string[]; avoid: string[] }
+  banned_claims: string[]
+  cta_rules: string[]
+  strategy_refs: StrategyRef[]
+  /** What is not decided or not approved. Kept in the approved revision so every reader sees it. */
+  gaps: ContentGap[]
 }
 
 /** One immutable revision file. */
@@ -215,8 +298,16 @@ export function approvalSeal(secret: string, digest: string): string {
 }
 
 /** Digest of what a revision cites (facts and research notes, with revisions). Lets an agent detect a source change. */
-export function sourceDigest(content: Pick<StrategyContent, 'fact_refs' | 'evidence_refs'>): string {
-  return sha256Hex(canonicalJson({ facts: content.fact_refs.map((ref) => [ref.id, ref.revision]), evidence: content.evidence_refs.map((ref) => ref.ref) }))
+export function sourceDigest(content: Pick<StrategyContent, 'fact_refs' | 'evidence_refs' | 'content_strategy'>): string {
+  const strategies = content.content_strategy?.strategy_refs ?? []
+  // The strategies key is added only when present, so SEO and paid-media digests are unchanged.
+  return sha256Hex(
+    canonicalJson({
+      facts: content.fact_refs.map((ref) => [ref.id, ref.revision]),
+      evidence: content.evidence_refs.map((ref) => ref.ref),
+      ...(strategies.length ? { strategies: strategies.map((ref) => [ref.strategy_id, ref.revision, ref.content_sha256]) } : {}),
+    }),
+  )
 }
 
 export function newApprovalEventId(): string {
@@ -322,6 +413,105 @@ function finiteOrNull(value: unknown, field: string): number | null {
   return value
 }
 
+const GAP_FIELD = /^[a-z_]+(?:\[[a-z0-9_.-]{1,40}\])?(?:\.[a-z_]+)?$/
+
+function cadenceOf(value: unknown, field: string): ContentChannelPlan['cadence'] {
+  if (value === undefined || value === null) return null
+  const c = objectOf(value, field, ['per', 'target'])
+  const target = c.target
+  if (typeof target !== 'number' || !Number.isInteger(target) || target < 1 || target > STRATEGY_LIMITS.maxCadence) {
+    throw new StrategyError('invalid_input', `${field}.target must be a whole number from 1 to ${STRATEGY_LIMITS.maxCadence}, or leave cadence null (not decided).`)
+  }
+  return { per: oneOf(c.per, ['week', 'month'] as const, `${field}.per`), target }
+}
+
+function localeList(value: unknown, field: string, max = 10): string[] {
+  return [
+    ...new Set(
+      list(value, field, max).map((item, i) => {
+        if (typeof item !== 'string' || !LOCALE.test(item)) throw new StrategyError('invalid_input', `${field}[${i}] must be a language code such as en, fa or tr.`)
+        return item
+      }),
+    ),
+  ]
+}
+
+function factIds(value: unknown, field: string): string[] {
+  return [...new Set(list(value, field, STRATEGY_LIMITS.maxFactRefs).map((id, i) => factIdOf(id, `${field}[${i}]`)))]
+}
+
+/** Strict parse of the `content_strategy` block. Unknown keys are refused at every level. */
+export function parseContentStrategy(raw: unknown): ContentStrategyBlock {
+  const b = objectOf(raw, 'content_strategy', ['schema', 'languages', 'pillars', 'channels', 'sources', 'voice_rules', 'vocabulary', 'banned_claims', 'cta_rules', 'strategy_refs', 'gaps'])
+  if (b.schema !== undefined && b.schema !== 1) throw new StrategyError('invalid_input', 'content_strategy.schema must be 1.')
+  const languages = localeList(b.languages, 'content_strategy.languages')
+  if (languages.length === 0) throw new StrategyError('invalid_input', 'content_strategy.languages needs at least one language.')
+  const pillars = uniqueIds(
+    list(b.pillars, 'content_strategy.pillars', STRATEGY_LIMITS.maxPillars).map((item, i) => {
+      const p = objectOf(item, `content_strategy.pillars[${i}]`, ['id', 'name', 'fact_refs'])
+      const refs = factIds(p.fact_refs, `content_strategy.pillars[${i}].fact_refs`)
+      if (refs.length === 0) throw new StrategyError('invalid_input', `content_strategy.pillars[${i}] cites no fact. A pillar serves an approved fact (for example business.marketing.pillars).`)
+      return { id: itemId(p.id, `content_strategy.pillars[${i}].id`), name: text(p.name, `content_strategy.pillars[${i}].name`, 80), fact_refs: refs }
+    }),
+    'content_strategy.pillars',
+  )
+  const seen = new Set<string>()
+  const channels = list(b.channels, 'content_strategy.channels', STRATEGY_LIMITS.maxChannels).map((item, i) => {
+    const field = `content_strategy.channels[${i}]`
+    const c = objectOf(item, field, ['channel', 'role', 'formats', 'cadence', 'languages', 'pillars', 'fact_refs'])
+    const channel = oneOf(c.channel, CONTENT_CHANNELS, `${field}.channel`)
+    if (seen.has(channel)) throw new StrategyError('invalid_input', `content_strategy.channels has ${channel} twice.`)
+    seen.add(channel)
+    const langs = localeList(c.languages, `${field}.languages`)
+    for (const lang of langs) if (!languages.includes(lang)) throw new StrategyError('invalid_input', `${field}.languages has ${lang}, which is not in content_strategy.languages.`)
+    const pillarIds = [...new Set(list(c.pillars, `${field}.pillars`, STRATEGY_LIMITS.maxPillars).map((id, j) => itemId(id, `${field}.pillars[${j}]`)))]
+    for (const id of pillarIds) if (!pillars.some((p) => p.id === id)) throw new StrategyError('invalid_input', `${field}.pillars has ${id}, which is not a pillar of this strategy.`)
+    return {
+      channel,
+      role: optionalText(c.role, `${field}.role`),
+      formats: [...new Set(list(c.formats, `${field}.formats`, CONTENT_FORMATS.length).map((f, j) => oneOf(f, CONTENT_FORMATS, `${field}.formats[${j}]`)))],
+      cadence: cadenceOf(c.cadence, `${field}.cadence`),
+      languages: langs,
+      pillars: pillarIds,
+      fact_refs: factIds(c.fact_refs, `${field}.fact_refs`),
+    }
+  })
+  const rawSources = b.sources === undefined || b.sources === null ? {} : objectOf(b.sources, 'content_strategy.sources', CONTENT_SOURCE_ROLES)
+  const sources = Object.fromEntries(CONTENT_SOURCE_ROLES.map((role) => [role, factIds(rawSources[role], `content_strategy.sources.${role}`)])) as Record<ContentSourceRole, string[]>
+  const pair = (value: unknown, field: string, keys: readonly [string, string]) => {
+    const o = value === undefined || value === null ? {} : objectOf(value, field, keys)
+    return Object.fromEntries(keys.map((key) => [key, textList(o[key], `${field}.${key}`)]))
+  }
+  const strategyRefs = list(b.strategy_refs, 'content_strategy.strategy_refs', STRATEGY_LIMITS.maxStrategyRefs).map((item, i) => {
+    const r = objectOf(item, `content_strategy.strategy_refs[${i}]`, ['strategy_id', 'revision', 'content_sha256'])
+    return { strategy_id: validateStrategyId(r.strategy_id), revision: validateRevisionNumber(r.revision), content_sha256: validateSha(r.content_sha256, `content_strategy.strategy_refs[${i}].content_sha256`) }
+  })
+  if (new Set(strategyRefs.map((r) => r.strategy_id)).size !== strategyRefs.length) throw new StrategyError('invalid_input', 'content_strategy.strategy_refs cites one strategy twice.')
+  const gaps = list(b.gaps, 'content_strategy.gaps', STRATEGY_LIMITS.maxGaps).map((item, i) => {
+    const g = objectOf(item, `content_strategy.gaps[${i}]`, ['field', 'reason', 'fact_ids'])
+    if (typeof g.field !== 'string' || !GAP_FIELD.test(g.field)) throw new StrategyError('invalid_input', `content_strategy.gaps[${i}].field must be a field path such as channels[instagram].cadence.`)
+    return { field: g.field, reason: oneOf(g.reason, CONTENT_GAP_REASONS, `content_strategy.gaps[${i}].reason`), fact_ids: factIds(g.fact_ids, `content_strategy.gaps[${i}].fact_ids`) }
+  })
+  return {
+    schema: 1,
+    languages,
+    pillars,
+    channels,
+    sources,
+    voice_rules: pair(b.voice_rules, 'content_strategy.voice_rules', ['do', 'dont']) as ContentStrategyBlock['voice_rules'],
+    vocabulary: pair(b.vocabulary, 'content_strategy.vocabulary', ['prefer', 'avoid']) as ContentStrategyBlock['vocabulary'],
+    banned_claims: textList(b.banned_claims, 'content_strategy.banned_claims'),
+    cta_rules: textList(b.cta_rules, 'content_strategy.cta_rules'),
+    strategy_refs: strategyRefs,
+    gaps,
+  }
+}
+
+/** Every fact id the block cites. Each must also be in the strategy's fact_refs. */
+export function contentBlockFactIds(block: ContentStrategyBlock): string[] {
+  return [...new Set([...block.pillars.flatMap((p) => p.fact_refs), ...block.channels.flatMap((c) => c.fact_refs), ...Object.values(block.sources).flat()])]
+}
+
 /** The proposal as the owner (or Claude, for the owner) writes it. fact_refs and evidence_refs are resolved by the store. */
 export interface ProposalInput {
   title: string
@@ -349,6 +539,8 @@ export interface ProposalInput {
   open_questions: string[]
   restricted: RestrictedBlock | null
   origin: StrategyOrigin
+  /** Present only for type `content`. */
+  content_strategy?: ContentStrategyBlock
 }
 
 const PROPOSAL_KEYS = [
@@ -375,6 +567,7 @@ const PROPOSAL_KEYS = [
   'open_questions',
   'restricted',
   'origin',
+  'content_strategy',
 ] as const
 
 function originOf(value: unknown, fallback: StrategyOrigin): StrategyOrigin {
@@ -448,7 +641,12 @@ export function parseProposal(raw: unknown, origin: StrategyOrigin = { kind: 'ma
     }),
     'recommendations',
   )
-  if (recommendations.length === 0) throw new StrategyError('invalid_input', 'A strategy needs at least one recommendation.')
+  const type = oneOf(doc.type, STRATEGY_TYPES, 'type')
+  // A content strategy's substance is its content_strategy block; recommendations are optional there.
+  if (recommendations.length === 0 && type !== 'content') throw new StrategyError('invalid_input', 'A strategy needs at least one recommendation.')
+  const hasBlock = doc.content_strategy !== undefined && doc.content_strategy !== null
+  if (type === 'content' && !hasBlock) throw new StrategyError('invalid_input', 'A content strategy needs a content_strategy block (brand:content strategy writes one).')
+  if (type !== 'content' && hasBlock) throw new StrategyError('invalid_input', 'content_strategy is only allowed on a content strategy.')
   let restricted: RestrictedBlock | null = null
   if (doc.restricted !== undefined && doc.restricted !== null) {
     const r = objectOf(doc.restricted, 'restricted', ['budget', 'notes'])
@@ -464,7 +662,7 @@ export function parseProposal(raw: unknown, origin: StrategyOrigin = { kind: 'ma
   }
   const proposal: ProposalInput = {
     title: text(doc.title, 'title', STRATEGY_LIMITS.maxTitleChars),
-    type: oneOf(doc.type, STRATEGY_TYPES, 'type'),
+    type,
     locale: doc.locale,
     scope: { markets: [...new Set(markets)], channel: text(scope.channel, 'scope.channel', 60), period: optionalText(scope.period, 'scope.period', 40) },
     valid_from: isoDate(doc.valid_from, 'valid_from'),
@@ -487,6 +685,8 @@ export function parseProposal(raw: unknown, origin: StrategyOrigin = { kind: 'ma
     restricted,
     origin: originOf(doc.origin, origin),
   }
+  // Set only when present, so a non-content proposal has no such key at all.
+  if (hasBlock) proposal.content_strategy = parseContentStrategy(doc.content_strategy)
   if (proposal.valid_until <= proposal.valid_from) throw new StrategyError('invalid_input', 'valid_until must be after valid_from.')
   if (proposal.review_due_at > proposal.valid_until) throw new StrategyError('invalid_input', 'review_due_at must not be after valid_until.')
   if (!alternatives.some((alt) => alt.assessment === 'chosen') && alternatives.length > 0) throw new StrategyError('invalid_input', 'Mark the alternative that was chosen (assessment: chosen).')
