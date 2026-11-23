@@ -75,6 +75,8 @@ Every result has `brand_id`, `classification`, `approval_state`, `revision`, `so
 
 `visual_dna` checks visual references before they are used: asset ids, a mascot request (emotion, stage, use case, angle) and, for a `creative-read` token, creative-memory variants. Each comes back `approved`, `withheld`, `missing` or `changed`, with checksum, usage rights and the effective `model_use`. Metadata only, never file bytes; a missing pose stays missing. See `docs-internal/VISUAL_DNA.md`.
 
+`production_readiness` answers whether production can start for a task, separately from the pack's context `readiness`: the same inputs as `task_context` plus `required_assets` (`logo`). Each check names its rule owner, input, verdict and whether it blocks; only objective rules block (pack digest, no renderer or unsupported format, missing approved copy, a banned claim, a required logo that is missing, changed or withheld). `ready` is not approval; taste stays `needs_human_review`. Metadata only. See `docs-internal/BRAND_RUNTIME.md` § Production readiness.
+
 The older named tools (`search_brand_docs`, `get_brand_tokens`, `get_brand_overview`, `get_business_plan`, and the rest) use the same retrieval path and the same identity.
 
 `brand:query` takes the same token from the environment:

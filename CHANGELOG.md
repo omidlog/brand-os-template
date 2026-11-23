@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — Production readiness and quality gate (fixes pack PR-E, GAP-05)
+
+### Added
+
+- `productionReadiness()` (`@brand-os/brand-core/runtime`): a separate `brand-os/production-readiness/v1` projection over a `task_context` pack. `TaskContextPack.readiness` keeps its meaning (context only) and is copied unchanged. `production_ready` is `ready` only when no deterministic rule blocks; it is not approval and carries no score; `human_review_required` is always true. Every check names its rule owner, input (ids and counts only), verdict and whether it blocks. Hard rules: pack digest, blocked context, no verified renderer (only `social_batch` has one), unsupported count/format/channel, missing approved copy, a banned claim (the content-bridge guard, shared with `postChecks` as `copyClaimConflicts`), and a logo the owner marked required that is missing, changed, withheld, not SVG or not verifiable. Optional assets never block. Artifact stage re-hashes every file, re-runs both SVG gates on the bytes, checks the pack pin and a required logo in every post, and lifts the runtime's own checks with their owners; non-hard runtime failures (contrast) become `needs_human_review`.
+- MCP tool `production_readiness` (strict schema; pre-render; builds the pack with `task_context` and asset verdicts with `visual_dna` under the same caller context; metadata only; guests, unprofiled agents and other brands denied first; one access-log line, ids only).
+- `brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require logo] [--locale fa|en|tr] [--json]` (exit 3 when not ready) and `--require logo` on `social-batch`, which also writes `production-readiness.json` (`batch-summary.json` is unchanged). en/fa/tr labels, fa RTL.
+- `schemas/production-readiness.schema.json`; guide section in `docs-internal/BRAND_RUNTIME.md`; `task-context` skill step 8. Tests: `production-readiness` (synthetic demo brand only); `audit` pins the tool.
+
+### Changed
+
+- The runtime reads its logo through the Visual DNA resolver (Visual DNA owner decision 6): `loadApprovedLogo` resolves the pack's logo ids as the owner process and reads the bytes with `readVerifiedAsset(…, 'renderer')`; a file that differs from the pack's pinned checksum is `pack_pin_differs`. Not-embedded reasons are now `visual_dna:<state>:<reason>` codes. The resolver's append-only access-log line is the only write under `brand/`. The runtime resolves with the default `use_scope: public` (#44), so a portrait with internal-only rights is never embedded. The synthetic demo logo records its licence.
+
 ## Unreleased — Visual V1.3: visual QA (screenshot baselines, PDF text/font checks, RTL checks)
 
 ### Added

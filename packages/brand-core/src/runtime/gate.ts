@@ -45,6 +45,20 @@ export function bannedRules(pack: TaskContextPack): { banned: Array<{ text: stri
   return { banned, availability: typeof availability?.value === 'string' ? availability.value.trim() : null }
 }
 
+/**
+ * The banned-claim guard over the copy one post carries (message, CTA, brand name), exactly as `postChecks` runs it.
+ * Shared with the production-readiness projection so a planned post and a rendered post are judged by one rule.
+ */
+export function copyClaimConflicts(pack: TaskContextPack, post: Pick<PostPlan, 'message' | 'cta' | 'brand_name'>): { rules: ReturnType<typeof bannedRules>; conflicts: ReturnType<typeof claimConflicts> } {
+  const rules = bannedRules(pack)
+  const texts: Array<[string, string | null]> = [
+    ['message', post.message],
+    ['cta', post.cta],
+    ['brand_name', post.brand_name],
+  ]
+  return { rules, conflicts: texts.flatMap(([field, value]) => claimConflicts(field, value, rules.banned, rules.availability)) }
+}
+
 /** Every check for one rendered post. Pure: the SVG text and the pack in, results out. */
 export function postChecks(pack: TaskContextPack, plan: BatchPlan, post: PostPlan, rendered: RenderedPost): ReportedCheck[] {
   const out: ReportedCheck[] = []
@@ -94,13 +108,7 @@ export function postChecks(pack: TaskContextPack, plan: BatchPlan, post: PostPla
 
   if (post.brand_name) out.push(check('post.signoff_fit', 'runtime.manifest', rendered.signoff.fits ? 'pass' : 'warn', [`lines:${rendered.signoff.lines}`, 'method:estimated_advance_width']))
 
-  const rules = bannedRules(pack)
-  const texts: Array<[string, string | null]> = [
-    ['message', post.message],
-    ['cta', post.cta],
-    ['brand_name', post.brand_name],
-  ]
-  const conflicts = texts.flatMap(([field, value]) => claimConflicts(field, value, rules.banned, rules.availability))
+  const { rules, conflicts } = copyClaimConflicts(pack, post)
   out.push(
     check(
       'copy.claims',
