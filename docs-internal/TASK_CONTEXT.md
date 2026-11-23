@@ -160,13 +160,40 @@ approved source it cites has changed. `stale_pin` arrives with pinned calendar r
 
 ### Not in Slice 1 (and not pretended)
 
-- No MCP tool. `task_context` is CLI only in this slice; exposing it over stdio MCP, with its negative security tests,
-  is the next slice (the package's P2).
+- No MCP tool in Slice 1. Added afterwards: see "MCP tool (GAP-02)" below.
 - No calendar or per-slot brief in the pack (`scope_id`, `content_calendar`, `content_brief` pins): next slice. A
   ten-post request today therefore produces an **on-demand draft brief** and no approved slot — which is the required
   behaviour anyway, since an on-demand request is not an approved calendar week.
-- No `task_context_validate`, no skill update, no Studio view, no LLM classification path.
+- No `task_context_validate`, no Studio view, no LLM classification path. (The skill handoff came with the MCP tool.)
 - No deliverable is produced by this code. The pack is context for a drafting agent; it renders nothing.
+
+## MCP tool (GAP-02)
+
+`scripts/mcp.ts` registers one read-only stdio tool, `task_context`. It and the CLI call the same function,
+`runTaskContextTool` (`task-context/agent.ts`), which calls `buildTaskContext`. No second retrieval path was added.
+
+- **Identity.** The server resolves `BRAND_OS_AGENT_TOKEN` once at startup (`resolveAgentContext`) and passes that one
+  context to every reader. No input names a brand, role, profile, token or audience; unknown keys are stripped by the
+  schema. Contexts from different profiles are never combined: a `design` token gets no paid strategy, a
+  `strategy-ads-read` token gets no content strategy.
+- **Access first.** `taskContextAccess` runs before the request is classified, so a guest, an unprofiled agent or a
+  token of another brand gets `denied` (logged) and learns nothing. An unknown, revoked or other-brand token stops the
+  server at startup, as for every other tool.
+- **Inputs.** `task_type` (enum) or `request` (at most 500 characters, classified in en/fa/tr, then dropped);
+  `channel`, `deliverable_count` (1 to 50), `locale` (`en`, `fa`, `tr`), `request_mode`, `output_format`, `scope_id`.
+  Explicit inputs win over the classifier. An unclear request returns `need_task_type` with the tied candidates.
+- **No leaks.** The request text is not in the result, the access log or the pack digest. The log line holds ids only.
+- **No writes** apart from the normal access-log line. `authorizes` is `[]` and every permission flag is `false`.
+- **Readiness is context readiness.** `ready` means the approved context for the task is complete. It does not mean an
+  asset file is deliverable, a renderer exists or a human reviewed anything.
+
+Skill: `agent-skills/task-context/SKILL.md`. The social, UI, marketing and brand designer skills call it first, once.
+Tests: `tests/task-context-agent.test.ts` (real stdio server: listing, the Persian ten-post request, digest equal to
+the core pack, guest, cross-brand, revoked, forged arguments, profile isolation, schema bounds, no request text in the
+log).
+
+Setting it up in a new Claude Code session: `docs-internal/AI_CONNECTORS.md`, "Task context in a new Claude Code
+session".
 
 ## Usage
 
