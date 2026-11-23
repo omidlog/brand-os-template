@@ -105,8 +105,19 @@ export const QUALITY_THRESHOLDS = {
   vagueWordGate: 25,
 } as const
 
+/**
+ * Folds the spellings an owner's keyboard may produce so a lexicon term matches however it was typed:
+ * Arabic yeh / alef maksura / kaf to the Persian letters, tatweel and ZWNJ removed, and the combining dot that
+ * lower-casing a Turkish `İ` leaves behind (`İ` → `i̇`) dropped, so `KALİTELİ` matches `kaliteli`.
+ */
 export function normalizeForMatch(text: string): string {
-  return asciiDigits(text).normalize('NFKC').toLocaleLowerCase('en').replace(/‌/g, '')
+  return asciiDigits(text)
+    .normalize('NFKC')
+    .toLocaleLowerCase('en')
+    .replace(/[يى]/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/[‌ـ]/g, '')
+    .replace(/̇/g, '')
 }
 
 /** Whole-phrase, case-insensitive containment. `etc` does not match inside `etching`. */

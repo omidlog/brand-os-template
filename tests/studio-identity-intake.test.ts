@@ -160,7 +160,7 @@ test('the intake never reaches Studio brand pages or the sync cache', async () =
   await withStudio(async (s, client) => {
     const res = await post(s, client, { logo_presence: 'present', identity_intent: 'rebrand', change_depth: 'strategic_rebrand' })
     assert.equal(res.status, 303)
-    for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/brand-book', '/brands/acme-learning/design', '/brands/acme-learning/history', '/brands/acme-learning/handoff']) {
+    for (const pathname of ['/brands', '/brands/acme-learning', '/brands/acme-learning/brand/book', '/brands/acme-learning/brand/design-system', '/brands/acme-learning/governance/history', '/brands/acme-learning/governance/github']) {
       const page = await client.page(pathname)
       assert.doesNotMatch(page.text, /unapproved_owner_intake|identity_intent|strategic_rebrand/, pathname)
     }

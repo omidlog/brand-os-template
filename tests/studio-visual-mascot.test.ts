@@ -37,9 +37,9 @@ test('Studio: the mascot atlas is read-only, approved-only, designed when empty,
     await s.studio.sync.settled()
 
     // 1. One link from the Assets page; the template catalog has no artwork, so the atlas is the designed empty state.
-    const assets = await owner.page(`/brands/${SLUG}/assets`)
-    assert.equal((assets.text.match(new RegExp(`href="/brands/${SLUG}/visual/mascot"`, 'g')) ?? []).length, 1, 'exactly one link')
-    let page = await owner.page(`/brands/${SLUG}/visual/mascot`)
+    const assets = await owner.page(`/brands/${SLUG}/brand/assets`)
+    assert.equal((assets.text.match(new RegExp(`href="/brands/${SLUG}/brand/mascot"`, 'g')) ?? []).length, 1, 'exactly one link')
+    let page = await owner.page(`/brands/${SLUG}/brand/mascot`)
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Mascot atlas/)
     assert.match(page.text, /Six-stage evolution sheet/)
@@ -70,7 +70,7 @@ test('Studio: the mascot atlas is read-only, approved-only, designed when empty,
       fs.writeFileSync(catalogFile, stringify(catalog))
     })
     await s.studio.sync.refresh(SLUG)
-    page = await owner.page(`/brands/${SLUG}/visual/mascot`)
+    page = await owner.page(`/brands/${SLUG}/brand/mascot`)
     assert.equal(page.res.status, 200)
     assert.ok(page.text.includes(`<img class="vz-mframe-img" src="/brands/${SLUG}/assets/file/${sha(ART)}"`), 'approved art through the existing asset route')
     assert.ok(page.text.includes(sha(WAVE)), 'an approved file still tagged draft is drawn internally')
@@ -94,14 +94,14 @@ test('Studio: the mascot atlas is read-only, approved-only, designed when empty,
     assert.equal(/<form[^>]*method="post"/i.test(page.text.split('<main')[1] ?? ''), false, 'no write form')
 
     // 3. Print view (A4 book pages) and the public edition: nothing is published, so nothing is drawn or named.
-    const print = await owner.page(`/brands/${SLUG}/visual/mascot/print`)
+    const print = await owner.page(`/brands/${SLUG}/brand/mascot/print`)
     assert.equal(print.res.status, 200)
     assert.match(print.text, /vz-book-body/)
     assert.equal((print.text.match(/class="vz-page vz-page--book/g) ?? []).length, 4, 'opener, atlas, evolution, appendix')
     assert.ok(print.text.includes(sha(ART)))
     assert.equal(/\sstyle="/.test(print.text), false)
     assert.equal(/<script(?![^>]*src="\/static\/visual\.js\?v=[A-Za-z0-9_-]+")/.test(print.text), false)
-    const pub = await owner.page(`/brands/${SLUG}/visual/mascot/print?edition=public`)
+    const pub = await owner.page(`/brands/${SLUG}/brand/mascot/print?edition=public`)
     assert.equal(pub.res.status, 200)
     assert.match(pub.text, /Public edition/)
     assert.equal(pub.text.includes(sha(ART)), false, 'approved but unpublished art stays out of the public edition')
@@ -112,23 +112,23 @@ test('Studio: the mascot atlas is read-only, approved-only, designed when empty,
 
     // 4. Read-only: no other method, no other path; guests are sent to sign in.
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      for (const pathname of [`/brands/${SLUG}/visual/mascot`, `/brands/${SLUG}/visual/mascot/print`]) {
+      for (const pathname of [`/brands/${SLUG}/brand/mascot`, `/brands/${SLUG}/brand/mascot/print`]) {
         const res = await owner.request(method, pathname, { form: { _csrf: 'x' } })
         assert.ok([404, 405].includes(res.status), `${method} ${pathname} ${res.status}`)
       }
     }
-    assert.equal((await owner.get(`/brands/${SLUG}/visual/mascot/edit`)).status, 404)
-    assert.equal((await new Client(s.url).get(`/brands/${SLUG}/visual/mascot`)).status, 302)
+    assert.equal((await owner.get(`/brands/${SLUG}/brand/mascot/edit`)).status, 404)
+    assert.equal((await new Client(s.url).get(`/brands/${SLUG}/brand/mascot`)).status, 302)
 
     // 5. Persian (RTL, Vazirmatn through visual.css) and Turkish.
-    await owner.get(`/brands/${SLUG}/visual/mascot?lang=fa`)
-    const fa = await owner.page(`/brands/${SLUG}/visual/mascot`)
+    await owner.get(`/brands/${SLUG}/brand/mascot?lang=fa`)
+    const fa = await owner.page(`/brands/${SLUG}/brand/mascot`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /اطلس ماسکات/)
     assert.match(fa.text, /برگهٔ تکامل شش‌مرحله‌ای/)
     assert.ok(fa.text.includes(sha(ART)))
-    await owner.get(`/brands/${SLUG}/visual/mascot?lang=tr`)
-    const tr = await owner.page(`/brands/${SLUG}/visual/mascot`)
+    await owner.get(`/brands/${SLUG}/brand/mascot?lang=tr`)
+    const tr = await owner.page(`/brands/${SLUG}/brand/mascot`)
     assert.match(tr.text, /Maskot atlası/)
     assert.match(tr.text, /Altı aşamalı gelişim sayfası/)
   } finally {

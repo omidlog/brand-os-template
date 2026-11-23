@@ -785,3 +785,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .entity-ids ul { margin: var(--studio-space-2) 0; padding-inline-start: 1.2em; }
 .entity-legacy { display: flex; align-items: center; gap: var(--studio-space-2); font-size: 0.85em; color: var(--studio-color-text-secondary); }
 .entity-legacy svg { width: 14px; height: 14px; flex: none; }
+
+/* Visual V2.4 (R1): brand sections grouped by intent. The group name is a quiet overline; links keep their style. */
+.nav-section + .nav-section { margin-block-start: var(--studio-space-2); }
+.nav-section-label { margin: 0; padding: 6px var(--studio-space-3) 2px; font: var(--studio-type-overline); letter-spacing: 0.08em; text-transform: uppercase; color: var(--studio-color-text-tertiary); }
+[dir="rtl"] .nav-section-label { letter-spacing: 0; text-transform: none; }
+.nav-section-list { display: grid; gap: 1px; }

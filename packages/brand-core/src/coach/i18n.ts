@@ -472,6 +472,10 @@ export const COACH_UI: Record<Locale, Record<string, string>> = {
     momentApproveTitle: 'Coach notes before you approve (advisory; nothing is blocked):',
     momentMore: '{count} more: npm run brand:coach -- analyze --mode quality_review --question <id>',
     momentApproveFoot: 'Approving is your decision. The coach changed nothing and authorizes nothing.',
+    theInterview: 'the interview',
+    nextNoAnswer: 'Answer a question first (npm run brand:interview), or name one: npm run brand:coach -- analyze --mode follow_up --question <id>',
+    module_disabled: 'its module is turned off',
+    skip_condition: 'an earlier answer makes it unnecessary',
     ruleChecks: 'Rules checked',
     ruleGuard: 'a recognised exception applied',
   },
@@ -497,6 +501,10 @@ export const COACH_UI: Record<Locale, Record<string, string>> = {
     momentApproveTitle: 'یادداشت‌های مربی پیش از تأیید (مشورتی؛ چیزی مسدود نمی‌شود):',
     momentMore: '{count} مورد دیگر: npm run brand:coach -- analyze --mode quality_review --question <id>',
     momentApproveFoot: 'تأیید تصمیم شماست. مربی چیزی را تغییر نداد و اجازهٔ هیچ کاری نمی‌دهد.',
+    theInterview: 'مصاحبه',
+    nextNoAnswer: 'اول به یک پرسش پاسخ دهید (npm run brand:interview)، یا پرسشی را نام ببرید: npm run brand:coach -- analyze --mode follow_up --question <id>',
+    module_disabled: 'ماژول آن خاموش است',
+    skip_condition: 'یک پاسخ قبلی آن را غیرلازم کرده است',
     ruleChecks: 'قاعده‌های بررسی‌شده',
     ruleGuard: 'یک استثنای شناخته‌شده اعمال شد',
   },
@@ -522,6 +530,10 @@ export const COACH_UI: Record<Locale, Record<string, string>> = {
     momentApproveTitle: 'Onaylamadan önce koç notları (tavsiye; hiçbir şey engellenmez):',
     momentMore: '{count} tane daha: npm run brand:coach -- analyze --mode quality_review --question <id>',
     momentApproveFoot: 'Onaylamak sizin kararınız. Koç hiçbir şeyi değiştirmedi ve hiçbir şeye yetki vermez.',
+    theInterview: 'görüşme',
+    nextNoAnswer: 'Önce bir soruyu yanıtlayın (npm run brand:interview) ya da bir soru belirtin: npm run brand:coach -- analyze --mode follow_up --question <id>',
+    module_disabled: 'modülü kapalı',
+    skip_condition: 'önceki bir yanıt onu gereksiz kılıyor',
     ruleChecks: 'Denetlenen kurallar',
     ruleGuard: 'tanınmış bir istisna uygulandı',
   },
@@ -541,7 +553,7 @@ export function coachText(locale: Locale, code: CoachFindingCode, vars: Record<s
   return { reason: fill(phrase.reason, vars), improvement: phrase.improvement === null ? null : fill(phrase.improvement, vars) }
 }
 
-/** Every code, criterion and status has text in every locale. Used by the tests and by `brand:validate`. */
+/** Every code, criterion and status has text in every locale. Asserted by `tests/coach-core.test.ts` and `tests/coach-moments.test.ts`. */
 export function coachI18nErrors(): string[] {
   const errors: string[] = []
   for (const locale of ['en', 'fa', 'tr'] as const) {

@@ -17,6 +17,9 @@
  *   `personal-brand` profile. Turning on the personal module for a company brand (a founder's personal
  *   brand) never makes the company a person: it is recorded separately in `personal_brand`, outside the
  *   assessed subject.
+ * - **Independence** of a research note comes from the owner's link to an evidence-register entry
+ *   (`links.ts`). A note is `independent` only while its link is in force on the day assessed and the
+ *   register entry qualifies by the register's own rules; otherwise it stays `owner_stated`.
  * - **Reviews** for `reviewer_judgment` controls come from the owner's judgment store (`reviews.ts`). A
  *   judgment is used only while everything it was about (its basis) is unchanged; otherwise it is stale
  *   and the control is blocking again. The snapshot carries the revision id, never the owner's note.
@@ -44,6 +47,7 @@ import { latestAnswers } from '../completeness.js'
 import { personalConfig } from '../conditions.js'
 import { findContradictions } from '../contradictions.js'
 import { InterviewEngine } from '../engine.js'
+import { readEvidence, type EvidenceItem } from '../evidence.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
 import { scanAll } from '../knowledge/store.js'
 import { openWorkspace, type KnowledgeWorkspace } from '../knowledge/workspace.js'
@@ -53,11 +57,12 @@ import type { AnswerRecord, FieldQuestion } from '../types.js'
 import { assess, sourceSnapshotDigest, type AssessmentInput, type AuditAssessment, type ControlInput, type ControlReview, type FactPresence, type ResolvedEvidence, type ResolvedFact } from './assess.js'
 import { applicabilityOf, controlsForMethod, DEFAULT_CATALOG, type AssessableControl, type AssessmentSubject, type SubjectField } from './controls.js'
 import { methodById, POSITIONING_READINESS } from './registry.js'
+import { appendLink, assertOwnerLink, AssuranceLinkError, linkAsOf, linkState, readLinkHistory, type LinkRevision, type LinkState } from './links.js'
 import { appendReview, AssuranceReviewError, assertOwnerReview, basisDigest, JUDGMENT_STATUS, readReviewHistory, reviewAsOf, type Judgment, type ReviewBasis, type ReviewRevision } from './reviews.js'
 
 export const SNAPSHOT_SCHEMA = 'brand-os.assurance-snapshot/1'
 /** Version of the mapping from a workspace to assessment inputs. A changed mapping is a visible change. */
-export const BRIDGE_VERSION = 'brand-os.assurance-bridge/2'
+export const BRIDGE_VERSION = 'brand-os.assurance-bridge/3'
 /** The revision written for a restricted fact the audience may not see. Never a hash of anything. */
 export const WITHHELD_REVISION = 'withheld'
 /** Bound on a `--pin` / `verify` snapshot file, so a hostile file cannot exhaust memory. */
@@ -67,7 +72,7 @@ const AUDIENCE_RANK: Record<Audience, number> = { public: 0, internal: 1, restri
 
 export class AssuranceBridgeError extends Error {
   constructor(
-    readonly code: 'refused' | 'not_a_brand' | 'invalid_input' | 'invalid_pin' | 'invalid_review',
+    readonly code: 'refused' | 'not_a_brand' | 'invalid_input' | 'invalid_pin' | 'invalid_review' | 'invalid_link',
     message: string,
   ) {
     super(message)
@@ -116,7 +121,7 @@ export interface SubjectProvenance {
   question_id: string | null
 }
 
-export const MISSING_KINDS = ['subject_field', 'fact', 'evidence', 'reviewer_judgment', 'stale_judgment', 'changed_source'] as const
+export const MISSING_KINDS = ['subject_field', 'fact', 'evidence', 'independent_evidence', 'reviewer_judgment', 'stale_judgment', 'changed_source'] as const
 export type MissingKind = (typeof MISSING_KINDS)[number]
 
 export interface MissingItem {
@@ -152,6 +157,18 @@ export interface PersonalBrandRecord {
   changes_subject: false
 }
 
+/**
+ * A research note's link to an evidence-register entry, as it stands on the snapshot day. Ids and a
+ * closed-vocabulary state only: never the note's or the register entry's text. Not part of the digest;
+ * what it changes (a note's independence) is.
+ */
+export interface EvidenceLinkRecord {
+  note_id: string
+  evidence_id: string
+  link_revision: string
+  state: LinkState
+}
+
 export interface AssuranceSnapshot {
   schema: typeof SNAPSHOT_SCHEMA
   bridge_version: typeof BRIDGE_VERSION
@@ -166,6 +183,8 @@ export interface AssuranceSnapshot {
   controls: ControlInput[]
   /** The personal module, kept separate from the assessed subject. */
   personal_brand: PersonalBrandRecord
+  /** Research notes linked to the evidence register by the owner, and whether each link counts today. */
+  evidence_links: EvidenceLinkRecord[]
   /** `sourceSnapshotDigest()` of exactly these inputs. Same workspace state + same options = same digest. */
   source_snapshot_digest: string
   /** True only when nothing is missing at all. */
@@ -199,6 +218,10 @@ interface Workspace {
   answers: Map<string, AnswerRecord>
   contradictions: Array<{ id: string; fields: string[] }>
   notes: Array<{ id: string; revision: string; question_ids: string[] }>
+  /** Evidence-register entries by id. Read once; only ids, kinds, states and dates are used. */
+  register: Map<string, EvidenceItem>
+  /** Owner link histories by note id, for notes that have one. */
+  links: Map<string, LinkRevision[]>
 }
 
 function openBrand(root: string, now?: () => Date): Workspace {
@@ -232,6 +255,17 @@ function openBrand(root: string, now?: () => Date): Workspace {
       return meta.kind === 'research' && meta.classification === 'internal' && meta.status !== 'archived' && meta.brand_slug === ws.brandSlug
     })
     .map((loaded) => ({ id: loaded.id, revision: loaded.revision, question_ids: [...loaded.note.meta.question_ids] }))
+  let register: EvidenceItem[]
+  try {
+    register = readEvidence(ws.root)
+  } catch {
+    throw new AssuranceBridgeError('invalid_link', 'The evidence register (brand/interview/evidence-register.yaml) could not be read.')
+  }
+  const links = new Map<string, LinkRevision[]>()
+  for (const note of notes) {
+    const history = linkHistoryOf(ws, note.id)
+    if (history.length > 0) links.set(note.id, history)
+  }
   return {
     root: ws.root,
     brandId: ws.brandSlug,
@@ -245,7 +279,29 @@ function openBrand(root: string, now?: () => Date): Workspace {
     answers,
     contradictions,
     notes,
+    register: new Map(register.map((entry) => [entry.id, entry])),
+    links,
   }
+}
+
+function linkHistoryOf(ws: KnowledgeWorkspace, noteId: string): LinkRevision[] {
+  try {
+    return readLinkHistory(ws, noteId)
+  } catch (error) {
+    if (error instanceof AssuranceLinkError) {
+      if (error.code === 'refused') throw new AssuranceBridgeError('refused', error.message)
+      throw new AssuranceBridgeError('invalid_link', error.message)
+    }
+    throw error
+  }
+}
+
+/** The owner's link for a note in force on `day`, and whether the register entry counts that day. */
+function noteLink(w: Workspace, noteId: string, day: string): { link: LinkRevision; state: LinkState } | null {
+  const note = w.notes.find((entry) => entry.id === noteId)
+  const link = note ? linkAsOf(w.links.get(noteId) ?? [], day) : null
+  if (!note || !link) return null
+  return { link, state: linkState(link, note, w.register.get(link.evidence_id!), day) }
 }
 
 function approvedFact(w: Workspace, id: string): CanonicalFact | null {
@@ -350,15 +406,18 @@ function resolveFact(w: Workspace, id: string, audience: Audience, pins: Map<str
   return { ref: { id, revision: '' }, state: 'missing', presence: 'absent', classification }
 }
 
-function resolveEvidence(w: Workspace, control: AssessableControl, pins: Map<string, Map<string, string>>): ResolvedEvidence[] {
+function resolveEvidence(w: Workspace, control: AssessableControl, pins: Map<string, Map<string, string>>, day: string): ResolvedEvidence[] {
   if (!control.required_evidence) return []
   const ids = new Set([...control.required_question_ids, ...control.related_question_ids])
   const pinned = pins.get(control.control_id) ?? new Map<string, string>()
   const out = new Map<string, ResolvedEvidence>()
   const add = (noteId: string, revision: string, isPinned: boolean) => {
     const ref: EvidenceRef = { ref: `knowledge:${noteId}@${revision}`, note_id: noteId, revision }
-    // Knowledge notes carry no independent verification, so every note counts as owner-stated here.
-    out.set(noteId, { ref, state: isPinned ? evidenceState(w.ws, ref) : 'current', independence: 'owner_stated' })
+    // A note is the owner's own writing: owner-stated, unless the owner linked this very revision to a
+    // register entry that qualifies on the day assessed (`links.ts`). Nothing else raises it.
+    const current = w.notes.find((entry) => entry.id === noteId)
+    const linked = current && current.revision === revision ? noteLink(w, noteId, day) : null
+    out.set(noteId, { ref, state: isPinned ? evidenceState(w.ws, ref) : 'current', independence: linked?.state === 'qualifies' ? 'independent' : 'owner_stated' })
   }
   for (const note of w.notes.filter((entry) => entry.question_ids.some((id) => ids.has(id)))) add(note.id, pinned.get(note.id) ?? note.revision, pinned.has(note.id))
   // A note the previous snapshot cited and that is gone (archived, deleted, retagged) stays visible.
@@ -366,12 +425,12 @@ function resolveEvidence(w: Workspace, control: AssessableControl, pins: Map<str
   return [...out.values()].sort((a, b) => (a.ref.note_id < b.ref.note_id ? -1 : 1))
 }
 
-function controlInput(w: Workspace, control: AssessableControl, audience: Audience, factPins: Map<string, string>, notePins: Map<string, Map<string, string>>, review: ControlReview | null): ControlInput {
+function controlInput(w: Workspace, control: AssessableControl, audience: Audience, factPins: Map<string, string>, notePins: Map<string, Map<string, string>>, review: ControlReview | null, day: string): ControlInput {
   const touched = new Set([...control.required_question_ids, ...control.related_question_ids])
   return {
     control_id: control.control_id,
     facts: control.required_question_ids.map((id) => resolveFact(w, id, audience, factPins)),
-    evidence: resolveEvidence(w, control, notePins),
+    evidence: resolveEvidence(w, control, notePins, day),
     conflicts: w.contradictions
       .filter((entry) => entry.fields.some((field) => touched.has(field)))
       .map((entry) => entry.id)
@@ -389,11 +448,17 @@ function controlInput(w: Workspace, control: AssessableControl, audience: Audien
  * related) by approved revision, `none` when not approved, and the research notes it cites. Unpinned on
  * purpose: a judgment is checked against the workspace, not against an older snapshot.
  */
-function reviewBasisOf(w: Workspace, control: AssessableControl): ReviewBasis {
+function reviewBasisOf(w: Workspace, control: AssessableControl, day: string): ReviewBasis {
   const ids = [...new Set([...control.required_question_ids, ...control.related_question_ids])].sort()
   return {
     facts: ids.map((id) => ({ id, revision: approvedFact(w, id)?.revision_hash ?? 'none' })),
-    evidence: resolveEvidence(w, control, new Map()).map((note) => ({ note_id: note.ref.note_id, revision: note.ref.revision })),
+    // A note that counts as independent through a register link is a different basis from the same note
+    // as the owner's own statement: `+<evidence id>` marks it, so linking or losing a link makes a
+    // judgment stale. An unlinked note keeps its plain revision, so earlier judgments are unchanged.
+    evidence: resolveEvidence(w, control, new Map(), day).map((note) => {
+      const linked = note.independence === 'independent' ? noteLink(w, note.ref.note_id, day) : null
+      return { note_id: note.ref.note_id, revision: linked ? `${note.ref.revision}+${linked.link.evidence_id}` : note.ref.revision }
+    }),
   }
 }
 
@@ -415,7 +480,7 @@ export type JudgmentState = 'needs_judgment' | 'judged' | 'stale'
 function currentJudgment(w: Workspace, control: AssessableControl, day: string): { state: JudgmentState; revision: ReviewRevision | null; history: ReviewRevision[]; basis: ReviewBasis } {
   if (control.evaluation_mode !== 'reviewer_judgment') return { state: 'needs_judgment', revision: null, history: [], basis: { facts: [], evidence: [] } }
   const history = historyOf(w, control.control_id)
-  const basis = reviewBasisOf(w, control)
+  const basis = reviewBasisOf(w, control, day)
   const revision = reviewAsOf(history, day)
   if (!revision) return { state: 'needs_judgment', revision: null, history, basis }
   return { state: revision.basis_digest === basisDigest(basis) ? 'judged' : 'stale', revision, history, basis }
@@ -513,9 +578,125 @@ export function recordReview(root: string, input: RecordReviewInput, opts: { now
     note: input.note,
     ...(input.reviewed_on !== undefined ? { reviewed_on: input.reviewed_on } : {}),
     ...(input.expected_revision !== undefined ? { expected_revision: input.expected_revision } : {}),
-    basis: reviewBasisOf(w, control),
+    basis: reviewBasisOf(w, control, w.ws.now().toISOString().slice(0, 10)),
   })
   return { control_id: control.control_id, revision, authorizes: [] }
+}
+
+// ---- owner evidence links (brand:assurance-link) -------------------------------------------------
+
+export interface LinkCandidate {
+  evidence_id: string
+  claim_id: string
+  /** The register's own status. Only `verified` entries from an independent source can qualify. */
+  status: EvidenceItem['status']
+  independent_source: boolean
+}
+
+export interface LinkItem {
+  note_id: string
+  /** The note's current revision. A link is about exactly this revision. */
+  revision: string
+  question_ids: string[]
+  /** Controls of the method that would cite this note. */
+  control_ids: string[]
+  /** The link in force on the day, and whether it counts. */
+  link: { evidence_id: string; revision: string; linked_on: string; state: LinkState } | null
+  revisions: number
+  /** Register entries for a question this note is about. Ids, claim ids and states only, never the reference text. */
+  candidates: LinkCandidate[]
+}
+
+/** The brand's research notes, their links and the register entries they could link to. Read-only. */
+export function listEvidenceLinks(root: string, options: { asOf: Date; method_id?: string }): { brand_id: string; as_of: string; items: LinkItem[]; authorizes: [] } {
+  assertOwnerAssurance()
+  assertOwnerLink()
+  if (!(options.asOf instanceof Date) || Number.isNaN(options.asOf.getTime())) throw new AssuranceBridgeError('invalid_input', 'as_of must be a valid date.')
+  const method = methodById(options.method_id ?? POSITIONING_READINESS.method_id)
+  if (!method) throw new AssuranceBridgeError('invalid_input', 'No such method in the registry.')
+  const w = openBrand(root)
+  const day = options.asOf.toISOString().slice(0, 10)
+  const controls = controlsForMethod(method.method_id, DEFAULT_CATALOG).filter((control) => control.required_evidence)
+  const items = [...w.notes]
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((note): LinkItem => {
+      const linked = noteLink(w, note.id, day)
+      return {
+        note_id: note.id,
+        revision: note.revision,
+        question_ids: [...note.question_ids].sort(),
+        control_ids: controls
+          .filter((control) => [...control.required_question_ids, ...control.related_question_ids].some((id) => note.question_ids.includes(id)))
+          .map((control) => control.control_id)
+          .sort(),
+        link: linked ? { evidence_id: linked.link.evidence_id!, revision: linked.link.revision, linked_on: linked.link.linked_on, state: linked.state } : null,
+        revisions: w.links.get(note.id)?.length ?? 0,
+        candidates: [...w.register.values()]
+          .filter((entry) => entry.kind === 'verification' && note.question_ids.includes(entry.claim_id))
+          .map((entry) => ({ evidence_id: entry.id, claim_id: entry.claim_id, status: entry.status, independent_source: entry.source_type !== 'owner_testimony' }))
+          .sort((a, b) => (a.evidence_id < b.evidence_id ? -1 : 1)),
+      }
+    })
+  return { brand_id: w.brandId, as_of: options.asOf.toISOString(), items, authorizes: [] }
+}
+
+export interface LinkEvidenceInput {
+  note_id: string
+  /** The register entry for `link`; omitted for `unlink`. */
+  evidence_id?: string
+  linked_on?: string
+  expected_revision?: string | null
+}
+
+function linkableNote(w: Workspace, noteId: string) {
+  const note = w.notes.find((entry) => entry.id === noteId)
+  if (!note) throw new AssuranceLinkError('not_linkable', `${noteId} is not an internal, active research note of this brand. Run list to see which notes can be linked.`)
+  return note
+}
+
+/**
+ * Links a research note, at its current revision, to an evidence-register entry. The entry must be a
+ * verification from a source other than owner testimony, for a question the note is about, and not
+ * withdrawn or rejected. A pending entry may be linked: it counts once the owner verifies it with
+ * `brand:evidence verify`. Writes only `brand/.private/assurance/evidence-links/<note_id>.json`.
+ */
+export function linkEvidence(root: string, input: LinkEvidenceInput, opts: { now?: () => Date } = {}): { note_id: string; revision: LinkRevision; state: LinkState; authorizes: [] } {
+  assertOwnerAssurance()
+  assertOwnerLink()
+  const w = openBrand(root, opts.now)
+  const note = linkableNote(w, input.note_id)
+  const entry = typeof input.evidence_id === 'string' ? w.register.get(input.evidence_id) : undefined
+  if (!entry) throw new AssuranceLinkError('not_linkable', `No evidence-register entry ${String(input.evidence_id)}. Record one with brand:evidence add.`)
+  if (entry.kind !== 'verification') throw new AssuranceLinkError('not_linkable', `${entry.id} is a permission, not evidence for a claim.`)
+  if (entry.source_type === 'owner_testimony') throw new AssuranceLinkError('not_linkable', `${entry.id} is owner testimony. It never counts as independent evidence.`)
+  if (!note.question_ids.includes(entry.claim_id)) throw new AssuranceLinkError('not_linkable', `${entry.id} supports ${entry.claim_id}, which this note is not about.`)
+  if (entry.status === 'withdrawn' || entry.status === 'rejected') throw new AssuranceLinkError('not_linkable', `${entry.id} was ${entry.status}. Record a new entry instead.`)
+  const revision = appendLink(w.ws, {
+    note_id: note.id,
+    action: 'link',
+    evidence_id: entry.id,
+    note_revision: note.revision,
+    ...(input.linked_on !== undefined ? { linked_on: input.linked_on } : {}),
+    ...(input.expected_revision !== undefined ? { expected_revision: input.expected_revision } : {}),
+  })
+  return { note_id: note.id, revision, state: linkState(revision, note, entry, revision.linked_on), authorizes: [] }
+}
+
+/** Removes a note's link (a new `unlink` revision; history stays). The note is owner-stated again. */
+export function unlinkEvidence(root: string, input: LinkEvidenceInput, opts: { now?: () => Date } = {}): { note_id: string; revision: LinkRevision; authorizes: [] } {
+  assertOwnerAssurance()
+  assertOwnerLink()
+  const w = openBrand(root, opts.now)
+  // A note that was archived or retagged may still be unlinked: removing a link only restricts.
+  const revision = appendLink(w.ws, {
+    note_id: input.note_id,
+    action: 'unlink',
+    evidence_id: null,
+    note_revision: null,
+    ...(input.linked_on !== undefined ? { linked_on: input.linked_on } : {}),
+    ...(input.expected_revision !== undefined ? { expected_revision: input.expected_revision } : {}),
+  })
+  return { note_id: input.note_id, revision, authorizes: [] }
 }
 
 // ---- what is missing ----------------------------------------------------------------------------
@@ -555,6 +736,10 @@ function missingOf(controls: AssessableControl[], inputs: ControlInput[], subjec
     }
     if (control.required_evidence && !input.evidence.some((note) => note.state === 'current')) {
       out.push(item('evidence', false, { control_id: control.control_id, question_ids: [...control.related_question_ids, ...control.required_question_ids].sort() }))
+    } else if (control.required_evidence?.independence === 'independent' && !input.evidence.some((note) => note.state === 'current' && note.independence === 'independent')) {
+      // Notes exist, but each is the owner's own statement. Not blocking: the evaluator counts it as not
+      // complete. A note linked to a verified register entry (brand:assurance-link) would close it.
+      out.push(item('independent_evidence', false, { control_id: control.control_id, question_ids: [...control.related_question_ids, ...control.required_question_ids].sort() }))
     }
     // Same order as the engine: a changed source or a recorded conflict is reported before any judgment is asked for.
     if (control.evaluation_mode === 'reviewer_judgment' && !input.review && changed.length === 0 && input.conflicts.length === 0) {
@@ -613,8 +798,14 @@ export function buildAssuranceSnapshot(root: string, options: BridgeOptions): As
   const inputs = controls.map((control) => {
     const judged = currentJudgment(w, control, day)
     if (judged.state === 'stale') stale.add(control.control_id)
-    return controlInput(w, control, audience, pins.facts, pins.notes, judged.state === 'judged' ? reviewOf(control, judged.revision!) : null)
+    return controlInput(w, control, audience, pins.facts, pins.notes, judged.state === 'judged' ? reviewOf(control, judged.revision!) : null, day)
   })
+  const evidenceLinks: EvidenceLinkRecord[] = []
+  for (const note of w.notes) {
+    const linked = noteLink(w, note.id, day)
+    if (linked) evidenceLinks.push({ note_id: note.id, evidence_id: linked.link.evidence_id!, link_revision: linked.link.revision, state: linked.state })
+  }
+  evidenceLinks.sort((a, b) => (a.note_id < b.note_id ? -1 : a.note_id > b.note_id ? 1 : 0))
   const input: AssessmentInput = { brand_id: w.brandId, method_id: method.method_id, subject, audience, as_of: options.asOf, controls: inputs }
   const missing = missingOf(controls, inputs, subject, audience, stale)
 
@@ -630,6 +821,7 @@ export function buildAssuranceSnapshot(root: string, options: BridgeOptions): As
     subject_provenance: provenance,
     controls: inputs,
     personal_brand: { enabled: w.personal.enabled, facets: w.personal.facets, brand_entity_kind: subject.entity_kind === 'person' ? 'person' : 'company', changes_subject: false },
+    evidence_links: evidenceLinks,
     source_snapshot_digest: sourceSnapshotDigest(input),
     complete: missing.length === 0,
     scoreable: !missing.some((entry) => entry.blocking),
@@ -669,7 +861,7 @@ const PIN_ID = /^[A-Za-z0-9_.:-]{1,200}$/
  * Parses a snapshot file the owner kept, as data. Only ids, revisions and the options are taken from it;
  * anything else in the file is ignored. A malformed file is refused without echoing its content.
  */
-export function parseSnapshotFile(text: string): { brand_id: string; method_id: string; as_of: Date; audience: Audience; paid_media: PaidMediaStatement; digest: string; pins: SnapshotPins } {
+export function parseSnapshotFile(text: string): { brand_id: string; method_id: string; as_of: Date; audience: Audience; paid_media: PaidMediaStatement; digest: string; pins: SnapshotPins; links: Array<{ note_id: string; evidence_id: string; link_revision: string; state: string }> } {
   if (text.length > MAX_SNAPSHOT_BYTES) throw new AssuranceBridgeError('invalid_pin', 'The snapshot file is too large.')
   let raw: unknown
   try {
@@ -704,7 +896,15 @@ export function parseSnapshotFile(text: string): { brand_id: string; method_id: 
       evidence.push({ ref: `knowledge:${ref.note_id}@${ref.revision}`, note_id: ref.note_id, revision: ref.revision, control_id: control.control_id })
     }
   }
-  return { brand_id: doc.brand_id, method_id: doc.method_id, as_of: asOf, audience, paid_media: paid, digest: doc.source_snapshot_digest, pins: { facts, evidence } }
+  // Snapshots kept before bridge version 3 have no `evidence_links`: nothing to compare.
+  const links: Array<{ note_id: string; evidence_id: string; link_revision: string; state: string }> = []
+  for (const link of Array.isArray(doc.evidence_links) ? doc.evidence_links : []) {
+    if (!isRecord(link) || typeof link.note_id !== 'string' || !PIN_ID.test(link.note_id) || typeof link.evidence_id !== 'string' || !PIN_ID.test(link.evidence_id) || typeof link.link_revision !== 'string' || !PIN_ID.test(link.link_revision) || typeof link.state !== 'string' || !PIN_ID.test(link.state)) {
+      throw new AssuranceBridgeError('invalid_pin', 'An evidence link in the snapshot file is malformed.')
+    }
+    links.push({ note_id: link.note_id, evidence_id: link.evidence_id, link_revision: link.link_revision, state: link.state })
+  }
+  return { brand_id: doc.brand_id, method_id: doc.method_id, as_of: asOf, audience, paid_media: paid, digest: doc.source_snapshot_digest, pins: { facts, evidence }, links }
 }
 
 export interface VerifyResult {
@@ -712,7 +912,7 @@ export interface VerifyResult {
   expected_digest: string
   actual_digest: string
   /** Refs whose pinned revision is no longer the approved one, or no longer there. Ids only. */
-  changed: Array<{ kind: 'fact' | 'research_note'; id: string; state: RefState }>
+  changed: Array<{ kind: 'fact' | 'research_note' | 'evidence_link'; id: string; state: RefState }>
   snapshot: AssuranceSnapshot
   authorizes: []
 }
@@ -735,6 +935,16 @@ export function verifyAssuranceSnapshot(root: string, text: string): VerifyResul
     for (const fact of control.facts) if (fact.state !== 'current' && isApprovedPin(fact.ref.revision) && kept.pins.facts.some((ref) => ref.id === fact.ref.id && ref.revision === fact.ref.revision)) changed.set(`fact:${fact.ref.id}`, { kind: 'fact', id: fact.ref.id, state: fact.state })
     for (const note of control.evidence) if (note.state !== 'current') changed.set(`note:${note.ref.note_id}`, { kind: 'research_note', id: note.ref.note_id, state: note.state })
   }
+  // A link added, removed or no longer counting (an entry withdrawn, expired, a note changed) is named
+  // by its note id. Snapshots kept before links existed list none, so only new links show up for them.
+  const nowLinks = new Map(pinned.evidence_links.map((link) => [link.note_id, link]))
+  const keptLinks = new Map(kept.links.map((link) => [link.note_id, link]))
+  for (const [noteId, link] of keptLinks) {
+    const now = nowLinks.get(noteId)
+    if (!now) changed.set(`link:${noteId}`, { kind: 'evidence_link', id: noteId, state: 'missing' })
+    else if (now.evidence_id !== link.evidence_id || now.link_revision !== link.link_revision || now.state !== link.state) changed.set(`link:${noteId}`, { kind: 'evidence_link', id: noteId, state: 'changed' })
+  }
+  for (const noteId of nowLinks.keys()) if (!keptLinks.has(noteId)) changed.set(`link:${noteId}`, { kind: 'evidence_link', id: noteId, state: 'changed' })
   return {
     reproduced: fresh.source_snapshot_digest === kept.digest,
     expected_digest: kept.digest,
