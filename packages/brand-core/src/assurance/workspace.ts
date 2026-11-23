@@ -12,12 +12,16 @@
  * - **Conflicts** are the interview's own deterministic contradictions (`findContradictions`), by id.
  * - **Subject** fields come from approved facts and `brand.config.yaml`. Whether the brand runs paid
  *   media has no canonical question, so it is `unknown` unless the owner states it on the command line.
+ * - **Reviews** for `reviewer_judgment` controls come from the owner's judgment store (`reviews.ts`). A
+ *   judgment is used only while everything it was about (its basis) is unchanged; otherwise it is stale
+ *   and the control is blocking again. The snapshot carries the revision id, never the owner's note.
  *
  * Rules this bridge keeps:
  *
  * 1. **Owner-local.** Refused while `BRAND_OS_AGENT_TOKEN` is set. No MCP tool, `brand_retrieve` kind,
  *    Studio route or agent profile reaches it.
- * 2. **Read-only.** It writes no file, cache or lock anywhere.
+ * 2. **Read-only.** Building, assessing and verifying write no file, cache or lock anywhere. The one
+ *    write is `recordReview`, the owner's own judgment, to `brand/.private/assurance/reviews/`.
  * 3. **No values out.** The snapshot carries ids, revisions, states and closed-vocabulary subject
  *    values. A restricted fact below the `restricted` audience is not even pinned (`revision: withheld`).
  * 4. **Reproducible.** The digest is `sourceSnapshotDigest()` of the built input: the same workspace
@@ -41,13 +45,14 @@ import { openWorkspace, type KnowledgeWorkspace } from '../knowledge/workspace.j
 import { canonicalJson, type EvidenceRef, type FactRef } from '../strategy/model.js'
 import { evidenceState, factState, type RefState } from '../strategy/store.js'
 import type { AnswerRecord, FieldQuestion } from '../types.js'
-import { assess, sourceSnapshotDigest, type AssessmentInput, type AuditAssessment, type ControlInput, type FactPresence, type ResolvedEvidence, type ResolvedFact } from './assess.js'
+import { assess, sourceSnapshotDigest, type AssessmentInput, type AuditAssessment, type ControlInput, type ControlReview, type FactPresence, type ResolvedEvidence, type ResolvedFact } from './assess.js'
 import { applicabilityOf, controlsForMethod, DEFAULT_CATALOG, type AssessableControl, type AssessmentSubject, type SubjectField } from './controls.js'
 import { methodById, POSITIONING_READINESS } from './registry.js'
+import { appendReview, AssuranceReviewError, assertOwnerReview, basisDigest, JUDGMENT_STATUS, readReviewHistory, reviewAsOf, type Judgment, type ReviewBasis, type ReviewRevision } from './reviews.js'
 
 export const SNAPSHOT_SCHEMA = 'brand-os.assurance-snapshot/1'
 /** Version of the mapping from a workspace to assessment inputs. A changed mapping is a visible change. */
-export const BRIDGE_VERSION = 'brand-os.assurance-bridge/1'
+export const BRIDGE_VERSION = 'brand-os.assurance-bridge/2'
 /** The revision written for a restricted fact the audience may not see. Never a hash of anything. */
 export const WITHHELD_REVISION = 'withheld'
 /** Bound on a `--pin` / `verify` snapshot file, so a hostile file cannot exhaust memory. */
@@ -57,7 +62,7 @@ const AUDIENCE_RANK: Record<Audience, number> = { public: 0, internal: 1, restri
 
 export class AssuranceBridgeError extends Error {
   constructor(
-    readonly code: 'refused' | 'not_a_brand' | 'invalid_input' | 'invalid_pin',
+    readonly code: 'refused' | 'not_a_brand' | 'invalid_input' | 'invalid_pin' | 'invalid_review',
     message: string,
   ) {
     super(message)
@@ -103,7 +108,7 @@ export interface SubjectProvenance {
   question_id: string | null
 }
 
-export const MISSING_KINDS = ['subject_field', 'fact', 'evidence', 'reviewer_judgment', 'changed_source'] as const
+export const MISSING_KINDS = ['subject_field', 'fact', 'evidence', 'reviewer_judgment', 'stale_judgment', 'changed_source'] as const
 export type MissingKind = (typeof MISSING_KINDS)[number]
 
 export interface MissingItem {
@@ -165,10 +170,10 @@ interface Workspace {
   notes: Array<{ id: string; revision: string; question_ids: string[] }>
 }
 
-function openBrand(root: string): Workspace {
+function openBrand(root: string, now?: () => Date): Workspace {
   let ws: KnowledgeWorkspace
   try {
-    ws = openWorkspace(root)
+    ws = openWorkspace(root, now ? { now } : {})
   } catch {
     throw new AssuranceBridgeError('not_a_brand', 'This folder is not a Brand OS brand (brand/brand.config.yaml is missing or has no slug). Run the command from the brand repository root.')
   }
@@ -318,7 +323,7 @@ function resolveEvidence(w: Workspace, control: AssessableControl, pins: Map<str
   return [...out.values()].sort((a, b) => (a.ref.note_id < b.ref.note_id ? -1 : 1))
 }
 
-function controlInput(w: Workspace, control: AssessableControl, audience: Audience, factPins: Map<string, string>, notePins: Map<string, Map<string, string>>): ControlInput {
+function controlInput(w: Workspace, control: AssessableControl, audience: Audience, factPins: Map<string, string>, notePins: Map<string, Map<string, string>>, review: ControlReview | null): ControlInput {
   const touched = new Set([...control.required_question_ids, ...control.related_question_ids])
   return {
     control_id: control.control_id,
@@ -328,10 +333,146 @@ function controlInput(w: Workspace, control: AssessableControl, audience: Audien
       .filter((entry) => entry.fields.some((field) => touched.has(field)))
       .map((entry) => entry.id)
       .sort(),
-    // No review store exists yet: a judgment control stays `needs_review` and is listed as blocking.
-    review: null,
+    // The owner's current judgment, or null: then a judgment control stays `needs_review` and is blocking.
+    review,
     maturity: null,
   }
+}
+
+// ---- owner judgments ----------------------------------------------------------------------------
+
+/**
+ * What a judgment on this control is about, as it stands now: every fact the control names (required and
+ * related) by approved revision, `none` when not approved, and the research notes it cites. Unpinned on
+ * purpose: a judgment is checked against the workspace, not against an older snapshot.
+ */
+function reviewBasisOf(w: Workspace, control: AssessableControl): ReviewBasis {
+  const ids = [...new Set([...control.required_question_ids, ...control.related_question_ids])].sort()
+  return {
+    facts: ids.map((id) => ({ id, revision: approvedFact(w, id)?.revision_hash ?? 'none' })),
+    evidence: resolveEvidence(w, control, new Map()).map((note) => ({ note_id: note.ref.note_id, revision: note.ref.revision })),
+  }
+}
+
+function historyOf(w: Workspace, controlId: string): ReviewRevision[] {
+  try {
+    return readReviewHistory(w.ws, controlId)
+  } catch (error) {
+    if (error instanceof AssuranceReviewError) {
+      if (error.code === 'refused') throw new AssuranceBridgeError('refused', error.message)
+      throw new AssuranceBridgeError('invalid_review', error.message)
+    }
+    throw error
+  }
+}
+
+export type JudgmentState = 'needs_judgment' | 'judged' | 'stale'
+
+/** The judgment that applies on `day`, and whether its basis still matches the workspace. */
+function currentJudgment(w: Workspace, control: AssessableControl, day: string): { state: JudgmentState; revision: ReviewRevision | null; history: ReviewRevision[]; basis: ReviewBasis } {
+  if (control.evaluation_mode !== 'reviewer_judgment') return { state: 'needs_judgment', revision: null, history: [], basis: { facts: [], evidence: [] } }
+  const history = historyOf(w, control.control_id)
+  const basis = reviewBasisOf(w, control)
+  const revision = reviewAsOf(history, day)
+  if (!revision) return { state: 'needs_judgment', revision: null, history, basis }
+  return { state: revision.basis_digest === basisDigest(basis) ? 'judged' : 'stale', revision, history, basis }
+}
+
+/**
+ * The engine's review input. `reviewer_id` names the revision, so a new judgment changes the digest.
+ * `rationale` is a reference to the private note, which the store guarantees is non-empty; the note
+ * itself never enters a snapshot.
+ */
+function reviewOf(control: AssessableControl, revision: ReviewRevision): ControlReview {
+  return {
+    reviewer_id: `owner:${revision.revision}`,
+    reviewer_role: 'owner',
+    status: JUDGMENT_STATUS[revision.judgment],
+    rationale: `assurance-review:${control.control_id}@${revision.revision}`,
+    reviewed_at: `${revision.reviewed_on}T00:00:00.000Z`,
+  }
+}
+
+export interface ReviewItem {
+  control_id: string
+  state: JudgmentState
+  /** The judgment in force, if any. The note is included only when the owner asked for it. */
+  latest: { revision: string; judgment: Judgment; reviewed_on: string; note: string | null } | null
+  revisions: number
+  /** What a judgment made now would be about. Ids only; `approved` says whether the fact is approved. */
+  basis_now: { facts: Array<{ id: string; approved: boolean }>; notes: string[] }
+  /** For a stale judgment: the fact or note ids whose revision changed, appeared or disappeared since. */
+  changed: string[]
+  /** Open contradictions touching the control: the engine reports `conflicted` before any judgment. */
+  conflicts: string[]
+}
+
+function changedSince(before: ReviewBasis, now: ReviewBasis): string[] {
+  const key = (basis: ReviewBasis) => new Map([...basis.facts.map((ref) => [ref.id, ref.revision] as const), ...basis.evidence.map((ref) => [ref.note_id, ref.revision] as const)])
+  const a = key(before)
+  const b = key(now)
+  return [...new Set([...a.keys(), ...b.keys()])].filter((id) => a.get(id) !== b.get(id)).sort()
+}
+
+/** The controls that need a person's judgment under a method, and where each stands. Read-only. */
+export function listReviewItems(root: string, options: { asOf: Date; showNotes?: boolean; method_id?: string }): { brand_id: string; as_of: string; items: ReviewItem[]; authorizes: [] } {
+  assertOwnerAssurance()
+  if (!(options.asOf instanceof Date) || Number.isNaN(options.asOf.getTime())) throw new AssuranceBridgeError('invalid_input', 'as_of must be a valid date.')
+  const method = methodById(options.method_id ?? POSITIONING_READINESS.method_id)
+  if (!method) throw new AssuranceBridgeError('invalid_input', 'No such method in the registry.')
+  const w = openBrand(root)
+  const day = options.asOf.toISOString().slice(0, 10)
+  const items = controlsForMethod(method.method_id, DEFAULT_CATALOG)
+    .filter((control) => control.evaluation_mode === 'reviewer_judgment')
+    .sort((a, b) => (a.control_id < b.control_id ? -1 : 1))
+    .map((control): ReviewItem => {
+      const judged = currentJudgment(w, control, day)
+      const touched = new Set([...control.required_question_ids, ...control.related_question_ids])
+      return {
+        control_id: control.control_id,
+        state: judged.state,
+        latest: judged.revision ? { revision: judged.revision.revision, judgment: judged.revision.judgment, reviewed_on: judged.revision.reviewed_on, note: options.showNotes ? judged.revision.note : null } : null,
+        revisions: judged.history.length,
+        basis_now: { facts: judged.basis.facts.map((ref) => ({ id: ref.id, approved: ref.revision !== 'none' })), notes: judged.basis.evidence.map((ref) => ref.note_id) },
+        changed: judged.state === 'stale' && judged.revision ? changedSince(judged.revision.basis, judged.basis) : [],
+        conflicts: w.contradictions.filter((entry) => entry.fields.some((field) => touched.has(field))).map((entry) => entry.id).sort(),
+      }
+    })
+  return { brand_id: w.brandId, as_of: options.asOf.toISOString(), items, authorizes: [] }
+}
+
+export interface RecordReviewInput {
+  control_id: string
+  judgment: unknown
+  note: unknown
+  reviewed_on?: string
+  expected_revision?: string | null
+  method_id?: string
+}
+
+/**
+ * Records the owner's judgment on one `reviewer_judgment` control, with its basis taken from the
+ * workspace now. The only write in Assurance, and only to `brand/.private/assurance/reviews/`.
+ */
+export function recordReview(root: string, input: RecordReviewInput, opts: { now?: () => Date } = {}): { control_id: string; revision: ReviewRevision; authorizes: [] } {
+  assertOwnerAssurance()
+  assertOwnerReview()
+  const method = methodById(input.method_id ?? POSITIONING_READINESS.method_id)
+  if (!method) throw new AssuranceBridgeError('invalid_input', 'No such method in the registry.')
+  const control = controlsForMethod(method.method_id, DEFAULT_CATALOG).find((entry) => entry.control_id === input.control_id)
+  if (!control || control.evaluation_mode !== 'reviewer_judgment') {
+    throw new AssuranceReviewError('not_reviewable', `${String(input.control_id)} is not a control that needs a person's judgment. Run list to see which ones do.`)
+  }
+  const w = openBrand(root, opts.now)
+  const revision = appendReview(w.ws, {
+    control_id: control.control_id,
+    judgment: input.judgment,
+    note: input.note,
+    ...(input.reviewed_on !== undefined ? { reviewed_on: input.reviewed_on } : {}),
+    ...(input.expected_revision !== undefined ? { expected_revision: input.expected_revision } : {}),
+    basis: reviewBasisOf(w, control),
+  })
+  return { control_id: control.control_id, revision, authorizes: [] }
 }
 
 // ---- what is missing ----------------------------------------------------------------------------
@@ -340,7 +481,7 @@ function item(kind: MissingKind, blocking: boolean, fields: Partial<Omit<Missing
   return { kind, blocking, control_id: null, field: null, question_ids: [], presence: null, flag: null, ...fields }
 }
 
-function missingOf(controls: AssessableControl[], inputs: ControlInput[], subject: AssessmentSubject, audience: Audience): MissingItem[] {
+function missingOf(controls: AssessableControl[], inputs: ControlInput[], subject: AssessmentSubject, audience: Audience, stale: Set<string>): MissingItem[] {
   const out: MissingItem[] = []
   const unknownFields = new Set<SubjectField>()
   const byId = new Map(inputs.map((input) => [input.control_id, input]))
@@ -374,7 +515,7 @@ function missingOf(controls: AssessableControl[], inputs: ControlInput[], subjec
     }
     // Same order as the engine: a changed source or a recorded conflict is reported before any judgment is asked for.
     if (control.evaluation_mode === 'reviewer_judgment' && !input.review && changed.length === 0 && input.conflicts.length === 0) {
-      out.push(item('reviewer_judgment', true, { control_id: control.control_id }))
+      out.push(item(stale.has(control.control_id) ? 'stale_judgment' : 'reviewer_judgment', true, { control_id: control.control_id }))
     }
   }
 
@@ -424,9 +565,15 @@ export function buildAssuranceSnapshot(root: string, options: BridgeOptions): As
   const { subject, provenance } = deriveSubject(w, paidMedia)
   const controls = [...controlsForMethod(method.method_id, DEFAULT_CATALOG)].sort((a, b) => (a.control_id < b.control_id ? -1 : 1))
   const pins = pinMaps(options.pins)
-  const inputs = controls.map((control) => controlInput(w, control, audience, pins.facts, pins.notes))
+  const day = options.asOf.toISOString().slice(0, 10)
+  const stale = new Set<string>()
+  const inputs = controls.map((control) => {
+    const judged = currentJudgment(w, control, day)
+    if (judged.state === 'stale') stale.add(control.control_id)
+    return controlInput(w, control, audience, pins.facts, pins.notes, judged.state === 'judged' ? reviewOf(control, judged.revision!) : null)
+  })
   const input: AssessmentInput = { brand_id: w.brandId, method_id: method.method_id, subject, audience, as_of: options.asOf, controls: inputs }
-  const missing = missingOf(controls, inputs, subject, audience)
+  const missing = missingOf(controls, inputs, subject, audience, stale)
 
   return {
     schema: SNAPSHOT_SCHEMA,
