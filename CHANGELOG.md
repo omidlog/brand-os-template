@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Content planner skill and agent integration guide (Content Bridge Slice D)
+
+### Added
+
+- Skill `agent-skills/content-planner`: the owner's flow from approved facts to an approved content strategy and approved weeks (an agent proposes and reviews, never approves), and the content agent loop (`content_calendar` → `content_brief` with a pin → `content_report`; stop on `stale_pin` or `not_found`).
+- Guide `docs-internal/CONTENT_AGENT_INTEGRATION.md`: connecting an external content bot read-only over stdio MCP or `brand:query`, token issue and revocation, the three JSON schemas and digest verification, what `authorizes: []` and the permission flags mean, en/fa/tr notes, and a CLI journey demo with real output.
+- Test `content-journey` (2): the full journey through the real CLIs and MCP server, and a check that the skill and guide name only existing commands, tools and schemas.
+
+### Changed
+
+- The `brand:strategy review` note for a `content` strategy now says `content-read` agents read it (true since Slice C).
+
 ## Unreleased — Visual Blueprint P0: business model canvas
 
 ### Added

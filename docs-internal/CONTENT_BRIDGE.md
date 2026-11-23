@@ -8,8 +8,8 @@ built in four slices, one PR each:
 | --- | --- | --- |
 | A | `content` strategy type, `brand:content strategy` proposer, voice rules projection | done |
 | B | Calendar planner and per-week owner approval, read-only Studio page | done |
-| C | `content_calendar` / `content_brief` / `content_report` agent tools through the existing gates | this guide |
-| D | `content-planner` skill and integration guide | not started |
+| C | `content_calendar` / `content_brief` / `content_report` agent tools through the existing gates | done |
+| D | `content-planner` skill, integration guide for external bots, CLI journey demo | done |
 
 Brand OS plans and governs. It never posts, schedules or publishes, and approving a content strategy authorizes nothing
 (`authorizes: []`).
@@ -325,3 +325,17 @@ npm run brand:content -- reports [--week wk-2026-11-23]                         
   profile.
 - `content_report` is MCP only; `brand:query` stays read-only.
 
+## Slice D: skill and integration guide
+
+Slice D adds no runtime code path. It documents the existing one and tests that the documents stay true.
+
+| Item | Where | Reuses |
+| --- | --- | --- |
+| Agent skill: the owner's flow (propose and review only, never approve) and the content agent loop (calendar → pinned brief → report, stop on `stale_pin` / `not_found`) | `agent-skills/content-planner/SKILL.md` | The commands and tools above; the Strategy Feed rule that agents never approve or pass a guessed `--expect-sha`. |
+| Integration guide for an external bot (any stdio MCP client, or `brand:query` without MCP): token issue and revocation, the result envelope, the three schemas, digest verification (with a Python recipe checked against real output), `authorizes: []` and the permission flags, en/fa/tr | `docs-internal/CONTENT_AGENT_INTEGRATION.md` | `AI_CONNECTORS.md` token model; no new profile, tool or field. |
+| CLI journey demo with real output | `CONTENT_AGENT_INTEGRATION.md` section 8 | Captured from `tests/content-journey.test.ts` (`CONTENT_JOURNEY_TRANSCRIPT=<file>`). |
+| Doc test: every `npm run` command, `brand:query --tool`, MCP tool and schema id named in the skill and guide exists; neither shows `--proof` or a token | `tests/content-journey.test.ts` | The `audit`-style tool list check. |
+| Journey test: owner strategy and week approval through the real CLIs (proof refused without it), token issue through the CLI, agent reads through `brand:query`, report over stdio MCP, owner `reports` in en/fa/tr, revocation refused at next start, guest denied, access log without URLs | `tests/content-journey.test.ts` | Slices A–C code, unchanged. |
+
+One text fix: the `brand:strategy review` note for a `content` strategy said no agent reads content strategies. Since
+Slice C, `content-read` agents do (through `strategy_list` / `strategy_get`); the note now says so.
