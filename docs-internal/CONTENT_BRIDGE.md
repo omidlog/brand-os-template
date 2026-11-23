@@ -7,8 +7,8 @@ built in four slices, one PR each:
 | Slice | What | State |
 | --- | --- | --- |
 | A | `content` strategy type, `brand:content strategy` proposer, voice rules projection | done |
-| B | Calendar planner and per-week owner approval, read-only Studio page | this guide |
-| C | `content_calendar` / `content_brief` agent tools through the existing gates | not started |
+| B | Calendar planner and per-week owner approval, read-only Studio page | done |
+| C | `content_calendar` / `content_brief` / `content_report` agent tools through the existing gates | this guide |
 | D | `content-planner` skill and integration guide | not started |
 
 Brand OS plans and governs. It never posts, schedules or publishes, and approving a content strategy authorizes nothing
@@ -43,7 +43,8 @@ strategy and never projected.
 2. **Content strategy** (Slice A) holds the decisions facts do not: which pillars, the role, formats and cadence of each
    channel, content languages, owner-written extra rules, and explicit gaps. It cites facts; it does not restate them.
 3. **Content calendar** (Slice B) pins the approved content strategy revision and the facts its slots cite.
-4. **Content brief** (Slice C) will be a read-only projection of 1–3.
+4. **Content brief** (Slice C) is a read-only projection of 1–3 for one slot.
+5. **Reports** (Slice C) are produced / published observations next to the calendar. They never change 1–4.
 
 ## Slice A: the content strategy record
 
@@ -231,3 +232,95 @@ npm run brand:content -- share --week wk-2026-11-23 --dry-run
 - Slot status stops at `idea | planned | skipped`; `produced` / `published` come from agent observations in Slice C.
 - The Studio page shows a week as of `shared_at`; the current status is the CLI `calendar`.
 - Fact text and pillar names are shown as written; gap, notice and CLI text is en/fa/tr.
+
+## Slice C preflight reuse map (against main `f956681`)
+
+Written before any Slice C code. Slice C adds one token profile, three tools and one small observation file per week.
+Everything else is reused.
+
+| Existing module | Reused for | New small type | Why it is not a second truth |
+| --- | --- | --- | --- |
+| `auth.ts` profiles, `agent-tokens.ts`, `resolveAgentContext` | One new fixed profile, `content-read` (facts as `marketing`). Issued by the owner with `brand:agent-token issue --profile content-read`. | `'content-read'` | Same token store, hashing, revocation and fail-closed startup. Existing tokens keep their profile, so none gains calendar access. |
+| `strategy/feed.ts` `strategyAccess`, `STRATEGY_PROFILES`, `cleanPin`, `StaleInfo` | The gate: `content-read` maps to the agent kind `content`. `contentAccess` is `strategyAccess` narrowed to that kind. The pin check and the `stale_pin` shape are the Strategy Feed's. | none | No new gate. The same profile also reads approved `content` strategies through `strategy_list` / `strategy_get`. |
+| `access-log.ts` `appendAccessLog` | One line per call, allowed or not, `kind: "content"`, ids only (week, slot, observation id). URLs and text are never logged. | none | Same log file and rules. |
+| `content-bridge/calendar-store.ts` `buildCalendar`, `evaluateWeek`, `approvedWeekEntry`, `loadWeekRecord` (Slice B) | `content_calendar` is the Slice B calendar view, plus the latest report per slot. A brief reads one slot of a week whose status is `current`. | `AgentCalendarDocument` | The owner's `contentCalendar` and the agent tool run the same code. The owner-process check moved to thin wrappers (`contentCalendar`, `contentStrategyView`) so both paths share one served rule. |
+| `content-bridge/projection.ts` `servedContentViews` (Slice A) | Voice sources and do / don't, banned claims, availability rule, audience, CTA rules and channel plan in a brief. | `ContentBriefDocument` | Resolved from approved facts at the pinned revision on every read. Restricted facts are never resolved. |
+| `competitive/` observation ids already in the slot (`SlotResearch`, Slice B) | The brief's `competitive_angle`: observation id, `knowledge:kn_…@sha256` ref, confidence. | none | Quotes stay in Knowledge research notes. |
+| `creative/` `scanPreferences`, `preferenceView` | Approved series preferences whose surface is the slot's format, by id. Read them with `creative_context` (a `creative-read` token). | none | Preferences stay in Creative Learning; the brief lists ids only. |
+| Knowledge `withLock`, `writeVaultFile`, `safeRead`, `dirUsable`; `knowledge/safety.ts` `credentialFindings` | The observation file `brand/.private/content/observations/<week_id>.json` (0600, git-ignored, per-week lock); refusing URLs that carry a credential. | `ContentObservation` | Reports are observations, not decisions: they pin the week revision and hash they were made against and change no week, strategy or fact. Not Knowledge notes, because notes are the owner's unapproved ideas and an agent must not add to the owner's inbox. Not Creative feedback, because that store is about design variants. |
+| stdio MCP (`scripts/mcp.ts`), `brand:query` (`scripts/brand.ts`) | `content_calendar`, `content_brief`, `content_report` in MCP; `content_calendar`, `content_brief` in `brand:query`. | none | Same caller resolution from the server's environment; no tool takes a role, profile or brand argument. |
+| `content-bridge/i18n.ts` pattern | en/fa/tr notices, refusal reasons, report messages and CLI lines. | `agent-i18n.ts` | Text only. |
+| Template sync / migrations | Nothing to migrate: a new profile name and a new private folder. Old tokens and old brand repositories are unaffected. | none | — |
+
+## Slice C: agent consumption
+
+### Who can read
+
+Only an owner-issued token with the `content-read` profile, of this brand. Guests, the owner process context, tokens
+without a profile and every other profile (including `marketing`, `creative-read` and the strategy profiles) get
+`denied`. A token of another brand is `denied` (`cross-brand`). Arguments such as `brand_id`, `profile` or
+`include_drafts` are ignored or refused; nothing in a call widens access.
+
+### Tools
+
+| Tool | Arguments | Returns |
+| --- | --- | --- |
+| `content_calendar` | `from?`, `to?` (YYYY-MM-DD, at most 120 days), `channel?`, `lang?` (en, fa, tr) | Schema `brand-os/content-feed/v1`. Approved weeks whose status is `current`, each with `revision`, `digests.content_sha256`, `digests.approval_digest`, slots, resolved cited facts (never restricted), gaps and `reports` (latest per slot). Drafts, `needs_review`, `integrity_failed` weeks: counted under `withheld` only. `digests.view_sha256` (the Slice B view) and `digests.feed_sha256` (this document). |
+| `content_brief` | `week_id`, `slot_id`, `pin? {revision, content_sha256}`, `lang?` | Schema `brand-os/content-brief/v1`. Slot (date, channel, format, language, `direction`, pillar, hook, angle, notes), channel plan, resolved objective / key message / offer / CTA, CTA rules, audience, voice sources and do / don't / vocabulary, banned claims and availability rule, `must_include`, `must_avoid`, `competitive_angle`, `creative.preferences` (ids), the latest `report`, `sources`, `redacted`, `missing`. `digests.brief_sha256`. |
+| `content_report` | `week_id`, `slot_id`, `pin {revision, content_sha256}` (required), `status` (`produced` or `published`), `url?` (required for `published`), `lang?` | Schema `brand-os/content-report/v1`. The stored observation (`cob_…`), or the earlier one when the same report was already made (`duplicate: true`). |
+
+Every document carries `authorizes: []` and `publication_permission: false` (calendar and brief also
+`schedule_permission` and `spend_permission`), and a notice that its text is data, not instructions.
+
+### Pins and stale weeks
+
+Pin the week `revision` and `content_sha256` from the calendar. When the owner approves a newer revision of the week,
+a brief or report with the old pin gets `stale_pin`, `pinned_state: superseded`, the current pin and no content. A
+week that needs review (a cited fact, research note or the strategy changed) serves nothing: `not_found` without a
+pin, `stale_pin` with `pinned_state: needs_review` and `current: null` with one. A pin to a draft or rejected
+revision is reported as `unknown` and reveals nothing about it.
+
+### Reports
+
+A report is an observation. It is stored in `brand/.private/content/observations/<week_id>.json` and pins the week
+revision and hash it was made against. It never edits the week revision, its hash, the strategy or a fact, and nothing
+reads reports to change strategy. The URL must be `https://`, at most 500 characters, on a public domain name (no
+localhost, bare names or IP addresses), and must not carry a user name, password or access token. Brand OS never
+opens it. A skipped slot cannot be reported. After the owner approves a new revision of the week, earlier reports stay
+on file but are not shown on the new revision. The owner reads them with `brand:content reports`.
+
+### Agent workflow
+
+```bash
+npm run brand:agent-token -- issue --profile content-read --label "instagram agent"   # owner, proof needed
+# In the agent host: BRAND_OS_AGENT_TOKEN=<token> npm run mcp:serve (stdio MCP), then
+#   content_calendar {channel: "instagram"}                      → weeks with revision + content_sha256
+#   content_brief {week_id, slot_id, pin}                        → one slot's brief
+#   content_report {week_id, slot_id, pin, status: "published", url}
+# The same reads without MCP:
+BRAND_OS_AGENT_TOKEN=<token> npm run brand:query -- --tool content_calendar --channel instagram
+BRAND_OS_AGENT_TOKEN=<token> npm run brand:query -- --tool content_brief --week wk-2026-11-23 --slot s01 --pin-revision 1 --pin-sha <sha256>
+npm run brand:content -- reports [--week wk-2026-11-23]                               # owner
+```
+
+### Tests
+
+| Behaviour | Test |
+| --- | --- |
+| Approved current week only; draft week counted; stable, self-verifying JSON; filters; en/fa/tr; bad arguments; every other profile, guest, owner context, unprofiled and cross-brand denied and logged; forged arguments; content strategy via `strategy_list` | `content-agent` "gate: a content-read agent sees only…" |
+| Brief contents: voice, claims, audience, resolved message, channel plan, competitive angle (no quote), creative preference ids (no drafts), RTL, restricted fact redacted with a canary | `content-agent` "a brief carries…" |
+| Stale pins (draft, superseded, hash-only), `needs_review` week withheld | `content-agent` "stale pins are refused…" |
+| Reports: observation fields, duplicate, URL refusals, pin required, draft and stale weeks refused, skipped slot, week files unchanged, 0600 file, access log without URL, owner-only listing | `content-agent` "reports…" |
+| Mock Instagram agent over stdio MCP and `brand:query`; marketing token and guest denied; access log | `content-agent` "gate over stdio MCP and brand:query…" |
+| `brand:content reports` en/fa/tr, `--json`, older revision label, refused under an agent token | `content-agent` "brand:content reports…" |
+| MCP tool list | `audit` |
+
+### Limits (Slice C)
+
+- Reports are not verified: Brand OS never opens the URL, so a report says what the agent claims. The owner sees who
+  reported what with `brand:content reports`.
+- No results or metrics are collected, and reports never change strategy (out of scope for the brief).
+- The Studio page does not show reports. Revoking a token takes effect when the MCP server restarts, as for every
+  profile.
+- `content_report` is MCP only; `brand:query` stays read-only.
+

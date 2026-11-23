@@ -68,8 +68,9 @@ Issue a token with `npm run brand:agent-token -- issue --profile strategy-seo-re
 | --- | --- | --- |
 | `strategy-seo-read` | `seo` | those whose `agent_kinds` includes `seo` |
 | `strategy-ads-read` | `paid_media` | those whose `agent_kinds` includes `ads` |
+| `content-read` | `content` | those whose `agent_kinds` includes `content` (Content Bridge Slice C) |
 
-Both profiles read facts as the `marketing` profile does.
+All three profiles read facts as the `marketing` profile does.
 
 The two tools are also available through the CLI:
 
@@ -108,7 +109,7 @@ What `strategy_get` returns:
 
 ## Content strategies (Content Bridge Slice A)
 
-A third type, `content`, uses this same store and approval flow with one extra typed block, `content_strategy`. No profile reads it, so `strategy_list` and `strategy_get` never return a content strategy; the owner reads it with `brand:content show`. A content strategy may pin approved SEO or paid-media revisions; if one is replaced, the content strategy turns `needs_review`. See `docs-internal/CONTENT_BRIDGE.md`.
+A third type, `content`, uses this same store and approval flow with one extra typed block, `content_strategy`. Only the `content-read` profile reads it through `strategy_list` and `strategy_get` (the feed document does not include the block; a content agent gets voice, claims and audience per slot from `content_brief`). The owner reads it with `brand:content show`. A content strategy may pin approved SEO or paid-media revisions; if one is replaced, the content strategy turns `needs_review`. See `docs-internal/CONTENT_BRIDGE.md`.
 
 ## Limits
 
