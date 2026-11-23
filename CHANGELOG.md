@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased — Visual DNA owner policy decisions and the `published` status fix
+
+### Fixed
+
+- Manifest status `published` was counted as unapproved: `brand_retrieve kind: asset` skipped it and Visual DNA reported it `missing`. `published` now reads exactly like `approved`; `approved_sha256`, checksum, safe-path, SVG, size, rights and licence checks still apply (replaced bytes are `changed`).
+
+### Changed
+
+- Visual DNA: the brand's own logo, wordmark, logomark or brand mark (`asset.logo.*` and the other mark ids, or a mark tag) with an empty or `TBD` licence is `approved` with `rights.license_basis: own_brand_mark`. Third-party assets still need a recorded licence: client logos, marks tagged `third-party`, `partner`, `client-logo`, `stock` or `licensed`, and every icon, photo, illustration and mascot artwork (`withheld / license_missing`). Approved references now carry `license_basis` (`recorded` or `own_brand_mark`).
+- Visual DNA: new `use_scope` (`public` by default; MCP input, `--use-scope` on `resolve` and owner `read`, echoed in the result). Internal-scope rights cover a portrait or other rights-sensitive subject for internal use; public use without public-scope rights stays `withheld / rights`. `rightsBlocker` takes the use and defaults to `public`, so every publication gate is unchanged.
+- Tests: `visual-dna-policy` (own mark with empty/TBD licence approved; third-party, partner, client logo, icon and mascot art with TBD withheld; exemption skips no other check; internal portrait approved for internal use and withheld for public use; public rights cover both; pending, expired, holderless and missing rights cover neither; strict `use_scope`; `published` approved; published with replaced bytes or an approval for other bytes `changed`; other statuses missing). `visual-dna-agent` checks `--use-scope` on the CLI.
+
+## Unreleased — Assurance: owner-local bridge to approved brand facts (GAP-09)
+
+### Added
+
+- `npm run brand:assurance -- snapshot | assess | verify`: an owner-local, read-only bridge from a brand's approved facts, internal research notes and open contradictions to the existing Assurance evaluator. Reproducible snapshot digest, `--pin` / `verify` against a kept snapshot, no score while anything blocking is missing, restricted facts withheld below the `restricted` audience, en/fa/tr output, refused under `BRAND_OS_AGENT_TOKEN`, writes nothing, never a certification.
+- `@brand-os/brand-core/assurance/workspace` entry point (the pure `assurance` index still reads no file).
+- Tests: `assurance-workspace`, `assurance-cli` (synthetic temp brands only).
+
+### Fixed
+
+- Assurance `completeness.blocked_by` reported every `needs_review` blocker as `source_changed`; it now names the control's own reason (for example `reviewer_required`).
+
+## Unreleased — Visual DNA reference resolver (fixes pack PR-C, GAP-03)
+
+### Added
+
+- `packages/brand-core/src/visual-dna` (`@brand-os/brand-core/visual-dna`): a read-only, metadata-first resolver for visual references. It reads asset ids through `brand_retrieve kind: asset`, a mascot emotion/stage/use case/angle through `brand_retrieve kind: mascot`, and creative-memory variants through `creative_context`, all under the caller's one context. Each reference is `approved`, `withheld`, `missing` or `changed`, with source, checksum, size, usage rights and the effective `model_use` (`not_allowed` unless recorded). Extra checks: `approved_sha256` must match, 20 MiB size limit, rights-sensitive subjects need granted rights, a licence must be recorded, a creative variant whose asset changed is `changed`. A missing pose or angle stays missing; nothing is substituted. No new store and no `brand/visual-dna/` folder. `authorizes: []`, every permission flag false (including `upload`).
+- MCP tool `visual_dna` (strict, bounded schema; metadata only, never file bytes; guests, unprofiled agents and other brands denied; creative references for `creative-read` only).
+- `brand:visual-dna resolve` (as the agent token in the environment, or as the owner) and `brand:visual-dna read <asset.id> --for renderer|local_model|external_provider [--stdout]`: owner-only, one checked asset; refuses a use its `model_use` forbids (`local_only` art never goes to an external provider); hashes and SVG-checks the same bytes it returns; writes no file; `upload_authorized: false`.
+- `schemas/visual-dna.schema.json`, `docs-internal/VISUAL_DNA.md`, en/fa/tr notices and reasons (fa RTL). Skills `task-context` and `mascot-creator` check references with `visual_dna`.
+- Tests: `visual-dna` (same asset by id and by catalog, wrong angle missing, drafts hidden from agents, changed / approval-for-other-bytes / symlink / active SVG / licence / rights, profile limits, strict input, creative references and stale variants, locales, no writes, owner read and `model_use`), `visual-dna-agent` (stdio MCP and CLI). `audit` pins `visual_dna` in the tool list.
+
 ## Unreleased — Task Context MCP tool (GAP-02)
 
 ### Added

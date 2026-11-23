@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./assurance": "./src/assurance/index.ts",
+    "./assurance/workspace": "./src/assurance/local.ts",
     "./coach": "./src/coach/index.ts",
     "./competitive": "./src/competitive/index.ts",
     "./creative": "./src/creative/index.ts",
@@ -15,6 +16,7 @@
     "./runtime": "./src/runtime/index.ts",
     "./seo": "./src/seo/index.ts",
     "./strategy": "./src/strategy/index.ts",
-    "./visual": "./src/visual/index.ts"
+    "./visual": "./src/visual/index.ts",
+    "./visual-dna": "./src/visual-dna/index.ts"
   }
 }
