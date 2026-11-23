@@ -261,4 +261,10 @@ test('runTaskContextTool checks access before it classifies, for the CLI and MCP
   const counted = runTaskContextTool(s.engine, ctx, { request: FA_REQUEST, deliverable_count: '4' })
   assert.equal(counted.status, 'ok')
   assert.equal(counted.status === 'ok' ? counted.data?.task.deliverable_count : null, 4, 'an explicit count wins over the request')
+  // With no locale given, the pack speaks the language of the request; an explicit locale still wins.
+  assert.equal(counted.status === 'ok' ? counted.data?.task.locale : null, 'fa', 'a Persian request gets a Persian pack')
+  const explicit = runTaskContextTool(s.engine, ctx, { request: FA_REQUEST, locale: 'en' })
+  assert.equal(explicit.status === 'ok' ? explicit.data?.task.locale : null, 'en', 'an explicit locale wins over the request')
+  const english = runTaskContextTool(s.engine, ctx, { request: 'make 10 instagram posts' })
+  assert.equal(english.status === 'ok' ? english.data?.task.locale : null, 'en')
 })

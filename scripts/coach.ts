@@ -28,8 +28,10 @@ Modes:
                       decide later are never reopened.
   quality_review      an explainable status (ready, needs_clarification, evidence_missing, needs_review,
                       not_applicable, insufficient_context) with at most two named deficits. No score.
-  consistency_review  the interview's own deterministic contradictions, reported unchanged. Strategic
-                      trade-offs (potential_tension) are not assessed in this version.
+  consistency_review  confirmed_conflict (the interview's own contradiction rules, unchanged),
+                      potential_tension (a trade-off worth one question, from a few narrow rules),
+                      needs_verification (a claim with no verified source) and, per rule, not_tested
+                      when an input is still open. No score, no percentage.
 
 Everything is advisory: authorizes is always empty. Changing an answer stays brand:interview, brand:review
 and brand:approve. Nothing is cached or written. Refused while ${AGENT_TOKEN_ENV} is set; restricted
