@@ -11,6 +11,7 @@ import { CONTROL_TEXT, fill, type AssuranceLang } from './i18n.js'
 import type { AssuranceSnapshot, JudgmentState, LinkItem, MissingItem, MissingKind, ReviewItem, SubjectSource, VerifyResult } from './workspace.js'
 import type { Judgment, ReviewRevision } from './reviews.js'
 import type { LinkRevision, LinkState } from './links.js'
+import type { EvidenceStatus } from '../evidence.js'
 import type { FactPresence } from './assess.js'
 import type { SubjectField } from './controls.js'
 
@@ -79,6 +80,11 @@ export const BRIDGE_TEXT: Catalog = {
   },
   expected: { en: 'Kept digest', fa: 'چکیدهٔ نگه‌داشته', tr: 'Saklanan özet' },
   actual: { en: 'Digest now', fa: 'چکیدهٔ کنونی', tr: 'Şimdiki özet' },
+  verify_unnamed: {
+    en: 'No cited source changed. Either something was added since (an answer approved, a research note captured, or an owner judgment recorded for this day), or the kept file was edited.',
+    fa: 'هیچ منبع ارجاع‌شده‌ای تغییر نکرده است. یا از آن زمان چیزی اضافه شده (پاسخی تأیید شده، یادداشت پژوهشی‌ای ثبت شده، یا داوری مالک برای همین روز ثبت شده)، یا فایل نگه‌داشته ویرایش شده است.',
+    tr: 'Atıf yapılan hiçbir kaynak değişmedi. Ya o zamandan beri bir şey eklendi (bir yanıt onaylandı, bir araştırma notu eklendi veya bu gün için sahibin kararı kaydedildi) ya da saklanan dosya düzenlendi.',
+  },
   changed_refs: { en: 'Cited sources that changed:', fa: 'منابع ارجاع‌شده‌ای که تغییر کرده‌اند:', tr: 'Değişen kaynaklar:' },
   refused_agent: {
     en: 'Assurance on a real brand is the owner’s local review. Refusing while BRAND_OS_AGENT_TOKEN is set; no agent profile covers it.',
@@ -115,7 +121,7 @@ export const BRIDGE_TEXT: Catalog = {
 
 export const MISSING_KIND_TEXT: Record<MissingKind, T> = {
   subject_field: { en: 'Scope not stated', fa: 'دامنه مشخص نشده', tr: 'Kapsam belirtilmedi' },
-  fact: { en: 'No approved fact', fa: 'fact تأییدشده‌ای نیست', tr: 'Onaylı bilgi yok' },
+  fact: { en: 'No approved fact', fa: 'واقعیت تأییدشده‌ای نیست', tr: 'Onaylı bilgi yok' },
   evidence: { en: 'No research note', fa: 'یادداشت پژوهشی نیست', tr: 'Araştırma notu yok' },
   independent_evidence: {
     en: 'Only the owner’s own notes: link one to a verified evidence-register entry (brand:assurance-link)',
@@ -147,7 +153,7 @@ export const SUBJECT_FIELD_TEXT: Record<SubjectField, T> = {
 }
 
 export const SUBJECT_SOURCE_TEXT: Record<SubjectSource, T> = {
-  approved_fact: { en: 'from an approved fact', fa: 'از یک fact تأییدشده', tr: 'onaylı bir bilgiden' },
+  approved_fact: { en: 'from an approved fact', fa: 'از یک واقعیت تأییدشده', tr: 'onaylı bir bilgiden' },
   brand_config: { en: 'from brand.config.yaml', fa: 'از brand.config.yaml', tr: 'brand.config.yaml dosyasından' },
   owner_flag: {
     en: 'stated on the command line with the deprecated --paid-media',
@@ -179,7 +185,7 @@ certification or a compliance statement; authorizes is always empty. Refused whi
 
   snapshot [--as-of YYYY-MM-DD] [--audience public|internal|restricted]
            [--pin <snapshot.json>] [--lang en|fa|tr] [--json]
-                     factهای تأییدشده، یادداشت‌های پژوهشی و تناقض‌های برند را برای متد «آمادگی جایگاه‌یابی»
+                     واقعیت‌های تأییدشده، یادداشت‌های پژوهشی و تناقض‌های برند را برای متد «آمادگی جایگاه‌یابی»
                      سنجاق می‌کند و آنچه کم است را فهرست می‌کند
   assess   (همان گزینه‌ها)
                      تصویر لحظه‌ای و سپس گزارش کمبودهای موجود برای آن
@@ -209,11 +215,16 @@ Engelleyen bir eksik varken puan verilmez. Bu bir iç değerlendirmedir; asla se
 authorizes her zaman boştur. BRAND_OS_AGENT_TOKEN ayarlıyken reddedilir.`,
 }
 
+/** List separator: Persian uses its own comma (U+060C). */
+function comma(lang: AssuranceLang): string {
+  return lang === 'fa' ? '، ' : ', '
+}
+
 function missingLine(entry: MissingItem, lang: AssuranceLang): string {
   const parts = [MISSING_KIND_TEXT[entry.kind][lang]]
   if (entry.control_id) parts.push(entry.control_id)
   if (entry.field) parts.push(SUBJECT_FIELD_TEXT[entry.field][lang])
-  if (entry.question_ids.length > 0) parts.push(entry.question_ids.map((id) => `\`${id}\``).join(', '))
+  if (entry.question_ids.length > 0) parts.push(entry.question_ids.map((id) => `\`${id}\``).join(comma(lang)))
   if (entry.presence) parts.push(PRESENCE_TEXT[entry.presence][lang])
   if (entry.flag) parts.push(`\`${entry.flag}\``)
   return `- ${parts.join(' · ')}`
@@ -229,11 +240,11 @@ export function renderSnapshotSummary(snapshot: AssuranceSnapshot, lang: Assuran
   lines.push(`- ${fill(BRIDGE_TEXT.reproduce![lang], { as_of: snapshot.as_of.slice(0, 10), audience: snapshot.audience, paid })}`)
   lines.push(`- ${BRIDGE_TEXT.subject![lang]}:`)
   for (const entry of snapshot.subject_provenance) {
-    lines.push(`  - ${SUBJECT_FIELD_TEXT[entry.field][lang]}: \`${entry.value}\` (${SUBJECT_SOURCE_TEXT[entry.source][lang]}${entry.question_id ? `, \`${entry.question_id}\`` : ''})`)
+    lines.push(`  - ${SUBJECT_FIELD_TEXT[entry.field][lang]}: \`${entry.value}\` (${SUBJECT_SOURCE_TEXT[entry.source][lang]}${entry.question_id ? `${comma(lang)}\`${entry.question_id}\`` : ''})`)
   }
   // A company brand's founder: tracked beside the company, never folded into the subject.
   if (snapshot.personal_brand.enabled && snapshot.personal_brand.brand_entity_kind === 'company') {
-    const facets = snapshot.personal_brand.facets.length > 0 ? snapshot.personal_brand.facets.map((facet) => `\`${facet}\``).join(', ') : BRIDGE_TEXT.no_facets![lang]
+    const facets = snapshot.personal_brand.facets.length > 0 ? snapshot.personal_brand.facets.map((facet) => `\`${facet}\``).join(comma(lang)) : BRIDGE_TEXT.no_facets![lang]
     lines.push(`- ${fill(BRIDGE_TEXT.personal_brand![lang], { facets })}`)
   }
   lines.push('')
@@ -270,6 +281,8 @@ export function renderVerifyResult(result: VerifyResult, lang: AssuranceLang): s
   if (result.changed.length > 0) {
     lines.push('', BRIDGE_TEXT.changed_refs![lang])
     for (const ref of result.changed) lines.push(`- \`${ref.kind}:${ref.id}\` (${ref.state})`)
+  } else if (!result.reproduced) {
+    lines.push('', BRIDGE_TEXT.verify_unnamed![lang])
   }
   lines.push('', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')
   return lines.join('\n')
@@ -311,7 +324,7 @@ export const REVIEW_TEXT: Catalog = {
   latest: { en: 'Judgment in force', fa: 'داوری جاری', tr: 'Geçerli karar' },
   note: { en: 'Your note', fa: 'یادداشت شما', tr: 'Notunuz' },
   revisions: { en: 'Recorded revisions', fa: 'نسخه‌های ثبت‌شده', tr: 'Kayıtlı sürümler' },
-  facts_now: { en: 'Facts it is about', fa: 'factهایی که درباره‌شان است', tr: 'İlgili bilgiler' },
+  facts_now: { en: 'Facts it is about', fa: 'واقعیت‌هایی که درباره‌شان است', tr: 'İlgili bilgiler' },
   notes_now: { en: 'Research notes it is about', fa: 'یادداشت‌های پژوهشی مربوط', tr: 'İlgili araştırma notları' },
   no_notes: { en: 'none yet (capture one with brand:knowledge)', fa: 'هنوز هیچ (با brand:knowledge ثبت کنید)', tr: 'henüz yok (brand:knowledge ile ekleyin)' },
   approved: { en: 'approved', fa: 'تأییدشده', tr: 'onaylı' },
@@ -374,7 +387,7 @@ This is an internal assessment, never a certification or a compliance statement;
                      کنترل‌هایی که به داوری انسان نیاز دارند و وضعیت هر کدام
   record --control <id> --judgment yes|partly|no --note "<دلیل کوتاه>" [--date YYYY-MM-DD]
          [--expect <revision>|none] [--lang en|fa|tr] [--json]
-                     داوری خود را ثبت کنید؛ داوری دربارهٔ factها و یادداشت‌های پژوهشیِ کنونی است
+                     داوری خود را ثبت کنید؛ داوری دربارهٔ واقعیت‌ها و یادداشت‌های پژوهشیِ کنونی است
                      و با تغییر هر کدام خودبه‌خود کهنه می‌شود
 
 داوری‌ها با نسخه در brand/.private/assurance/reviews/ نگه داشته می‌شوند (بیرون از git). هر داوری تازه یک نسخه
@@ -412,10 +425,10 @@ export function renderReviewList(result: { brand_id: string; items: ReviewItem[]
       if (entry.latest.note !== null) lines.push(`- ${REVIEW_TEXT.note![lang]}: ${entry.latest.note}`)
     }
     lines.push(`- ${REVIEW_TEXT.revisions![lang]}: ${entry.revisions}`)
-    lines.push(`- ${REVIEW_TEXT.facts_now![lang]}: ${entry.basis_now.facts.map((fact) => `\`${fact.id}\` (${fact.approved ? REVIEW_TEXT.approved![lang] : REVIEW_TEXT.not_approved![lang]})`).join(', ') || '—'}`)
-    lines.push(`- ${REVIEW_TEXT.notes_now![lang]}: ${entry.basis_now.notes.map((id) => `\`${id}\``).join(', ') || REVIEW_TEXT.no_notes![lang]}`)
-    if (entry.changed.length > 0) lines.push(`- ${REVIEW_TEXT.changed![lang]}: ${entry.changed.map((id) => `\`${id}\``).join(', ')}`)
-    if (entry.conflicts.length > 0) lines.push(`- ${REVIEW_TEXT.conflicts![lang]}: ${entry.conflicts.map((id) => `\`${id}\``).join(', ')}`)
+    lines.push(`- ${REVIEW_TEXT.facts_now![lang]}: ${entry.basis_now.facts.map((fact) => `\`${fact.id}\` (${fact.approved ? REVIEW_TEXT.approved![lang] : REVIEW_TEXT.not_approved![lang]})`).join(comma(lang)) || '—'}`)
+    lines.push(`- ${REVIEW_TEXT.notes_now![lang]}: ${entry.basis_now.notes.map((id) => `\`${id}\``).join(comma(lang)) || REVIEW_TEXT.no_notes![lang]}`)
+    if (entry.changed.length > 0) lines.push(`- ${REVIEW_TEXT.changed![lang]}: ${entry.changed.map((id) => `\`${id}\``).join(comma(lang))}`)
+    if (entry.conflicts.length > 0) lines.push(`- ${REVIEW_TEXT.conflicts![lang]}: ${entry.conflicts.map((id) => `\`${id}\``).join(comma(lang))}`)
     lines.push(`- ${fill(REVIEW_TEXT.how![lang], { control: entry.control_id })}`, '')
   }
   lines.push(`> ${REVIEW_TEXT.owner_stated![lang]}`, '', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')
@@ -464,6 +477,14 @@ export const LINK_STATE_TEXT: Record<LinkState, T> = {
   expired: { en: 'does not count: past its review date; verify it again', fa: 'حساب نمی‌شود: تاریخ بازبینی‌اش گذشته؛ دوباره تأیید کنید', tr: 'sayılmaz: inceleme tarihi geçti; yeniden doğrulayın' },
   withdrawn: { en: 'does not count: the entry was withdrawn', fa: 'حساب نمی‌شود: مدرک پس گرفته شده است', tr: 'sayılmaz: kayıt geri çekildi' },
   rejected: { en: 'does not count: the owner rejected the entry', fa: 'حساب نمی‌شود: مالک این مدرک را رد کرده است', tr: 'sayılmaz: sahip kaydı reddetti' },
+}
+
+/** The evidence register's own status words, so a Persian or Turkish list does not show English tokens. */
+export const EVIDENCE_STATUS_TEXT: Record<EvidenceStatus, T> = {
+  pending: { en: 'pending', fa: 'در انتظار تأیید', tr: 'onay bekliyor' },
+  verified: { en: 'verified', fa: 'تأییدشده', tr: 'doğrulandı' },
+  rejected: { en: 'rejected', fa: 'ردشده', tr: 'reddedildi' },
+  withdrawn: { en: 'withdrawn', fa: 'پس‌گرفته‌شده', tr: 'geri çekildi' },
 }
 
 export const LINK_TEXT: Catalog = {
@@ -579,12 +600,12 @@ export function renderLinkList(result: { brand_id: string; items: LinkItem[] }, 
   lines.push(LINK_TEXT.intro![lang], '')
   for (const entry of result.items) {
     lines.push(`## \`${entry.note_id}\``, '')
-    lines.push(`- ${LINK_TEXT.questions![lang]}: ${entry.question_ids.map((id) => `\`${id}\``).join(', ') || '—'}`)
-    lines.push(`- ${LINK_TEXT.controls![lang]}: ${entry.control_ids.join(', ') || '—'}`)
+    lines.push(`- ${LINK_TEXT.questions![lang]}: ${entry.question_ids.map((id) => `\`${id}\``).join(comma(lang)) || '—'}`)
+    lines.push(`- ${LINK_TEXT.controls![lang]}: ${entry.control_ids.join(comma(lang)) || '—'}`)
     lines.push(`- ${LINK_TEXT.link![lang]}: ${entry.link ? `\`${entry.link.evidence_id}\` · ${entry.link.linked_on} · \`${entry.link.revision}\` · **${LINK_STATE_TEXT[entry.link.state][lang]}**` : LINK_TEXT.no_link![lang]}`)
     lines.push(`- ${LINK_TEXT.revisions![lang]}: ${entry.revisions}`)
-    const candidates = entry.candidates.map((candidate) => `\`${candidate.evidence_id}\` (\`${candidate.claim_id}\`, ${candidate.status}${candidate.independent_source ? '' : `, ${LINK_TEXT.testimony![lang]}`})`)
-    lines.push(`- ${LINK_TEXT.candidates![lang]}: ${candidates.join(', ') || LINK_TEXT.no_candidates![lang]}`)
+    const candidates = entry.candidates.map((candidate) => `\`${candidate.evidence_id}\` (\`${candidate.claim_id}\`${comma(lang)}${EVIDENCE_STATUS_TEXT[candidate.status][lang]}${candidate.independent_source ? '' : `${comma(lang)}${LINK_TEXT.testimony![lang]}`})`)
+    lines.push(`- ${LINK_TEXT.candidates![lang]}: ${candidates.join(comma(lang)) || LINK_TEXT.no_candidates![lang]}`)
     lines.push(`- ${fill(LINK_TEXT.how![lang], { note: entry.note_id })}`, '')
   }
   lines.push(`> ${LINK_TEXT.unconfirmed![lang]}`, '', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')

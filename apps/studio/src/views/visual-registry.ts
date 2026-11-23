@@ -24,6 +24,8 @@ export interface BlockContext {
   assetUrl: (key: string) => string | null
   /** Print engine (V1.2): turns a plate's source line into a numbered note (see `IdentityContext.note`). */
   note?: IdentityContext['note']
+  /** Full book (V4.2): plate numbers in the whole book (see `IdentityContext.plateNum`). */
+  plateNum?: IdentityContext['plateNum']
 }
 
 type RendererMap = { [K in VisualBlock['type']]: (block: Extract<VisualBlock, { type: K }>, ctx: BlockContext) => SafeHtml }

@@ -91,6 +91,27 @@ test('paginate: keep-with-next, sections on new pages, continued tables with the
   assert.equal(pages[b]!.continued, false, 'a new section starts a new page')
   // Measured heights replace the estimates.
   assert.equal(paginate(sections, new Map([['a:big', 20]]))[0]!.parts.length > 2, true)
+  // A table's first row and its "continues" line fit together, or the table starts on the next page (with the
+  // heading kept with it): the line is never pushed past the text block.
+  const budget = BOOK_BODY_MM - 4
+  const tight = (heading: boolean): BookSection[] => [
+    {
+      id: 't',
+      title: 'T',
+      num: '01',
+      state: null,
+      flows: [
+        block('t:big', heading ? 190 : 200),
+        ...(heading ? [block('t:sub', 5, { keepWithNext: true })] : []),
+        { kind: 'table', id: 't:table', headMm: 10, rows: [25, 25, 25], render: ([from, to], part) => html`<p>${from}-${to}${part.continues ? ' more' : ''}</p>` },
+      ],
+    },
+  ]
+  for (const heading of [false, true]) {
+    const laid = paginate(tight(heading))
+    assert.ok(laid.every((page) => page.used <= budget), `every page within the budget (${laid.map((page) => page.used).join(', ')})`)
+    assert.deepEqual(laid[0]!.parts.map((part) => part.id), ['t:big'], heading ? 'the heading moves with the table' : 'the table starts on the next page')
+  }
 })
 
 test('book: cover, imprint, contents with real page numbers, running heads and folios, notes; ids only in the appendix', () => {
