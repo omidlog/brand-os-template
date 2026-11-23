@@ -23,8 +23,8 @@ contradictions.ts findContradictions ─┘                                     
 
 1. **Derived and advisory only.** `authority` is always `derived_advice` and `authorizes` is always `[]`.
    The coach never edits an answer, a fact, a config value, a strategy, an asset, a calendar, an approval
-   or a publication. There are no silent writes, no auto-approve and no auto-correct. Every test asserts
-   the brand is byte-for-byte unchanged after an analysis.
+   or a publication. There are no silent writes, no auto-approve and no auto-correct. Twelve tests
+   snapshot the whole brand directory and assert it is byte-for-byte unchanged after an analysis.
 2. **One interview engine.** `InterviewEngine` owns the questions, the ledger and the approval gates. The
    coach uses canonical question ids and the engine's own eligibility, skip, dependency and disposition
    rules. There is no second question bank, no second approval path and no second knowledge store.
@@ -55,8 +55,10 @@ Returns **0 or 1** clarifying question for one answered question.
   left alone, because the cheapest coaching is silence.
 - If an **existing canonical question** closes that exact gap, the coach returns its id in
   `canonical_question_id` and leaves `suggested_question` null. It never writes a second version of a
-  question the interview already owns. "Exact" means the gap *is* that question: today, a declared
-  prerequisite (`depends_on`) that is still open, or the other field named by an open contradiction.
+  question the interview already owns. "Exact" means the deficit itself names the id: today that is a
+  declared prerequisite (`depends_on`) that is still open. The other fields of an open contradiction are
+  considered too, but they are by definition already answered, so in practice that gap falls through to a
+  clarifying question about which of the two statements should stand.
 - If the gap is **inside the answer** (it is vague, it carries no figure, it has no evidence), no other
   question can close it, so the coach asks its own single clarifying question from
   `CLARIFY_QUESTIONS` — one per criterion, in en, fa and tr.
