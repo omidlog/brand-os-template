@@ -383,3 +383,8 @@ First template slice of Brand OS.
 - Agent instructions, ten skills, and a local read-only tool adapter.
 
 Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand facts are included.
+
+## Unreleased — Brand Runtime: ten Instagram posts (first vertical slice)
+
+- `npm run brand:runtime -- social-batch --demo --out <dir>`: a `social_batch` `task_context` pack for the SYNTHETIC DEMO brand (temp workspace) becomes ten deterministic SVG drafts, per-post manifests citing pack source ids and revisions, and a batch summary. Checks are calls into existing layers (SVG checker, publication gate, normalizer, Content Bridge claim guard, design-tokens contrast, Strategic Coach, Assurance). No model, no network, `authorizes: []`. Guide: `docs-internal/BRAND_RUNTIME.md`.
+- Asset records: optional `model_use` (`not_allowed` | `local_only` | `external_allowed`); absent means `not_allowed`.

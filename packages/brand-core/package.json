@@ -12,6 +12,7 @@
     "./content-bridge": "./src/content-bridge/index.ts",
     "./identity": "./src/identity/index.ts",
     "./research": "./src/research/index.ts",
+    "./runtime": "./src/runtime/index.ts",
     "./seo": "./src/seo/index.ts",
     "./strategy": "./src/strategy/index.ts",
     "./visual": "./src/visual/index.ts"
