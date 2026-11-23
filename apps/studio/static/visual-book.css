@@ -100,15 +100,14 @@
 .bk-toc { margin-block-start: 18mm; }
 .bk-toc-col { margin: 0; display: flex; justify-content: space-between; padding-block-end: 2.5mm; border-block-end: 0.5mm solid #121212; font: 600 7pt/1 var(--vz-display); letter-spacing: 0.18em; text-transform: uppercase; color: #59636d; }
 .bk-toc ol { margin: 0; padding: 0; list-style: none; }
-.bk-toc-item a { display: grid; grid-template-columns: 14mm auto minmax(8mm, 1fr) auto; align-items: baseline; column-gap: 3mm; padding-block: 5mm; border-block-end: 0.2mm solid #d5dade; color: #121212; text-decoration: none; }
-.bk-toc-num { font: 600 9pt/1 var(--vz-display); letter-spacing: 0.16em; color: #59636d; font-variant-numeric: tabular-nums; }
-.bk-toc-text { display: flex; flex-direction: column; gap: 1.2mm; }
-.bk-toc-name { font: 600 17pt/1.1 var(--vz-display); }
+.bk-toc-item a { display: grid; grid-template-columns: 14mm auto minmax(8mm, 1fr) auto; grid-template-areas: "num name leader page" ". state state ."; align-items: baseline; column-gap: 3mm; row-gap: 1.2mm; padding-block: 5mm; border-block-end: 0.2mm solid #d5dade; color: #121212; text-decoration: none; }
+.bk-toc-num { grid-area: num; font: 600 9pt/1 var(--vz-display); letter-spacing: 0.16em; color: #59636d; font-variant-numeric: tabular-nums; }
+.bk-toc-name { grid-area: name; font: 600 17pt/1.1 var(--vz-display); }
 .bk-toc-item--appendix .bk-toc-name { font-size: 12pt; color: #3f4852; }
-.bk-toc-state { font-size: 7.5pt; color: #59636d; }
+.bk-toc-leader { grid-area: leader; align-self: end; margin-block-end: 1.4mm; border-block-end: 0.35mm dotted #59636d; }
 .bk-toc-state.is-ready { color: #157a3c; }
-.bk-toc-leader { align-self: end; margin-block-end: 1.6mm; border-block-end: 0.35mm dotted #59636d; }
-.bk-toc-page { font: 700 13pt/1 var(--vz-display); font-variant-numeric: tabular-nums; min-inline-size: 8mm; text-align: end; }
+.bk-toc-state { grid-area: state; font-size: 7.5pt; color: #59636d; }
+.bk-toc-page { grid-area: page; font: 700 13pt/1 var(--vz-display); font-variant-numeric: tabular-nums; min-inline-size: 8mm; text-align: end; }
 
 /* ---------- plates inside the text block ---------- */
 .bk-body .vz-plate { display: flex; flex-direction: column; gap: 5mm; padding: 0; border: 0; }

@@ -1,7 +1,7 @@
 import type { CitationListBlock, ColorPaletteBlock, LogoConstructionBlock, TypographySpecimenBlock, VisualBlock, VisualDocument, VisualEntry, VisualLang } from '@brand-os/brand-core/visual'
 import { bodyHeightMm, bookText, fillVisual, printProfile, visualCatalog } from '@brand-os/brand-core/visual'
 import { html, join, type SafeHtml } from './html.js'
-import { dateOnly, legend } from './visual-primitives.js'
+import { dateOnly, legend, two } from './visual-primitives.js'
 import { renderBlock, type BlockContext } from './visual-registry.js'
 import { comboList, contrastTable, footParts, frameworkNote, gridKey, plateHead, sourceRows, sourcesHead, swatchList, typeRoleItem, type IdentityContext } from './visual-identity.js'
 
@@ -54,7 +54,7 @@ export interface BookSection {
   id: string
   /** Running head and contents entry. */
   title: string
-  /** Contents number ("01"); null for the appendix. */
+  /** Contents number ("01", as on the plate head); null for the appendix. */
   num: string | null
   /** Short state shown under the contents entry (ready / awaiting), or null. */
   state: { text: string; ready: boolean } | null
@@ -311,9 +311,9 @@ export function identitySections(input: BookInput): BookSection[] {
   const citations = doc.blocks.find(isBlock('citation_list'))
   const state = (ready: boolean) => ({ text: ready ? t.ready : t.waiting, ready })
   const sections: BookSection[] = []
-  if (color) sections.push({ id: 'color', title: t.colorTitle, num: digits(lang, 1, 2), state: state(color.colors.length > 0), flows: colorFlows(color, builder) })
-  if (type) sections.push({ id: 'type', title: t.typeTitle, num: digits(lang, 2, 2), state: state(type.roles.length > 0), flows: typeFlows(type, builder) })
-  if (logo) sections.push({ id: 'logo', title: t.logoTitle, num: digits(lang, 3, 2), state: state(logo.spec !== null && logo.master !== null), flows: logoFlows(logo, builder) })
+  if (color) sections.push({ id: 'color', title: t.colorTitle, num: two(1), state: state(color.colors.length > 0), flows: colorFlows(color, builder) })
+  if (type) sections.push({ id: 'type', title: t.typeTitle, num: two(2), state: state(type.roles.length > 0), flows: typeFlows(type, builder) })
+  if (logo) sections.push({ id: 'logo', title: t.logoTitle, num: two(3), state: state(logo.spec !== null && logo.master !== null), flows: logoFlows(logo, builder) })
   sections.push({ id: 'appendix', title: b.appendixTitle, num: null, state: null, flows: appendixFlows(doc, citations, builder) })
   return sections
 }
@@ -413,7 +413,7 @@ function contents(input: BookInput, sections: BookSection[], firstPage: Map<stri
       <p class="bk-toc-col" aria-hidden="true"><span></span><span>${b.contentsPage}</span></p>
       <ol>${sections.map((section) => {
         const page = firstPage.get(section.id)!
-        return html`<li class="bk-toc-item${section.num ? '' : ' bk-toc-item--appendix'}"><a href="#bk-p${page}"><span class="bk-toc-num">${section.num ?? ''}</span><span class="bk-toc-text"><span class="bk-toc-name">${section.title}</span>${section.state ? html`<span class="bk-toc-state${section.state.ready ? ' is-ready' : ''}">${section.state.text}</span>` : ''}</span><span class="bk-toc-leader" aria-hidden="true"></span><span class="bk-toc-page" data-toc-page="${page}">${digits(lang, page)}</span></a></li>`
+        return html`<li class="bk-toc-item${section.num ? '' : ' bk-toc-item--appendix'}"><a href="#bk-p${page}"><span class="bk-toc-num">${section.num ?? ''}</span><span class="bk-toc-name">${section.title}</span><span class="bk-toc-leader" aria-hidden="true"></span><span class="bk-toc-page" data-toc-page="${page}">${digits(lang, page)}</span>${section.state ? html`<span class="bk-toc-state${section.state.ready ? ' is-ready' : ''}">${section.state.text}</span>` : ''}</a></li>`
       })}</ol>
     </nav>
   </div>`
