@@ -129,7 +129,10 @@ approved weight that the file does not contain is not synthesised. The font lice
   Coach and Assurance results, `batch_sha256`.
 - `previews/*.png` only with `--png` (resvg, system fonts; previews are not hashed and not deliverables).
 
-The writer refuses a non-empty directory, a symlink, and any path inside a `brand/` folder; files are created with `wx`.
+The writer refuses a non-empty directory, a symlink (also a dangling one), and any path inside a `brand/` folder, also
+when a linked parent directory leads into one (checked on the real path before and after the directory is created);
+files are created with `wx`. A logo that is not embedded (changed, unpinned, withheld, owner-only, not SVG) is still
+listed in every post manifest's `assets[]` with `embedded: false` and its `not_embedded_reason`.
 
 ## Production readiness (fixes pack PR-E)
 
@@ -173,7 +176,12 @@ metadata; no asset bytes are given to an agent (owner decision 5). Interfaces:
   `--batch` reads a `social-batch` output directory back (no symlinks, runtime file names only, size-capped) and re-hashes
   the files. Exit 0 when ready, 3 when not ready. Labels in en, fa (RTL) and tr.
 - **`social-batch`** also writes `production-readiness.json` (artifact stage) next to `batch-summary.json`, which is
-  unchanged. `--require logo` marks the logo required for that run.
+  unchanged. `--require logo` marks the logo required for that run. With `--root` it resolves every approved asset of
+  the pack through Visual DNA (logos first), the same ids `readiness --root` resolves. `social-batch` exits 0 whenever
+  the drafts were written, even when `status` is `blocked` or production is `not_ready`: read the printed
+  `production:` line or `production-readiness.json`, or run `readiness --batch` (exit 3 when not ready).
+- Asset ids the Visual DNA resolver would refuse (a manifest id with a space or a slash) are not sent to it; that
+  asset stays `not_tested` and the verdicts of the other assets are kept.
 
 The file checksums detect a changed or swapped file; they are not a signature. Someone who edits a post, its manifest
 and the summary together on the owner's own disk is outside this check.
@@ -214,13 +222,15 @@ final refused without fonts / scale / family / glyphs, final outlines everything
 reason when DejaVu Sans is not installed), CLI flags. `tests/runtime-social-batch.test.ts` (13) and
 `tests/asset-model-use.test.ts` (3): schema validity, SVG checker and
 publication gate on every post, determinism across builds, source pins, en/fa/tr copy unchanged, `model_use` default,
-checksum-changed logo refused, writes only in the output dir and `git status brand/` unchanged, tampered pack / wrong
+checksum-changed logo refused and listed with its reason in every manifest, writes only in the output dir (dangling
+links and linked parents into `brand/` refused) and `git status brand/` unchanged, tampered pack / wrong
 task / wrong count refused, too few messages or no palette ⇒ `blocked` (no padding), banned claim ⇒ `copy.claims: fail`,
 Coach and Assurance called (and the Coach still refuses under an agent token), CLI parity with the library.
 
-`tests/production-readiness.test.ts` (10): the demo pack is ready pre-render and its own readiness is copied unchanged;
+`tests/production-readiness.test.ts` (11): the demo pack is ready pre-render and its own readiness is copied unchanged;
 missing renderer and format violations block while context stays as built; bad SHA (tampered pack, changed logo file,
-stale pin); blocked rights and a missing required logo block while the same optional asset does not; a banned claim
+stale pin); an asset id the resolver refuses stays `not_tested` without voiding the others, and `social-batch --root`
+resolves every pack asset; blocked rights and a missing required logo block while the same optional asset does not; a banned claim
 blocks; artifact stage (wrong file checksum, unsafe SVG, missing required logo block; contrast `fail` is
 `needs_human_review`); a written batch re-checked on disk, symlinks and stray names refused; the agent entry (same
 caller, denied before input, invalid input); real stdio MCP (listed, strict schema, tr labels, guests denied); CLI

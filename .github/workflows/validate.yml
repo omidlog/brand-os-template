@@ -93,3 +93,12 @@ jobs:
         if: steps.scope.outputs.code == 'true'
         run: npm run test:studio
         timeout-minutes: 12
+      # Visual QA (V1.3): when a reference screenshot moves, its actual, baseline and diff images are kept here.
+      - name: visual QA diff images
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-qa-diff
+          path: dist/visual-qa/
+          if-no-files-found: ignore
+          retention-days: 7

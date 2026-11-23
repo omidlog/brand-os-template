@@ -50,6 +50,7 @@ export function runTaskContextTool(engine: InterviewEngine, ctx: AuthContext, in
   let taskType: unknown = rest.task_type
   let count: unknown = rest.deliverable_count
   let channel: unknown = rest.channel
+  let requestLocale: unknown = rest.locale
   const locale = (TASK_LOCALES as readonly string[]).includes(String(rest.locale)) ? (rest.locale as TaskLocale) : undefined
   if (typeof request === 'string' && request.length > 0) {
     const intent = classifyTask(request, locale)
@@ -68,13 +69,15 @@ export function runTaskContextTool(engine: InterviewEngine, ctx: AuthContext, in
     taskType ??= intent.task_type
     count ??= intent.deliverable_count ?? undefined
     channel ??= intent.channel ?? undefined
+    // The language the request was written in, when the caller named none: a Persian request gets Persian labels.
+    requestLocale ??= intent.locale
   }
   return buildTaskContext(engine, ctx, {
     task_type: taskType,
     request_mode: rest.request_mode,
     channel,
     deliverable_count: count,
-    locale: rest.locale,
+    locale: requestLocale,
     output_format: rest.output_format,
     scope_id: rest.scope_id,
   })

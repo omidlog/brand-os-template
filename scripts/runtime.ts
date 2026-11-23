@@ -130,8 +130,8 @@ async function main(): Promise<void> {
     const demo = createDemoBrand()
     try {
       const pack = demoPack(demo, locale)
-      const { logo, references } = loadApprovedLogo(demo.root, pack)
-      result = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo, coach: demo.engine, now: DEMO_NOW, origin: 'demo', final })
+      const { logo, considered, references } = loadApprovedLogo(demo.root, pack)
+      result = runSocialBatch(pack, { demo: true, demoBanner: DEMO_BANNER, logo, logoConsidered: considered, coach: demo.engine, now: DEMO_NOW, origin: 'demo', final })
       production = productionReadiness({ pack, required_assets: required, references, batch: result })
     } finally {
       demo.cleanup()
@@ -145,7 +145,7 @@ async function main(): Promise<void> {
     const drift = engine ? packSourceDrift(engine, pack) : null
     if (drift && drift.length > 0) throw new RuntimeError('stale_pack', `The pack is stale: ${drift.length} cited approved fact(s) changed since it was built (${drift.join(', ')}). Rebuild it with brand:query --tool task_context. Nothing was written.`)
     const loaded = engine ? loadApprovedLogo(engine.workspaceRoot(), pack) : null
-    result = runSocialBatch(pack, { demo: false, logo: loaded?.logo ?? null, coach: engine, now, origin: 'pack_file', final })
+    result = runSocialBatch(pack, { demo: false, logo: loaded?.logo ?? null, logoConsidered: loaded?.considered ?? null, coach: engine, now, origin: 'pack_file', final })
     production = productionReadiness({ pack, required_assets: required, references: loaded ? loaded.references : null, batch: result, source_drift: drift })
   }
   // An additive file next to the summary: batch-summary.json (runtime-batch/v1) is unchanged.

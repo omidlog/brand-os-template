@@ -30,6 +30,7 @@ import {
 import type { Outliner } from './outline.js'
 import { assertPackShape } from './pack.js'
 import { planSocialBatch } from './plan.js'
+import { packAssetIds } from './production.js'
 import { logoMarkup, renderPost, type EmbeddedLogo } from './render.js'
 
 export interface ApprovedLogo {
@@ -46,6 +47,11 @@ export interface SocialBatchOptions {
   demoBanner?: string | null
   /** The approved logo, already read through `loadApprovedLogo`. Absent: posts carry no logo. */
   logo?: ApprovedLogo | null
+  /**
+   * Every logo `loadApprovedLogo` considered (its `considered`). Those not embedded are listed in each post manifest
+   * with their reason code, so a withheld, changed or unpinned logo is visible instead of silently absent.
+   */
+  logoConsidered?: UsedAsset[] | null
   /** The owner-local coach source (the interview engine). Absent: the coach is reported as not called. */
   coach?: CoachSource | null
   /** The clock for the coach and the assessment. Injected so a run is reproducible. */
@@ -87,13 +93,17 @@ const tally = (checks: Array<{ result: CheckResult }>): Record<CheckResult, numb
 export function loadApprovedLogo(root: string, pack: TaskContextPack): { logo: ApprovedLogo | null; considered: UsedAsset[]; references: VisualReference[] } {
   const items = Object.values(pack.sections).flat().filter((item) => item.key === 'assets.logo' && item.state === 'approved')
   const considered: UsedAsset[] = []
-  if (items.length === 0) return { logo: null, considered, references: [] }
+  const logoIds = items.map((item) => String(((item.value ?? {}) as Record<string, unknown>).id ?? item.source_id)).filter((id) => ASSET_ID_PATTERN.test(id))
+  // Logos first, so the cap never drops the asset the renderer needs.
+  const assetIds = [...new Set([...logoIds, ...packAssetIds(pack)])].slice(0, MAX_ASSET_IDS)
+  if (items.length === 0 && assetIds.length === 0) return { logo: null, considered, references: [] }
   const ownerLocal = !process.env[AGENT_TOKEN_ENV]
   const engine = ownerLocal ? new InterviewEngine(root) : null
   const sameBrand = engine !== null && engine.config().brand.slug === pack.brand_id
   const ctx = sameBrand ? operatorContext(pack.brand_id) : null
-  const ids = [...new Set(items.map((item) => String(((item.value ?? {}) as Record<string, unknown>).id ?? item.source_id)))].filter((id) => ASSET_ID_PATTERN.test(id)).slice(0, MAX_ASSET_IDS)
-  const references = engine && ctx ? resolveVisualDna(engine, ctx, { asset_ids: ids }).references : []
+  // Every approved asset of the pack, not only the logos: the same ids `brand:runtime readiness --root` resolves, so the
+  // production-readiness.json a social-batch run writes has the same asset verdicts as that command.
+  const references = engine && ctx ? resolveVisualDna(engine, ctx, { asset_ids: assetIds }).references : []
   let logo: ApprovedLogo | null = null
   for (const item of items) {
     const value = (item.value ?? {}) as Record<string, unknown>
@@ -105,6 +115,10 @@ export function loadApprovedLogo(root: string, pack: TaskContextPack): { logo: A
     }
     if (logo) {
       skip('one_logo_per_post')
+      continue
+    }
+    if (!ASSET_ID_PATTERN.test(assetId)) {
+      skip('visual_dna:invalid:asset_id')
       continue
     }
     if (!engine || !ctx) {
@@ -191,9 +205,12 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
   })
   const packSha = pack.digests.context_sha256!
   const embedded: EmbeddedLogo | null = opts.logo ? logoMarkup(opts.logo.asset_id, opts.logo.svg) : null
-  const logoAssets: UsedAsset[] = opts.logo
-    ? [{ asset_id: opts.logo.asset_id, source_revision: opts.logo.source_revision, checksum_sha256: opts.logo.checksum_sha256, model_use: opts.logo.model_use, sent_to_model: false, embedded: embedded !== null, not_embedded_reason: embedded ? null : 'no_viewbox' }]
-    : []
+  const logoAssets: UsedAsset[] = [
+    ...(opts.logo
+      ? [{ asset_id: opts.logo.asset_id, source_revision: opts.logo.source_revision, checksum_sha256: opts.logo.checksum_sha256, model_use: opts.logo.model_use, sent_to_model: false as const, embedded: embedded !== null, not_embedded_reason: embedded ? null : 'no_viewbox' }]
+      : []),
+    ...(opts.logoConsidered ?? []).filter((asset) => !asset.embedded && asset.asset_id !== opts.logo?.asset_id).map((asset) => ({ ...asset, embedded: false, sent_to_model: false as const })),
+  ]
 
   const files = new Map<string, string>()
   const manifests: PostManifest[] = []
@@ -294,13 +311,38 @@ export function runSocialBatch(pack: TaskContextPack, opts: SocialBatchOptions):
  */
 export function writeBatch(outDir: string, result: SocialBatchResult): string[] {
   const target = path.resolve(outDir)
-  if (target.split(path.sep).includes('brand')) throw new RuntimeError('unsafe_output', 'The output directory may not be inside a brand/ folder.')
-  if (fs.existsSync(target)) {
-    if (fs.lstatSync(target).isSymbolicLink() || !fs.statSync(target).isDirectory()) throw new RuntimeError('unsafe_output', 'The output path must be a real directory.')
+  const insideBrand = (dir: string): boolean => dir.split(path.sep).includes('brand')
+  const refuseBrand = (): never => {
+    throw new RuntimeError('unsafe_output', 'The output directory may not be inside a brand/ folder.')
+  }
+  if (insideBrand(target)) refuseBrand()
+  const lstat = (file: string): fs.Stats | null => {
+    try {
+      return fs.lstatSync(file)
+    } catch {
+      return null
+    }
+  }
+  const stat = lstat(target)
+  if (stat) {
+    // lstat, not exists: a dangling link is still a link, and is refused like any other.
+    if (stat.isSymbolicLink() || !stat.isDirectory()) throw new RuntimeError('unsafe_output', 'The output path must be a real directory.')
     if (fs.readdirSync(target).length > 0) throw new RuntimeError('unsafe_output', 'The output directory must be empty. Nothing was overwritten.')
   }
+  // A linked parent must not lead into a brand/ folder either: resolve the nearest existing ancestor before anything
+  // is created, and check the real path of the directory again once it exists.
+  let existing = target
+  while (!lstat(existing) && path.dirname(existing) !== existing) existing = path.dirname(existing)
+  let realExisting: string
+  try {
+    realExisting = fs.realpathSync(existing)
+  } catch {
+    throw new RuntimeError('unsafe_output', 'The output path goes through a broken link.')
+  }
+  if (insideBrand(path.join(realExisting, path.relative(existing, target)))) refuseBrand()
   fs.mkdirSync(target, { recursive: true })
   const real = fs.realpathSync(target)
+  if (insideBrand(real)) refuseBrand()
   const written: string[] = []
   for (const [relative, text] of [...result.files.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     const full = path.resolve(real, relative)
