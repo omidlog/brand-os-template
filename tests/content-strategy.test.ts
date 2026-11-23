@@ -157,7 +157,7 @@ test('approved v1 is visible in the voice rules projection; v2 stays invisible u
   assert.deepEqual(contentStrategyView(s.ws, { lang: 'en' }), { views: [], withheld: { draft: 1 } }, 'a draft is counted, never shown')
   const review = reviewRevision(s.ws, { strategy_id: 'content-main', revision: 1 })
   assert.deepEqual(review.blockers, [])
-  assert.match(review.notice[0]!, /No agent profile reads content strategies yet/)
+  assert.match(review.notice[0]!, /content-read agents read it through strategy_list/)
   approve(s, 'content-main', 1, v1.content_sha256)
 
   const first = contentStrategyView(s.ws, { lang: 'en' })
