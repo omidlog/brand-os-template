@@ -617,6 +617,17 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
 - Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.
 
+## Unreleased — Audit: Trust area fixes (Assurance / GAP-09)
+
+### Fixed
+
+- `brand:assurance-review record` refuses a judgment note that looks like a credential (the Knowledge credential check). The note is stored in plain text; nothing is written and the text is never echoed.
+- `brand:assurance snapshot|assess --pin` refuses a snapshot kept for another brand or method (`invalid_pin`) instead of reporting its revisions as changed sources.
+- `brand:assurance verify` explains, in en/fa/tr, a digest change with no changed cited source (an answer approved, a research note added, or a judgment recorded for that day).
+- Persian text of the bridge and review commands uses «واقعیت» instead of the English word "fact", and the Persian comma «،» in lists.
+- `docs-internal/ASSURANCE.md`: an owner `yes` replaces PRR-08's evidence minimum; a same-day judgment changes that day's snapshot; dates are UTC days. Tests: `assurance-audit`.
+- After merging main (GAP-09 evidence links): `brand:assurance-link list` in Persian uses the Persian comma «،» and shows the register status (pending, verified, rejected, withdrawn) in en/fa/tr instead of the English token. `verify` with `--pin` keeps both the brand/method check and the evidence-link comparison.
+
 ## Unreleased — Audit: Runtime area fixes
 
 ### Fixed
