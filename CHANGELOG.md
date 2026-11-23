@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Visual V1.3: visual QA (screenshot baselines, PDF text/font checks, RTL checks)
+
+### Added
+
+- `tests/studio-visual-qa.test.ts` (Studio/Chrome CI job), on the ILLUSTRATIVE / MOCK DATA fixtures: reference screenshots of the A3 Business Model Canvas and the A4 Brand Book visual-identity chapter (cover, contents, colour plate) in en and fa, compared with `tests/visual-baselines/*.png` (fonts awaited, animation off, deterministic text rasterisation, tolerant diff); on a mismatch the actual, baseline and diff images are written to `dist/visual-qa/` and uploaded as the CI artifact `visual-qa-diff`.
+- `npm run visual:baselines`: re-renders and overwrites the baselines, for intended visual changes only.
+- Digital PDF checks on the `brand:export-visual` book: headings, contents entries with the right page numbers, folios (Persian digits in fa), and every font embedded including the bundled OFL Inter, Rajdhani and Vazirmatn. No bleed or PDF/X claim.
+- RTL checks: `dir="rtl"`, headings without overflow or words split across lines, mirrored contents leaders and folios, canonical (not mirrored) canvas.
+- `tests/helpers/visual-qa.ts`: PNG codec, pixel diff and Chrome-PDF reader on Node `zlib`, no new dependency.
+
+### Known
+
+- On the fixture, the A3 canvas print footer is clipped by about 7 mm; recorded as a `todo` test.
+
 ## Unreleased — Owner review judgments for assurance scores (GAP-09 follow-up)
 
 ### Added
