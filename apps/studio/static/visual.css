@@ -61,6 +61,7 @@
 .vz-chip--conflict { color: var(--vz-danger); background: var(--vz-danger-bg); }
 .vz-chip--withheld, .vz-zchip--withheld, .vz-chip--missing, .vz-zchip--missing, .vz-chip--na, .vz-zchip--not_applicable { color: var(--vz-neutral); background: var(--vz-neutral-bg); }
 .vz-chip--missing, .vz-zchip--missing { background: transparent; border-color: var(--vz-rule-strong); border-style: dotted; }
+.vz-master-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-block-start: 6px; }
 .vz-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 /* Source footnote: a quiet line under a specimen; the field id stays in the details and the print appendix. */
 .vz-foot { margin: 14px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 11.5px; line-height: 1.5; color: var(--vz-text-3); }
