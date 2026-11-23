@@ -662,6 +662,103 @@
 .vz-cmp-plate > .vz-cmp-scroll { margin-inline-start: 0; }
 .vz-cmp .vz-cmp-table { min-inline-size: 920px; }
 
+/* ---------- Positioning map (V2.3) ----------
+   The owner's two axes as a quiet band grid on paper: hairlines per band, a stronger centre cross, ink dots with key
+   numbers, a lime diamond for the own brand. Stale = dashed ring; conflicting = dashed range box (never resolved).
+   The plot is direction-neutral (dir="ltr"); all words are HTML around it, so Persian sets in Vazirmatn, RTL.
+   Pole names use physical left/right on purpose: they follow the plot, not the reading direction. */
+.vz-pos-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 1fr); gap: 40px 48px; align-items: start; }
+.vz-pos-figure { margin: 0; display: flex; flex-direction: column; gap: 18px; }
+.vz-pos-chart { display: grid; grid-template-columns: minmax(72px, 112px) minmax(0, 1fr); grid-template-rows: auto auto; gap: 10px 14px; }
+.vz-pos-yaxis { grid-row: 1; grid-column: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; text-align: right; padding-block: 4px; }
+.vz-pos-plot { grid-row: 1; grid-column: 2; }
+.vz-pos-xaxis { grid-row: 2; grid-column: 2; display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 12px; }
+.vz-pos-xaxis .vz-pos-pole--low { text-align: left; }
+.vz-pos-xaxis .vz-pos-pole--high { text-align: right; }
+/* fa: the chart is dir=rtl, so the grid already puts the y column on the right and the low pole on the right. Physical
+   alignment here, because each pole is dir=auto and an English fallback label would otherwise align to its own start. */
+.vz-pos-chart--mirrored .vz-pos-yaxis { text-align: left; }
+.vz-pos-chart--mirrored .vz-pos-xaxis .vz-pos-pole--low { text-align: right; }
+.vz-pos-chart--mirrored .vz-pos-xaxis .vz-pos-pole--high { text-align: left; }
+.vz-pos-pole { margin: 0; font: 500 12.5px/1.35 var(--vz-font); color: var(--vz-text-2); overflow-wrap: anywhere; }
+.vz-pos-axis-name { margin: 0; display: inline-flex; align-items: baseline; gap: 6px; font: 600 11px/1.3 var(--vz-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--vz-text); }
+[dir="rtl"] .vz-pos-axis-name, .vz-pos-axis-name [dir="rtl"] { letter-spacing: 0; text-transform: none; font-size: 13px; }
+.vz-pos-arrow { font-family: var(--vz-font); color: var(--vz-text-3); letter-spacing: 0; }
+.vz-pos-svg { display: block; inline-size: 100%; block-size: auto; aspect-ratio: 1; overflow: visible; }
+.vz-pos-field { fill: var(--vz-subtle); }
+.vz-pos-grid { stroke: var(--vz-rule); stroke-width: 1; }
+.vz-pos-cross { stroke: var(--vz-rule-strong); stroke-width: 1.4; }
+.vz-pos-frame-line { fill: none; stroke: var(--vz-text); stroke-width: 2; }
+.vz-pos-range { fill: var(--vz-danger-bg); fill-opacity: 0.55; stroke: var(--vz-danger); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.vz-pos-dot { fill: var(--vz-text); stroke: var(--vz-paper); stroke-width: 2.5; }
+.vz-pos-num { fill: var(--vz-paper); font: 600 14px/1 var(--vz-display); font-variant-numeric: tabular-nums; }
+.vz-pos-own { fill: var(--vz-lime); stroke: var(--vz-ink); stroke-width: 2; }
+.vz-pos-stale { fill: none; stroke: var(--vz-draft); stroke-width: 1.8; stroke-dasharray: 4 3; }
+.vz-pos-point--conflicting .vz-pos-dot { fill: var(--vz-danger); }
+.vz-pos-caption { display: flex; flex-direction: column; gap: 6px; }
+.vz-pos-note { display: flex; align-items: flex-start; gap: 10px; }
+.vz-pos-swatch { flex: none; inline-size: 18px; block-size: 14px; margin-block-start: 3px; }
+.vz-pos-swatch--range { border: 1.5px dashed var(--vz-danger); border-radius: 3px; background: var(--vz-danger-bg); }
+.vz-pos-swatch--stale { inline-size: 14px; border: 1.8px dashed var(--vz-draft); border-radius: 50%; }
+
+.vz-pos-side { display: flex; flex-direction: column; gap: 32px; }
+.vz-pos-key { inline-size: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.4; border-block-start: 2px solid var(--vz-text); }
+.vz-pos-key caption { text-align: start; caption-side: top; padding-block-end: 10px; }
+.vz-pos-key thead th { padding: 10px 8px 8px; text-align: start; font: 600 10.5px/1.3 var(--vz-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--vz-text-2); border-block-end: 1px solid var(--vz-text); }
+[dir="rtl"] .vz-pos-key thead th { letter-spacing: 0; font-size: 12px; }
+.vz-pos-key th[scope="row"], .vz-pos-key td { padding: 12px 8px; vertical-align: top; text-align: start; font-weight: 400; border-block-end: 1px solid var(--vz-rule); }
+.vz-pos-key-n { inline-size: 30px; }
+.vz-pos-key-dot { display: inline-grid; place-items: center; inline-size: 22px; block-size: 22px; border-radius: 50%; background: var(--vz-text); color: var(--vz-paper); font: 600 12px/1 var(--vz-display); font-variant-numeric: tabular-nums; }
+.vz-pos-key-own { display: inline-block; inline-size: 14px; block-size: 14px; margin: 4px; background: var(--vz-lime); outline: 2px solid var(--vz-ink); transform: rotate(45deg); }
+.vz-pos-key-row--own > * { background: var(--vz-subtle); }
+.vz-pos-key-name { display: block; font: 600 15px/1.25 var(--vz-display); color: var(--vz-text); overflow-wrap: anywhere; }
+[dir="rtl"] .vz-pos-key-name { font-size: 14px; line-height: 1.5; }
+.vz-pos-key .vz-cmp-own-kicker { margin-block-end: 4px; }
+.vz-pos-place, .vz-pos-state-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.vz-pos-place + .vz-pos-place { margin-block-start: 4px; }
+.vz-pos-states { display: flex; flex-direction: column; gap: 4px; }
+.vz-pos-axis-tag { font-size: 11px; color: var(--vz-text-3); }
+.vz-pos-key .vz-cmp-fn { margin: 0; }
+.vz-pos-margin { padding-block-start: 14px; border-block-start: 1px solid var(--vz-rule-strong); }
+.vz-pos-margin ul { margin: 8px 0 10px; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.vz-pos-margin li { display: flex; flex-direction: column; gap: 4px; padding-block: 10px; border-block-end: 1px solid var(--vz-rule); }
+.vz-pos-margin-name { font: 600 14px/1.3 var(--vz-display); color: var(--vz-text); }
+.vz-pos-nopoints { padding: 16px 18px; border: 1px dashed var(--vz-rule-strong); border-radius: 4px; background: var(--vz-subtle); }
+.vz-pos-ghost { display: grid; grid-template-columns: 1fr 1fr; aspect-ratio: 1; min-block-size: 200px; border: 1.5px dashed var(--vz-rule-strong); border-radius: 4px; background: var(--vz-subtle); }
+.vz-pos-ghost span { border: 1px dotted var(--vz-rule-strong); }
+
+@media (max-width: 900px) {
+  .vz-pos-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .vz-pos-chart { grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
+  .vz-pos-pole { font-size: 11px; }
+}
+
+/* Print: the map on its own A4 portrait plate; the key under the figure. */
+.vz-page--book .vz-pos-layout { grid-template-columns: minmax(0, 1fr); gap: 6mm; }
+.vz-page--book .vz-pos-chart { grid-template-columns: 24mm minmax(0, 1fr); max-inline-size: 86mm; margin-inline: auto; }
+.vz-page--book .vz-pos-figure { gap: 3mm; }
+.vz-page--book .vz-pos-caption .vz-note { font-size: 7.4pt; }
+.vz-page--book .vz-pos-pole { font-size: 7.6pt; }
+.vz-page--book .vz-pos-axis-name { font-size: 7pt; }
+.vz-page--book .vz-pos-key { font-size: 7.8pt; }
+.vz-page--book .vz-pos-key thead th { font-size: 6.6pt; padding: 1.6mm 1.4mm; }
+.vz-page--book .vz-pos-key th[scope="row"], .vz-page--book .vz-pos-key td { padding: 1.8mm 1.4mm; }
+.vz-page--book .vz-pos-key-name { font-size: 9pt; }
+.vz-page--book .vz-pos-side { gap: 3.5mm; }
+.vz-page--book .vz-pos-margin li { padding-block: 1.6mm; }
+@media print {
+  .vz-pos-figure, .vz-pos-key tr, .vz-pos-margin li { break-inside: avoid; }
+}
+@media (forced-colors: active) {
+  .vz-pos-field { fill: Canvas; }
+  .vz-pos-grid, .vz-pos-cross, .vz-pos-frame-line, .vz-pos-range, .vz-pos-stale, .vz-pos-own { stroke: CanvasText; }
+  .vz-pos-dot { fill: CanvasText; }
+  .vz-pos-num { fill: Canvas; }
+  .vz-pos-key-dot { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+}
+
 /* ---------- mascot atlas and six-stage evolution sheet (V3.4) ---------- */
 /* Catalog-book plates: framed artwork on paper, crop marks around empty frames, hairline rules, small-caps labels. */
 .vz-mtally { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; margin: 0; font-size: 13px; color: var(--vz-text-3); }
