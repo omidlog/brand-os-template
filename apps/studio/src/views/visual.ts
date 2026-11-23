@@ -41,9 +41,15 @@ function itemNames(block: BusinessModelCanvasBlock): ItemNames {
  * names and details are shown as recorded. Links read as the target item's name; a target that is not on this
  * canvas is said to be not shown, never guessed.
  */
-function itemsView(cat: VisualCatalog, entry: VisualEntry, items: VisualEntityItem[], names: ItemNames, lang: VisualLang): SafeHtml {
+/** Print page 1 is one fixed A3 page: a long list shows its first items there; the full list is on page 2. */
+const PRINT_ITEMS = 4
+
+function itemsView(cat: VisualCatalog, entry: VisualEntry, items: VisualEntityItem[], names: ItemNames, lang: VisualLang, mode: CanvasOptions['mode']): SafeHtml {
   const spec = entitySpec(entry.id)
-  return html`<ol class="vz-items" aria-label="${fillVisual(cat.entities.itemCount, { count: new Intl.NumberFormat(lang).format(items.length) })}">${items.map(
+  const numbers = new Intl.NumberFormat(lang)
+  const shown = mode === 'print' ? items.slice(0, PRINT_ITEMS) : items
+  const more = items.length - shown.length
+  return html`<ol class="vz-items" aria-label="${fillVisual(cat.entities.itemCount, { count: numbers.format(items.length) })}">${shown.map(
     (item) => html`<li class="vz-item">
       <span class="vz-item-name" dir="auto">${item.name}</span>${item.tags.map((tag) => html` <span class="vz-item-tag">${spec ? entityOptionLabel(spec, tag.field, tag.value, lang) : tag.value}</span>`)}
       ${item.detail ? html`<span class="vz-item-detail" dir="auto">${item.detail}</span>` : ''}
@@ -54,14 +60,14 @@ function itemsView(cat: VisualCatalog, entry: VisualEntry, items: VisualEntityIt
           )}</span>`
         : ''}
     </li>`,
-  )}</ol>`
+  )}</ol>${more > 0 ? html`<p class="vz-items-more">${fillVisual(cat.entities.moreItems, { count: numbers.format(more) })}</p>` : ''}`
 }
 
-function entryView(cat: VisualCatalog, entry: VisualEntry, names: ItemNames = new Map(), lang: VisualLang = 'en'): SafeHtml {
+function entryView(cat: VisualCatalog, entry: VisualEntry, names: ItemNames = new Map(), lang: VisualLang = 'en', mode: CanvasOptions['mode'] = 'screen'): SafeHtml {
   const meta = STATE_META[entry.state]
   const body =
     entry.items && entry.items.length
-      ? itemsView(cat, entry, entry.items, names, lang)
+      ? itemsView(cat, entry, entry.items, names, lang, mode)
       : entry.legacy && entry.value !== null
         ? html`<p class="vz-entry-value" dir="auto">${entry.value}</p><p class="vz-legacy">${icon('alert')}<span>${cat.entities.legacy}</span><span class="vz-legacy-hint">${cat.entities.legacyHint}</span></p>`
         : entry.state === 'withheld'
@@ -116,7 +122,7 @@ function zoneView(cat: VisualCatalog, zone: BmcZone, opts: CanvasOptions, names:
       ? ghostChart({ title: cat.text.gapTitle })
       : emptyList
         ? ghostChart({ title: cat.entities.emptyTitle[zone.zone_id as ListZone], body: cat.entities.emptyBody })
-        : html`<ul class="vz-entries">${zone.entries.map((entry) => entryView(cat, entry, names, opts.lang))}</ul>`}
+        : html`<ul class="vz-entries">${zone.entries.map((entry) => entryView(cat, entry, names, opts.lang, opts.mode))}</ul>`}
   </article>`
 }
 
@@ -318,16 +324,16 @@ ${input.toolbar}
     ${foot(cat.text.pageSources, 2)}
     ${illustrativeStamp(cat, doc)}
     <div class="vz-sources-grid">
-      <div>
+      <div class="vz-main">
         ${citationTable(cat, citations, canvas, lang, true)}
+        ${internal ? html`<section class="vz-panel vz-next-panel"><h2 class="vz-panel-title">${cat.text.nextQuestions}</h2><ul class="vz-next-all">${canvas.zones
+          .filter((zone) => zone.next_questions.length)
+          .map((zone) => html`<li><strong>${two(zone.order)} ${cat.zone[zone.zone_id].title}</strong> ${join(zone.next_questions.map((q) => html`<code class="vz-code" dir="ltr">${q.id}</code>`), ' ')}</li>`)}</ul></section>` : ''}
       </div>
       <div class="vz-side">
         <section class="vz-panel"><h2 class="vz-panel-title">${cat.text.summaryTitle}</h2>${summaryView(cat, doc, lang)}${miniMap(cat, canvas, 'p', false)}<p class="vz-muted vz-edition-note">${internal ? cat.text.editionInternalNote : cat.text.editionPublicNote} ${cat.text.gapBody}</p></section>
         ${frameworkPanel(cat, doc.framework_refs[0]!, lang, 'print')}
         ${relationshipsPanel(cat, canvas)}
-        ${internal ? html`<section class="vz-panel"><h2 class="vz-panel-title">${cat.text.nextQuestions}</h2><ul class="vz-next-all">${canvas.zones
-          .filter((zone) => zone.next_questions.length)
-          .map((zone) => html`<li><strong>${two(zone.order)} ${cat.zone[zone.zone_id].title}</strong> ${join(zone.next_questions.map((q) => html`<code class="vz-code" dir="ltr">${q.id}</code>`), ' ')}</li>`)}</ul></section>` : ''}
       </div>
     </div>
   </section>

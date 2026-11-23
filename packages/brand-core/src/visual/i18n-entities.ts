@@ -11,6 +11,8 @@ export interface EntityText {
   emptyBody: string
   /** `{count}` items. */
   itemCount: string
+  /** Print page 1 shows the first items of a long list; `{count}` more are in the sources table on page 2. */
+  moreItems: string
   legacy: string
   legacyHint: string
   linksTitle: string
@@ -38,6 +40,7 @@ export const ENTITY_TEXT: Record<'en' | 'fa' | 'tr', EntityText> = {
     },
     emptyBody: 'Each item is added in the interview. Nothing is filled in from other answers.',
     itemCount: '{count} items',
+    moreItems: '+{count} more, listed under sources',
     legacy: 'Earlier free text, kept as written',
     legacyHint: 'Not yet a list of items. A conversion is proposed for the owner to review.',
     linksTitle: 'Links between zones',
@@ -63,6 +66,7 @@ export const ENTITY_TEXT: Record<'en' | 'fa' | 'tr', EntityText> = {
     },
     emptyBody: 'هر مورد در مصاحبه افزوده می‌شود. هیچ چیز از پاسخ‌های دیگر پر نمی‌شود.',
     itemCount: '{count} مورد',
+    moreItems: '+{count} مورد دیگر، در فهرست منابع',
     legacy: 'متن آزاد پیشین، همان‌طور که نوشته شده',
     legacyHint: 'هنوز فهرستی از موارد نیست. تبدیل آن برای بازبینی مالک پیشنهاد می‌شود.',
     linksTitle: 'پیوند میان بخش‌ها',
@@ -88,6 +92,7 @@ export const ENTITY_TEXT: Record<'en' | 'fa' | 'tr', EntityText> = {
     },
     emptyBody: 'Her öğe görüşmede eklenir. Diğer yanıtlardan hiçbir şey doldurulmaz.',
     itemCount: '{count} öğe',
+    moreItems: '+{count} öğe daha, kaynaklarda listelenmiştir',
     legacy: 'Önceki serbest metin, yazıldığı gibi',
     legacyHint: 'Henüz bir öğe listesi değil. Sahibin incelemesi için bir dönüştürme önerilir.',
     linksTitle: 'Alanlar arası bağlantılar',
