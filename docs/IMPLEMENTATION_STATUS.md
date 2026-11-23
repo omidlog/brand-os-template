@@ -387,3 +387,8 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 - The approval proof is a local shared secret, not SSO. Anyone who can read `approval-secret` can approve.
 - `brand:init --reset` rewrites the ledger after copying it into the private backup. It does not rewrite mascot catalogs or module prose.
 - A public build of a brand with `publish_docs: public` publishes approved public facts. Restricted values stay out. Internal facts stay out of the public audience.
+
+## Brand Runtime: ten Instagram posts (first vertical slice)
+
+- **Done:** `packages/brand-core/src/runtime/` and `brand:runtime social-batch --demo`. Ten real SVG drafts (1080×1350, en/fa/tr labels, RTL by copy script) from one `task_context` pack, manifests with source pins, batch summary; schemas `runtime-post-manifest`, `runtime-batch`; asset `model_use` (absent ⇒ `not_allowed`). Tests: `runtime-social-batch`, `asset-model-use`.
+- **Not done:** real brands (CLI is `--demo` only), MCP tool, visual/semantic advisory review (`not_tested`), approved fonts from `brand.type.scale`, website / ads / mascot journeys, Studio view. Nothing is published, scheduled or approved.
