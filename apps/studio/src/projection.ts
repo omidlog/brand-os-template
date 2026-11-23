@@ -16,7 +16,7 @@ import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/br
 import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStatus } from '@brand-os/brand-core/coach'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
-import { buildCompetitorComparison } from '@brand-os/brand-core/visual'
+import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -168,6 +168,11 @@ export interface StudioVisualProjection {
    * caches written before it existed; sync rebuilds those.
    */
   competitors?: VisualDocument
+  /**
+   * Mascot atlas and six-stage evolution sheet (V3.4): approved catalog artwork backed by approved, previewable manifest
+   * assets only, in its internal and public editions. Absent in caches written before it existed; sync rebuilds those.
+   */
+  mascot?: { internal: VisualDocument; public: VisualDocument }
 }
 
 /**
@@ -302,12 +307,13 @@ function projectCreative(root: string, slug: string): StudioCreativeProjection |
 }
 
 /** The visual documents; a failure here must not take down the brand view either. */
-function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[]): StudioVisualProjection | null {
+function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], assets: MascotAssetCandidate[]): StudioVisualProjection | null {
   try {
     const visual: StudioVisualProjection = {
       bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
       identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }), master_rule: IDENTITY_MASTER_RULE },
       competitors: buildCompetitorComparison(engine, readSharedLandscape(engine.workspaceRoot(), engine.config().brand.slug)),
+      mascot: { internal: buildMascotAtlas(engine, 'internal', { assets }), public: buildMascotAtlas(engine, 'public', { assets }) },
     }
     assertNoSecrets(visual)
     return visual
@@ -398,6 +404,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
   const previews: PreviewFile[] = []
   // Logo assets offered to the Visual identity chapter; the core builder decides which (if any) is the master.
   const logoCandidates: LogoMasterCandidate[] = []
+  const assetCandidates: MascotAssetCandidate[] = []
   const sizes = new Map<string, { width: number; height: number } | null>()
   const assets: ProjectionAsset[] = (manifest.assets ?? []).slice(0, 2000).flatMap((asset) => {
     if (typeof asset.id !== 'string' || typeof asset.path !== 'string') return []
@@ -430,6 +437,20 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
       }
     }
     const tags = Array.isArray(asset.tags) ? asset.tags.filter((tag): tag is string => typeof tag === 'string') : []
+    // Every asset is offered to the mascot atlas; the core draws only approved, previewable catalog artwork.
+    assetCandidates.push({
+      asset_id: asset.id.slice(0, 200),
+      name: (typeof asset.name === 'string' ? asset.name : asset.id).slice(0, 200),
+      version: typeof asset.version === 'string' ? asset.version.slice(0, 40) : null,
+      approved,
+      published,
+      tags: tags.slice(0, 50),
+      example: tags.includes('example') || /EXAMPLE/.test(String(asset.license ?? '')),
+      preview_key: approved ? preview_key : null,
+      mime: approved && preview_key ? mime : null,
+      width: null,
+      height: null,
+    })
     if (tags.includes('logo')) {
       const size = preview_key ? (sizes.get(preview_key) ?? null) : null
       logoCandidates.push({
@@ -542,7 +563,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
-    visual: projectVisual(engine, logoCandidates),
+    visual: projectVisual(engine, logoCandidates, assetCandidates),
     coach: projectCoach(engine, dashboard.review_queue.items),
   }
   assertNoSecrets(projection)

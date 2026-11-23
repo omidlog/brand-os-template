@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Visual V3.4: mascot atlas and evolution sheet
+
+### Added
+
+- Mascot atlas (`mascot_atlas` block): every expression, pose and product state from approved catalog artwork only, backed by an approved, checksummed, previewable, non-example asset; each plate carries the recorded usage and do / don't notes. Draft artwork is never drawn: the internal edition lists it as "in review", the public edition leaves it out. A file still tagged `draft` stays out of the public edition. Designed empty state when nothing is approved.
+- Six-stage evolution sheet (`mascot_evolution` block): stages in order with approved stage artwork; missing or undefined stages are clear placeholders; the template's example configuration is labelled.
+- Studio: `GET /brands/<slug>/visual/mascot[/print[?edition=public]]`, read-only, en/fa/tr with RTL and Vazirmatn, ids only in details and the print appendix; one link on the Assets page's mascot card. Sync rebuilds caches written before the atlas existed.
+- Framework registry entry `MASCOT-MODEL-SHEET`; ILLUSTRATIVE fixture in `npm run visual:golden`.
+- Tests: `visual-mascot`, `studio-visual-mascot`, `studio-visual-mascot-browser`.
 ## Unreleased — Production readiness and quality gate (fixes pack PR-E, GAP-05)
 
 ### Added
@@ -38,6 +47,7 @@
 ### Changed
 
 - The bridge (`brand-os.assurance-bridge/2`) reads the judgment in force on the `--as-of` day while what it judged (cited facts and research notes) is unchanged, so `brand:assurance assess` can give a score. A judgment whose basis changed is listed as `stale_judgment` (blocking). The snapshot carries the revision id, never the owner's note. Unconfirmed answers still lower the ratio; notes are still owner-stated; never a certification.
+
 ## Unreleased — Coach UX: automatic, context-aware guidance
 
 ### Added
@@ -517,3 +527,15 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
 - Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
 - Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
+
+## Unreleased — GAP-09 follow-ups: paid-media interview question, company stays company
+
+### Added
+
+- Interview question `business.marketing.paid_media` (business marketing module, single choice `undecided` / `yes` / `no`, internal, en/fa/tr). It is in the question bank, field registry and marketing record.
+
+### Changed
+
+- `brand:assurance` reads `runs_paid_media` from the approved answer to `business.marketing.paid_media`. `--paid-media yes|no` is deprecated: it still works, but only while the question has no approved answer, and it prints an en/fa/tr notice on stderr. An approved answer always wins. A missing paid-media item now points at the question instead of the flag.
+- `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
+- Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.

@@ -179,7 +179,7 @@ It stays silent on factual or non-strategic questions (names, choices, colours, 
 
 ## Assurance on a real brand
 
-`npm run brand:assurance -- assess --as-of <YYYY-MM-DD> --paid-media yes|no [--lang fa]` checks your approved facts against Brand OS's own Positioning Readiness method and lists what is missing. It is owner-local and read-only, prints a reproducible snapshot digest (`verify --snapshot <file>` checks a kept one), gives no score while anything blocking is missing, and is an internal assessment — never a certification or a compliance statement. Guide: `docs-internal/ASSURANCE.md`.
+`npm run brand:assurance -- assess --as-of <YYYY-MM-DD> [--lang fa]` checks your approved facts against Brand OS's own Positioning Readiness method and lists what is missing. Whether you run paid media comes from the interview question `business.marketing.paid_media` (`--paid-media` is deprecated). The personal module never turns a company brand into a person. It is owner-local and read-only, prints a reproducible snapshot digest (`verify --snapshot <file>` checks a kept one), gives no score while anything blocking is missing, and is an internal assessment — never a certification or a compliance statement. Guide: `docs-internal/ASSURANCE.md`.
 
 Some controls need your own judgment (today PRR-08: is the differentiation claim backed by the evidence?). `npm run brand:assurance-review -- list` shows them, and `record --control PRR-08 --judgment yes|partly|no --note "…"` records yours privately in `brand/.private/assurance/reviews/`. Once nothing else blocks, `assess` gives a score. A judgment goes out of date by itself when the facts or research notes it was about change.
 
