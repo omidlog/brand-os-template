@@ -89,7 +89,7 @@ export function visualPrintPage(ctx: ViewContext, view: BrandView, edition: 'int
 }
 
 /** Approved previews are served by the existing asset route (session-only, GET). */
-function assetUrlFor(slug: string): (key: string) => string | null {
+export function assetUrlFor(slug: string): (key: string) => string | null {
   return (key) => (/^[0-9a-f]{64}$/.test(key) ? `/brands/${slug}/assets/file/${key}` : null)
 }
 
