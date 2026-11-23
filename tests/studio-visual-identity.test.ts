@@ -80,11 +80,14 @@ test('Studio: the Visual identity chapter is read-only, approved-only, designed 
     assert.equal(/\son[a-z]+="/.test(page.text), false, 'no inline handler')
     assert.equal(/<form[^>]*method="post"/i.test(page.text.split('<main')[1] ?? ''), false, 'no write form')
 
-    // 3. Print view (A4 portrait book pages) and the public edition.
+    // 3. Print view (print engine V1.2, book_a4_portrait: cover, imprint, contents, plates, appendix) and the public edition.
     const print = await owner.page(`/brands/${SLUG}/visual/identity/print`)
     assert.equal(print.res.status, 200)
     assert.match(print.text, /vz-book-body/)
-    assert.equal((print.text.match(/class="vz-page vz-page--book/g) ?? []).length, 5, 'opener, three plates, appendix')
+    assert.match(print.text, /<link rel="stylesheet" href="\/static\/visual-book\.css\?v=[A-Za-z0-9_-]+">/)
+    for (const kind of ['cover', 'imprint', 'contents', 'plate', 'appendix']) assert.match(print.text, new RegExp(`class="bk-sheet bk-(recto|verso) bk-sheet--${kind}"`), kind)
+    assert.ok((print.text.match(/class="bk-sheet /g) ?? []).length >= 7, 'front matter, three plates, appendix')
+    assert.equal((await owner.get('/static/visual-book.css')).status, 200)
     assert.equal(/\sstyle="/.test(print.text), false)
     assert.equal(/<script(?![^>]*src="\/static\/visual\.js\?v=[A-Za-z0-9_-]+")/.test(print.text), false)
     const pub = await owner.page(`/brands/${SLUG}/visual/identity/print?edition=public`)
