@@ -337,7 +337,21 @@ Branch `feat/coach-pr-1`. Guide: `docs-internal/STRATEGIC_COACH.md`. Contract: `
 | `npm run brand:coach` | Done | `analyze --mode follow_up\|quality_review\|consistency_review [--question <id>] [--lang en\|fa\|tr] [--json]` and `next`. Exit 0 / 1 (refusal or bad id, with a code) / 2 (usage). `tests/coach-cli.test.ts`. |
 | Privacy and access | Done | No finding ever quotes, paraphrases or digests the owner's words (canary-tested on JSON and printed text). Restricted questions are refused outright — no value, no digest, no length — on every stream. Every mode is denied while `BRAND_OS_AGENT_TOKEN` is set; no MCP tool and no `brand_retrieve` kind exposes the coach. A prompt-injection answer is tested as inert. |
 | Model | None | Nothing in this version calls a model or the network. Every finding is `origin: deterministic`; `model_suggestion` is reserved for PR 3. |
-| Personal facet rubrics, Studio or panel projection, optional provider, pilot measurement | Not started | PR 2, PR 3 and PR 4 in `docs-internal/STRATEGIC_COACH.md`. Facet *scoping* is already inherited from the condition engine; the per-facet prompts and checks are not written. |
+| Personal facet rubrics, optional provider, pilot measurement | Not started | PR 2 and PR 3 in `docs-internal/STRATEGIC_COACH.md`. A narrow Studio projection (the Overview card) landed with Coach UX, below. Facet *scoping* is already inherited from the condition engine; the per-facet prompts and checks are not written. |
+
+## Coach UX: automatic, context-aware moments
+
+Branch `feat/coach-ux`. Decision record: `docs-internal/COACH_UX_DECISION.md`. Problem it solves: the owner did not know when to run the coach, so it was effectively never run.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Moment policy (`coach/moments.ts`) | Done | One pure filter for every moment: not restricted; free text or a measure; strategic id namespace (`COACH_STRATEGIC_NAMESPACES`) or a `verified_evidence` claim. A closed list of silence reasons. Never throws (a failure is silence, `unavailable`). `tests/coach-moments.test.ts`. |
+| After an answer (`brand:interview`) | Done | Interactive and agent mode: 0 or 1 note after a `recorded` result, in the session locale; `--json` gains an additive `coach` object. First answer revision only, so the coach never repeats or loops. `tests/coach-moments-cli.test.ts`. The interactive loop is not driven by a test (its prompt does not read piped stdin); it calls the same helper as agent mode. |
+| Before approving (`brand:approve`) | Done | Up to three notes on the batch's plain drafts, on stderr before the proof prompt (also with `--dry-run`). Change proposals are counted, not advised on. Never blocks; the approve JSON is unchanged. |
+| Studio Overview card | Done | `projection.coach` built during sync (no route, GET only); up to five notes with en/fa/tr text; hidden when empty; ids and closed vocabulary only, canary-tested. Screenshots: `docs/screenshots/coach-ux/`. `tests/studio-coach.test.ts`. |
+| Off switch | Done | `BRAND_OS_COACH=off` (also `0`, `false`, `no`) silences the automatic moments for one shell. Silent under `BRAND_OS_AGENT_TOKEN`. |
+| Brand Runtime | Unchanged | The warn-only `coach` layer of the ten-post path stays as it was. |
+| `brand:next` / `brand:status` summary, advice on change proposals, docs `/dashboard` panel | Not started | Deferred in the decision record. |
 
 ## SVG checker, normalizer and asset approval
 

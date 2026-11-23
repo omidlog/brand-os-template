@@ -169,6 +169,14 @@ Throw messy ideas into the brand with `npm run brand:knowledge -- capture` (loca
 
 It is advisory and owner-local: it reads the interview and writes nothing — no answer, fact, approval, strategy, asset or cache file — and `authorizes` is always empty. Nothing calls a model. Restricted questions are refused, and the command is refused under an agent token. Guide: `docs-internal/STRATEGIC_COACH.md`.
 
+**You do not have to remember to run it.** The coach now speaks on its own at three moments you already go through, and stays silent otherwise (decision record: `docs-internal/COACH_UX_DECISION.md`):
+
+- **Right after an important answer** in `brand:interview` (interactive, and `--question … --answer … [--json]`, where the note arrives as a `coach` object): at most one short note — the missing dimension and one clarifying question, or the existing question to answer next. Only on the first answer to that question, so it never repeats.
+- **Before you approve**, in `brand:approve` (and `--dry-run`), before the proof prompt: up to three drafts in the batch that have a gap. Approval is never blocked; the `--json` output is unchanged.
+- **In Studio**, on a brand's Overview: a read-only "Before you approve: coach notes" card for merged drafts, in en/fa/tr. It does not appear when there is nothing to say.
+
+It stays silent on factual or non-strategic questions (names, choices, colours, legal, visual systems…), on `unknown` / `skip` / `not relevant` / `decide later`, on restricted questions, on answers that already meet its criteria, on second and later answers to the same question, and under an agent token. It never scores. `BRAND_OS_COACH=off` turns the automatic moments off for one shell; `npm run brand:coach` keeps working on demand.
+
 ## Studio
 
 One private Studio shows every brand at `/brands/<slug>` and creates new ones. It is a viewer plus a repository provisioner, not an editor:

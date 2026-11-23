@@ -189,14 +189,15 @@ Exit codes: `0` success, `1` a refusal or a bad id (`refused`, `not_found`, `inv
 `invalid_output`; with `--json` the body is `{ ok: false, error: { code, message } }`), `2` a usage error.
 An unexpected error prints its name only — never a message that could carry a path or a value.
 
-### Rollout
+### Rollout and automatic moments
 
-PR 1 needs **no config flag**: the coach is a separate command that nothing calls automatically. There is
-no hook in `brand:interview`, `brand:next`, the MCP server or Studio, so the only way to run it is to run
-it. A flag becomes necessary the first time something *else* invokes the coach — an automatic follow-up
-inside the interview loop, or a Studio projection. **Owner decision for PR 2:** whether that automatic
-follow-up should be on by default (one question per answered question, as the brief allows) or behind
-`capabilities.coach_follow_up`. Until then, adding a flag would be a setting with nothing to switch.
+The coach no longer waits to be called. `docs-internal/COACH_UX_DECISION.md` records the decision:
+`brand:interview` (after a recorded answer), `brand:approve` (before the proof prompt) and the Studio Overview
+call it through `coach/moments.ts`, which filters for important questions (strategic namespaces or evidence
+claims, free text or a measure, never restricted), shows at most one note per answer and only on its first
+revision, never blocks, and stays silent otherwise with a closed-vocabulary reason. It is **on by default**;
+`BRAND_OS_COACH=off` silences the automatic moments for one shell (an environment switch rather than a config
+field, so the brand config holds no tool preferences). The MCP server and `brand:next` still do not call it.
 
 ## Boundaries with the neighbouring systems
 
@@ -208,7 +209,7 @@ follow-up should be on by default (one question per answered question, as the br
 | Strategy Feed (`docs-internal/STRATEGY_FEED.md`) | owner-approved strategy revisions | produce or alter a strategy record; an advisory finding is not a strategy |
 | Knowledge Inbox (`docs-internal/KNOWLEDGE.md`) | the owner's unstructured notes | create a note; coach output is computed, not captured |
 | Creative Learning (`docs-internal/CREATIVE_LEARNING.md`) | design feedback and scoped preferences | record a preference; the coach reads nothing from it yet |
-| Studio (`docs-internal/STUDIO.md`) | the read-only viewer | add a route, a form, a chat or a model call |
+| Studio (`docs-internal/STUDIO.md`) | the read-only viewer | add a route, a form, a chat or a model call (the Overview coach card is a projection field built during sync) |
 
 **Trust v2 (parallel work).** A separate branch is building the global trust / assurance model: a
 framework and claim registry, a typed assessable **control** model, evidence lineage, maturity and an
@@ -270,5 +271,5 @@ real brand, person, client or figure appears in them.
 | --- | --- |
 | **PR 2** | the narrowly scoped rule registry (each rule declaring field ids, exact conditions, severity, en/fa/tr messages and evidence / time / market guards, with negative tests), the `potential_tension` and `needs_verification` emitters, and the five personal facet rubrics |
 | **PR 3** | an optional provider adapter behind the existing bounded `llm/` seam, to phrase a follow-up or suggest a tension only. Advisory, never authoritative; no provider configured falls back to today's behaviour. **Only if PR 2 shows a deterministic gap worth it** |
-| **PR 4** | a read-only, privacy-reviewed projection for a side panel or a report appendix, after the visual foundation and a security gate. No Studio mutation, no chat, no model call in Studio |
+| **PR 4** | a report appendix and richer panels. The narrow first step — the Studio Overview card on merged drafts — shipped with Coach UX (`COACH_UX_DECISION.md`). No Studio mutation, no chat, no model call in Studio |
 | Separately | a pilot measurement plan (relevance, correction rate, missed contradictions, false positives, time overhead, skipped suggestions) that records counts and codes only, never answer text |

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Coach UX: automatic, context-aware guidance
+
+### Added
+
+- `coach/moments.ts`: one policy for when the Strategic Coach speaks on its own (strategic id namespaces or evidence claims, free text or a measure, never restricted) with a closed list of silence reasons. Decision record `docs-internal/COACH_UX_DECISION.md`.
+- `brand:interview` prints at most one coach note after an important first answer (interactive and agent mode); `--json` gains an additive `coach` object.
+- `brand:approve` (and `--dry-run`) prints up to three coach notes on the batch's drafts before the proof prompt. Never blocks; JSON unchanged.
+- Studio Overview: a read-only "Before you approve: coach notes" card (en/fa/tr), hidden when empty. Screenshots in `docs/screenshots/coach-ux/`.
+- `BRAND_OS_COACH=off` silences the automatic moments for one shell.
+- Tests: `coach-moments`, `coach-moments-cli`, `studio-coach`.
+
 ## Unreleased — Assurance registry and assessable controls (Trust v2 PR-A)
 
 ### Added
