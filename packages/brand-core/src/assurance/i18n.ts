@@ -190,9 +190,9 @@ export const CLAIM_CAP_TEXT: Catalog = {
     tr: 'Resmî kaynağı açıp koşullarını doğrulayan olmadı.',
   },
   no_attestation: {
-    en: 'No named third party has reviewed or certified a scope here, so neither may be claimed.',
-    fa: 'هیچ شخص ثالث نام‌برده‌ای دامنه‌ای را بازبینی یا گواهی نکرده؛ پس هیچ‌کدام ادعا نمی‌شود.',
-    tr: 'Adı belirtilmiş hiçbir üçüncü taraf bir kapsamı incelemedi veya belgelendirmedi; ikisi de iddia edilemez.',
+    en: 'No named third party has attested this scope at the declared level (a review is not a certificate), so that level may not be claimed.',
+    fa: 'هیچ شخص ثالث نام‌برده‌ای این دامنه را در سطح اعلام‌شده تأیید نکرده است (بازبینی، گواهینامه نیست)؛ پس آن سطح را نمی‌توان ادعا کرد.',
+    tr: 'Adı belirtilmiş hiçbir üçüncü taraf bu kapsamı beyan edilen düzeyde doğrulamadı (inceleme, belge değildir); bu düzey iddia edilemez.',
   },
 }
 

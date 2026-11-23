@@ -234,8 +234,10 @@ export function registryErrors(registry: MethodEntry[] = METHOD_REGISTRY): strin
     const rulesAssessable = entry.rules_access === 'authored' || entry.rules_access === 'licensed'
     if (rulesAssessable && !entry.evaluation_rule_version) errors.push(`${where}: an assessable method needs an evaluation_rule_version`)
     if (!rulesAssessable && entry.evaluation_rule_version) errors.push(`${where}: a method we cannot assess against must not carry an evaluation_rule_version`)
+    if (entry.attestation !== null && !entry.attestation.issuer.trim()) errors.push(`${where}: an attestation must name its issuer`)
+    if (entry.attestation !== null && !/^\d{4}-\d{2}-\d{2}$/.test(entry.attestation.issued_at)) errors.push(`${where}: attestation issued_at must be a YYYY-MM-DD date`)
     const claim = methodClaim(entry)
-    if (claim.level === 'certified' && entry.attestation === null) errors.push(`${where}: "certified" without an attestation`)
+    if (claim.level === 'certified' && entry.attestation?.kind !== 'certificate') errors.push(`${where}: "certified" without a certificate`)
   }
   return errors
 }

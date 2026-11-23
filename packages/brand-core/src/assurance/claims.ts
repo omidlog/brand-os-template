@@ -59,6 +59,8 @@ export type LicenseStatus = (typeof LICENSE_STATUSES)[number]
  * nothing in the template has been externally reviewed or certified, so nothing may say so.
  */
 export interface Attestation {
+  /** `review`: a named independent reviewer examined a scope. `certificate`: an accredited body certified it. */
+  kind: 'review' | 'certificate'
   /** The reviewing or certifying organisation, named. */
   issuer: string
   /** Exactly what was reviewed or certified. Never "the product". */
@@ -92,41 +94,48 @@ export interface ClaimDecision {
   capped_by: ClaimCapReason[]
 }
 
+/** The highest level an attestation supports. A review is not a certificate. */
+const ATTESTATION_CAP: Record<Attestation['kind'], ClaimLevel> = { review: 'externally_reviewed', certificate: 'certified' }
+
 /**
- * The gate. An unverified edition or an unchecked source drops a method to `reference_only`, whatever
- * it declares, because citing an edition nobody checked is itself an unsupported claim.
+ * The gate. Levels only ever go down, in this order:
+ *
+ * 1. Above `internally_assessed` needs an attestation by someone who is not us, and a review supports
+ *    `externally_reviewed` at most.
+ * 2. Without an attestation, rules access caps the level (we cannot "internally assess" against rules
+ *    we hold no rights to). An attestation is a third party's statement, so it does not need our rules.
+ * 3. An unverified edition or an unchecked source drops the entry to `reference_only`, whatever it
+ *    declares, because citing an edition nobody checked is itself an unsupported claim.
  */
 export function effectiveClaim(subject: ClaimSubject): ClaimDecision {
   const capped: ClaimCapReason[] = []
   let level = subject.declared_claim_level
+  const lower = (cap: ClaimLevel, reason: ClaimCapReason) => {
+    if (RANK[level] > RANK[cap]) {
+      level = cap
+      capped.push(reason)
+    }
+  }
 
-  const accessCap = RULES_ACCESS_CAP[subject.rules_access]
-  if (RANK[accessCap] < RANK[level]) {
-    level = accessCap
-    capped.push('rules_access')
-  }
-  if (subject.edition === null && RANK[level] > RANK.reference_only) {
-    level = 'reference_only'
-    capped.push('edition_unverified')
-  }
-  if (subject.checked_at === null && RANK[level] > RANK.reference_only) {
-    level = 'reference_only'
-    capped.push('source_unverified')
-  }
-  if (subject.attestation === null && RANK[level] > RANK.internally_assessed) {
-    level = 'internally_assessed'
-    capped.push('no_attestation')
-  }
+  if (subject.attestation === null) lower('internally_assessed', 'no_attestation')
+  else lower(ATTESTATION_CAP[subject.attestation.kind], 'no_attestation')
+
+  // An attested level stands on the attestation; anything at or below our own assessment stands on our rules.
+  if (RANK[level] <= RANK.internally_assessed) lower(RULES_ACCESS_CAP[subject.rules_access], 'rules_access')
+
+  if (subject.edition === null) lower('reference_only', 'edition_unverified')
+  if (subject.checked_at === null) lower('reference_only', 'source_unverified')
   return { level, capped_by: capped }
 }
 
 /**
- * Whether a method may be assessed against at all. `reference_only` and `informed_by` methods have no
- * usable requirement set here, so their controls are reported `blocked_by_license` rather than passed
- * or failed. Not knowing a rule is not the same as failing it.
+ * Whether a method may be assessed against at all: we must hold its rules (authored or licensed), and a
+ * person must have checked the entry. Anything else has no usable requirement set here, so its controls
+ * are reported `blocked_by_license` rather than passed or failed. Not knowing a rule is not failing it.
+ * A certificate someone else holds does not make a method assessable by us.
  */
-export function assessable(decision: ClaimDecision): boolean {
-  return RANK[decision.level] >= RANK.internally_assessed
+export function assessable(subject: Pick<ClaimSubject, 'rules_access' | 'checked_at' | 'edition'>): boolean {
+  return (subject.rules_access === 'authored' || subject.rules_access === 'licensed') && subject.checked_at !== null && subject.edition !== null
 }
 
 export function isClaimLevel(value: unknown): value is ClaimLevel {

@@ -210,12 +210,22 @@ export interface AuditAssessment {
 
 const AUDIENCE_RANK: Record<Audience, number> = { public: 0, internal: 1, restricted: 2 }
 
+function byKey<T>(key: (value: T) => string): (a: T, b: T) => number {
+  return (a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0)
+}
+
 function refsOf(input: ControlInput | null): ControlResult['source_refs'] {
   if (!input) return []
+  // Sorted, so the order a resolver happened to list sources in never changes the output.
   return [
     ...input.facts.map((fact) => ({ kind: 'fact' as const, id: fact.ref.id, revision: fact.ref.revision, state: fact.state })),
     ...input.evidence.map((item) => ({ kind: 'research_note' as const, id: item.ref.note_id, revision: item.ref.revision, state: item.state })),
-  ]
+  ].sort(byKey((ref) => `${ref.kind}\u0000${ref.id}\u0000${ref.revision}`))
+}
+
+/** Exactly the four subject fields, so nothing else a caller attached can ride along into the output. */
+function subjectOf(subject: AssessmentSubject): AssessmentSubject {
+  return { entity_kind: subject.entity_kind, sells: subject.sells, stage: subject.stage, runs_paid_media: subject.runs_paid_media }
 }
 
 function unmet(control: AssessableControl, input: ControlInput): string[] {
@@ -377,15 +387,19 @@ export function sourceSnapshotDigest(input: AssessmentInput): string {
     canonicalJson({
       brand_id: input.brand_id,
       method_id: input.method_id,
-      subject: input.subject,
+      subject: subjectOf(input.subject),
       audience: input.audience,
       as_of: input.as_of.toISOString(),
       controls: [...input.controls]
         .sort((a, b) => (a.control_id < b.control_id ? -1 : 1))
         .map((control) => ({
           control_id: control.control_id,
-          facts: control.facts.map((fact) => ({ id: fact.ref.id, revision: fact.ref.revision, state: fact.state, presence: fact.presence, classification: fact.classification })),
-          evidence: control.evidence.map((item) => ({ note_id: item.ref.note_id, revision: item.ref.revision, state: item.state, independence: item.independence })),
+          facts: control.facts
+            .map((fact) => ({ id: fact.ref.id, revision: fact.ref.revision, state: fact.state, presence: fact.presence, classification: fact.classification }))
+            .sort(byKey((fact) => `${fact.id}\u0000${fact.revision}`)),
+          evidence: control.evidence
+            .map((item) => ({ note_id: item.ref.note_id, revision: item.ref.revision, state: item.state, independence: item.independence }))
+            .sort(byKey((item) => `${item.note_id}\u0000${item.revision}`)),
           conflicts: [...control.conflicts].sort(),
           review: control.review ? { reviewer_id: control.review.reviewer_id, status: control.review.status, reviewed_at: control.review.reviewed_at } : null,
           maturity: control.maturity,
@@ -421,7 +435,7 @@ export function assess(input: AssessmentInput, catalog: MethodCatalog = DEFAULT_
   if (controls.length === 0) throw new AssuranceError('no_controls', `Method ${method.method_id} has no controls, so there is nothing to assess.`)
 
   const claim = methodClaim(method)
-  const methodAssessable = assessable(claim)
+  const methodAssessable = assessable(method)
   const byId = new Map(input.controls.map((control) => [control.control_id, control]))
 
   const results = [...controls]
@@ -453,7 +467,7 @@ export function assess(input: AssessmentInput, catalog: MethodCatalog = DEFAULT_
     claim_capped_by: claim.capped_by,
     as_of: asOf,
     audience: input.audience,
-    subject: input.subject,
+    subject: subjectOf(input.subject),
     source_snapshot_digest: snapshot,
     control_results: results,
     completeness,
