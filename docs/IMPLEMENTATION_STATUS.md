@@ -278,6 +278,17 @@ Branch `feat/content-bridge-slice-c`. Guide: `docs-internal/CONTENT_BRIDGE.md`.
 | Access log | Done | One line per call, ids only (never URLs or text). |
 | Result metrics, Studio view of reports | Not started | Out of scope for Slice C. |
 
+## Content planner skill and agent integration guide (Content Bridge Slice D)
+
+Branch `feat/content-bridge-slice-d`. Guides: `docs-internal/CONTENT_BRIDGE.md`, `docs-internal/CONTENT_AGENT_INTEGRATION.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| `agent-skills/content-planner/SKILL.md` | Done | Owner flow (propose / review; the owner approves with proof) and the content agent loop with pins; stop on `stale_pin` / `not_found`. |
+| Integration guide for an external content bot | Done | stdio MCP (`mcp:serve` + `BRAND_OS_AGENT_TOKEN`) or `brand:query`; token issue and revocation (effective on server restart); `content-feed/v1`, `content-brief/v1`, `content-report/v1`; digest verification; permission flags; en/fa/tr notes. |
+| CLI journey demo (real output) | Done | Owner journey, mock agent via `brand:query`, report over MCP, `reports`, revoke. `tests/content-journey.test.ts` runs it and checks the documents name only real commands, tools and schemas. |
+| Hosted API, per-channel tokens, Studio view of reports | Not started | Not in the brief. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.

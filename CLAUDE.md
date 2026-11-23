@@ -24,6 +24,7 @@ Skills for specific work:
 - `agent-skills/seo-strategist/SKILL.md` (draft SEO/GEO strategy with cited, dated sources; `docs-internal/SEO_STRATEGIST.md`)
 - `docs-internal/STRATEGY_FEED.md` before touching `brand:strategy` or the `strategy_*` agent tools (owner-approved revisions; approval authorizes no execution)
 - `docs-internal/COMPETITIVE.md` before touching `brand:competitive` (owner-only competitor index and its purpose drafts; quotes stay in Knowledge research notes; drafts never set prices or facts)
+- `agent-skills/content-planner/SKILL.md` (owner plans and approves content weeks; content agents read briefs with a pin and report; `docs-internal/CONTENT_AGENT_INTEGRATION.md` connects an external bot read-only)
 - `docs-internal/CONTENT_BRIDGE.md` before touching `brand:content` or the `content` strategy type (content strategy cites approved facts, never restates voice; approval is `brand:strategy`)
 - `docs-internal/IDENTITY_BRIEF.md` before touching `brand:identity` (owner-only identity audit and logo brief; a brief or concept selection never approves a logo; skill `agent-skills/logo-identity-strategist/SKILL.md`)
 

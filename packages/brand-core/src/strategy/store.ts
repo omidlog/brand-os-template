@@ -505,7 +505,7 @@ export function reviewRevision(ws: KnowledgeWorkspace, input: { strategy_id: str
     approve_with: `npm run brand:strategy -- approve --id ${record.strategy_id} --revision ${entry.revision} --expect-sha ${entry.content_sha256}`,
     notice: [
       record.type === 'content'
-        ? 'Approving makes this the content strategy the owner projection (brand:content show) serves. No agent profile reads content strategies yet. It authorizes no post, publication, schedule, ad or spend.'
+        ? 'Approving makes this the content strategy the owner projection (brand:content show) serves; the calendar planner plans from it, and content-read agents read it through strategy_list / strategy_get. It authorizes no post, publication, schedule, ad or spend.'
         : 'Approving makes this revision the one agents with a matching strategy profile can read. It authorizes no ad, spend, publication or website change.',
       base ? `On approval, revision ${base.revision} becomes superseded. It stays on disk for audit.` : 'This is the first revision of this strategy.',
       'Restricted fields are never sent to an agent.',
