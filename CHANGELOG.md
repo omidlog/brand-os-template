@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Visual V1.2: print engine (book_a4_portrait)
+
+### Added
+
+- Typed print profiles (`@brand-os/brand-core/visual` `PRINT_PROFILE_SPECS`): `book_a4_portrait`, `canvas_a3_landscape` (unchanged), `deck_16_9` (planned stub). en/fa/tr book text (`BOOK_TEXT`).
+- The Brand Book "Visual identity" print view is now an A4 portrait book: cover, imprint, contents with the printed page numbers and dotted leaders, running heads (book title verso, chapter recto), outer-edge folios (mirrored, with Persian digits, in fa), numbered notes on the page of their reference, tables continued with a repeated header, headings kept with what follows, no orphan page. New stylesheet `visual-book.css`; the canvas print output is unchanged byte for byte.
+- `npm run brand:export-visual`: owner-machine export of the identity book or the canvas to self-contained HTML and, with a local Chrome, PDF from a measured two-pass layout with an overflow check. Never inside `brand/` or `.private`, refused under an agent token. Studio stays GET-only.
+- Tests: `studio-visual-print-book`; book checks added to `studio-visual-browser` and `studio-visual-identity`.
+
 ## Unreleased — Assurance registry and assessable controls (Trust v2 PR-A)
 
 ### Added
