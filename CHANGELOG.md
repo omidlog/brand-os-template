@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Coach contradiction and facet rubrics (fixes pack GAP-08)
+
+### Added
+
+- `coach/rules.ts`: a narrow rule registry for `consistency_review`. `potential_tension` from `premium-vs-lowest-price` (guards: entry tier, plan, trial, launch offer, student/nonprofit price) and `availability-held-back`, each with one explanatory question in en/fa/tr; `needs_verification` from `evidence-claim-unverified` and `sensitive-claim-wording` (guarantees, certifications, rankings, awards; negated mentions and banned-claim lists excluded). `confirmed_conflict` still comes only from `findContradictions`.
+- `rule_checks` on `consistency_review` results (additive, optional in the schema): every rule's outcome, including `not_tested` when an input is open. Printed as "Rules checked".
+- `coach/facet-rubrics.ts`: six personal facet rubrics in `quality_review` — founder role vs ownership, consultant client confidentiality, creator dated audience numbers and sponsorship disclosure, artist usage rights, speaker dated talks and publications. They link existing canonical questions and add no field.
+- Finding codes `consistency_tension`, `consistency_verification`, `facet_ownership_separate`, `facet_companion_open`, `facet_claim_undated` with en/fa/tr text.
+- Tests: `coach-rules` (synthetic brands only), including the no-false-conflict pricing and market cases.
+
+### Changed
+
+- `COACH_RULE_VERSION` is `coach-rules/2`. `follow_up` and the automatic Coach moments are unchanged.
+
 ## Unreleased — Visual V3.5: finance security design (proposal, docs only)
 
 ### Added
