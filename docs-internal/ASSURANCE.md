@@ -141,9 +141,9 @@ Evidence lineage over a real workspace (PR-B), any Studio view (PR-D), decision 
 `packages/brand-core/src/assurance/workspace.ts` (+ `workspace-text.ts`, exported from `assurance/local.ts` as `@brand-os/brand-core/assurance/workspace`) and the command `npm run brand:assurance`. It builds the frozen input `assess()` needs from what the brand has **already approved**, and hands it to the existing evaluator unchanged. Nothing about the evaluation is redone.
 
 ```
-npm run brand:assurance -- snapshot --as-of 2026-11-23 --paid-media no [--audience internal] [--lang fa] [--json]
-npm run brand:assurance -- assess   --as-of 2026-11-23 --paid-media no [--lang tr]
-npm run brand:assurance -- snapshot --as-of 2026-11-23 --paid-media no --json > ~/kept/snapshot.json
+npm run brand:assurance -- snapshot --as-of 2026-11-23 [--audience internal] [--lang fa] [--json]
+npm run brand:assurance -- assess   --as-of 2026-11-23 [--lang tr]
+npm run brand:assurance -- snapshot --as-of 2026-11-23 --json > ~/kept/snapshot.json
 npm run brand:assurance -- verify   --snapshot ~/kept/snapshot.json      # exit 0 same digest, 3 changed
 ```
 
@@ -155,10 +155,14 @@ npm run brand:assurance -- verify   --snapshot ~/kept/snapshot.json      # exit 
 | `ResolvedEvidence` | Knowledge Inbox `scanAll(['local','shared'])` | Research notes only (`kind: research`, `internal`, not archived, this brand) whose `question_ids` touch the control. Restricted notes are never decrypted. Every note is `owner_stated`: notes carry no independent verification. |
 | `conflicts` | `contradictions.ts` `findContradictions` (pure) | Open contradictions whose fields touch the control, by id only. |
 | `review` | — | Always `null`: there is no reviewer store yet, so PRR-08 is `needs_review`. |
-| `subject.entity_kind` | `modules.personal.enabled` | `person` when on, else `company`. |
+| `subject.entity_kind` | `brand.profile` | `person` only for the `personal-brand` profile, else `company`. The personal module never changes it (see below). |
 | `subject.sells` | approved `business.sales.motion` | `not-applicable` → `no`; `undecided` or unapproved → `unknown`; any other option → `yes`. |
 | `subject.stage` | approved `business.stage.current`, else `business.identity.new_or_existing` | Otherwise `unknown`. |
-| `subject.runs_paid_media` | `--paid-media yes\|no` (owner statement) | No canonical question exists and none is invented, so it is `unknown` unless the owner states it. The statement is recorded (`owner_flag`) and is part of the digest. |
+| `subject.runs_paid_media` | approved `business.marketing.paid_media` | The interview question (`undecided` / `yes` / `no`, internal). `yes` / `no` approved → that value (`approved_fact`); `undecided`, a draft or no answer → `unknown`, and the blocking item points at the question. Deprecated: `--paid-media yes\|no` still works, but only while the question has no approved answer (`owner_flag`, a notice on stderr); an approved answer always wins. |
+
+### Company or person (owner decision, 2026-11-23)
+
+A company brand stays a company. `modules.personal.enabled: true` on a `universal` (or any non-`personal-brand`) profile means the founder's own personal brand is tracked in the same repository. The snapshot records it separately as `personal_brand: { enabled, facets, brand_entity_kind, changes_subject: false }`. It is not part of `subject` and not part of the digest, so turning the module on or off never changes a company brand's assessment, and the person-only control (PRR-15) stays not applicable. Only `brand.profile: personal-brand`, where the brand itself is the person, gives `entity_kind: person`. The bridge version is `brand-os.assurance-bridge/2` for this mapping.
 
 ### Guarantees
 
@@ -177,6 +181,7 @@ Fixed with it: `completenessOf` reported every `needs_review` blocker as `source
 | Test | Covers |
 | --- | --- |
 | `tests/assurance-workspace.test.ts` | pinning approved facts, drafts and `unknown` never approved, subject derivation, reproducibility, value canaries in JSON and en/fa/tr text, restricted withholding, research-note selection, changed and vanished pins, conflict before judgment, no certification, agent refusal, no agent surface, read-only, hostile snapshot files, en/fa/tr text |
-| `tests/assurance-cli.test.ts` | the real command: usage errors, three languages, byte-identical runs, verify exit codes, agent refusal, symlinked or malformed files, outside a brand, not reachable through `brand:query` |
+| `tests/assurance-cli.test.ts` | the real command: usage errors, three languages, byte-identical runs, verify exit codes, agent refusal, symlinked or malformed files, outside a brand, not reachable through `brand:query`, the deprecated `--paid-media` notice on stderr |
+| `tests/assurance-followups.test.ts` | the paid-media question in en/fa/tr and in the committed bank, approved answer as the source, draft or `undecided` stays `unknown`, the deprecated flag never overrides an answer, old snapshots still verify, a company with the personal module stays a company (same digest on or off, PRR-15 not applicable), only `personal-brand` is a person, new en/fa/tr text |
 
 All fixtures are synthetic temp brands.

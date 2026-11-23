@@ -171,7 +171,7 @@ It is advisory and owner-local: it reads the interview and writes nothing — no
 
 ## Assurance on a real brand
 
-`npm run brand:assurance -- assess --as-of <YYYY-MM-DD> --paid-media yes|no [--lang fa]` checks your approved facts against Brand OS's own Positioning Readiness method and lists what is missing. It is owner-local and read-only, prints a reproducible snapshot digest (`verify --snapshot <file>` checks a kept one), gives no score while anything blocking is missing, and is an internal assessment — never a certification or a compliance statement. Guide: `docs-internal/ASSURANCE.md`.
+`npm run brand:assurance -- assess --as-of <YYYY-MM-DD> [--lang fa]` checks your approved facts against Brand OS's own Positioning Readiness method and lists what is missing. Whether you run paid media comes from the interview question `business.marketing.paid_media` (`--paid-media` is deprecated). The personal module never turns a company brand into a person. It is owner-local and read-only, prints a reproducible snapshot digest (`verify --snapshot <file>` checks a kept one), gives no score while anything blocking is missing, and is an internal assessment — never a certification or a compliance statement. Guide: `docs-internal/ASSURANCE.md`.
 
 ## Studio
 
