@@ -38,9 +38,9 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     const sha = await brandWithFacts(s, owner)
 
     const overview = await owner.page(`/brands/${SLUG}`)
-    assert.match(overview.text, new RegExp(`href="/brands/${SLUG}/visual"`), 'nav entry for a business brand')
+    assert.match(overview.text, new RegExp(`href="/brands/${SLUG}/strategy/business-model"`), 'nav entry for a business brand')
 
-    const page = await owner.page(`/brands/${SLUG}/visual`)
+    const page = await owner.page(`/brands/${SLUG}/strategy/business-model`)
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Business Model Canvas/)
     assert.match(page.text, /Internal edition/)
@@ -63,7 +63,7 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     assert.equal(/\son[a-z]+="/.test(page.text), false, 'no inline handler')
     assert.equal(/<form[^>]*method="post"/i.test(page.text.split('<main')[1] ?? ''), false, 'no write form in the page body')
 
-    const print = await owner.page(`/brands/${SLUG}/visual/print`)
+    const print = await owner.page(`/brands/${SLUG}/strategy/business-model/print`)
     assert.equal(print.res.status, 200)
     assert.match(print.text, /class="vz-print-body/)
     assert.match(print.text, /vz-page--canvas/)
@@ -73,7 +73,7 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     assert.equal(/<script(?![^>]*src="\/static\/visual\.js\?v=[A-Za-z0-9_-]+")/.test(print.text), false, 'only the static helper script')
     assert.equal(/\sstyle="/.test(print.text), false)
 
-    const pub = await owner.page(`/brands/${SLUG}/visual/print?edition=public`)
+    const pub = await owner.page(`/brands/${SLUG}/strategy/business-model/print?edition=public`)
     assert.equal(pub.res.status, 200)
     assert.match(pub.text, /Public edition/)
     assert.equal(pub.text.includes('DRAFT-PRICING'), false, 'the public edition leaves drafts out')
@@ -87,31 +87,31 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     }
 
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      for (const pathname of [`/brands/${SLUG}/visual`, `/brands/${SLUG}/visual/print`]) {
+      for (const pathname of [`/brands/${SLUG}/strategy/business-model`, `/brands/${SLUG}/strategy/business-model/print`]) {
         const res = await owner.request(method, pathname, { form: { _csrf: 'x' } })
         assert.ok([404, 405].includes(res.status), `${method} ${pathname} ${res.status}`)
       }
     }
     assert.equal((await owner.get(`/brands/${SLUG}/visual/edit`)).status, 404)
-    assert.equal((await owner.get('/brands/no-such-brand/visual')).status, 404)
+    assert.equal((await owner.get('/brands/no-such-brand/strategy/business-model')).status, 404)
 
     const guest = new Client(s.url)
-    for (const pathname of [`/brands/${SLUG}/visual`, `/brands/${SLUG}/visual/print`]) {
+    for (const pathname of [`/brands/${SLUG}/strategy/business-model`, `/brands/${SLUG}/strategy/business-model/print`]) {
       const res = await guest.get(pathname)
       assert.equal(res.status, 302)
       assert.equal((await res.text()).includes('Fluent'), false)
     }
 
-    await owner.get(`/brands/${SLUG}/visual?lang=fa`)
-    const fa = await owner.page(`/brands/${SLUG}/visual`)
+    await owner.get(`/brands/${SLUG}/strategy/business-model?lang=fa`)
+    const fa = await owner.page(`/brands/${SLUG}/strategy/business-model`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /بوم مدل کسب‌وکار/)
     assert.match(fa.text, /class="vz-bmc" dir="ltr"/, 'the canvas keeps its canonical topology in Persian')
     assert.match(fa.text, /class="vz-cell vz-cell--key_partners" dir="rtl"/, 'text inside the zones is right-to-left')
-    const faPrint = await owner.page(`/brands/${SLUG}/visual/print`)
+    const faPrint = await owner.page(`/brands/${SLUG}/strategy/business-model/print`)
     assert.match(faPrint.text, /<html lang="fa" dir="rtl">/)
-    await owner.get(`/brands/${SLUG}/visual?lang=tr`)
-    assert.match((await owner.page(`/brands/${SLUG}/visual`)).text, /İş Modeli Kanvası/)
+    await owner.get(`/brands/${SLUG}/strategy/business-model?lang=tr`)
+    assert.match((await owner.page(`/brands/${SLUG}/strategy/business-model`)).text, /İş Modeli Kanvası/)
   } finally {
     await s.close()
   }
@@ -128,11 +128,11 @@ test('Studio: a personal brand without a business facet has no canvas entry and 
     await s.studio.sync.settled()
     const overview = await owner.page('/brands/alex-example')
     assert.equal(overview.res.status, 200)
-    assert.equal(overview.text.includes('href="/brands/alex-example/visual"'), false)
-    const page = await owner.page('/brands/alex-example/visual')
+    assert.equal(overview.text.includes('href="/brands/alex-example/strategy/business-model"'), false)
+    const page = await owner.page('/brands/alex-example/strategy/business-model')
     assert.equal(page.res.status, 200)
     assert.match(page.text, /Not used for this profile/)
-    assert.equal((await owner.get('/brands/alex-example/visual/print')).status, 404)
+    assert.equal((await owner.get('/brands/alex-example/strategy/business-model/print')).status, 404)
   } finally {
     await s.close()
   }

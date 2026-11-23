@@ -1,7 +1,7 @@
 import { normalizeCommand, SVG_ISSUE_CODES } from '@brand-os/asset-catalog'
 import { CHANGE_DEPTHS, IDENTITY_INTENTS, LOGO_PRESENCE } from '@brand-os/brand-core'
 import type { DocumentKind, IdentityField } from '@brand-os/brand-core'
-import { isVisualLang, visualCatalog } from '@brand-os/brand-core/visual'
+import { isVisualLang } from '@brand-os/brand-core/visual'
 import type { MessageKey } from '../i18n/index.js'
 import type { ProjectionAsset, ProjectionToken, StudioProjection } from '../projection.js'
 import type { BrandRecord, ProvisionRequest } from '../registry.js'
@@ -26,7 +26,7 @@ import {
 } from './components.js'
 import { html, join, safeGitHubUrl, safeHex, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
-import { brandAvatar, plainShell, refreshButton, shell, type BrandSection, type BrandView, type ViewContext } from './layout.js'
+import { brandAvatar, brandPath, plainShell, refreshButton, shell, type BrandSection, type BrandView, type ViewContext } from './layout.js'
 import { mascotLink } from './visual-mascot.js'
 
 /* ---------------------------------------------------------------- sign in */
@@ -537,9 +537,9 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
         <h1 class="page-title" dir="auto">${p.brand.name}</h1>
         <div class="page-meta">${profileBadge(ctx, p.brand.kind)}${view.cached.status.repo_private ? badge(i.t('sync.private'), 'neutral', 'lock') : ''}${code(`${view.record.repo.owner}/${view.record.repo.name}`)}</div>
       </div></div>
-      <a class="btn btn-secondary" href="/brands/${view.record.slug}/handoff">${icon('handoff')}<span>${i.t('nav.handoff')}</span></a>
+      <a class="btn btn-secondary" href="${brandPath(view.record.slug, 'handoff')}">${icon('handoff')}<span>${i.t('nav.handoff')}</span></a>
     </header>
-    ${banner({ tone: 'info', body: html`${i.t('app.readOnlyNote')} <a href="/brands/${view.record.slug}/handoff">${i.t('nav.handoff')}</a>` })}
+    ${banner({ tone: 'info', body: html`${i.t('app.readOnlyNote')} <a href="${brandPath(view.record.slug, 'handoff')}">${i.t('nav.handoff')}</a>` })}
     ${!p.brand.initialized ? banner({ tone: 'warning', body: i.t('overview.notInitialized') }) : ''}
     ${update ? updatePanel(ctx, view, update) : ''}
     <section class="stat-grid" aria-label="${i.t('overview.title')}">
@@ -551,7 +551,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
     <div class="facts-strip">
       ${badge(i.t('overview.approvedFacts', { count: i.number(o.approved_facts) }), 'success', 'checkCircle')}
       ${o.restricted_withheld ? badge(i.t('overview.withheld', { count: i.number(o.restricted_withheld) }), 'neutral', 'lock') : ''}
-      ${o.contradictions ? html`<a href="/brands/${view.record.slug}/history#contradictions">${badge(i.t('overview.contradictions', { count: i.number(o.contradictions) }), 'warning', 'alert')}</a>` : ''}
+      ${o.contradictions ? html`<a href="${brandPath(view.record.slug, 'history', '#contradictions')}">${badge(i.t('overview.contradictions', { count: i.number(o.contradictions) }), 'warning', 'alert')}</a>` : ''}
     </div>
     ${coachCard(ctx, p)}
     <div class="two-col">
@@ -578,7 +578,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
       </section>
     </div>
     <section class="card" aria-labelledby="recent-title">
-      <div class="card-head"><h2 class="card-title" id="recent-title">${i.t('overview.recent')}</h2><a href="/brands/${view.record.slug}/history" class="link-sm">${i.t('nav.history')}</a></div>
+      <div class="card-head"><h2 class="card-title" id="recent-title">${i.t('overview.recent')}</h2><a href="${brandPath(view.record.slug, 'history')}" class="link-sm">${i.t('nav.history')}</a></div>
       ${commits.length ? commitList(ctx, commits) : html`<p class="muted">${i.t('overview.recentEmpty')}</p>`}
       <p class="muted small">${icon('info')} ${i.t('sync.canonical')}</p>
     </section>
@@ -629,19 +629,6 @@ function commitList(ctx: ViewContext, commits: NonNullable<BrandView['cached']['
       ${url ? html`<a class="commit-sha mono" dir="ltr" href="${url}" target="_blank" rel="noopener noreferrer">${shortSha(commit.sha)}<span class="visually-hidden"> ${i.t('common.opensNewTab')}</span></a>` : code(shortSha(commit.sha))}
     </li>`
   })}</ol>`
-}
-
-export function brandBookPage(ctx: ViewContext, view: BrandView, flash: string | null): SafeHtml {
-  const { i } = ctx
-  const p = view.cached.projection
-  const doc = p?.documents['brand-book']
-  return brandShell(ctx, view, 'brand-book', i.t('book.title'), p ? html`${brandHeader(ctx, view, i.t('book.title'), i.t('book.subtitle'))}${p.visual?.identity ? identityChapterLink(ctx, view.record.slug) : ''}${doc ? documentView(i, doc, 'book') : ''}` : html``, flash)
-}
-
-/** A link from the Brand Book page to its Visual identity chapter (V2.1). Additive: the page is not restructured. */
-function identityChapterLink(ctx: ViewContext, slug: string): SafeHtml {
-  const t = visualCatalog(isVisualLang(ctx.i.locale) ? ctx.i.locale : 'en').identity
-  return banner({ tone: 'info', title: t.openChapter, body: t.openChapterHint, actions: html`<a class="btn btn-secondary btn-sm" href="/brands/${slug}/visual/identity">${icon('layers')}<span>${t.openChapter}</span></a>` })
 }
 
 function tokenState(ctx: ViewContext, token: ProjectionToken): SafeHtml {
@@ -778,18 +765,21 @@ export function assetsPage(ctx: ViewContext, view: BrandView, flash: string | nu
   return brandShell(ctx, view, 'assets', i.t('assets.title'), body, flash)
 }
 
-function docPicker(ctx: ViewContext, base: string, kinds: DocumentKind[], current: DocumentKind, titles: Partial<Record<DocumentKind, string>>): SafeHtml {
+function docPicker(ctx: ViewContext, base: string | ((kind: DocumentKind) => string), kinds: DocumentKind[], current: DocumentKind, titles: Partial<Record<DocumentKind, string>>): SafeHtml {
+  const href = typeof base === 'string' ? (kind: DocumentKind) => `${base}?doc=${kind}` : base
   return html`<nav class="tabs" aria-label="${ctx.i.t('doc.pick')}"><ul>${kinds.map(
-    (kind) => html`<li><a class="tab ${kind === current ? 'is-active' : ''}" href="${base}?doc=${kind}" ${kind === current ? html`aria-current="page"` : ''} dir="auto">${titles[kind] ?? kind}</a></li>`,
+    (kind) => html`<li><a class="tab ${kind === current ? 'is-active' : ''}" href="${href(kind)}" ${kind === current ? html`aria-current="page"` : ''} dir="auto">${titles[kind] ?? kind}</a></li>`,
   )}</ul></nav>`
 }
 
-export function businessPage(ctx: ViewContext, view: BrandView, doc: string | null, flash: string | null): SafeHtml {
+/** Business plan (Strategy Lab) and Marketing plan (Market & Content): one page each since V2.4, same prose reader. */
+export function businessPage(ctx: ViewContext, view: BrandView, doc: 'business-plan' | 'marketing-plan', flash: string | null): SafeHtml {
   const { i } = ctx
   const p = view.cached.projection
-  if (!p) return brandShell(ctx, view, 'business', i.t('business.title'), html``, flash)
+  const section: BrandSection = doc === 'marketing-plan' ? 'marketing' : 'business'
+  if (!p) return brandShell(ctx, view, section, i.t('business.title'), html``, flash)
   const kinds: DocumentKind[] = ['business-plan', 'marketing-plan']
-  const current = kinds.includes(doc as DocumentKind) ? (doc as DocumentKind) : 'business-plan'
+  const current: DocumentKind = doc
   const titles = Object.fromEntries(kinds.map((kind) => [kind, p.documents[kind]?.title ?? kind])) as Partial<Record<DocumentKind, string>>
   const modules = p.modules.filter((module) => module.group === 'business')
   const body = html`${brandHeader(ctx, view, i.t('business.title'), i.t('business.subtitle'))}
@@ -802,9 +792,9 @@ export function businessPage(ctx: ViewContext, view: BrandView, doc: string | nu
           </table></div>`
         : html`<p class="muted">${i.t('business.empty')}</p>`}
     </section>
-    ${docPicker(ctx, `/brands/${view.record.slug}/business`, kinds, current, titles)}
+    ${docPicker(ctx, (kind) => brandPath(view.record.slug, kind === 'marketing-plan' ? 'marketing' : 'business'), kinds, current, titles)}
     ${p.documents[current] ? documentView(i, p.documents[current]!, current) : ''}`
-  return brandShell(ctx, view, 'business', i.t('business.title'), body, flash)
+  return brandShell(ctx, view, section, i.t('business.title'), body, flash)
 }
 
 export function personalPage(ctx: ViewContext, view: BrandView, doc: string | null, flash: string | null): SafeHtml {
@@ -816,7 +806,7 @@ export function personalPage(ctx: ViewContext, view: BrandView, doc: string | nu
   const titles = Object.fromEntries(kinds.map((kind) => [kind, p.documents[kind]?.title ?? kind])) as Partial<Record<DocumentKind, string>>
   const body = html`${brandHeader(ctx, view, i.t('personal.title'), i.t('personal.subtitle'))}
     <div class="facts-strip"><span class="muted">${i.t('personal.facets')}:</span> ${personal.facets.length ? join(personal.facets.map((facet) => badge(i.t(`wizard.facet.${facet}` as MessageKey), 'accent', 'user'))) : html`<span class="muted">${i.t('personal.noFacets')}</span>`}</div>
-    ${kinds.length ? html`${docPicker(ctx, `/brands/${view.record.slug}/personal`, kinds, current, titles)}${p.documents[current] ? documentView(i, p.documents[current]!, current) : ''}` : emptyState({ icon: 'user', title: i.t('personal.title'), body: i.t('doc.empty') })}`
+    ${kinds.length ? html`${docPicker(ctx, brandPath(view.record.slug, 'personal'), kinds, current, titles)}${p.documents[current] ? documentView(i, p.documents[current]!, current) : ''}` : emptyState({ icon: 'user', title: i.t('personal.title'), body: i.t('doc.empty') })}`
   return brandShell(ctx, view, 'personal', i.t('personal.title'), body, flash)
 }
 

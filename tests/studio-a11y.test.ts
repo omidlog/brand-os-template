@@ -103,7 +103,7 @@ test('every page in every locale: one skip link to a focusable main, one h1, lab
     })
     await s.studio.provisioning.settled()
     await s.studio.sync.settled()
-    const pages = ['/brands', '/brands/new', '/account', '/brands/acme-learning', '/brands/acme-learning/brand-book', '/brands/acme-learning/design', '/brands/acme-learning/assets', '/brands/acme-learning/business', '/brands/acme-learning/history', '/brands/acme-learning/handoff', '/brands/acme-learning/provisioning']
+    const pages = ['/brands', '/brands/new', '/account', '/brands/acme-learning', '/brands/acme-learning/brand/book', '/brands/acme-learning/brand/design-system', '/brands/acme-learning/brand/assets', '/brands/acme-learning/strategy/business-plan', '/brands/acme-learning/governance/history', '/brands/acme-learning/governance/github', '/brands/acme-learning/provisioning']
     for (const locale of LOCALES) {
       const dir = locale === 'fa' ? 'rtl' : 'ltr'
       await guest.get(`/login?lang=${locale}`)

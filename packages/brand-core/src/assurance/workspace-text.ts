@@ -8,8 +8,9 @@
  */
 
 import { CONTROL_TEXT, fill, type AssuranceLang } from './i18n.js'
-import type { AssuranceSnapshot, JudgmentState, MissingItem, MissingKind, ReviewItem, SubjectSource, VerifyResult } from './workspace.js'
+import type { AssuranceSnapshot, JudgmentState, LinkItem, MissingItem, MissingKind, ReviewItem, SubjectSource, VerifyResult } from './workspace.js'
 import type { Judgment, ReviewRevision } from './reviews.js'
+import type { LinkRevision, LinkState } from './links.js'
 import type { FactPresence } from './assess.js'
 import type { SubjectField } from './controls.js'
 
@@ -94,6 +95,12 @@ export const BRIDGE_TEXT: Catalog = {
     fa: 'فایل تصویر لحظه‌ای قابل استفاده نبود: {reason}',
     tr: 'Anlık görüntü dosyası kullanılamadı: {reason}',
   },
+  evidence_links: { en: 'Research notes linked to the evidence register:', fa: 'یادداشت‌های پژوهشیِ پیوندخورده به دفتر شواهد:', tr: 'Kanıt kaydına bağlı araştırma notları:' },
+  invalid_link: {
+    en: 'A stored evidence link or the evidence register could not be used, so nothing was built: {reason}',
+    fa: 'یک پیوند شواهدِ ذخیره‌شده یا دفتر شواهد قابل استفاده نبود، پس چیزی ساخته نشد: {reason}',
+    tr: 'Kayıtlı bir kanıt bağlantısı veya kanıt kaydı kullanılamadı, bu yüzden hiçbir şey oluşturulmadı: {reason}',
+  },
   invalid_review: {
     en: 'A stored review judgment could not be used, so no snapshot was built: {reason}',
     fa: 'یک داوری بازبینیِ ذخیره‌شده قابل استفاده نبود، پس تصویر لحظه‌ای ساخته نشد: {reason}',
@@ -110,6 +117,11 @@ export const MISSING_KIND_TEXT: Record<MissingKind, T> = {
   subject_field: { en: 'Scope not stated', fa: 'دامنه مشخص نشده', tr: 'Kapsam belirtilmedi' },
   fact: { en: 'No approved fact', fa: 'fact تأییدشده‌ای نیست', tr: 'Onaylı bilgi yok' },
   evidence: { en: 'No research note', fa: 'یادداشت پژوهشی نیست', tr: 'Araştırma notu yok' },
+  independent_evidence: {
+    en: 'Only the owner’s own notes: link one to a verified evidence-register entry (brand:assurance-link)',
+    fa: 'فقط یادداشت‌های خود مالک: یکی را به یک مدرک تأییدشده در دفتر شواهد پیوند دهید (brand:assurance-link)',
+    tr: 'Yalnızca sahibin kendi notları: birini doğrulanmış bir kanıt kaydına bağlayın (brand:assurance-link)',
+  },
   reviewer_judgment: { en: 'A person must judge this control', fa: 'یک انسان باید این کنترل را داوری کند', tr: 'Bu kontrolü bir kişi değerlendirmeli' },
   stale_judgment: {
     en: 'The owner’s judgment is out of date: what it was about changed. Judge it again (brand:assurance-review)',
@@ -240,6 +252,12 @@ export function renderSnapshotSummary(snapshot: AssuranceSnapshot, lang: Assuran
   } else if (blocking.length === 0) {
     lines.push(BRIDGE_TEXT.nothing_missing![lang])
   }
+  // Snapshots kept before bridge version 3 have no links at all.
+  const links = snapshot.evidence_links ?? []
+  if (links.length > 0) {
+    lines.push('', BRIDGE_TEXT.evidence_links![lang])
+    for (const link of links) lines.push(`- \`${link.note_id}\` → \`${link.evidence_id}\` · ${LINK_STATE_TEXT[link.state][lang]}`)
+  }
   lines.push('', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')
   return lines.join('\n')
 }
@@ -299,9 +317,9 @@ export const REVIEW_TEXT: Catalog = {
   approved: { en: 'approved', fa: 'تأییدشده', tr: 'onaylı' },
   not_approved: { en: 'not approved', fa: 'تأیید نشده', tr: 'onaylanmadı' },
   owner_stated: {
-    en: 'Research notes count as the owner’s own statements, not independent evidence.',
-    fa: 'یادداشت‌های پژوهشی گفتهٔ خود مالک شمرده می‌شوند، نه شواهد مستقل.',
-    tr: 'Araştırma notları bağımsız kanıt değil, sahibin kendi beyanı sayılır.',
+    en: 'Research notes count as the owner’s own statements, not independent evidence, unless linked to a verified evidence-register entry (brand:assurance-link).',
+    fa: 'یادداشت‌های پژوهشی گفتهٔ خود مالک شمرده می‌شوند، نه شواهد مستقل؛ مگر اینکه به یک مدرک تأییدشده در دفتر شواهد پیوند خورده باشند (brand:assurance-link).',
+    tr: 'Araştırma notları, doğrulanmış bir kanıt kaydına bağlanmadıkça (brand:assurance-link) bağımsız kanıt değil, sahibin kendi beyanı sayılır.',
   },
   changed: { en: 'Changed since the judgment', fa: 'تغییرکرده از زمان داوری', tr: 'Karardan beri değişenler' },
   conflicts: {
@@ -416,4 +434,173 @@ export function renderRecorded(result: { control_id: string; revision: ReviewRev
     BRIDGE_TEXT.disclaimer![lang],
     '',
   ].join('\n')
+}
+
+// ---- owner evidence links (brand:assurance-link) -------------------------------------------------
+
+export const LINK_STATE_TEXT: Record<LinkState, T> = {
+  qualifies: { en: 'counts as independent evidence', fa: 'شاهد مستقل حساب می‌شود', tr: 'bağımsız kanıt sayılır' },
+  note_changed: {
+    en: 'does not count: the note changed since it was linked; link it again',
+    fa: 'حساب نمی‌شود: یادداشت پس از پیوند تغییر کرده؛ دوباره پیوند دهید',
+    tr: 'sayılmaz: not bağlandıktan sonra değişti; yeniden bağlayın',
+  },
+  entry_missing: { en: 'does not count: the register entry is gone', fa: 'حساب نمی‌شود: مدرک در دفتر شواهد دیگر نیست', tr: 'sayılmaz: kayıt artık yok' },
+  not_independent: {
+    en: 'does not count: owner testimony or a permission is never independent evidence',
+    fa: 'حساب نمی‌شود: گفتهٔ خود مالک یا یک مجوز هرگز شاهد مستقل نیست',
+    tr: 'sayılmaz: sahibin beyanı veya bir izin asla bağımsız kanıt değildir',
+  },
+  claim_mismatch: {
+    en: 'does not count: the entry supports a question this note is not about',
+    fa: 'حساب نمی‌شود: این مدرک پشتوانهٔ پرسشی است که یادداشت دربارهٔ آن نیست',
+    tr: 'sayılmaz: kayıt bu notun ilgili olmadığı bir soruyu destekliyor',
+  },
+  not_verified: {
+    en: 'does not count yet: the owner has not verified the entry (brand:evidence verify)',
+    fa: 'هنوز حساب نمی‌شود: مالک این مدرک را تأیید نکرده است (brand:evidence verify)',
+    tr: 'henüz sayılmaz: sahip kaydı doğrulamadı (brand:evidence verify)',
+  },
+  expired: { en: 'does not count: past its review date; verify it again', fa: 'حساب نمی‌شود: تاریخ بازبینی‌اش گذشته؛ دوباره تأیید کنید', tr: 'sayılmaz: inceleme tarihi geçti; yeniden doğrulayın' },
+  withdrawn: { en: 'does not count: the entry was withdrawn', fa: 'حساب نمی‌شود: مدرک پس گرفته شده است', tr: 'sayılmaz: kayıt geri çekildi' },
+  rejected: { en: 'does not count: the owner rejected the entry', fa: 'حساب نمی‌شود: مالک این مدرک را رد کرده است', tr: 'sayılmaz: sahip kaydı reddetti' },
+}
+
+export const LINK_TEXT: Catalog = {
+  title: { en: 'Evidence links for research notes — owner-local', fa: 'پیوند یادداشت‌های پژوهشی به شواهد — فقط محلی', tr: 'Araştırma notları için kanıt bağlantıları — yalnızca yerel' },
+  intro: {
+    en: 'A research note is your own statement. Link it to a verified entry in the evidence register and the assessment counts it as independent evidence while that entry stays verified and current.',
+    fa: 'یادداشت پژوهشی گفتهٔ خود شماست. آن را به یک مدرک تأییدشده در دفتر شواهد پیوند دهید تا ارزیابی، تا وقتی آن مدرک تأییدشده و معتبر است، آن را شاهد مستقل حساب کند.',
+    tr: 'Bir araştırma notu sizin kendi beyanınızdır. Onu kanıt kaydındaki doğrulanmış bir girişe bağlayın; o giriş doğrulanmış ve güncel kaldıkça değerlendirme onu bağımsız kanıt sayar.',
+  },
+  none: { en: 'This brand has no internal research notes yet (capture one with brand:knowledge).', fa: 'این برند هنوز یادداشت پژوهشی داخلی ندارد (با brand:knowledge ثبت کنید).', tr: 'Bu markanın henüz iç araştırma notu yok (brand:knowledge ile ekleyin).' },
+  questions: { en: 'About', fa: 'دربارهٔ', tr: 'Konu' },
+  controls: { en: 'Cited by', fa: 'ارجاع‌شده در', tr: 'Atıf yapan' },
+  link: { en: 'Link in force', fa: 'پیوند جاری', tr: 'Geçerli bağlantı' },
+  no_link: { en: 'not linked: counts as your own statement', fa: 'پیوند ندارد: گفتهٔ خود شما حساب می‌شود', tr: 'bağlı değil: sizin beyanınız sayılır' },
+  revisions: { en: 'Recorded revisions', fa: 'نسخه‌های ثبت‌شده', tr: 'Kayıtlı sürümler' },
+  candidates: { en: 'Register entries for these questions', fa: 'مدارک دفتر شواهد برای این پرسش‌ها', tr: 'Bu sorular için kanıt kayıtları' },
+  no_candidates: {
+    en: 'none (record one with brand:evidence add, then verify it)',
+    fa: 'هیچ (با brand:evidence add ثبت و سپس تأیید کنید)',
+    tr: 'yok (brand:evidence add ile ekleyip doğrulayın)',
+  },
+  testimony: { en: 'owner testimony, cannot count', fa: 'گفتهٔ مالک، حساب نمی‌شود', tr: 'sahip beyanı, sayılamaz' },
+  how: {
+    en: 'Link: npm run brand:assurance-link -- link --note {note} --evidence ev-NNNN [--date YYYY-MM-DD]',
+    fa: 'پیوند: ‎npm run brand:assurance-link -- link --note {note} --evidence ev-NNNN [--date YYYY-MM-DD]‎',
+    tr: 'Bağlamak için: npm run brand:assurance-link -- link --note {note} --evidence ev-NNNN [--date YYYY-MM-DD]',
+  },
+  unconfirmed: {
+    en: 'Unapproved answers still lower the score and are not removed. A link changes only whether a note counts as independent.',
+    fa: 'پاسخ‌های تأییدنشده همچنان امتیاز را پایین می‌آورند و حذف نمی‌شوند. پیوند فقط تعیین می‌کند که یادداشت شاهد مستقل حساب شود یا نه.',
+    tr: 'Onaylanmamış yanıtlar puanı düşürmeye devam eder ve kaldırılmaz. Bir bağlantı yalnızca notun bağımsız kanıt sayılıp sayılmadığını değiştirir.',
+  },
+  linked: {
+    en: 'Linked {note} to {evidence} on {date} (revision {revision}): {state}.',
+    fa: '{note} در {date} به {evidence} پیوند خورد (نسخهٔ {revision}): {state}.',
+    tr: '{note}, {date} tarihinde {evidence} kaydına bağlandı (sürüm {revision}): {state}.',
+  },
+  unlinked: {
+    en: 'Removed the link of {note} on {date} (revision {revision}). The note counts as your own statement again.',
+    fa: 'پیوند {note} در {date} برداشته شد (نسخهٔ {revision}). یادداشت دوباره گفتهٔ خود شما حساب می‌شود.',
+    tr: '{note} notunun bağlantısı {date} tarihinde kaldırıldı (sürüm {revision}). Not yeniden sizin beyanınız sayılır.',
+  },
+  stored: {
+    en: 'Stored privately in brand/.private/assurance/evidence-links/ (gitignored, never read by agents, Studio or docs). Run brand:assurance assess to see the result.',
+    fa: 'به‌طور خصوصی در brand/.private/assurance/evidence-links/ ذخیره شد (در git نیست و عامل‌ها، Studio و مستندات آن را نمی‌خوانند). برای دیدن نتیجه brand:assurance assess را اجرا کنید.',
+    tr: 'brand/.private/assurance/evidence-links/ içinde gizli olarak saklandı (git dışında; ajanlar, Studio ve belgeler okumaz). Sonucu görmek için brand:assurance assess çalıştırın.',
+  },
+  refused_agent: {
+    en: 'Evidence links are the owner’s own. Refusing while BRAND_OS_AGENT_TOKEN is set; no agent profile covers them.',
+    fa: 'پیوندهای شواهد فقط مال مالک است. تا وقتی BRAND_OS_AGENT_TOKEN تنظیم است اجرا نمی‌شود؛ هیچ پروفایل عاملی آن را پوشش نمی‌دهد.',
+    tr: 'Kanıt bağlantıları yalnızca sahibe aittir. BRAND_OS_AGENT_TOKEN ayarlıyken reddedilir; hiçbir ajan profili bunu kapsamaz.',
+  },
+  rejected: { en: 'Not recorded: {reason}', fa: 'ثبت نشد: {reason}', tr: 'Kaydedilmedi: {reason}' },
+  unexpected: {
+    en: 'Unexpected error ({name}). A link is written in one atomic step: either it was recorded in full or not at all. Run list to check.',
+    fa: 'خطای پیش‌بینی‌نشده ({name}). پیوند در یک گام اتمی نوشته می‌شود: یا کامل ثبت شده یا اصلاً ثبت نشده. برای اطمینان list را اجرا کنید.',
+    tr: 'Beklenmeyen hata ({name}). Bir bağlantı tek bir atomik adımda yazılır: ya tamamen kaydedildi ya da hiç kaydedilmedi. Kontrol için list çalıştırın.',
+  },
+}
+
+export const LINK_HELP: T = {
+  en: `brand:assurance-link <command> [options]   owner-local; refused while BRAND_OS_AGENT_TOKEN is set
+
+  list   [--as-of YYYY-MM-DD] [--lang en|fa|tr] [--json]
+                     your research notes, their links and the register entries they could link to
+  link   --note <kn_…> --evidence <ev-NNNN> [--date YYYY-MM-DD] [--expect <revision>|none]
+         [--lang en|fa|tr] [--json]
+                     link a note, as it is now, to an evidence-register entry
+  unlink --note <kn_…> [--date YYYY-MM-DD] [--expect <revision>|none] [--lang en|fa|tr] [--json]
+                     remove the link; the note counts as your own statement again
+
+A linked note counts as independent evidence only while the entry is verified (brand:evidence verify),
+not owner testimony, about a question the note is about and not past its review date, and while the
+note is unchanged. Links are versioned in brand/.private/assurance/evidence-links/ (gitignored).
+This is an internal assessment, never a certification or a compliance statement; authorizes is always empty.`,
+  fa: `brand:assurance-link <command> [options]   فقط محلی برای مالک؛ تا وقتی BRAND_OS_AGENT_TOKEN تنظیم است اجرا نمی‌شود
+
+  list   [--as-of YYYY-MM-DD] [--lang en|fa|tr] [--json]
+                     یادداشت‌های پژوهشی شما، پیوندهایشان و مدارکی از دفتر شواهد که می‌توانند به آن‌ها وصل شوند
+  link   --note <kn_…> --evidence <ev-NNNN> [--date YYYY-MM-DD] [--expect <revision>|none]
+         [--lang en|fa|tr] [--json]
+                     یک یادداشت را، همان‌طور که اکنون هست، به یک مدرک در دفتر شواهد پیوند دهید
+  unlink --note <kn_…> [--date YYYY-MM-DD] [--expect <revision>|none] [--lang en|fa|tr] [--json]
+                     پیوند را بردارید؛ یادداشت دوباره گفتهٔ خود شما حساب می‌شود
+
+یادداشت پیوندخورده فقط وقتی شاهد مستقل حساب می‌شود که مدرک تأیید شده باشد (brand:evidence verify)، گفتهٔ خود مالک نباشد،
+دربارهٔ پرسشی باشد که یادداشت به آن می‌پردازد، تاریخ بازبینی‌اش نگذشته باشد و یادداشت تغییر نکرده باشد.
+پیوندها با نسخه در brand/.private/assurance/evidence-links/ نگه داشته می‌شوند (بیرون از git).
+این ارزیابی داخلی است و هرگز گواهی‌نامه یا اظهار انطباق نیست؛ authorizes همیشه خالی است.`,
+  tr: `brand:assurance-link <command> [options]   yalnızca sahibin yerel ortamı; BRAND_OS_AGENT_TOKEN ayarlıyken reddedilir
+
+  list   [--as-of YYYY-MM-DD] [--lang en|fa|tr] [--json]
+                     araştırma notlarınız, bağlantıları ve bağlanabilecekleri kanıt kayıtları
+  link   --note <kn_…> --evidence <ev-NNNN> [--date YYYY-MM-DD] [--expect <revision>|none]
+         [--lang en|fa|tr] [--json]
+                     bir notu, şimdiki hâliyle, bir kanıt kaydına bağlayın
+  unlink --note <kn_…> [--date YYYY-MM-DD] [--expect <revision>|none] [--lang en|fa|tr] [--json]
+                     bağlantıyı kaldırın; not yeniden sizin beyanınız sayılır
+
+Bağlı bir not yalnızca kayıt doğrulanmışsa (brand:evidence verify), sahip beyanı değilse, notun ilgili olduğu
+bir soruya aitse, inceleme tarihi geçmemişse ve not değişmemişse bağımsız kanıt sayılır.
+Bağlantılar brand/.private/assurance/evidence-links/ içinde sürümlü tutulur (git dışında).
+Bu bir iç değerlendirmedir; asla sertifika veya uyumluluk beyanı değildir; authorizes her zaman boştur.`,
+}
+
+/** The owner's research notes and their links. Ids, states and dates only; never note or register text. */
+export function renderLinkList(result: { brand_id: string; items: LinkItem[] }, lang: AssuranceLang): string {
+  const lines: string[] = [`# ${LINK_TEXT.title![lang]}`, '', `> ${BRIDGE_TEXT.disclaimer![lang]}`, '', `- ${BRIDGE_TEXT.brand![lang]}: \`${result.brand_id}\``, '']
+  if (result.items.length === 0) {
+    lines.push(LINK_TEXT.none![lang], '')
+    return lines.join('\n')
+  }
+  lines.push(LINK_TEXT.intro![lang], '')
+  for (const entry of result.items) {
+    lines.push(`## \`${entry.note_id}\``, '')
+    lines.push(`- ${LINK_TEXT.questions![lang]}: ${entry.question_ids.map((id) => `\`${id}\``).join(', ') || '—'}`)
+    lines.push(`- ${LINK_TEXT.controls![lang]}: ${entry.control_ids.join(', ') || '—'}`)
+    lines.push(`- ${LINK_TEXT.link![lang]}: ${entry.link ? `\`${entry.link.evidence_id}\` · ${entry.link.linked_on} · \`${entry.link.revision}\` · **${LINK_STATE_TEXT[entry.link.state][lang]}**` : LINK_TEXT.no_link![lang]}`)
+    lines.push(`- ${LINK_TEXT.revisions![lang]}: ${entry.revisions}`)
+    const candidates = entry.candidates.map((candidate) => `\`${candidate.evidence_id}\` (\`${candidate.claim_id}\`, ${candidate.status}${candidate.independent_source ? '' : `, ${LINK_TEXT.testimony![lang]}`})`)
+    lines.push(`- ${LINK_TEXT.candidates![lang]}: ${candidates.join(', ') || LINK_TEXT.no_candidates![lang]}`)
+    lines.push(`- ${fill(LINK_TEXT.how![lang], { note: entry.note_id })}`, '')
+  }
+  lines.push(`> ${LINK_TEXT.unconfirmed![lang]}`, '', `- ${BRIDGE_TEXT.authorizes![lang]}`, '')
+  return lines.join('\n')
+}
+
+export function renderLinked(result: { note_id: string; revision: LinkRevision; state?: LinkState }, lang: AssuranceLang): string {
+  const head =
+    result.revision.action === 'link'
+      ? fill(LINK_TEXT.linked![lang], {
+          note: result.note_id,
+          evidence: result.revision.evidence_id ?? '',
+          date: result.revision.linked_on,
+          revision: result.revision.revision,
+          state: result.state ? LINK_STATE_TEXT[result.state][lang] : '',
+        })
+      : fill(LINK_TEXT.unlinked![lang], { note: result.note_id, date: result.revision.linked_on, revision: result.revision.revision })
+  return [head, LINK_TEXT.stored![lang], BRIDGE_TEXT.disclaimer![lang], ''].join('\n')
 }

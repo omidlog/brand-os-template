@@ -11,6 +11,8 @@ import {
   coachI18nErrors,
   coachNext,
   CoachError,
+  consistencyReview,
+  CRITERION_NAMES,
   CoachResultSchema,
   openCoachContext,
   renderCoachResult,
@@ -18,15 +20,15 @@ import {
   vagueMarkersIn,
   type CoachResult,
 } from '@brand-os/brand-core/coach'
-import { AGENT_TOKEN_ENV } from '@brand-os/brand-core'
+import { AGENT_TOKEN_ENV, type AnswerRecord } from '@brand-os/brand-core'
 import { answer, ANSWER_CANARY, approved, assertUnchanged, coachBrand, defer, disposition, RESTRICTED_CANARY, snapshot, SPECIFIC_SEGMENT, VAGUE_SEGMENT, type CoachBrand } from './helpers/coach.js'
 import { useTestKey } from './helpers/knowledge.js'
 
 /**
  * Strategic Coach, PR 1: the deterministic core.
  *
- * All fixtures are SYNTHETIC DEMO data. No test calls a model or the network, and every test asserts that
- * the analysis left the brand byte-for-byte unchanged.
+ * All fixtures are SYNTHETIC DEMO data. No test calls a model or the network, and the tests that analyse a
+ * recorded brand snapshot it and assert the analysis left it byte-for-byte unchanged.
  */
 useTestKey()
 
@@ -482,4 +484,74 @@ test('pure read: the context opens without the engine ever being asked to write'
   assert.ok(ctx.eligibleIds.size > 0)
   assert.deepEqual(ctx.contradictions, [], 'the contradictions come from the pure rule function')
   assertUnchanged(before, brand.root, 'opening the context')
+})
+
+// ---- Coach area audit (2026-11-23): regressions for the fixes in "Audit: Coach area fixes" -------------------
+
+test('audit: a scoped consistency review finds its field even when other conflicts fill the cap', () => {
+  const brand = segmentBrand(SPECIFIC_SEGMENT)
+  const ctx = openCoachContext(brand.engine)
+  const target = 'business.customer.primary_segment'
+  // SYNTHETIC DEMO: more high-severity conflicts on other fields than the cap, and one low-severity one on the target.
+  const others = ctx.questions.filter((question) => question.id !== target && question.sensitivity !== 'restricted').slice(0, COACH_LIMITS.maxConsistencyFindings + 6)
+  for (const [index, question] of others.entries()) {
+    ctx.contradictions.push({ id: `demo-${String(index).padStart(2, '0')}`, rule: 'demo-rule', severity: 'high', message: 'SYNTHETIC DEMO', fields: [question.id, 'business.stage.current'], status: 'open' })
+  }
+  ctx.contradictions.push({ id: 'demo-target', rule: 'demo-rule', severity: 'low', message: 'SYNTHETIC DEMO', fields: [target, 'business.stage.current'], status: 'open' })
+  const scoped = contract(consistencyReview(ctx, target), 'scoped consistency beyond the cap')
+  assert.equal(scoped.status, 'needs_review', 'the field’s own conflict is not cut off by the brand-wide cap')
+  assert.deepEqual(scoped.findings.map((finding) => finding.id), ['consistency_review:business.customer.primary_segment:none:consistency_rule:demo-target'])
+  const brandWide = contract(consistencyReview(ctx, null), 'brand-wide consistency beyond the cap')
+  assert.equal(brandWide.findings.length, COACH_LIMITS.maxConsistencyFindings, 'the brand-wide summary is still capped')
+})
+
+test('audit: open ledger records and ids the bank no longer has are not "answered" for a consistency review', () => {
+  const brand = coachBrand()
+  const ctx = openCoachContext(brand.engine)
+  const base = { answer_id: 'ans-demo', value: null, status: 'unanswered' } as unknown as AnswerRecord
+  ctx.answers.set('business.customer.primary_segment', base)
+  ctx.answers.set('business.retired.question', { ...base, answer_id: 'ans-demo-2', status: 'draft', value: 'SYNTHETIC DEMO' } as AnswerRecord)
+  const result = contract(consistencyReview(ctx, null), 'consistency with only open or unknown records')
+  assert.equal(result.status, 'insufficient_context', 'nothing live was read, so it is not "consistent"')
+  assert.deepEqual(result.analysis_scope.questions, [])
+})
+
+test('audit: next does not name a restricted last answer, and its fallback text is localized', () => {
+  const brand = segmentBrand(SPECIFIC_SEGMENT)
+  const restricted = brand.engine.questions().find((question) => question.sensitivity === 'restricted')
+  assert.ok(restricted)
+  assert.equal(brand.engine.changeAnswer(restricted.id, `990 ${RESTRICTED_CANARY}`).kind, 'recorded')
+  for (const locale of ['en', 'fa', 'tr'] as const) {
+    const result = contract(coachNext(brand.engine, { locale }), `next after a restricted answer ${locale}`)
+    assert.equal(result.status, 'insufficient_context')
+    const text = `${JSON.stringify(result)}\n${renderCoachResult(result)}`
+    assert.ok(!text.includes(restricted.id), `${locale}: the restricted id is not named`)
+    assert.ok(!text.includes(RESTRICTED_CANARY), `${locale}: no restricted value`)
+    assert.ok(!result.findings[0]!.improvement?.includes('--question the'), `${locale}: no command with a non-id in it`)
+    if (locale !== 'en') assert.ok(!result.findings[0]!.reason.includes('the interview'), `${locale}: no English fallback`)
+  }
+})
+
+test('audit: fa and tr matching folds keyboard variants (Arabic kaf and yeh, Turkish dotted İ)', () => {
+  assert.ok(vagueMarkersIn('همه كسب‌وكارها').includes('همه کسب‌وکارها'), 'Arabic kaf is read as Persian kaf')
+  assert.ok(vagueMarkersIn('براي هر كسي').includes('هر کسی'), 'Arabic yeh and kaf do not hide a term')
+  assert.ok(vagueMarkersIn('KALİTELİ ürünler').includes('kaliteli'), 'an upper-case Turkish İ still matches')
+  assert.deepEqual(vagueMarkersIn('Kalitesizlik yok'), [], 'whole words only, in Turkish too')
+})
+
+test('audit: rendered fa/tr text uses localized criterion names and reasons, not English identifiers', () => {
+  const brand = segmentBrand(VAGUE_SEGMENT)
+  for (const locale of ['fa', 'tr'] as const) {
+    const text = renderCoachResult(run(brand, 'follow_up', 'business.customer.primary_segment', locale))
+    assert.ok(text.includes(CRITERION_NAMES[locale].specificity), `${locale}: localized criterion name`)
+    assert.ok(!text.includes('— specificity'), `${locale}: no English criterion id in the heading`)
+  }
+  const off = coachBrand()
+  const config = path.join(off.root, 'brand', 'brand.config.yaml')
+  fs.writeFileSync(config, fs.readFileSync(config, 'utf8').replace(/mascot:\n(\s+)enabled: true/, 'mascot:\n$1enabled: false'))
+  const mascot = off.engine.questions().find((question) => question.id.startsWith('brand.mascot.') && question.id !== 'brand.mascot.enabled')
+  assert.ok(mascot)
+  const fa = run(off, 'quality_review', mascot.id, 'fa')
+  assert.ok(!fa.findings[0]!.reason.includes('module_disabled'), 'the reason does not carry an English code')
+  assert.ok(fa.findings[0]!.reason.includes('ماژول'), 'the reason says why in Persian')
 })
