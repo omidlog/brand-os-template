@@ -193,3 +193,18 @@ test('the CLI: drafts by default, --final needs --font-file, and --font-file nee
   assert.match(wrongFamily.stderr, /Vazirmatn/)
   assert.ok(!fs.existsSync(path.join(dir, 'c')), 'a refused final export writes nothing')
 })
+
+test('a long approved brand name wraps clear of the counter and is reported, never cut', () => {
+  const long = 'SYNTHETIC DEMO brand name that is far longer than one footer line can hold, with a note in brackets (illustrative)'
+  const result = run(repack((copy) => {
+    for (const item of Object.values(copy.sections).flat()) if (item.key === 'brand_name') item.value = long
+  }))
+  for (const manifest of result.manifests) {
+    const svg = result.files.get(manifest.file)!
+    const drawn = [...svg.matchAll(/font-weight="700"[^>]*>([^<]*)<\/text>/g)].map((match) => match[1]!).join(' ')
+    assert.ok(drawn.includes('(illustrative)'), `${manifest.post_id}: the whole name is drawn`)
+    assert.equal(manifest.checks.find((entry) => entry.check_id === 'post.signoff_fit')!.result, 'warn')
+  }
+  assert.equal(result.summary.status, 'drafted')
+  assert.equal(run(pack).manifests[0]!.checks.find((entry) => entry.check_id === 'post.signoff_fit')!.result, 'pass')
+})

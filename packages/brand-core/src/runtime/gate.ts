@@ -92,6 +92,8 @@ export function postChecks(pack: TaskContextPack, plan: BatchPlan, post: PostPla
     ),
   )
 
+  if (post.brand_name) out.push(check('post.signoff_fit', 'runtime.manifest', rendered.signoff.fits ? 'pass' : 'warn', [`lines:${rendered.signoff.lines}`, 'method:estimated_advance_width']))
+
   const rules = bannedRules(pack)
   const texts: Array<[string, string | null]> = [
     ['message', post.message],

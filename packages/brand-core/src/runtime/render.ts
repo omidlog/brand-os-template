@@ -145,6 +145,8 @@ export interface RenderedPost {
   pairs: Array<{ foreground: string; background: string; text: 'large' | 'body' }>
   /** `start` is the approved (or default) headline size; `size` what was drawn. */
   headline: { size: number; start: number; lines: number; fits: boolean; reduced: boolean }
+  /** The brand-name sign-off: lines drawn and whether it fitted its box (estimated advance width). */
+  signoff: { lines: number; fits: boolean }
 }
 
 export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolean; logo: EmbeddedLogo | null }): RenderedPost {
@@ -202,14 +204,23 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
   // Footer: brand name and the approved CTA, both from the pack. A missing one is simply absent.
   const footerY = H - 210
   deco.push(`<rect x="${MARGIN}" y="${footerY - 70}" width="${contentWidth}" height="2" fill="${fg}" opacity="0.35"/>`)
+  let ctaLines = 0
   if (post.cta) {
     const cta = wrapText(post.cta, bodyType.size_px, contentWidth - 180, 2)
+    ctaLines = cta.lines.length
     body.push(textBlock(cta.lines, startX, footerY, bodyType.size_px, Math.round(bodyType.size_px * bodyType.line_height), `font-weight="${bodyType.weight}" ${attrs(bodyType.family_stack, lead)}`))
     pairs.push({ foreground: post.colors.foreground, background: post.colors.background, text: 'body' })
   }
+  let signoff = { lines: 0, fits: true }
   if (post.brand_name) {
-    // The sign-off: body family and size, at the headline weight.
-    body.push(`<text x="${startX}" y="${H - 110}" font-size="${Math.min(bodyType.size_px, 36)}" font-weight="${headType.weight}" ${attrs(bodyType.family_stack, lead)}>${escapeXml(bidi(post.brand_name))}</text>`)
+    // The sign-off: body family and size, at the headline weight, wrapped clear of the counter. Two lines only when the
+    // CTA left room; text that still does not fit is drawn in full and reported (`post.signoff_fit`), never cut.
+    const size = Math.min(bodyType.size_px, 36)
+    const step = Math.round(size * 1.25)
+    const wrapped = wrapText(post.brand_name, size, contentWidth - 200, ctaLines >= 2 ? 1 : 2)
+    signoff = { lines: wrapped.lines.length, fits: wrapped.fits }
+    const top = H - 110 - step * (wrapped.lines.length - 1)
+    body.push(textBlock(wrapped.lines, startX, top, size, step, `font-weight="${headType.weight}" ${attrs(bodyType.family_stack, lead)}`))
   }
   // Chrome (counter, draft stamp): label family at fixed sizes, so the stamp stays legible whatever the scale.
   const counter = localDigits(`${String(post.index).padStart(2, '0')}/${SOCIAL_BATCH_COUNT}`, locale)
@@ -240,5 +251,5 @@ export function renderPost(plan: BatchPlan, post: PostPlan, opts: { demo: boolea
     `</svg>`,
     '',
   ].join('\n')
-  return { svg, pairs, headline: { size: headline.size, start: headType.size_px, lines: headline.lines.length, fits: headline.fits, reduced: headline.reduced } }
+  return { svg, pairs, headline: { size: headline.size, start: headType.size_px, lines: headline.lines.length, fits: headline.fits, reduced: headline.reduced }, signoff }
 }
