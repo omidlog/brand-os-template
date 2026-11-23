@@ -84,7 +84,7 @@ export function createStudio(deps: StudioDeps): {
       handle: openUpdatePull,
     },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
-    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/visual(?:/(identity|competitors))?(?:/(print))?$`), auth: 'session', handle: visual },
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/visual(?:/(identity|competitors|mascot))?(?:/(print))?$`), auth: 'session', handle: visual },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}(?:/(${BRAND_SECTIONS.join('|')}))?$`), auth: 'session', handle: brandPage },
   ]
 

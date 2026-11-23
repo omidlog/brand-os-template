@@ -37,6 +37,18 @@
       "permitted_claim": "original_professional_template",
       "verified_on": null,
       "usage_note": "Original Brand OS chapter layout for colour, type and logo construction. Values come only from approved facts and the approved master asset."
+    },
+    {
+      "framework_id": "MASCOT-MODEL-SHEET",
+      "title": "Character model sheet (mascot atlas and evolution sheet)",
+      "kind": "editorial_template",
+      "authority": "Brand OS",
+      "edition": "Brand OS template v1",
+      "source_url": "https://github.com/omidlog/brand-os-template",
+      "license_status": "template-licence",
+      "permitted_claim": "original_professional_template",
+      "verified_on": null,
+      "usage_note": "Original Brand OS layout for a character's expressions, poses and growth stages. Artwork comes only from approved catalog artwork and approved manifest assets; nothing is generated or inferred."
     }
   ]
 }
