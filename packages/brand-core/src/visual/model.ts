@@ -192,12 +192,12 @@ export interface LogoConstructionBlock extends BlockBase {
   master_state: 'approved' | 'missing' | 'example_only' | 'not_previewable'
 }
 
-export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock | ColorPaletteBlock | TypographySpecimenBlock | LogoConstructionBlock
+export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock | ColorPaletteBlock | TypographySpecimenBlock | LogoConstructionBlock | CompetitorMatrixBlock | PriceStripBlock
 
 export interface VisualDocument {
   schema: typeof VISUAL_SCHEMA
   schema_version: 1
-  document_kind: 'business_model_canvas' | 'visual_identity'
+  document_kind: 'business_model_canvas' | 'visual_identity' | 'competitor_comparison'
   brand_id: string
   brand_name: string
   audience: VisualAudience
@@ -215,4 +215,84 @@ export interface VisualDocument {
 
 export function emptyStatusSummary(): Record<DataState, number> {
   return Object.fromEntries(DATA_STATES.map((state) => [state, 0])) as Record<DataState, number>
+}
+
+// ---- Visual V2.2: competitor comparison matrix and price strip -------------------------------------------
+
+/**
+ * What a comparison cell may say. `present` and `unverified` come from a cited, current observation; `absent` only
+ * when a source states it (the competitor index records no absence today, so the share path never emits it and
+ * silence is never read as absence); `unknown` stays unknown.
+ */
+export const COMPARISON_STATES = ['present', 'unverified', 'historical', 'conflicting', 'needs_review', 'absent', 'unknown'] as const
+export type ComparisonState = (typeof COMPARISON_STATES)[number]
+
+/** One numbered source footnote: who is speaking, the public host for web sources, and when it was read. */
+export interface ComparisonSource {
+  n: number
+  source_class: string | null
+  host: string | null
+  observed_on: string
+}
+
+export interface ComparisonCell {
+  criterion: string
+  state: ComparisonState
+  /** Short recorder labels (competitors) or the approved value (own brand). Never a quote. */
+  labels: string[]
+  /** Approved colour swatches for the own brand's visual identity cell; empty otherwise. */
+  swatches: string[]
+  footnotes: number[]
+  /** Own brand only: the approved fact the cell is drawn from (value null unless approved). */
+  own: VisualEntry | null
+}
+
+export interface ComparisonRow {
+  row_id: string
+  kind: 'own_brand' | 'competitor'
+  name: string
+  relationship: string[]
+  markets: string[]
+  official_domain: string | null
+  needs_refresh: boolean
+  cells: ComparisonCell[]
+}
+
+export interface CompetitorMatrixBlock extends BlockBase {
+  type: 'competitor_matrix'
+  criteria: string[]
+  rows: ComparisonRow[]
+  footnotes: ComparisonSource[]
+  /** Whether the owner shared a landscape on this commit, and whether Studio could show it. */
+  share_state: 'not_shared' | 'shared' | 'withheld'
+  withheld_reason: string | null
+  not_shared: { candidates: number; disputed: number; archived: number } | null
+  withheld_text: number
+}
+
+export interface PriceStripRow {
+  competitor_id: string
+  competitor_name: string
+  offer_name: string
+  amount: number
+  currency: string
+  market: string
+  billing_period: string
+  billing_commitment: string
+  tax_inclusion: string
+  promotion: string
+  feature_scope: string | null
+  rate_label: string
+  state: string
+  footnote: number
+}
+
+/** Published prices, grouped by currency in the order recorded. Never ranked, never converted. */
+export interface PriceStripBlock extends BlockBase {
+  type: 'price_strip'
+  groups: Array<{ currency: string; rows: PriceStripRow[] }>
+  /** Competitors with no shared public price: unknown stays unknown. */
+  unpriced: string[]
+  ranked: false
+  currency_conversion: 'none'
 }
