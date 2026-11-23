@@ -11,7 +11,12 @@
  *   touch the control, pinned by note revision. Restricted notes are never read.
  * - **Conflicts** are the interview's own deterministic contradictions (`findContradictions`), by id.
  * - **Subject** fields come from approved facts and `brand.config.yaml`. Whether the brand runs paid
- *   media has no canonical question, so it is `unknown` unless the owner states it on the command line.
+ *   media is the interview question `business.marketing.paid_media`. The old `--paid-media` statement is
+ *   a deprecated fallback, used only while that question has no approved answer.
+ * - **Company or person** comes from `brand.profile` only. A person-centred brand is the
+ *   `personal-brand` profile. Turning on the personal module for a company brand (a founder's personal
+ *   brand) never makes the company a person: it is recorded separately in `personal_brand`, outside the
+ *   assessed subject.
  *
  * Rules this bridge keeps:
  *
@@ -47,7 +52,7 @@ import { methodById, POSITIONING_READINESS } from './registry.js'
 
 export const SNAPSHOT_SCHEMA = 'brand-os.assurance-snapshot/1'
 /** Version of the mapping from a workspace to assessment inputs. A changed mapping is a visible change. */
-export const BRIDGE_VERSION = 'brand-os.assurance-bridge/1'
+export const BRIDGE_VERSION = 'brand-os.assurance-bridge/2'
 /** The revision written for a restricted fact the audience may not see. Never a hash of anything. */
 export const WITHHELD_REVISION = 'withheld'
 /** Bound on a `--pin` / `verify` snapshot file, so a hostile file cannot exhaust memory. */
@@ -87,7 +92,10 @@ export interface BridgeOptions {
   /** The clock, injected. Required: a snapshot without a fixed clock is not reproducible. */
   asOf: Date
   audience?: Audience
-  /** The owner's own statement. There is no canonical question for it, so nothing else sets it. */
+  /**
+   * Deprecated: the old `--paid-media` statement. The answer now comes from the approved interview
+   * question `business.marketing.paid_media`; this is only a fallback while that has no approved answer.
+   */
   paidMedia?: PaidMediaStatement
   pins?: SnapshotPins | null
   method_id?: string
@@ -121,6 +129,24 @@ export interface MissingItem {
   flag: string | null
 }
 
+/** The question that states whether the brand runs paid media. */
+export const PAID_MEDIA_QUESTION = 'business.marketing.paid_media'
+
+/**
+ * A founder's (or any person's) personal brand inside a company brand repository. Tracked beside the
+ * company, never folded into it: it does not change `subject.entity_kind` and is not part of the digest.
+ */
+export interface PersonalBrandRecord {
+  /** `modules.personal.enabled` in brand.config.yaml. */
+  enabled: boolean
+  /** The selected facets, sorted. Facet ids only. */
+  facets: string[]
+  /** `person` only for the `personal-brand` profile, where the brand is the person; else `company`. */
+  brand_entity_kind: 'company' | 'person'
+  /** Always false: the personal module never changes what the brand is. */
+  changes_subject: false
+}
+
 export interface AssuranceSnapshot {
   schema: typeof SNAPSHOT_SCHEMA
   bridge_version: typeof BRIDGE_VERSION
@@ -128,10 +154,13 @@ export interface AssuranceSnapshot {
   method_id: string
   as_of: string
   audience: Audience
+  /** The deprecated `--paid-media` statement as given (`unknown` when not given). The subject uses the approved answer first. */
   paid_media_statement: PaidMediaStatement
   subject: AssessmentSubject
   subject_provenance: SubjectProvenance[]
   controls: ControlInput[]
+  /** The personal module, kept separate from the assessed subject. */
+  personal_brand: PersonalBrandRecord
   /** `sourceSnapshotDigest()` of exactly these inputs. Same workspace state + same options = same digest. */
   source_snapshot_digest: string
   /** True only when nothing is missing at all. */
@@ -155,7 +184,9 @@ interface Workspace {
   root: string
   brandId: string
   ws: KnowledgeWorkspace
-  personal: boolean
+  /** `brand.profile: personal-brand`: the brand itself is a person. */
+  personProfile: boolean
+  personal: { enabled: boolean; facets: string[] }
   mascot: boolean
   gamification: boolean
   questions: Map<string, FieldQuestion>
@@ -200,7 +231,8 @@ function openBrand(root: string): Workspace {
     root: ws.root,
     brandId: ws.brandSlug,
     ws,
-    personal: personalConfig(config).enabled === true,
+    personProfile: config.brand?.profile === 'personal-brand',
+    personal: { enabled: personalConfig(config).enabled === true, facets: [...personalConfig(config).facets].sort() },
     mascot,
     gamification,
     questions,
@@ -229,7 +261,9 @@ function approvedChoice(w: Workspace, id: string): string | null {
 function deriveSubject(w: Workspace, paidMedia: PaidMediaStatement): { subject: AssessmentSubject; provenance: SubjectProvenance[] } {
   const provenance: SubjectProvenance[] = []
 
-  const entity: AssessmentSubject['entity_kind'] = w.personal ? 'person' : 'company'
+  // Only the profile says the brand is a person. The personal module on a company brand is the
+  // founder's own brand, tracked in `personal_brand`; it never turns the company into a person.
+  const entity: AssessmentSubject['entity_kind'] = w.personProfile ? 'person' : 'company'
   provenance.push({ field: 'entity_kind', value: entity, source: 'brand_config', question_id: null })
 
   let sells: AssessmentSubject['sells'] = 'unknown'
@@ -250,9 +284,18 @@ function deriveSubject(w: Workspace, paidMedia: PaidMediaStatement): { subject: 
   }
   provenance.push({ field: 'stage', value: stage, source: stageSource ? 'approved_fact' : 'none', question_id: stageSource })
 
-  provenance.push({ field: 'runs_paid_media', value: paidMedia, source: paidMedia === 'unknown' ? 'none' : 'owner_flag', question_id: null })
+  // The approved interview answer wins. The deprecated statement only fills a gap the interview left.
+  let runsPaid: PaidMediaStatement = 'unknown'
+  const answered = approvedChoice(w, PAID_MEDIA_QUESTION)
+  if (answered === 'yes' || answered === 'no') {
+    runsPaid = answered
+    provenance.push({ field: 'runs_paid_media', value: runsPaid, source: 'approved_fact', question_id: PAID_MEDIA_QUESTION })
+  } else {
+    runsPaid = paidMedia
+    provenance.push({ field: 'runs_paid_media', value: runsPaid, source: runsPaid === 'unknown' ? 'none' : 'owner_flag', question_id: null })
+  }
 
-  return { subject: { entity_kind: entity, sells, stage, runs_paid_media: paidMedia }, provenance }
+  return { subject: { entity_kind: entity, sells, stage, runs_paid_media: runsPaid }, provenance }
 }
 
 /** Which existing questions would settle a subject field, so a missing item points somewhere real. */
@@ -260,7 +303,7 @@ const SUBJECT_QUESTIONS: Record<SubjectField, { question_ids: string[]; flag: st
   entity_kind: { question_ids: [], flag: null },
   sells: { question_ids: ['business.sales.motion'], flag: null },
   stage: { question_ids: ['business.stage.current'], flag: null },
-  runs_paid_media: { question_ids: [], flag: '--paid-media yes|no' },
+  runs_paid_media: { question_ids: [PAID_MEDIA_QUESTION], flag: null },
 }
 
 // ---- controls -----------------------------------------------------------------------------------
@@ -439,6 +482,7 @@ export function buildAssuranceSnapshot(root: string, options: BridgeOptions): As
     subject,
     subject_provenance: provenance,
     controls: inputs,
+    personal_brand: { enabled: w.personal.enabled, facets: w.personal.facets, brand_entity_kind: subject.entity_kind === 'person' ? 'person' : 'company', changes_subject: false },
     source_snapshot_digest: sourceSnapshotDigest(input),
     complete: missing.length === 0,
     scoreable: !missing.some((entry) => entry.blocking),
