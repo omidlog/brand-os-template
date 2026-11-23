@@ -91,6 +91,9 @@ export interface SnapshotPins {
   facts: FactRef[]
   /** Research notes by the control that cited them, so a note deleted since is still reported, as missing. */
   evidence: Array<EvidenceRef & { control_id: string }>
+  /** The brand and method the kept snapshot was built for. When set, pins from another brand or method are refused. */
+  brand_id?: string
+  method_id?: string
 }
 
 export interface BridgeOptions {
@@ -605,6 +608,9 @@ export function buildAssuranceSnapshot(root: string, options: BridgeOptions): As
   if (!method) throw new AssuranceBridgeError('invalid_input', `No method ${methodId} in the registry.`)
 
   const w = openBrand(root)
+  // Revisions kept for another brand or method say nothing about this one: refuse rather than report them as changed.
+  if (options.pins?.brand_id !== undefined && options.pins.brand_id !== w.brandId) throw new AssuranceBridgeError('invalid_pin', 'The snapshot file belongs to a different brand.')
+  if (options.pins?.method_id !== undefined && options.pins.method_id !== method.method_id) throw new AssuranceBridgeError('invalid_pin', 'The snapshot file was built for a different method.')
   const { subject, provenance } = deriveSubject(w, paidMedia)
   const controls = [...controlsForMethod(method.method_id, DEFAULT_CATALOG)].sort((a, b) => (a.control_id < b.control_id ? -1 : 1))
   const pins = pinMaps(options.pins)
@@ -704,14 +710,18 @@ export function parseSnapshotFile(text: string): { brand_id: string; method_id: 
       evidence.push({ ref: `knowledge:${ref.note_id}@${ref.revision}`, note_id: ref.note_id, revision: ref.revision, control_id: control.control_id })
     }
   }
-  return { brand_id: doc.brand_id, method_id: doc.method_id, as_of: asOf, audience, paid_media: paid, digest: doc.source_snapshot_digest, pins: { facts, evidence } }
+  return { brand_id: doc.brand_id, method_id: doc.method_id, as_of: asOf, audience, paid_media: paid, digest: doc.source_snapshot_digest, pins: { facts, evidence, brand_id: doc.brand_id, method_id: doc.method_id } }
 }
 
 export interface VerifyResult {
   reproduced: boolean
   expected_digest: string
   actual_digest: string
-  /** Refs whose pinned revision is no longer the approved one, or no longer there. Ids only. */
+  /**
+   * Refs whose pinned revision is no longer the approved one, or no longer there. Ids only. It can be empty
+   * while `reproduced` is false: then nothing cited changed, but something was added since (an answer
+   * approved, a research note captured, or an owner judgment recorded on or before the snapshot's day).
+   */
   changed: Array<{ kind: 'fact' | 'research_note'; id: string; state: RefState }>
   snapshot: AssuranceSnapshot
   authorizes: []
