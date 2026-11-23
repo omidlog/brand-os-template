@@ -246,6 +246,7 @@
 .vz-page .vz-entries { gap: 2.8mm; }
 .vz-page .vz-entry { padding-inline-start: 2.4mm; }
 .vz-page .vz-entry--missing, .vz-page .vz-entry--na, .vz-page .vz-entry--withheld { gap: 0.8mm; }
+.vz-page .vz-entry--missing .vz-entry-value, .vz-page .vz-entry--na .vz-entry-value, .vz-page .vz-entry--withheld .vz-entry-value { margin-block-end: 0; }
 .vz-edition-note { margin: 3mm 0 0; font-size: 7.8pt; }
 .vz-page .vz-entry-meta, .vz-page .vz-chip, .vz-page .vz-zchip { font-size: 7pt; }
 .vz-page .vz-entry-value { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 7; line-clamp: 7; overflow: hidden; margin-block-end: 1.4mm; }
