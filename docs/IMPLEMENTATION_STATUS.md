@@ -249,7 +249,7 @@ Branch `feat/content-bridge-slice-a`. Guide and reuse map: `docs-internal/CONTEN
 | Proposer from approved facts (`buildContentStrategy`) | Done | Voice, audience, messaging, claims, offers and CTA cited by fact id, never copied. Missing, placeholder and owner-decision items are explicit gaps (en/fa/tr). Restricted facts refused. Pins the SEO / paid-media strategies served now. |
 | Voice rules projection (`contentStrategyView`) | Done | Owner-only; resolves the approved facts at the cited revisions; drafts only counted; `authorizes: []`. |
 | `npm run brand:content` | Done | `strategy` (`--out`, `--store`, `--channels`, `--cadence`, `--formats`, `--languages`), `show`. Approval stays `brand:strategy review / approve`. `tests/content-cli.test.ts`. |
-| Agent read access | Not started | Slice C. No token profile reads `content` strategies or calendar weeks yet. |
+| Agent read access | Done (Slice C) | The `content-read` profile reads approved `content` strategies through the Strategy Feed. |
 
 ## Content calendar (Content Bridge Slice B)
 
@@ -262,7 +262,21 @@ Branch `feat/content-bridge-slice-b`. Guide: `docs-internal/CONTENT_BRIDGE.md`.
 | Banned-claim and availability check | Done | On propose and approve, en/fa/tr. |
 | Per-week owner approval | Done | `week review / approve / reject`, owner proof, `--expect-sha`, HMAC seal with its own domain; `needs_review` on strategy or fact change. `tests/content-calendar-cli.test.ts`. |
 | Studio "Content calendar" page | Done | Read only; only weeks shared with `brand:content share` and merged. `tests/studio-calendar.test.ts`. |
-| `produced` / `published` status, agent tools | Not started | Slice C. |
+| `produced` / `published` status, agent tools | Done (Slice C) | See below. |
+
+## Content agent tools (Content Bridge Slice C)
+
+Branch `feat/content-bridge-slice-c`. Guide: `docs-internal/CONTENT_BRIDGE.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| `content-read` token profile | Done | Facts as `marketing`; the Strategy Feed gate (`strategyAccess`) maps it to the `content` agent kind, so `strategy_list` / `strategy_get` serve approved content strategies. Everyone else is denied. |
+| `content_calendar` (MCP, `brand:query`) | Done | Approved weeks whose status is `current` only; stable JSON with revision, content and approval digests and a self digest; drafts and `needs_review` weeks counted only; latest report per slot. `tests/content-agent.test.ts`. |
+| `content_brief` (MCP, `brand:query`) | Done | One slot: voice, claims, audience, resolved key message / offer / CTA, channel plan, cited competitive angle, approved creative preference ids, `must_include` / `must_avoid`, `missing`. Stale pin refused; restricted facts redacted. |
+| `content_report` (MCP only) | Done | `produced` / `published` + https URL stored as an observation in `brand/.private/content/observations/`; pins the week revision; changes no week, strategy or fact; never fetches the URL; no publish permission. |
+| `brand:content reports` | Done | Owner view of reports, en/fa/tr, `--json`; marks reports made against an older week revision. |
+| Access log | Done | One line per call, ids only (never URLs or text). |
+| Result metrics, Studio view of reports | Not started | Out of scope for Slice C. |
 
 ## SVG checker, normalizer and asset approval
 

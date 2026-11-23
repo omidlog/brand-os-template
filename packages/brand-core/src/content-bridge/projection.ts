@@ -159,6 +159,14 @@ export function buildView(input: {
 /** Every served content strategy of this brand (or one id), as owner views. Drafts are only counted. */
 export function contentStrategyView(ws: KnowledgeWorkspace, opts: { lang: ContentLang; strategy_id?: string; now?: Date }): ContentViewResult {
   assertOwnerProcess()
+  return servedContentViews(ws, opts)
+}
+
+/**
+ * The same views without the owner-process check. Callers authorize first: the owner CLI through
+ * `contentStrategyView`, agents through the Strategy Feed gate (`content-bridge/agent.ts`).
+ */
+export function servedContentViews(ws: KnowledgeWorkspace, opts: { lang: ContentLang; strategy_id?: string; now?: Date }): ContentViewResult {
   const now = opts.now ?? ws.now()
   const facts = readFacts(ws.root, 'approved', ws.brandSlug)
   const views: ContentStrategyView[] = []
