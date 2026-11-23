@@ -48,9 +48,12 @@ A question is **coach-worthy** only if all of these hold:
 2. it takes free text (`short_text`, `long_text`) **or** asks for a measure (`number`, or an id that names an
    objective, KPI, target, price, budget, runway …) — single choices, booleans, colours, fonts and logo specs are
    factual and never coached;
-3. it is **strategic**: its module is one of the positioning, audience, offer, goals, growth, sales, marketing,
-   finance, verbal-identity and personal positioning/story/proof modules (`COACH_STRATEGIC_MODULES`), **or** it
-   declares `publication_requires: verified_evidence` (a public claim that needs a source, wherever it lives).
+3. it is **strategic**: its id lives in one of the strategy namespaces — `brand.strategy`, `brand.personality`,
+   `business.customer|problem|offer|model|market|plan|goals|growth|sales|marketing|product|finance`,
+   `personal.positioning|services|story|goals` (`COACH_STRATEGIC_NAMESPACES`) — **or** it declares
+   `publication_requires: verified_evidence` (a public claim that needs a source, wherever it lives). Namespaces,
+   not modules, because the bank files e.g. `business.customer.primary_segment` under the `business-company`
+   module.
 
 Then, for that question, the existing Coach rules decide whether there is anything to say. A `ready` answer gets
 **silence** — the cheapest coaching is none.
@@ -136,7 +139,7 @@ gains one additive `coach` key; the approve JSON is untouched).
 ## For the owner to decide
 
 1. **On by default** with `BRAND_OS_COACH=off` as the switch — or would you rather have it opt-in?
-2. **The strategic module list** (`COACH_STRATEGIC_MODULES`). It decides what "important" means. Add or remove
-   modules if the Coach is too quiet or too talkative.
+2. **The strategic namespace list** (`COACH_STRATEGIC_NAMESPACES`). It decides what "important" means. Add or remove
+   namespaces if the Coach is too quiet or too talkative.
 3. **Caps**: one note per answer, three per approve run, five on the Studio card.
 4. Whether **`brand:review`** should also show the notes (today: only `brand:approve`, so you see each note once).
