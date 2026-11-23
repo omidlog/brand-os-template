@@ -94,10 +94,19 @@ function rowMm(flow: Extract<BookFlow, { kind: 'table' }>, i: number, heights: H
   return heights?.get(`${flow.id}:r${i}`) ?? flow.rows[i]!
 }
 
-/** The smallest piece of a flow that may start a page: the whole block, or a table's header and first row. */
+/**
+ * The smallest piece of a table that may start a page at row `i`: its header and that row, plus the "continues" line
+ * when more rows follow (the line is printed under the piece, so it must fit on the same page).
+ */
+function tablePieceMm(flow: Extract<BookFlow, { kind: 'table' }>, i: number, heights: Heights | undefined): number {
+  if (i >= flow.rows.length) return tableHeadMm(flow, heights)
+  return tableHeadMm(flow, heights) + rowMm(flow, i, heights) + (i + 1 < flow.rows.length ? CONTINUES_MM : 0)
+}
+
+/** The smallest piece of a flow that may start a page: the whole block, or a table's first piece. */
 function firstPieceMm(flow: BookFlow, heights: Heights | undefined): number {
   if (flow.kind === 'block') return flowMm(flow, heights)
-  return tableHeadMm(flow, heights) + (flow.rows.length ? rowMm(flow, 0, heights) : 0)
+  return tablePieceMm(flow, 0, heights)
 }
 
 /**
@@ -133,7 +142,7 @@ export function paginate(sections: BookSection[], heights?: Heights, budget = BO
       let part = 0
       while (i < flow.rows.length) {
         const head = tableHeadMm(flow, heights)
-        if (!fits(head + rowMm(flow, i, heights)) && page.parts.length) turn()
+        if (!fits(tablePieceMm(flow, i, heights)) && page.parts.length) turn()
         let take = 0
         let mm = head
         while (i + take < flow.rows.length) {
