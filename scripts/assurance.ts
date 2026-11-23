@@ -175,6 +175,7 @@ function message(error: AssuranceBridgeError, language: AssuranceLang): string {
   if (error.code === 'not_a_brand') return BRIDGE_TEXT.not_a_brand![language]
   if (error.code === 'invalid_pin') return fill(BRIDGE_TEXT.invalid_pin![language], { reason: error.message })
   if (error.code === 'invalid_review') return fill(BRIDGE_TEXT.invalid_review![language], { reason: error.message })
+  if (error.code === 'invalid_link') return fill(BRIDGE_TEXT.invalid_link![language], { reason: error.message })
   return error.message
 }
 
