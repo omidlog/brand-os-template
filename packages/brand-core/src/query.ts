@@ -5,7 +5,7 @@ import { parse } from 'yaml'
 import type { FieldQuestion } from './types.js'
 import type { InterviewEngine } from './engine.js'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
-import { inspectAssetForPublication } from '@brand-os/asset-catalog'
+import { effectiveModelUse, inspectAssetForPublication } from '@brand-os/asset-catalog'
 import { appendAccessLog, queryFingerprint } from './access-log.js'
 import { authorize, guestContext, type AgentProfile, type Audience, type AuthContext, type Role } from './auth.js'
 import { rightsBlocker } from './asset-rights.js'
@@ -274,7 +274,7 @@ function assetItem(engine: InterviewEngine, asset: Row): RetrievedItem {
     publication: published ? 'published' : 'unpublished',
     revision: String(asset.checksum_sha256),
     version: null,
-    value: { id: asset.id, name: asset.name, path: asset.path, checksum_sha256: asset.checksum_sha256, license: asset.license, usage: asset.usage },
+    value: { id: asset.id, name: asset.name, path: asset.path, checksum_sha256: asset.checksum_sha256, license: asset.license, usage: asset.usage, model_use: effectiveModelUse(asset) },
     withheld: false,
     reason: null,
     meta: { name: asset.name, status: asset.status, path: asset.path, checksum_sha256: asset.checksum_sha256, present: asset.present },

@@ -46,6 +46,10 @@
       }
     },
     "approval_reset": { "type": ["object", "null"] },
+    "model_use": {
+      "description": "May this file be given to a model or model provider? Absent means not_allowed. Recording a value sends nothing anywhere.",
+      "enum": ["not_allowed", "local_only", "external_allowed"]
+    },
     "subject": { "enum": ["portrait", "person", "case_study", "client_logo", "testimonial", null] },
     "rights": {
       "type": ["object", "null"],

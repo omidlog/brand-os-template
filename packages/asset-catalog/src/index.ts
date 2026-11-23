@@ -29,6 +29,26 @@ export interface AssetRecord {
   approval_carried_from?: string | null
   render_check?: { result: string; renderer?: string; width?: number; height?: number; checked_at?: string } | null
   approval_reset?: Record<string, unknown> | null
+  /**
+   * Whether this file may be given to a model or an image/model provider. Absent means `not_allowed`:
+   * nothing is sent anywhere unless a person recorded a wider value. See `effectiveModelUse`.
+   */
+  model_use?: ModelUse
+}
+
+/**
+ * Model-use right of an asset. `not_allowed` is the default and the value of every record that does not
+ * say otherwise. `local_only` permits a model running on the owner's machine; `external_allowed` permits a
+ * third-party provider. Recording a value grants nothing by itself: no code path in this repository sends
+ * an asset to any model today.
+ */
+export const MODEL_USE_VALUES = ['not_allowed', 'local_only', 'external_allowed'] as const
+export type ModelUse = (typeof MODEL_USE_VALUES)[number]
+
+/** The model-use right that applies: the recorded value when it is a known one, otherwise `not_allowed`. */
+export function effectiveModelUse(record: { model_use?: unknown } | null | undefined): ModelUse {
+  const value = record?.model_use
+  return typeof value === 'string' && (MODEL_USE_VALUES as readonly string[]).includes(value) ? (value as ModelUse) : 'not_allowed'
 }
 
 /** Originals of normalized files live here. Nothing under it is ever served, copied or published. */
