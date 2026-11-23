@@ -2,12 +2,11 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
-import { totpAt } from '../apps/studio/src/auth/totp.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
 import { teardown } from './helpers/cleanup.js'
 import { parse, stringify } from 'yaml'
 import { addApprovedAsset, approve, editOutsideStudio } from './helpers/edits.js'
-import { Client, OWNER_LOGIN, OWNER_PASSWORD, startStudio, TOTP_SECRET, type RunningStudio } from './helpers/studio-server.js'
+import { Client, freshTotp, OWNER_LOGIN, OWNER_PASSWORD, startStudio, type RunningStudio } from './helpers/studio-server.js'
 import { OWNER } from './helpers/studio.js'
 
 /**
@@ -66,7 +65,7 @@ before(async () => {
   await page.goto(`${s.url}/login`)
   await page.type('#login', OWNER_LOGIN)
   await page.type('#password', OWNER_PASSWORD)
-  await page.type('#totp', totpAt(TOTP_SECRET, Date.now()))
+  await page.type('#totp', await freshTotp())
   await page.navigation(() => page.click('button[type=submit]'))
 }, { timeout: 180_000 })
 
