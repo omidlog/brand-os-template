@@ -294,5 +294,5 @@ ${input.toolbar}
 /** The one link into the page, shown on the Assets page's mascot card. */
 export function mascotLink(lang: VisualLang, slug: string): SafeHtml {
   const t = mascotText(lang)
-  return banner({ tone: 'info', title: t.linkTitle, body: t.linkBody, actions: html`<a class="btn btn-secondary btn-sm" href="/brands/${slug}/visual/mascot">${icon('image')}<span>${t.linkLabel}</span></a>` })
+  return banner({ tone: 'info', title: t.linkTitle, body: t.linkBody, actions: html`<a class="btn btn-secondary btn-sm" href="/brands/${slug}/brand/mascot">${icon('image')}<span>${t.linkLabel}</span></a>` })
 }

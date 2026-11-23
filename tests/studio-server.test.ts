@@ -39,7 +39,7 @@ test('a guest sees nothing: every Studio route redirects to sign-in or answers 4
     await owner.login()
     await createBrand(s, owner)
     const guest = new Client(s.url)
-    for (const pathname of ['/', '/brands', '/brands/new', '/account', '/brands/acme-learning', '/brands/acme-learning/brand-book', '/brands/acme-learning/handoff', '/brands/no-such-brand', '/brands/acme-learning/provisioning']) {
+    for (const pathname of ['/', '/brands', '/brands/new', '/account', '/brands/acme-learning', '/brands/acme-learning/brand/book', '/brands/acme-learning/governance/github', '/brands/no-such-brand', '/brands/acme-learning/provisioning']) {
       const res = await guest.get(pathname)
       assert.equal(res.status, 302, pathname)
       assert.match(res.headers.get('location') ?? '', /^\/login/)
@@ -121,7 +121,7 @@ test('the whole owner journey: sign in, create a private brand, copy handoff, ed
     assert.match(overview.text, /To change a brand, open its repository in Claude Code/)
     assert.ok(overview.text.includes(repo.head!.slice(0, 7)), 'the synced SHA is shown')
 
-    const handoff = await client.page('/brands/acme-learning/handoff')
+    const handoff = await client.page('/brands/acme-learning/governance/github')
     assert.ok(handoff.text.includes('https://github.com/brand-owner/acme-learning'))
     assert.ok(handoff.text.includes(escapeHtml(starterPrompt({ slug: 'acme-learning', repoUrl: 'https://github.com/brand-owner/acme-learning' }))))
     assert.match(handoff.text, /Private repository access required/)
@@ -132,18 +132,18 @@ test('the whole owner journey: sign in, create a private brand, copy handoff, ed
       (engine, root) => approve(engine, root, { 'brand.strategy.purpose': 'Learning <b>should</b> feel possible.' }),
     )
     const csrf = await client.csrf('/brands/acme-learning')
-    const refreshed = await client.request('POST', '/brands/acme-learning/refresh', { form: { _csrf: csrf, return: '/brands/acme-learning/brand-book' } })
+    const refreshed = await client.request('POST', '/brands/acme-learning/refresh', { form: { _csrf: csrf, return: '/brands/acme-learning/brand/book' } })
     assert.equal(refreshed.status, 303)
-    assert.equal(refreshed.headers.get('location'), '/brands/acme-learning/brand-book?sync=synced')
-    const book = await client.page('/brands/acme-learning/brand-book?sync=synced')
+    assert.equal(refreshed.headers.get('location'), '/brands/acme-learning/brand/book?sync=synced')
+    const book = await client.page('/brands/acme-learning/brand/book?sync=synced')
     assert.ok(book.text.includes(sha.slice(0, 7)))
     assert.ok(book.text.includes('Learning &lt;b&gt;should&lt;/b&gt; feel possible.'), 'repository content is escaped')
     assert.equal(book.text.includes('<b>should</b>'), false)
-    for (const section of ['design', 'assets', 'business', 'history']) {
+    for (const section of ['brand/design-system', 'brand/assets', 'strategy/business-plan', 'market/marketing-plan', 'governance/history']) {
       const page = await client.page(`/brands/acme-learning/${section}`)
       assert.equal(page.res.status, 200, section)
     }
-    assert.equal((await client.get('/brands/acme-learning/personal')).status, 404, 'personal pages exist only for personal brands')
+    assert.equal((await client.get('/brands/acme-learning/brand/personal')).status, 404, 'personal pages exist only for personal brands')
   })
 })
 
@@ -152,11 +152,11 @@ test('a personal brand shows Phase 8 documents read-only; a mascot-free business
     const client = new Client(s.url)
     await client.login()
     await createBrand(s, client, { name: 'Jane Doe', slug: 'jane-doe', repo: 'jane-doe', profile: 'personal-brand', facets: ['founder-executive', 'speaker-author'] })
-    const personal = await client.page('/brands/jane-doe/personal')
+    const personal = await client.page('/brands/jane-doe/brand/personal')
     assert.equal(personal.res.status, 200)
     assert.match(personal.text, /Personal Brand/)
     assert.match(personal.text, /Founder or executive/)
-    const assets = await client.page('/brands/jane-doe/assets')
+    const assets = await client.page('/brands/jane-doe/brand/assets')
     assert.equal(assets.text.includes('defined state slots'), false)
   })
 })
@@ -166,7 +166,7 @@ test('forged slugs and cross-brand access: an authenticated owner gets 404 for a
     const client = new Client(s.url)
     await client.login()
     await createBrand(s, client)
-    for (const pathname of ['/brands/not-registered', '/brands/not-registered/handoff', '/brands/..%2f..%2fetc', '/brands/ACME-LEARNING', `/brands/not-registered/assets/file/${'a'.repeat(64)}`, `/brands/acme-learning/assets/file/${'b'.repeat(64)}`]) {
+    for (const pathname of ['/brands/not-registered', '/brands/not-registered/governance/github', '/brands/..%2f..%2fetc', '/brands/ACME-LEARNING', `/brands/not-registered/assets/file/${'a'.repeat(64)}`, `/brands/acme-learning/assets/file/${'b'.repeat(64)}`]) {
       const res = await client.get(pathname)
       assert.ok(res.status === 404 || res.status === 302, `${pathname} -> ${res.status}`)
       // The language switcher echoes the requested path; nothing else may point at an asset file.
@@ -201,7 +201,7 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
     await client.login()
     await createBrand(s, client)
     for (const method of ['PUT', 'PATCH', 'DELETE']) {
-      for (const pathname of ['/brands/acme-learning', '/brands/new', '/brands/acme-learning/brand-book']) {
+      for (const pathname of ['/brands/acme-learning', '/brands/new', '/brands/acme-learning/brand/book']) {
         const res = await client.request(method, pathname, { form: { _csrf: 'x' } })
         assert.equal(res.status, 405, `${method} ${pathname}`)
       }
@@ -212,7 +212,7 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
     }
     // No page offers a write form other than sign-out, refresh, (on the wizard) provisioning and,
     // only when the template moved on, "Open update PR".
-    for (const pathname of ['/brands/acme-learning', '/brands/acme-learning/brand-book', '/brands/acme-learning/design', '/brands/acme-learning/assets', '/brands/acme-learning/business', '/brands/acme-learning/history', '/brands/acme-learning/handoff']) {
+    for (const pathname of ['/brands/acme-learning', '/brands/acme-learning/brand/book', '/brands/acme-learning/brand/design-system', '/brands/acme-learning/brand/assets', '/brands/acme-learning/strategy/business-plan', '/brands/acme-learning/governance/history', '/brands/acme-learning/governance/github']) {
       const { text } = await client.page(pathname)
       const actions = [...text.matchAll(/<form[^>]*action="([^"]+)"/g)].map((match) => match[1])
       assert.ok(actions.every((action) => action === '/logout' || action === '/brands/acme-learning/refresh' || action === '/brands/acme-learning/template-update'), `${pathname}: ${actions.join(', ')}`)
@@ -322,7 +322,7 @@ test('security headers, no tokens in any response, and the static bundle carries
     const client = new Client(s.url)
     await client.login()
     await createBrand(s, client)
-    const pages = ['/login', '/brands', '/brands/new', '/account', '/account?test=1', '/brands/acme-learning', '/brands/acme-learning/brand-book', '/brands/acme-learning/design', '/brands/acme-learning/assets', '/brands/acme-learning/business', '/brands/acme-learning/history', '/brands/acme-learning/handoff', '/brands/acme-learning/provisioning', '/brands/acme-learning/provisioning.json']
+    const pages = ['/login', '/brands', '/brands/new', '/account', '/account?test=1', '/brands/acme-learning', '/brands/acme-learning/brand/book', '/brands/acme-learning/brand/design-system', '/brands/acme-learning/brand/assets', '/brands/acme-learning/strategy/business-plan', '/brands/acme-learning/governance/history', '/brands/acme-learning/governance/github', '/brands/acme-learning/provisioning', '/brands/acme-learning/provisioning.json']
     for (const pathname of pages) {
       const res = await client.get(pathname)
       const text = await res.text()
@@ -402,7 +402,7 @@ test('the owner previews a draft asset badged as a draft in en, fa (RTL) and tr;
       addApprovedAsset(root, { id: 'asset.mascot.bad', name: 'Bad draft', file: 'brand/assets/mascot/bad.svg', data: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"></svg>'), status: 'draft' })
     })
     const csrf = await client.csrf('/brands/acme-learning')
-    assert.equal((await client.request('POST', '/brands/acme-learning/refresh', { form: { _csrf: csrf, return: '/brands/acme-learning/assets' } })).status, 303)
+    assert.equal((await client.request('POST', '/brands/acme-learning/refresh', { form: { _csrf: csrf, return: '/brands/acme-learning/brand/assets' } })).status, 303)
 
     const expected = {
       en: { dir: 'ltr', flag: 'Draft, not approved', alt: 'Mascot stage 1 (draft, not approved)' },
@@ -410,8 +410,8 @@ test('the owner previews a draft asset badged as a draft in en, fa (RTL) and tr;
       tr: { dir: 'ltr', flag: 'Taslak, onaylı değil', alt: 'Mascot stage 1 (taslak, onaylı değil)' },
     } as const
     for (const [locale, want] of Object.entries(expected)) {
-      await client.get(`/brands/acme-learning/assets?lang=${locale}`)
-      const page = await client.page('/brands/acme-learning/assets')
+      await client.get(`/brands/acme-learning/brand/assets?lang=${locale}`)
+      const page = await client.page('/brands/acme-learning/brand/assets')
       assert.match(page.text, new RegExp(`<html lang="${locale}" dir="${want.dir}">`))
       const cards = page.text.split('<li class="asset-card"').slice(1)
       const draft = cards.find((card) => card.includes('asset.mascot.stage-1'))!
@@ -427,8 +427,8 @@ test('the owner previews a draft asset badged as a draft in en, fa (RTL) and tr;
     }
 
     // The draft preview is served like every preview: an image, never inline content.
-    await client.get('/brands/acme-learning/assets?lang=en')
-    const page = await client.page('/brands/acme-learning/assets')
+    await client.get('/brands/acme-learning/brand/assets?lang=en')
+    const page = await client.page('/brands/acme-learning/brand/assets')
     const src = /<img src="(\/brands\/acme-learning\/assets\/file\/[0-9a-f]{64})" alt="Mascot stage 1 \(draft/.exec(page.text)![1]!
     const res = await client.get(src)
     assert.equal(res.status, 200)
@@ -503,4 +503,72 @@ test('password hashing and TOTP primitives', () => {
 test('templates escape every interpolated value', () => {
   const evil = '<img src=x onerror=alert(1)>"\'`'
   assert.equal(html`<p title="${evil}">${evil}</p>`.value, '<p title="&lt;img src=x onerror=alert(1)&gt;&quot;&#39;&#96;">&lt;img src=x onerror=alert(1)&gt;&quot;&#39;&#96;</p>')
+})
+
+test('V2.4: brand pages live at stable paths, grouped by intent; old flat paths answer 301 for one release', async () => {
+  await withStudio(async (s) => {
+    const owner = new Client(s.url)
+    await owner.login()
+    await createBrand(s, owner)
+    const legacy: Array<[string, string]> = [
+      ['/brand-book', '/brand/book'],
+      ['/design', '/brand/design-system'],
+      ['/assets', '/brand/assets'],
+      ['/business', '/strategy/business-plan'],
+      ['/business?doc=marketing-plan', '/market/marketing-plan'],
+      ['/business?doc=business-plan&sync=synced', '/strategy/business-plan?sync=synced'],
+      ['/personal', '/brand/personal'],
+      ['/knowledge?note=kn_x', '/market/knowledge?note=kn_x'],
+      ['/creative', '/brand/creative-decisions'],
+      ['/calendar', '/market/content-calendar'],
+      ['/history', '/governance/history'],
+      ['/handoff', '/governance/github'],
+      ['/visual', '/strategy/business-model'],
+      ['/visual/print?edition=public', '/strategy/business-model/print?edition=public'],
+      ['/visual/identity', '/brand/book/visual-identity'],
+      ['/visual/identity/print', '/brand/book/visual-identity/print'],
+      ['/visual/competitors', '/market/competitors'],
+      ['/visual/competitors/print', '/market/competitors/print'],
+      ['/visual/mascot', '/brand/mascot'],
+      ['/visual/mascot/print?edition=public', '/brand/mascot/print?edition=public'],
+    ]
+    for (const [from, to] of legacy) {
+      const res = await owner.get(`/brands/acme-learning${from}`)
+      assert.equal(res.status, 301, from)
+      assert.equal(res.headers.get('location'), `/brands/acme-learning${to}`, from)
+    }
+    for (const pathname of ['/brand/book', '/brand/design-system', '/brand/assets', '/strategy/business-plan', '/market/marketing-plan', '/governance/history', '/governance/github', '/strategy/business-model', '/brand/book/visual-identity', '/market/competitors']) {
+      assert.equal((await owner.get(`/brands/acme-learning${pathname}`)).status, 200, pathname)
+    }
+    // A redirect never confirms a brand: an unregistered slug is 404 for the owner and a sign-in redirect for a guest,
+    // which keeps the old path in next= so the owner lands on the new page after signing in.
+    assert.equal((await owner.get('/brands/not-registered/brand-book')).status, 404)
+    const guest = new Client(s.url)
+    for (const slug of ['acme-learning', 'zzz-forged']) {
+      const res = await guest.get(`/brands/${slug}/brand-book`)
+      assert.equal(res.status, 302)
+      assert.equal(res.headers.get('location'), `/login?next=${encodeURIComponent(`/brands/${slug}/brand-book`)}`)
+    }
+    assert.equal((await guest.get('/brands/acme-learning/brand/book')).headers.get('location'), '/login?next=%2Fbrands%2Facme-learning%2Fbrand%2Fbook')
+    // Redirects are GET only; other methods on the old paths are refused like every page.
+    assert.equal((await owner.request('POST', '/brands/acme-learning/brand-book', { form: { _csrf: 'x' } })).status, 405)
+
+    // The sidebar groups every page by intent, in order, with standard names; nothing disappeared.
+    const { text } = await owner.page('/brands/acme-learning/brand/book')
+    const nav = text.split('<main')[0]!
+    const groups = [...nav.matchAll(/class="nav-section-label" id="nav-group-([a-z]+)">([^<]+)</g)].map((match) => [match[1], match[2]])
+    assert.deepEqual(groups, [
+      ['command', 'Command'],
+      ['strategy', 'Strategy Lab'],
+      ['studio', 'Brand Studio'],
+      ['market', 'Market &amp; Content'],
+      ['governance', 'Publishing &amp; Governance'],
+    ])
+    for (const label of ['Overview', 'Business Model Canvas', 'Business plan', 'Brand Book', 'Design System', 'Assets &amp; Mascot', 'Marketing plan', 'Competitor analysis', 'History &amp; Review', 'GitHub &amp; Claude Code']) {
+      assert.ok(nav.includes(`<span>${label}</span>`), label)
+    }
+    assert.match(nav, /<a class="nav-link nav-sub is-active" href="\/brands\/acme-learning\/brand\/book" aria-current="page">/)
+    // Group labels exist in every locale.
+    for (const locale of LOCALES) for (const group of ['command', 'strategy', 'studio', 'market', 'governance']) assert.ok(catalog(locale)[`nav.group.${group}` as keyof ReturnType<typeof catalog>], `${locale} ${group}`)
+  })
 })
