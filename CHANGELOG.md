@@ -6,6 +6,7 @@
 
 - `@brand-os/brand-core/visual`: a versioned semantic `VisualDocument` (blocks, data states, missing reasons, framework claim) and a nine-zone business model canvas built through the document model's `itemFor`, so approval, drafts, restriction and publication follow the same rules as the Brand Book. Gaps name the question to answer; nothing is guessed.
 - Studio: read-only **Business model** page (`/brands/<slug>/visual`) and an A3-landscape print view (`/visual/print`, `?edition=public` without drafts), en/fa/tr, light/dark, reduced motion. No new non-GET route.
+- Reading polish after owner review: standard name "Business Model Canvas"; question ids, next questions and helper text moved out of the canvas into a closed "Details and sources" area (screen) and print page 2; editorial type scale and whitespace in the zones.
 - `npm run visual:golden`: golden examples from an ILLUSTRATIVE / MOCK DATA fixture. Guide `docs-internal/VISUAL.md`. Tests: `visual-bmc`, `studio-visual`, `studio-visual-browser`.
 
 ## Unreleased — Content agent tools (Content Bridge Slice C)
