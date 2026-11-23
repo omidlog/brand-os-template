@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Visual V4.2: full Brand Book and Business Report PDF
+
+### Added
+
+- `npm run brand:export-visual -- --doc brand-book|business-report`: the full Brand Book and the Business Report as A4 portrait books on the V1.2 engine (cover, imprint, contents with real folios, running heads, numbered notes), en/fa/tr, internal and public editions, HTML and digital PDF. Persian mirrors the book and uses Persian digits for folios and chapter numbers.
+- Core `visual/full-book.ts` (`BookDocument`, `composeBook`, `buildBook`): chapters from the Brand Book and business plan sections, the "Visual identity" plates and the Business Model Canvas. Approved values only: drafts print as labels, recommendations are dropped, restricted values (finance figures) are never printed in any edition; the public edition shows no draft or restricted mark.
+- Designed "not yet available" pages for chapters with nothing approved, planned chapters (Motion, Applications) and chapters that print on their own today (Mascot atlas, Competitive landscape). Nothing is invented.
+- en/fa/tr text for the books, including fa/tr field labels for every printed question (`visual/i18n-full-book.ts`); ILLUSTRATIVE / MOCK DATA fixture `illustrativeBook`.
+- Studio projection `visual.books` (read by the export command; no new Studio route).
+- Visual QA: 10 new baselines (Brand Book cover, contents, Strategy; Business Report contents, Executive summary; en and fa), overflow and RTL checks, and PDF read-back checks (contents point at printed pages, folios, embedded fonts, Vazirmatn on fa pages, no draft or restricted value).
+
+### Changed
+
+- The book engine is generic (`renderBook`, `layoutBook`, `bookGalley`); the identity book's output is byte-identical. Plate heads accept a book-wide number. A contents page with more than seven entries uses compact rows.
+
 ## Unreleased — Coach contradiction and facet rubrics (fixes pack GAP-08)
 
 ### Added
