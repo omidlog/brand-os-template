@@ -1,7 +1,7 @@
 /**
  * Golden examples for the visual renderers (Visual Blueprint P0).
  *
- * Renders the ILLUSTRATIVE / MOCK DATA business model canvas and Visual identity chapter fixtures through the same print renderer Studio uses,
+ * Renders the ILLUSTRATIVE / MOCK DATA business model canvas, Visual identity chapter and mascot atlas fixtures through the same print renderer Studio uses,
  * in en, fa and tr and in the internal and public editions, as self-contained HTML files. When Chrome is installed
  * it also prints each file to PDF (A3 landscape) and, when `pdftoppm` exists, renders PNG previews for visual QA.
  *
@@ -13,10 +13,11 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { illustrativeBusinessModelCanvas, illustrativeVisualIdentity, VISUAL_LANGS, type IdentityFixtureVariant, type VisualLang } from '@brand-os/brand-core/visual'
+import { illustrativeBusinessModelCanvas, illustrativeMascotAtlas, illustrativeVisualIdentity, VISUAL_LANGS, type IdentityFixtureVariant, type MascotFixtureVariant, type VisualLang } from '@brand-os/brand-core/visual'
 import { html, trusted } from '../apps/studio/src/views/html.js'
 import { printDocument } from '../apps/studio/src/views/visual.js'
 import { identityPrintDocument } from '../apps/studio/src/views/visual-identity.js'
+import { mascotPrintDocument } from '../apps/studio/src/views/visual-mascot.js'
 import { renderBlock } from '../apps/studio/src/views/visual-registry.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
@@ -58,6 +59,12 @@ export function renderIdentityGolden(lang: VisualLang, edition: 'internal' | 'pu
   return identityPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html``, assetUrl: () => null }, (block, ctx) => renderBlock(block, { ...ctx, idPrefix: 'p' })).value
 }
 
+/** The mascot atlas fixture (V3.4), A4 portrait. Mock artwork is a labelled frame, never a drawn character. */
+export function renderMascotGolden(lang: VisualLang, edition: 'internal' | 'public', variant: MascotFixtureVariant): string {
+  const doc = illustrativeMascotAtlas(edition, variant)
+  return mascotPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html``, assetUrl: () => null }, (block, ctx) => renderBlock(block, { ...ctx, idPrefix: 'p' })).value
+}
+
 function print(chrome: string | null, png: boolean, out: string, name: string): void {
   if (!chrome) return
   const file = path.join(out, `${name}.html`)
@@ -84,6 +91,12 @@ function main(): void {
         fs.writeFileSync(path.join(out, `${identity}.html`), renderIdentityGolden(lang, edition, variant))
         console.log(`wrote ${path.relative(ROOT, path.join(out, `${identity}.html`))}`)
         print(chrome, Boolean(png), out, identity)
+      }
+      for (const variant of ['partial', 'empty'] as const) {
+        const mascot = `mascot-illustrative.${variant}.${edition}.${lang}`
+        fs.writeFileSync(path.join(out, `${mascot}.html`), renderMascotGolden(lang, edition, variant))
+        console.log(`wrote ${path.relative(ROOT, path.join(out, `${mascot}.html`))}`)
+        print(chrome, Boolean(png), out, mascot)
       }
     }
   }

@@ -724,6 +724,9 @@
 .vz-page--book .vz-mcard-use, .vz-page--book .vz-mnotes ul, .vz-page--book .vz-mawait-list ul { font-size: 8pt; }
 .vz-page--book .vz-mframe-crop { inset: 2.4mm; }
 .vz-page--book .vz-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7mm 5mm; padding-block-start: 4mm; }
+/* Six stages on one A4 page: a slightly landscape frame keeps both rows of three on the sheet. */
+.vz-page--book .vz-stage { gap: 2mm; }
+.vz-page--book .vz-stage .vz-mframe { aspect-ratio: 3 / 2; }
 .vz-page--book .vz-stage-num { font-size: 18pt; }
 .vz-page--book .vz-stage-name { font-size: 11pt; }
 .vz-page--book .vz-stage-summary { font-size: 8pt; }
