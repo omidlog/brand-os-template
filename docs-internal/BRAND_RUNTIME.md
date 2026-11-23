@@ -176,14 +176,27 @@ metadata; no asset bytes are given to an agent (owner decision 5). Interfaces:
   the files. Exit 0 when ready, 3 when not ready. Labels in en, fa (RTL) and tr.
 - **`social-batch`** also writes `production-readiness.json` (artifact stage) next to `batch-summary.json`, which is
   unchanged. `--require logo` marks the logo required for that run. With `--root` it resolves every approved asset of
-  the pack through Visual DNA (logos first), the same ids `readiness --root` resolves. `social-batch` exits 0 whenever
-  the drafts were written, even when `status` is `blocked` or production is `not_ready`: read the printed
-  `production:` line or `production-readiness.json`, or run `readiness --batch` (exit 3 when not ready).
+  the pack through Visual DNA (logos first), the same ids `readiness --root` resolves. `social-batch` writes the drafts
+  and then exits **3 when production is `not_ready`** (0 when `ready`; owner decision 3 below), with one en/fa/tr line
+  on stderr (`--json` stdout stays one JSON document). Exit 1 is a refused input (`RuntimeError`), 2 a usage error.
 - Asset ids the Visual DNA resolver would refuse (a manifest id with a space or a slash) are not sent to it; that
   asset stays `not_tested` and the verdicts of the other assets are kept.
 
 The file checksums detect a changed or swapped file; they are not a signature. Someone who edits a post, its manifest
 and the summary together on the owner's own disk is outside this check.
+
+### Owner decisions (PR-E, 2026-11-24)
+
+1. **Low contrast is review only.** `color.contrast` `fail` becomes `needs_human_review`; it never blocks.
+2. **Only the logo can be mandatory for now.** `--require` / `required_assets` accept `logo` and nothing else.
+3. **A not-ready batch exits non-zero.** `social-batch` still writes every draft and `production-readiness.json`, then
+   exits 3 so scripts and CI notice (`tests/production-readiness.test.ts`).
+4. **Incomplete brand data is a warning.** A `partial` pack is `warn` on `context.readiness`; only `blocked` blocks.
+5. **Duplicate posts are review only.** `set.distinct_files` and `set.distinct_messages` `fail` become
+   `needs_human_review`; they are not in `HARD_RUNTIME_CHECKS`.
+6. **No digital signing now.** Artifacts carry SHA-256 checksums, which detect a changed file; they are not a signature.
+7. **The access-log line stays in `brand/.private`.** `production_readiness` adds one line, ids only, to
+   `brand/.private/access-log.jsonl` (gitignored, mode 0600); nothing is logged elsewhere.
 
 ## `model_use` on assets
 
@@ -226,14 +239,15 @@ links and linked parents into `brand/` refused) and `git status brand/` unchange
 task / wrong count refused, too few messages or no palette ⇒ `blocked` (no padding), banned claim ⇒ `copy.claims: fail`,
 Coach and Assurance called (and the Coach still refuses under an agent token), CLI parity with the library.
 
-`tests/production-readiness.test.ts` (11): the demo pack is ready pre-render and its own readiness is copied unchanged;
+`tests/production-readiness.test.ts` (12): the demo pack is ready pre-render and its own readiness is copied unchanged;
 missing renderer and format violations block while context stays as built; bad SHA (tampered pack, changed logo file,
 stale pin); an asset id the resolver refuses stays `not_tested` without voiding the others, and `social-batch --root`
 resolves every pack asset; blocked rights and a missing required logo block while the same optional asset does not; a banned claim
 blocks; artifact stage (wrong file checksum, unsafe SVG, missing required logo block; contrast `fail` is
 `needs_human_review`); a written batch re-checked on disk, symlinks and stray names refused; the agent entry (same
 caller, denied before input, invalid input); real stdio MCP (listed, strict schema, tr labels, guests denied); CLI
-(`--root`, exit 3, fa output).
+(`--root`, exit 3, fa output); `social-batch` with a not-ready batch writes all drafts and exits 3 (text and `--json`,
+fa line on stderr, en/tr labels), and exits 0 when ready.
 
 ## Open questions (owner)
 
