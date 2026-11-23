@@ -589,6 +589,12 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
 - Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
 
+## Unreleased — Coach area audit
+
+- Strategic Coach: a scoped `consistency_review` no longer loses the field's own conflict when more than 20 conflicts are open; open ledger records and retired question ids are no longer counted as answered; `next` does not name a restricted last answer; fa/tr matching folds Arabic kaf/yeh and Turkish `İ`; the rendered criterion and the "does not apply" reason are localized. `COACH_RULE_VERSION` is now `coach-rules/2`, and Studio rebuilds a coach card cached under an older rule version.
+- Docs: `STRATEGIC_COACH.md` status and test counts, the silence-reason list in `COACH_UX_DECISION.md`, and the snapshot claim in `IMPLEMENTATION_STATUS.md` now match the code.
+- Merged with GAP-08 (Coach rules and facet rubrics). Both changes had moved `COACH_RULE_VERSION` to `coach-rules/2` independently; the combined rules are now `coach-rules/3`, so advice cached under either `/2` is rebuilt.
+
 ## Unreleased — GAP-09 follow-ups: paid-media interview question, company stays company
 
 ### Added

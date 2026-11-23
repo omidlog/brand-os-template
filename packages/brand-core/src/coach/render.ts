@@ -1,5 +1,5 @@
 import type { Locale } from '../i18n.js'
-import { coachUi, RULE_OUTCOME_NAMES, STATUS_NAMES } from './i18n.js'
+import { coachUi, CRITERION_NAMES, RULE_OUTCOME_NAMES, STATUS_NAMES } from './i18n.js'
 import type { CoachFinding, CoachResult } from './model.js'
 
 /**
@@ -18,7 +18,8 @@ function line(label: string, value: string): string {
 function renderFinding(finding: CoachFinding, locale: Locale, index: number): string[] {
   const out: string[] = []
   const status = STATUS_NAMES[locale][finding.status]
-  out.push(`${index}. [${finding.code}] ${status}${finding.criterion ? ` — ${finding.criterion}` : ''}`)
+  // The criterion is shown by its localized name: a fa or tr reader should not meet an English identifier here.
+  out.push(`${index}. [${finding.code}] ${status}${finding.criterion ? ` — ${CRITERION_NAMES[locale][finding.criterion]}` : ''}`)
   out.push(`   ${finding.reason}`)
   if (finding.canonical_question_id) out.push(`   ${coachUi(locale, 'useExisting')}: ${finding.canonical_question_id}`)
   if (finding.suggested_question) out.push(`   ${coachUi(locale, 'ask')}: ${finding.suggested_question}`)
