@@ -65,7 +65,7 @@ test('renderer: designed empty state with the owner steps; withheld shows no ste
   assert.equal(printEmpty.includes('axes set'), false, 'owner steps are never printed')
 })
 
-test('renderer: Persian is RTL text around a direction-neutral plot; Turkish is localized; owner words, not machine text', () => {
+test('renderer: Persian is RTL text around the plot; Turkish is localized; owner words, not machine text', () => {
   const fa = render(illustrativeCompetitorComparison('complete'), 'fa')
   assert.match(fa, /نقشهٔ جایگاه‌یابی/)
   assert.match(fa, /میزان راهنمایی/)

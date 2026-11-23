@@ -188,7 +188,15 @@ npm run brand:competitive -- axes show
 
 **Share.** `brand:competitive share` adds a `positioning` section when axes exist: axis labels and poles, the band list, the stale threshold, and for the own brand and each shared competitor, per axis, the state, the bands and source labels (class, public host for web sources, date). Never shared: rationale, axis ids, position ids, note ids, revisions, claim keys, quotes, positions of non-reviewed competitors. Axis labels pass the same safety scan as other shared text; a label that matches a recorded quote is refused. Studio's strict reader withholds the whole file if the section has any extra field.
 
-**Studio.** The map is plate 03 on the competitor comparison page and has its own A4 portrait print page. The plot is direction-neutral (low to high, left to right and bottom to top); all text is HTML around it, so Persian reads right to left in Vazirmatn. Competitor ids appear only in the details disclosure.
+**Studio.** The map is plate 03 on the competitor comparison page and has its own A4 portrait print page. The vertical axis always runs low to high, bottom to top. The horizontal axis follows the reading direction: in English and Turkish it runs low to high, left to right; in Persian it is mirrored, low on the right and high on the left, the vertical axis sits on the right where the two low ends meet, and the axis arrow points left. Points, conflict ranges, poles and the arrow are mirrored together on screen and in print. The key, the notes and the footnote numbers are unchanged, and bands in the key still read low to high (for example "Lower-mid – Mid"). All text is HTML around the SVG, so Persian reads right to left in Vazirmatn. Competitor ids appear only in the details disclosure. Screenshots: `docs/screenshots/positioning-map-fa-*.png`.
+
+**Owner decisions (2026-11-23).**
+
+1. Stale threshold: 90 days, the research threshold for market observations. Kept as is.
+2. Own-brand position: kept as is. The own brand is plotted on the same terms as a competitor. It needs one recorded source per axis, and the owner's own statement (source class `owner_statement` in a Knowledge research note) counts as a source.
+3. Persian mirrors the horizontal axis, as described under Studio above. English and Turkish stay left to right.
+
+No open questions remain for this slice.
 
 ## Not in this slice
 
