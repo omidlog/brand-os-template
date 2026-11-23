@@ -85,6 +85,8 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 
 `npm run brand:assurance` is the owner's local, read-only check of approved facts against the Positioning Readiness method (guide: `docs-internal/ASSURANCE.md`). It is refused while `BRAND_OS_AGENT_TOKEN` is set, and no MCP tool or `brand_retrieve` kind exposes it; do not look for one. Its result is an internal assessment, never a certification or a compliance claim, and `authorizes` is always empty. Do not quote a completeness ratio it did not print.
 
+`npm run brand:assurance-review` records the owner's own judgment on controls only a person can decide (PRR-08). It is refused under an agent token too. Never record, suggest or paraphrase a judgment for the owner, and never read `brand/.private/assurance/`.
+
 ## Knowledge Inbox
 
 `npm run brand:knowledge` keeps the owner's unstructured notes (guide: `docs-internal/KNOWLEDGE.md`). A note is an unapproved idea, never a brand fact, whoever wrote it.

@@ -154,7 +154,7 @@ npm run brand:assurance -- verify   --snapshot ~/kept/snapshot.json      # exit 
 | `ResolvedFact` per required question | `facts.ts` `readFacts(…, 'approved')`, pinned by `revision_hash` | Only `status: approved` of this brand counts. A non-approved answer is `draft` / `unknown` / `not_applicable` from the answer ledger, pinned by answer id; never treated as approved. No answer: `absent`, `missing`. |
 | `ResolvedEvidence` | Knowledge Inbox `scanAll(['local','shared'])` | Research notes only (`kind: research`, `internal`, not archived, this brand) whose `question_ids` touch the control. Restricted notes are never decrypted. Every note is `owner_stated`: notes carry no independent verification. |
 | `conflicts` | `contradictions.ts` `findContradictions` (pure) | Open contradictions whose fields touch the control, by id only. |
-| `review` | — | Always `null`: there is no reviewer store yet, so PRR-08 is `needs_review`. |
+| `review` | owner judgments, `assurance/reviews.ts` (see [Owner review judgments](#owner-review-judgments-gap-09-follow-up)) | The judgment in force on the `--as-of` day, only while its basis is unchanged; otherwise `null` and the control is `needs_review`. |
 | `subject.entity_kind` | `modules.personal.enabled` | `person` when on, else `company`. |
 | `subject.sells` | approved `business.sales.motion` | `not-applicable` → `no`; `undecided` or unapproved → `unknown`; any other option → `yes`. |
 | `subject.stage` | approved `business.stage.current`, else `business.identity.new_or_existing` | Otherwise `unknown`. |
@@ -163,14 +163,14 @@ npm run brand:assurance -- verify   --snapshot ~/kept/snapshot.json      # exit 
 ### Guarantees
 
 - **Owner-local.** Refused while `BRAND_OS_AGENT_TOKEN` is set, before anything is read. No MCP tool, `brand_retrieve` kind, Studio route or agent profile imports the bridge; a test reads `scripts/mcp.ts` and `apps/studio` to keep it that way.
-- **Writes nothing.** Output goes to stdout. There is no `--out`; the owner redirects it where they want. A kept snapshot file is read as bounded data (regular file, no symlink, ≤ 1 MiB, ids validated), and its other contents are ignored and never echoed.
+- **Writes nothing.** (`snapshot`, `assess`, `verify`.) Output goes to stdout. There is no `--out`; the owner redirects it where they want. A kept snapshot file is read as bounded data (regular file, no symlink, ≤ 1 MiB, ids validated), and its other contents are ignored and never echoed.
 - **No values.** The snapshot holds ids, revisions, states and closed-vocabulary subject values. Below the `restricted` audience a restricted fact is not pinned at all (`revision: withheld`), and its control lists no open question.
 - **Reproducible.** `source_snapshot_digest` is `sourceSnapshotDigest()` of the built input. Same workspace state, same `--as-of` (a UTC day; default today), same audience and statement → byte-identical snapshot and digest. `verify` rebuilds a kept snapshot with its own options; `reproduced: false` names the cited facts and notes that changed or disappeared.
 - **Versioned pins.** `--pin <kept snapshot>` re-checks the kept revisions (`strategy/store.ts` `factState` / `evidenceState`). A changed fact makes its control `needs_review`; a vanished note is `missing`, not silently dropped.
 - **No score on an incomplete snapshot.** `missing[]` lists every item; `blocking: true` items (an unstated scope field, a judgment nobody has made, a changed source) are exactly what makes `assess()` return `not_scoreable`, with `numerator` / `denominator` null. Tests assert `snapshot.scoreable` always equals the evaluator's verdict. `blocking: false` items are unapproved facts and missing research notes: the evaluator counts them as not complete; the bridge never fills them in.
 - **Never a certification.** `claim_level` stays `internally_assessed`, the `internal_assessment_only` limitation is always present, the snapshot carries `disclaimer: internal_assessment_not_certification`, and every rendering prints the disclaimer in en / fa / tr. `authorizes` is always `[]`.
 
-Today a real brand never gets a ratio: PRR-08 needs a person's judgment and there is no place to record one yet. That is deliberate (see the open questions in the GAP-09 report).
+Until the follow-up below, a real brand never got a ratio: PRR-08 needs a person's judgment and there was no place to record one.
 
 Fixed with it: `completenessOf` reported every `needs_review` blocker as `source_changed`; a blocker now carries its own reason (`reviewer_required`, `source_changed`, …). Synthetic fixture results are unchanged.
 
@@ -180,3 +180,30 @@ Fixed with it: `completenessOf` reported every `needs_review` blocker as `source
 | `tests/assurance-cli.test.ts` | the real command: usage errors, three languages, byte-identical runs, verify exit codes, agent refusal, symlinked or malformed files, outside a brand, not reachable through `brand:query` |
 
 All fixtures are synthetic temp brands.
+
+## Owner review judgments (GAP-09 follow-up)
+
+Owner decision (2026-11-23): a small owner-only flow to record the human judgments the engine will not make, so a real brand's readiness score can be produced. `packages/brand-core/src/assurance/reviews.ts` (store), `workspace.ts` (`listReviewItems`, `recordReview`, and the bridge reading them) and `npm run brand:assurance-review`.
+
+```
+npm run brand:assurance-review -- list   [--as-of 2026-11-23] [--show-notes] [--lang fa] [--json]
+npm run brand:assurance-review -- record --control PRR-08 --judgment yes|partly|no --note "short reason" [--date 2026-11-23] [--expect <revision>|none]
+npm run brand:assurance -- assess --as-of 2026-11-23 --paid-media no      # now gives a ratio when nothing else blocks
+```
+
+**CLI, not Studio.** The fixes pack keeps Studio read-only (`03-ARCHITECTURE-AND-PERMISSIONS.md`, "UI / ownership boundary"; `docs-internal/STUDIO.md`). Studio's only writes are creating a private repository and opening a template-update pull request. A write route there would be a new authenticated write surface. The owner's local CLI has the same access rule as every other owner-only store: it is refused while `BRAND_OS_AGENT_TOKEN` is set. A Studio page can be added later as a separate, security-reviewed change.
+
+| Rule | How |
+| --- | --- |
+| Which items | Controls of the method with `evaluation_mode: reviewer_judgment` (today PRR-08). Each has a plain question in en / fa / tr (`REVIEW_PROMPT`). `list` shows its state (`needs_judgment`, `judged`, `stale`), the judgment in force, the facts and research notes a judgment made now would be about (ids only) and any open contradiction. |
+| Judgment | `yes` → `applicable_complete`, `partly` → `applicable_partial`, `no` → `evidence_insufficient`, the engine's own reviewable statuses. Role is always `owner`; `agent` is not a reviewer role. A short note (1–500 characters, single line) is required. The date defaults to today, may not be in the future, and may not be earlier than the previous revision. |
+| Storage | `brand/.private/assurance/reviews/<control_id>.json` in the brand workspace (gitignored; excluded from Studio, docs builds, the projection and every agent tool), mode 0600, atomic write, Knowledge lock per control. Append-only revisions: each `revision` is a hash of its content and of the revision it `supersedes`, so an edited, reordered or foreign history is refused (`invalid_record`, `wrong_brand`, `unsafe_path`) and never used or repaired. `--expect` refuses a write if someone recorded since. |
+| Basis | Each revision records what it judged: the control's required and related facts by approved revision (`none` if not approved) and the research notes it cites, by revision. When any of them changes, the judgment is `stale`: the bridge passes `review: null` and lists `stale_judgment` (blocking). The owner judges again. |
+| Reproducible | The bridge uses the latest revision whose `reviewed_on` is on or before the `--as-of` day. Dates only go forward, so a snapshot as of an earlier day, and `verify` of it, are unchanged by later judgments. `reviewer_id` is `owner:<revision>`, so a new judgment changes the digest. |
+| Private note | The snapshot's `rationale` is a reference, `assurance-review:<control>@<revision>`; the note text stays in the private file. It is never in a snapshot, report, `--json` record output or log, and `list` shows it only with `--show-notes`. |
+| Not changed | Unconfirmed answers still lower the ratio and are not removed. Research notes still count as `owner_stated` (linking them to the evidence register is a later, separate change). Claim level stays `internally_assessed`; a judgment is not a certification, and `authorizes` stays `[]`. |
+
+| Test | Covers |
+| --- | --- |
+| `tests/assurance-reviews.test.ts` | score produced after `yes`, status mapping, latest revision wins, stale after a new note or a changed fact, reproducibility as of an earlier day, private 0600 versioned file with chained revisions, only private files written, note never leaves the file, tampered / foreign / symlinked / non-JSON history refused, bad input refused with nothing written, agent token refused for every read and write, no MCP or Studio import, agent role refused, en / fa / tr text |
+| `tests/assurance-review-cli.test.ts` | the real command: help in three languages, usage errors, list → record → `brand:assurance assess` scoreable, note not echoed, `--show-notes`, `--expect`, not-a-judgment control, agent refusal with nothing written or echoed, tampered history makes `brand:assurance` refuse |
