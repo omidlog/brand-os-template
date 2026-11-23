@@ -31,6 +31,8 @@ export interface QualityFinding {
   vars: Record<string, string>
   relatedIds: string[]
   sourceRefs: CoachSourceRef[]
+  /** An existing question that closes this gap (set by the facet rubrics), reported as `canonical_question_id`. */
+  canonicalId?: string
 }
 
 export interface QualityAssessment {

@@ -12,6 +12,20 @@
 
 - The bridge (`brand-os.assurance-bridge/3`) counts a linked note as `independent` while the register entry qualifies on the `--as-of` day (verified, not owner testimony, same question, not past its review date) and the note is unchanged; otherwise `owner_stated`. The snapshot lists `evidence_links` (ids and a state); a new non-blocking gap `independent_evidence` points at `brand:assurance-link`. A qualifying link makes a PRR-08 judgment stale. Unapproved answers still lower the ratio; never a certification.
 
+## Unreleased — Coach contradiction and facet rubrics (fixes pack GAP-08)
+
+### Added
+
+- `coach/rules.ts`: a narrow rule registry for `consistency_review`. `potential_tension` from `premium-vs-lowest-price` (guards: entry tier, plan, trial, launch offer, student/nonprofit price) and `availability-held-back`, each with one explanatory question in en/fa/tr; `needs_verification` from `evidence-claim-unverified` and `sensitive-claim-wording` (guarantees, certifications, rankings, awards; negated mentions and banned-claim lists excluded). `confirmed_conflict` still comes only from `findContradictions`.
+- `rule_checks` on `consistency_review` results (additive, optional in the schema): every rule's outcome, including `not_tested` when an input is open. Printed as "Rules checked".
+- `coach/facet-rubrics.ts`: six personal facet rubrics in `quality_review` — founder role vs ownership, consultant client confidentiality, creator dated audience numbers and sponsorship disclosure, artist usage rights, speaker dated talks and publications. They link existing canonical questions and add no field.
+- Finding codes `consistency_tension`, `consistency_verification`, `facet_ownership_separate`, `facet_companion_open`, `facet_claim_undated` with en/fa/tr text.
+- Tests: `coach-rules` (synthetic brands only), including the no-false-conflict pricing and market cases.
+
+### Changed
+
+- `COACH_RULE_VERSION` is `coach-rules/2`. `follow_up` and the automatic Coach moments are unchanged.
+
 ## Unreleased — Visual V3.5: finance security design (proposal, docs only)
 
 ### Added
@@ -39,6 +53,20 @@
 ### Changed
 
 - The runtime reads its logo through the Visual DNA resolver (Visual DNA owner decision 6): `loadApprovedLogo` resolves the pack's logo ids as the owner process and reads the bytes with `readVerifiedAsset(…, 'renderer')`; a file that differs from the pack's pinned checksum is `pack_pin_differs`. Not-embedded reasons are now `visual_dna:<state>:<reason>` codes. The resolver's append-only access-log line is the only write under `brand/`. The runtime resolves with the default `use_scope: public` (#44), so a portrait with internal-only rights is never embedded. The synthetic demo logo records its licence.
+
+## Unreleased — Visual V1.3: visual QA (screenshot baselines, PDF text/font checks, RTL checks)
+
+### Added
+
+- `tests/studio-visual-qa.test.ts` (Studio/Chrome CI job), on the ILLUSTRATIVE / MOCK DATA fixtures: reference screenshots of the A3 Business Model Canvas and the A4 Brand Book visual-identity chapter (cover, contents, colour plate) in en and fa, compared with `tests/visual-baselines/*.png` (fonts awaited, animation off, deterministic text rasterisation, tolerant diff); on a mismatch the actual, baseline and diff images are written to `dist/visual-qa/` and uploaded as the CI artifact `visual-qa-diff`.
+- `npm run visual:baselines`: re-renders and overwrites the baselines, for intended visual changes only.
+- Digital PDF checks on the `brand:export-visual` book: headings, contents entries with the right page numbers, folios (Persian digits in fa), and every font embedded including the bundled OFL Inter, Rajdhani and Vazirmatn. No bleed or PDF/X claim.
+- RTL checks: `dir="rtl"`, headings without overflow or words split across lines, mirrored contents leaders and folios, canonical (not mirrored) canvas.
+- `tests/helpers/visual-qa.ts`: PNG codec, pixel diff and Chrome-PDF reader on Node `zlib`, no new dependency.
+
+### Known
+
+- On the fixture, the A3 canvas print footer is clipped by about 7 mm; recorded as a `todo` test.
 
 ## Unreleased — Owner review judgments for assurance scores (GAP-09 follow-up)
 
@@ -556,3 +584,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:assurance` reads `runs_paid_media` from the approved answer to `business.marketing.paid_media`. `--paid-media yes|no` is deprecated: it still works, but only while the question has no approved answer, and it prints an en/fa/tr notice on stderr. An approved answer always wins. A missing paid-media item now points at the question instead of the flag.
 - `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
 - Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.
+
+## Unreleased — Audit: Runtime area fixes
+
+### Fixed
+
+- `task_context`: a `request` with no `locale` now builds the pack in the language the request was written in (a Persian request gets `fa`, RTL labels). The classifier detected it before, but the result was dropped. An explicit `locale` still wins.
+- `brand:runtime social-batch`: a logo that is not embedded (changed, unpinned, withheld, owner-only, not SVG) is listed in every post manifest with `embedded: false` and its reason, instead of being silently absent.
+- `writeBatch` refuses a dangling symlink and a linked parent directory that leads into a `brand/` folder (checked on the real path before and after the directory is created).
+- Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
+- `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).

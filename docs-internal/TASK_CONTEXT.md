@@ -183,7 +183,8 @@ approved source it cites has changed. `stale_pin` arrives with pinned calendar r
   server at startup, as for every other tool.
 - **Inputs.** `task_type` (enum) or `request` (at most 500 characters, classified in en/fa/tr, then dropped);
   `channel`, `deliverable_count` (1 to 50), `locale` (`en`, `fa`, `tr`), `request_mode`, `output_format`, `scope_id`.
-  Explicit inputs win over the classifier. An unclear request returns `need_task_type` with the tied candidates.
+  Explicit inputs win over the classifier. With no `locale`, the pack takes the language the request was written in (a
+  Persian request gets `fa`). An unclear request returns `need_task_type` with the tied candidates.
 - **No leaks.** The request text is not in the result, the access log or the pack digest. The log line holds ids only.
 - **No writes** apart from the normal access-log line. `authorizes` is `[]` and every permission flag is `false`.
 - **Readiness is context readiness.** `ready` means the approved context for the task is complete. It does not mean an
