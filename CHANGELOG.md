@@ -8,6 +8,17 @@
 - The Brand Book "Visual identity" print view is now an A4 portrait book: cover, imprint, contents with the printed page numbers and dotted leaders, running heads (book title verso, chapter recto), outer-edge folios (mirrored, with Persian digits, in fa), numbered notes on the page of their reference, tables continued with a repeated header, headings kept with what follows, no orphan page. New stylesheet `visual-book.css`; the canvas print output is unchanged byte for byte.
 - `npm run brand:export-visual`: owner-machine export of the identity book or the canvas to self-contained HTML and, with a local Chrome, PDF from a measured two-pass layout with an overflow check. Never inside `brand/` or `.private`, refused under an agent token. Studio stays GET-only.
 - Tests: `studio-visual-print-book`; book checks added to `studio-visual-browser` and `studio-visual-identity`.
+## Unreleased — Assurance: owner-local bridge to approved brand facts (GAP-09)
+
+### Added
+
+- `npm run brand:assurance -- snapshot | assess | verify`: an owner-local, read-only bridge from a brand's approved facts, internal research notes and open contradictions to the existing Assurance evaluator. Reproducible snapshot digest, `--pin` / `verify` against a kept snapshot, no score while anything blocking is missing, restricted facts withheld below the `restricted` audience, en/fa/tr output, refused under `BRAND_OS_AGENT_TOKEN`, writes nothing, never a certification.
+- `@brand-os/brand-core/assurance/workspace` entry point (the pure `assurance` index still reads no file).
+- Tests: `assurance-workspace`, `assurance-cli` (synthetic temp brands only).
+
+### Fixed
+
+- Assurance `completeness.blocked_by` reported every `needs_review` blocker as `source_changed`; it now names the control's own reason (for example `reviewer_required`).
 
 ## Unreleased — Visual DNA reference resolver (fixes pack PR-C, GAP-03)
 

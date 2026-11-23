@@ -169,6 +169,10 @@ Throw messy ideas into the brand with `npm run brand:knowledge -- capture` (loca
 
 It is advisory and owner-local: it reads the interview and writes nothing — no answer, fact, approval, strategy, asset or cache file — and `authorizes` is always empty. Nothing calls a model. Restricted questions are refused, and the command is refused under an agent token. Guide: `docs-internal/STRATEGIC_COACH.md`.
 
+## Assurance on a real brand
+
+`npm run brand:assurance -- assess --as-of <YYYY-MM-DD> --paid-media yes|no [--lang fa]` checks your approved facts against Brand OS's own Positioning Readiness method and lists what is missing. It is owner-local and read-only, prints a reproducible snapshot digest (`verify --snapshot <file>` checks a kept one), gives no score while anything blocking is missing, and is an internal assessment — never a certification or a compliance statement. Guide: `docs-internal/ASSURANCE.md`.
+
 ## Studio
 
 One private Studio shows every brand at `/brands/<slug>` and creates new ones. It is a viewer plus a repository provisioner, not an editor:
