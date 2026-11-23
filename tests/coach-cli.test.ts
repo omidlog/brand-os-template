@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { AGENT_TOKEN_ENV } from '@brand-os/brand-core'
@@ -143,6 +145,14 @@ test('cli: an explicit decision is reported as settled and produces no question'
   assert.equal(result.json?.status, 'not_applicable')
   assert.deepEqual((result.json?.findings as Array<{ code: string }>).map((finding) => finding.code), ['follow_up_none'])
   assertUnchanged(before, brand.root, 'coaching an explicit decision')
+})
+
+test('cli: outside a brand repository the command says so instead of failing on a file read', () => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'coach-not-a-brand-'))
+  const result = coach(outside, ['analyze', '--mode', 'consistency_review', '--json'])
+  assert.equal(result.status, 1)
+  assert.equal((result.json?.error as { code: string }).code, 'invalid_input')
+  assert.match((result.json?.error as { message: string }).message, /not a Brand OS brand/)
 })
 
 test('cli: the command is not reachable through brand:query, and no MCP tool exposes it', () => {

@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { AGENT_TOKEN_ENV, InterviewEngine } from '@brand-os/brand-core'
 import { coachAnalyze, coachNext, CoachError, COACH_MODES, isCoachMode, renderCoachResult, type CoachResult } from '@brand-os/brand-core/coach'
@@ -61,6 +63,10 @@ function print(values: Values, result: CoachResult): void {
 }
 
 function run(values: Values): void {
+  // A clear message rather than a YAML read error when the command runs outside a brand repository.
+  if (!fs.existsSync(path.join(process.cwd(), 'brand', 'brand.config.yaml'))) {
+    throw new CoachError('invalid_input', 'This folder is not a Brand OS brand (brand/brand.config.yaml is missing). Run the command from the brand repository root.')
+  }
   const engine = new InterviewEngine(process.cwd())
   switch (command) {
     case 'analyze': {
