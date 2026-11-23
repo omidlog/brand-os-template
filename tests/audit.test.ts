@@ -182,7 +182,7 @@ test('an MCP client can list tools and call them with Unicode', async () => {
   try {
     const tools = await client.listTools()
     const names = tools.tools.map((tool) => tool.name).sort()
-    assert.deepEqual(names, ['brand_retrieve', 'creative_context', 'draft_personal_content', 'get_asset_metadata', 'get_brand_guidelines', 'get_brand_overview', 'get_brand_status', 'get_brand_tokens', 'get_business_plan', 'get_design_component', 'get_logo_rules', 'get_marketing_plan', 'get_mascot_guidelines', 'get_mascot_profile', 'get_motion_guidelines', 'get_social_template', 'knowledge_backlinks', 'knowledge_list', 'knowledge_read', 'knowledge_search', 'knowledge_suggest_proposal', 'list_mascot_assets', 'list_mascot_stages', 'search_brand_docs', 'search_mascot_assets', 'strategy_get', 'strategy_list'])
+    assert.deepEqual(names, ['brand_retrieve', 'content_brief', 'content_calendar', 'content_report', 'creative_context', 'draft_personal_content', 'get_asset_metadata', 'get_brand_guidelines', 'get_brand_overview', 'get_brand_status', 'get_brand_tokens', 'get_business_plan', 'get_design_component', 'get_logo_rules', 'get_marketing_plan', 'get_mascot_guidelines', 'get_mascot_profile', 'get_motion_guidelines', 'get_social_template', 'knowledge_backlinks', 'knowledge_list', 'knowledge_read', 'knowledge_search', 'knowledge_suggest_proposal', 'list_mascot_assets', 'list_mascot_stages', 'search_brand_docs', 'search_mascot_assets', 'strategy_get', 'strategy_list'])
     for (const tool of tools.tools) assert.ok(tool.inputSchema)
     const status = await client.callTool({ name: 'get_brand_status', arguments: {} })
     assert.match(JSON.stringify(status), /Unpublished/)

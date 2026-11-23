@@ -40,7 +40,7 @@ import { claimConflicts } from './claims.js'
 import { CAL_NOTICE, CAL_TEXT } from './calendar-i18n.js'
 import { fill, type ContentLang } from './i18n.js'
 import { gapText } from './planner.js'
-import { contentStrategyView, type ContentStrategyView, type ResolvedSource } from './projection.js'
+import { servedContentViews, type ContentStrategyView, type ResolvedSource } from './projection.js'
 
 /**
  * Calendar weeks on disk (Content Bridge Slice B). One folder per week under brand/.private/content/calendar/ (git
@@ -127,7 +127,8 @@ function entryOf(record: ContentWeekRecord, revision: number): WeekEntry {
   return entry
 }
 
-function approvedEntry(record: ContentWeekRecord): WeekEntry | null {
+/** The one approved revision of a week, or null. Two approved revisions is integrity_failed (thrown). */
+export function approvedWeekEntry(record: ContentWeekRecord): WeekEntry | null {
   const approved = record.revisions.filter((item) => item.state === 'approved')
   if (approved.length > 1) throw new StrategyError('integrity_failed', `${record.week_id} has ${approved.length} approved revisions. None is served.`)
   return approved[0] ?? null
@@ -172,7 +173,7 @@ function strategyFacts(view: ContentStrategyView): Set<string> {
 
 /** The served view of the pinned strategy, or null when it is not served. */
 function pinnedView(ws: KnowledgeWorkspace, content: ContentWeekContent, now: Date, lang: ContentLang): ContentStrategyView | null {
-  return contentStrategyView(ws, { lang, strategy_id: content.strategy.strategy_id, now }).views[0] ?? null
+  return servedContentViews(ws, { lang, strategy_id: content.strategy.strategy_id, now }).views[0] ?? null
 }
 
 /**
@@ -256,7 +257,7 @@ export function proposeWeek(ws: KnowledgeWorkspace, input: { week: unknown; lang
     }
     if (record.revisions.length >= CALENDAR_LIMITS.maxRevisions) throw new StrategyError('invalid_input', `At most ${CALENDAR_LIMITS.maxRevisions} revisions per week.`)
     const number = record.revisions.reduce((max, item) => Math.max(max, item.revision), 0) + 1
-    const approved = approvedEntry(record)
+    const approved = approvedWeekEntry(record)
     const base = { week_id: id, brand_slug: ws.brandSlug, revision: number, supersedes_revision: approved?.revision ?? null, content }
     const revision: ContentWeekRevision = { schema_version: CALENDAR_SCHEMA_VERSION, kind: 'content_week_revision', ...base, content_sha256: weekContentDigest(base), created_at: now }
     const file = revisionFile(ws, id, number)
@@ -324,7 +325,7 @@ export function reviewWeek(ws: KnowledgeWorkspace, input: { week_id: string; rev
   const record = loadWeekRecord(ws, validateWeekId(input.week_id))
   const entry = entryOf(record, validateRevisionNumber(input.revision))
   const revision = loadWeekRevision(ws, record.week_id, entry.revision, entry)
-  const current = approvedEntry(record)
+  const current = approvedWeekEntry(record)
   const problems = blockersFor(ws, record, entry, revision, current)
   problems.push(...weekProblems(ws, revision.content, ws.now(), lang).problems)
   return {
@@ -365,7 +366,7 @@ export function approveWeek(ws: KnowledgeWorkspace, input: { week_id: string; re
     const entry = entryOf(record, number)
     const revision = loadWeekRevision(ws, id, number, entry)
     if (revision.content_sha256 !== expected) throw new StrategyError('stale_revision', `Revision ${number} hashes to ${revision.content_sha256}, not the ${expected} you reviewed. Review it again. Nothing was approved.`)
-    const current = approvedEntry(record)
+    const current = approvedWeekEntry(record)
     const problems = [...blockersFor(ws, record, entry, revision, current), ...weekProblems(ws, revision.content, ws.now(), input.lang ?? 'en').problems]
     if (problems.length) throw new CalendarError('refused', problems)
     const now = ws.now().toISOString()
@@ -414,7 +415,7 @@ export function listWeeks(ws: KnowledgeWorkspace, lang: ContentLang = 'en', now:
   return scanWeeks(ws).map((record) => {
     let current: number | null = null
     try {
-      current = approvedEntry(record)?.revision ?? null
+      current = approvedWeekEntry(record)?.revision ?? null
     } catch {
       current = null
     }
@@ -479,8 +480,21 @@ function valueText(fact: CanonicalFact): string {
  * Approved, current weeks overlapping [from, to], optionally one channel. Drafts, rejected, superseded, stale and
  * tampered weeks are only counted under `withheld`.
  */
-export function contentCalendar(ws: KnowledgeWorkspace, opts: { lang: ContentLang; from?: string; to?: string; channel?: ContentChannel; now?: Date }): CalendarView {
+export function contentCalendar(ws: KnowledgeWorkspace, opts: CalendarOptions): CalendarView {
   assertOwnerProcess()
+  return buildCalendar(ws, opts)
+}
+
+export interface CalendarOptions {
+  lang: ContentLang
+  from?: string
+  to?: string
+  channel?: ContentChannel
+  now?: Date
+}
+
+/** The same view without the owner-process check. Callers authorize first (the agent tools use the Strategy Feed gate). */
+export function buildCalendar(ws: KnowledgeWorkspace, opts: CalendarOptions): CalendarView {
   const now = opts.now ?? ws.now()
   const from = opts.from ? isoDate(parseDate(opts.from, '--from')) : null
   const to = opts.to ? isoDate(parseDate(opts.to, '--to')) : null
@@ -494,7 +508,7 @@ export function contentCalendar(ws: KnowledgeWorkspace, opts: { lang: ContentLan
     for (const entry of record.revisions) if (entry.state === 'draft') count('draft')
     let entry: WeekEntry | null
     try {
-      entry = approvedEntry(record)
+      entry = approvedWeekEntry(record)
     } catch {
       count('integrity_failed')
       continue

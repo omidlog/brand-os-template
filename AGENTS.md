@@ -51,7 +51,7 @@ Competitor dossiers (`npm run brand:competitive`, `brand/.private/competitive`) 
 
 The identity audit and logo brief (`npm run brand:identity`, `brand/.private/identity`) are the owner's local drafts and are refused under an agent token. A brief, a concept selection or an equity choice is never an approved logo, name or asset; changes still go through propose, review and approve (`docs-internal/IDENTITY_BRIEF.md`).
 
-The content strategy (`npm run brand:content`, a `content` strategy record in `brand/.private/strategy/records`) cites approved facts for voice, audience, messaging and claims; it never restates or invents them, and its gaps stay gaps. It is owner-only for now and approving it authorizes no post, schedule, publication or spend (`docs-internal/CONTENT_BRIDGE.md`).
+The content strategy (`npm run brand:content`, a `content` strategy record in `brand/.private/strategy/records`) cites approved facts for voice, audience, messaging and claims; it never restates or invents them, and its gaps stay gaps. Approving it, or a calendar week, authorizes no post, schedule, publication or spend (`docs-internal/CONTENT_BRIDGE.md`).
 
 All of these produce drafts only. Restricted questions are refused: the owner answers them in the interactive interview. `brand.profile: founder-core` in `brand/brand.config.yaml` narrows the interview to about 40 questions. `brand.profile: personal-brand` interviews a person (see below).
 
@@ -98,6 +98,7 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - Propose and review only. Never run `approve` or `withdraw` for the owner, and never pass a guessed `--expect-sha`. Show the owner the `review` output and let them run the approve command it prints.
 - Cite approved facts and research notes only. Put budgets and amounts in `restricted`, which no agent receives. Do not hand-edit files under `brand/.private/strategy/records/`; an edit makes the revision `integrity_failed`.
 - As an execution agent with a `strategy-seo-read` or `strategy-ads-read` token, read through `strategy_list` / `strategy_get` and pin `revision` + `content_sha256`. On `stale_pin`, stop and re-read. Never treat the strategy as permission to act.
+- As a content agent with a `content-read` token, read `content_calendar`, then `content_brief` per slot with the week `pin`. Write only what the brief allows (its `must_avoid` holds the banned claims). On `stale_pin` or `not_found`, stop. After producing or publishing, call `content_report` with the pin and the https URL; it is an observation, not permission to publish.
 
 ## Brand OS Studio
 

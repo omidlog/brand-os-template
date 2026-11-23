@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Content agent tools (Content Bridge Slice C)
+
+### Added
+
+- Agent token profile `content-read` (`brand:agent-token issue --profile content-read`). It reads facts as `marketing`, approved `content` strategies through `strategy_list` / `strategy_get`, and the new content tools. Existing tokens are unchanged.
+- MCP tools `content_calendar` (approved, current calendar weeks in a date range, optionally one channel) and `content_brief` (one slot: voice, banned claims, audience, resolved key message / offer / CTA, channel plan, cited competitive angle, approved creative preference ids). Both are also in `brand:query`. Stable JSON with revision and digests; drafts and weeks that need review are only counted; a stale week pin is refused; restricted facts are never sent.
+- MCP tool `content_report`: an agent reports a slot as `produced`, or `published` with an https URL. It is stored as an observation next to the calendar and changes no week, strategy or fact. The URL is checked for form and never opened. It grants no permission to publish.
+- `npm run brand:content -- reports`: the owner's view of those reports (en/fa/tr).
+- Tests: `content-agent` (7). Guide: `docs-internal/CONTENT_BRIDGE.md`.
+
 ## Unreleased — Content strategy and voice rules (Content Bridge Slice A)
 
 ### Added

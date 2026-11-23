@@ -5,6 +5,8 @@ import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { AGENT_TOKEN_ENV, KnowledgeError, openWorkspace, type KnowledgeWorkspace } from '@brand-os/brand-core'
 import {
+  AGENT_TEXT,
+  approvedWeekEntry,
   approveWeek,
   brandSettings,
   buildContentStrategy,
@@ -15,7 +17,9 @@ import {
   contentLang,
   contentStrategyView,
   fill,
+  listObservations,
   listWeeks,
+  loadWeekRecord,
   parseCadence,
   parseChannels,
   parseFormats,
@@ -25,8 +29,11 @@ import {
   rejectWeek,
   reviewWeek,
   ROLE_LABELS,
+  scanWeeks,
   shareWeek,
+  validateWeekId,
   type CalendarView,
+  type ContentObservation,
   type ContentLang,
   type ContentStrategyDraft,
   type ContentStrategyView,
@@ -48,6 +55,9 @@ import { CONTENT_CHANNELS, proposeRevision, StrategyError, validateRevisionNumbe
  * Slice B: `plan` drafts calendar weeks from the served content strategy (deterministic, offline), `week propose` stores
  * one (edited) week as a draft, `week review / approve / reject` is the owner's per-week approval (owner proof, the
  * reviewed hash), `calendar` shows approved weeks only, and `share` copies an approved week for Studio (you commit it).
+ *
+ * Slice C: agents read through the content_calendar / content_brief MCP tools (content-read token), never through this
+ * command. `reports` shows the produced/published observations agents sent with content_report.
  */
 
 const HELP = `brand:content <command> [options]
@@ -74,6 +84,7 @@ const HELP = `brand:content <command> [options]
                                   approved, current weeks only (drafts are never shown)
   share --week wk-YYYY-MM-DD [--dry-run]
                                   copy an approved week's summary to brand/content-calendar/shared (you commit it)
+  reports [--week wk-YYYY-MM-DD]  produced/published reports from content agents (observations only)
 
 Review and approve with: npm run brand:strategy -- review / approve (owner proof).
 Options: --lang en|fa|tr (default: the brand default locale), --json. Refused while ${AGENT_TOKEN_ENV} is set.`
@@ -262,6 +273,32 @@ function calendarText(view: CalendarView, lang: ContentLang): string {
   return lines.join('\n')
 }
 
+function reportsText(items: Array<ContentObservation & { current: boolean }>, lang: ContentLang): string {
+  const t = (key: string) => AGENT_TEXT[key]![lang]
+  if (!items.length) return t('reports_none')
+  const lines = [t('reports_header'), '']
+  for (const item of items) {
+    const old = item.current ? '' : ` ${fill(t('reports_old_revision'), { rev: item.week_revision })}`
+    lines.push(`${item.week_id} ${item.slot_id} r${item.week_revision} ${item.status} ${item.url ?? '—'} · ${item.reported_at} · ${item.reporter}${old}`)
+  }
+  return lines.join('\n')
+}
+
+/** Observations with a flag: reported against the week revision served as approved now, or an older one. */
+function reportsOf(ws: KnowledgeWorkspace, week: string | undefined): Array<ContentObservation & { current: boolean }> {
+  const ids = week ? [validateWeekId(week)] : scanWeeks(ws).map((record) => record.week_id)
+  return listObservations(ws, ids).map((item) => {
+    let current = false
+    try {
+      const entry = approvedWeekEntry(loadWeekRecord(ws, item.week_id))
+      current = entry !== null && entry.revision === item.week_revision && entry.content_sha256 === item.week_content_sha256
+    } catch {
+      current = false
+    }
+    return { ...item, current }
+  })
+}
+
 async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
   const lang = contentLang(values.lang, contentLang(brandSettings(ws).default_locale.slice(0, 2)))
   if (values.lang && values.lang !== lang) usage('--lang is en, fa or tr.')
@@ -382,6 +419,11 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
     case 'share': {
       const result = shareWeek(ws, { week_id: need(values, 'week'), dryRun: values['dry-run'] })
       print({ ok: true, ...result }, () => (result.written ? fill(CAL_TEXT.shared_week![lang], { list: result.path }) : `${CAL_TEXT.shared_preview![lang]}\n${JSON.stringify(result.week, null, 2)}`))
+      return
+    }
+    case 'reports': {
+      const items = reportsOf(ws, values.week)
+      print({ ok: true, reports: items }, () => reportsText(items, lang))
       return
     }
     default:

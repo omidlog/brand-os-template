@@ -23,10 +23,12 @@ export interface ResourceRef {
 
 /**
  * Fixed agent profiles. An owner picks one when issuing a token; a client cannot pick or widen it.
- * Every profile is read-only, limited to the `internal` audience, and has no `restricted` scope, so
- * restricted (financial or legal) values are never returned to an agent in this release.
+ * Every profile is read-only for brand data, limited to the `internal` audience, and has no `restricted` scope, so
+ * restricted (financial or legal) values are never returned to an agent in this release. The one write any profile
+ * has is `content-read` appending a produced/published observation (content-bridge/observations.ts), which changes
+ * no fact, strategy or calendar week.
  */
-export type AgentProfile = 'internal-read' | 'design' | 'marketing' | 'finance' | 'knowledge-read' | 'creative-read' | 'strategy-seo-read' | 'strategy-ads-read'
+export type AgentProfile = 'internal-read' | 'design' | 'marketing' | 'finance' | 'knowledge-read' | 'creative-read' | 'strategy-seo-read' | 'strategy-ads-read' | 'content-read'
 
 const MARKETING_BUSINESS_MODULES = new Set([
   'business-company',
@@ -108,6 +110,16 @@ export const AGENT_PROFILES: Record<AgentProfile, { description: string; allowsM
   },
   'strategy-ads-read': {
     description: 'Approved internal facts as the marketing profile, plus the read-only Strategy Feed for approved paid-media strategies. No drafts, no restricted budget or notes. Grants no execution, spend or publication.',
+    allowsModule: (module) => AGENT_PROFILES.marketing.allowsModule(module),
+  },
+  /**
+   * The only profile the content_* tools answer (content-bridge/agent.ts), and the Strategy Feed profile for `content`
+   * strategies. Facts as marketing, plus approved, current calendar weeks and per-slot briefs. It may append a
+   * produced/published observation for a slot of a served week; that is the only thing it writes, and it changes no
+   * fact, strategy or week. No drafts, no restricted values. Grants no publication, scheduling or spend.
+   */
+  'content-read': {
+    description: 'Approved internal facts as the marketing profile, plus the approved content strategy (strategy_list/strategy_get), approved current calendar weeks (content_calendar), per-slot briefs (content_brief) and produced/published reports as observations (content_report). No drafts, no restricted values. Grants no publication, scheduling or spend.',
     allowsModule: (module) => AGENT_PROFILES.marketing.allowsModule(module),
   },
 }
