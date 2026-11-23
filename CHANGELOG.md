@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Visual V3.5: finance security design (proposal, docs only)
+
+### Added
+
+- `docs-internal/FINANCE_SECURITY_DESIGN.md`: **proposal awaiting owner approval** (decision D4). Finance data classes, threat model, storage and readers (owner vs agent token vs Studio), redaction per audience and export profile, audit logging, invariants that must never reach agents or Studio, open owner decisions FD1–FD8 with a recommendation each, proposed en/fa/tr strings. No code, route, tool or profile changed; restricted finance stays out of Studio, agents and Git.
+
 ## Unreleased — Visual V3.4: mascot atlas and evolution sheet
 
 ### Added
