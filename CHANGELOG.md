@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Content strategy and voice rules (Content Bridge Slice A)
+
+### Added
+
+- Strategy records gain a `content` type with a typed `content_strategy` block: content languages, pillars that cite the approved pillars fact, channels with role, formats and cadence (null until the owner decides), approved fact ids per role (voice, claims, audience, messaging, pillars, channels, offers, CTA, languages, objective), owner-written extra rules, pinned SEO / paid-media strategy revisions and explicit gaps. Review, approval, rejection and withdrawal are the existing `brand:strategy` commands.
+- `npm run brand:content -- strategy`: proposes a content strategy from approved facts. It never writes voice: facts are cited by id, and anything missing, still `TBD`, or only the owner can decide is listed as a gap in en/fa/tr. `--out` writes a proposal file to edit, `--store` stores a draft.
+- `npm run brand:content -- show`: the owner's voice rules projection of the approved content strategy (voice text, do / don't pairs, banned claims, availability rule, pillars, channels, gaps), resolved from approved facts. Drafts are never shown.
+- A changed cited fact or a replaced cited SEO / paid-media strategy puts the content strategy in `needs_review`. Restricted facts such as the budget are refused. No agent reads content strategies yet.
+- Guide `docs-internal/CONTENT_BRIDGE.md`. Tests: `content-strategy`, `content-cli`.
+
 ## Unreleased — Identity audit and logo brief (Identity Slice D)
 
 ### Added

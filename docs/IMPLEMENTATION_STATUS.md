@@ -239,6 +239,18 @@ Branch `feat/identity-slice-d`. Guide: `docs-internal/IDENTITY_BRIEF.md`. Skill:
 | Fact, logo or asset mutation | None | Tracked brand files and facts asserted unchanged in every journey. |
 | Logo drawing, trademark clearance, Figma, Studio view, agent access | Not started | Out of scope for the brief. |
 
+## Content strategy and voice rules (Content Bridge Slice A)
+
+Branch `feat/content-bridge-slice-a`. Guide and reuse map: `docs-internal/CONTENT_BRIDGE.md`.
+
+| Item | Status | Note |
+| --- | --- | --- |
+| `content` strategy type and `content_strategy` block | Done | Same store, immutable revisions, hash-bound owner approval and `needs_review` as Sprint 3 strategies. Other types carry no new key, so their hashes are unchanged. `tests/content-strategy.test.ts`. |
+| Proposer from approved facts (`buildContentStrategy`) | Done | Voice, audience, messaging, claims, offers and CTA cited by fact id, never copied. Missing, placeholder and owner-decision items are explicit gaps (en/fa/tr). Restricted facts refused. Pins the SEO / paid-media strategies served now. |
+| Voice rules projection (`contentStrategyView`) | Done | Owner-only; resolves the approved facts at the cited revisions; drafts only counted; `authorizes: []`. |
+| `npm run brand:content` | Done | `strategy` (`--out`, `--store`, `--channels`, `--cadence`, `--formats`, `--languages`), `show`. Approval stays `brand:strategy review / approve`. `tests/content-cli.test.ts`. |
+| Agent read access, calendar, Studio page | Not started | Slices B and C. No token profile reads `content` strategies yet. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.

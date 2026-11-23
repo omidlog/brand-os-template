@@ -106,6 +106,10 @@ What `strategy_get` returns:
 | Tamper and stale sources | edited bytes, a draft forced to approved, an edited cited note, expiry |
 | Owner proof, hash-bound approval, diff | `strategy-store`, `strategy-cli` |
 
+## Content strategies (Content Bridge Slice A)
+
+A third type, `content`, uses this same store and approval flow with one extra typed block, `content_strategy`. No profile reads it, so `strategy_list` and `strategy_get` never return a content strategy; the owner reads it with `brand:content show`. A content strategy may pin approved SEO or paid-media revisions; if one is replaced, the content strategy turns `needs_review`. See `docs-internal/CONTENT_BRIDGE.md`.
+
 ## Limits
 
 - The feed is local stdio and CLI only. A remote gateway needs its own threat model (spec backlog 4).

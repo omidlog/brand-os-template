@@ -44,3 +44,97 @@ strategy and never projected.
    channel, content languages, owner-written extra rules, and explicit gaps. It cites facts; it does not restate them.
 3. **Content calendar** (Slice B) will cite the approved content strategy revision.
 4. **Content brief** (Slice C) will be a read-only projection of 1–3.
+
+## Slice A: the content strategy record
+
+### Data model
+
+A content strategy is a `StrategyRevision` with `type: "content"` and a `content_strategy` block
+(`packages/brand-core/src/strategy/model.ts`, `parseContentStrategy`):
+
+| Field | Meaning |
+| --- | --- |
+| `languages` | Content languages (locale codes). Default: the brand default locale. |
+| `pillars[]` | `{id, name, fact_refs}`. Each pillar must cite at least one approved fact. |
+| `channels[]` | `{channel, role, formats, cadence, languages, pillars, fact_refs}`. `role` and `cadence` are `null` until the owner decides; `formats` from `reel, carousel, post, thread, story, article, email, short_video, video, live`. |
+| `sources` | Approved fact ids per role: `voice, claims, audience, messaging, pillars, channels, offers, cta, languages, objective`. Values are never copied. |
+| `voice_rules`, `vocabulary`, `banned_claims`, `cta_rules` | Owner-written additions. The proposer leaves them empty. |
+| `strategy_refs[]` | Pinned approved SEO / paid-media revisions `{strategy_id, revision, content_sha256}`. |
+| `gaps[]` | `{field, reason, fact_ids}`, reason `not_approved`, `placeholder` or `owner_decision`. Kept in the approved revision. |
+
+Rules enforced on `propose`:
+- Every fact id in the block must be in the revision's `fact_refs` (pinned to `revision_hash`).
+- Restricted facts are refused (`business.marketing.budget` and anything classified `restricted`).
+- A cited strategy must be the revision served now; only SEO and paid-media strategies can be cited.
+- Unknown keys are refused at every level; text goes through the same safety check as every strategy (no money, credentials, personal data or placeholders).
+
+Status at read time is the Sprint 3 evaluation plus one check: a cited strategy that is replaced or no longer served
+makes the content strategy `needs_review`, like a changed fact.
+
+### Proposer (`brand:content strategy`)
+
+`buildContentStrategy` (`packages/brand-core/src/content-bridge/propose.ts`) reads the fixed source catalog
+(`sources.ts`, `CONTENT_SOURCES`; personal-brand facts only when `modules.personal.enabled`):
+
+- A role with no approved fact is a `not_approved` gap naming the questions to answer. A fact whose approved value says
+  `TBD`, `none`, `unknown`, `نامشخص` or `henüz yok` is a `placeholder` gap. Nothing is assumed in its place.
+- Pillar names are split from the approved pillars fact (lines, `;`, bullets, short comma lists) and cite it. If it
+  cannot be split into short names, the owner names them (`owner_decision`).
+- Channels: `--channels` if given; otherwise channels named in affirmative clauses of approved channel facts. A clause
+  with a negation ("not TikTok", "no paid social", "YouTube later", "بدون", "değil") is skipped. A note says which
+  channels were detected.
+- Every channel gets `owner_decision` gaps for role, and for formats and cadence unless `--formats` / `--cadence` give
+  them. Cadence is never guessed.
+- Currently served SEO and paid-media strategies are pinned.
+- The generated title, objective, rationale, guardrails and non-goals are fixed process text in en/fa/tr. They say
+  how the strategy works, never how the brand sounds.
+
+It writes nothing. `--out` writes the proposal file (never overwrites), `--store` stores it as a draft through
+`proposeRevision`.
+
+### Voice rules projection (`brand:content show`)
+
+`contentStrategyView` (`projection.ts`) returns `brand-os/content-strategy-view/v1` for every content strategy whose
+approved revision is servable now (the Strategy Feed's `servable` rule: `current` or `review_due`):
+
+- `voice.sources`, `audience`, `messaging`, `offers`, `objective`, `language_sources`: the approved fact values, read now.
+  A served strategy has every cited fact at its pinned revision, so this is exactly what the owner approved.
+- `voice.do` / `voice.dont`: from `brand.verbal.voice_pairs` plus owner-written rules, each with its source.
+- `claims.banned`: split from `brand.verbal.forbidden` plus owner-written claims; `claims.availability_rule` from
+  `business.marketing.availability_claim` (en/fa/tr).
+- `gaps` with en/fa/tr text, `digests.view_sha256` (deterministic), `authorizes: []`, `publication_permission: false`.
+- Drafts, rejected, superseded, withdrawn and stale revisions are only counted under `withheld`.
+
+It is owner-only in Slice A (refused under `BRAND_OS_AGENT_TOKEN`). Slice C exposes it to content agents through the
+existing token profiles, MCP tools and access log.
+
+### Owner workflow
+
+```bash
+npm run brand:content -- strategy                          # gap report, nothing written
+npm run brand:content -- strategy --channels instagram,linkedin \
+  --cadence instagram=3/week --formats instagram=reel+carousel --out content.json
+# edit content.json: channel roles, extra rules, pillar names
+npm run brand:strategy -- propose --id content-main --file content.json
+npm run brand:strategy -- review  --id content-main --revision 1
+BRAND_OS_APPROVAL_PROOF=… npm run brand:strategy -- approve --id content-main --revision 1 --expect-sha <sha256>
+npm run brand:content -- show [--lang fa|tr]
+```
+
+### Tests
+
+| Behaviour | Test |
+| --- | --- |
+| Missing facts become explicit gaps (en/fa/tr); nothing written; no voice invented | `content-strategy` "missing facts…" |
+| Placeholder facts are gaps; restricted facts never cited; budget canary absent | `content-strategy` "placeholder facts…" |
+| Pillars from the fact, negated channels skipped, voice cited not copied | `content-strategy` "approved facts become cited sources…" |
+| Approved v1 visible, draft v2 invisible until approved, then v2 served; changed fact → `needs_review` | `content-strategy` "approved v1 is visible…" |
+| No agent profile reads `content`; block only on `content`; old hashes unchanged | `content-strategy` "no agent reads…" |
+| Pinned SEO strategy replaced → `needs_review`; stale pin refused | `content-strategy` "a cited SEO strategy…" |
+| CLI journey with proof-gated approval through `brand:strategy` | `content-cli` |
+
+### Limits
+
+- No calendar, no per-slot brief and no agent read path yet (Slices B and C).
+- Channel detection reads wording; the owner checks the detected list before approving.
+- Approved fact text is shown as written; the projection does not translate it. Gap and rule text is en/fa/tr.
