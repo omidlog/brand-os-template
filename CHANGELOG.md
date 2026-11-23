@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased — Task Context MCP tool (GAP-02)
+
+### Added
+
+- `task_context` stdio MCP tool: one read-only pack of approved context per task (`task_type` or the owner's `request`, plus `channel`, `deliverable_count`, `locale`, `request_mode`, `output_format`, `scope_id`). Same core (`buildTaskContext`) and the same single caller context as `brand:query --tool task_context`, through a shared `runTaskContextTool`. Access is checked before a request is classified; the request text is never logged, hashed or returned. `authorizes: []`, every permission flag false. No new profile, store, write path or hosted API.
+- Skill `agent-skills/task-context/SKILL.md`; `social-designer`, `ui-designer`, `marketing-creative` and `brand-designer` call `task_context` first, once.
+- `docs-internal/AI_CONNECTORS.md`: setting the tool up for a new Claude Code session (token in the server environment, never in a prompt or a committed file).
+- Tests: `task-context-agent` (stdio server: listing, Persian ten-post request, digest equal to the core pack, guest, cross-brand, revoked, forged arguments, profile isolation, schema bounds, no request text in the log). `audit` now pins `task_context` in the tool list.
+
+### Changed
+
+- `brand:query --tool task_context` now checks access before classifying `--request`: a guest gets `denied` instead of `need_task_type`.
+
+## Unreleased — Fix: Visual identity shows the approved master logo
+
+### Fixed
+
+- The Visual identity chapter showed "awaiting asset" for a brand with an approved, previewable logo that was not tagged `master`. The master is now resolved deterministically: an asset named (exact asset id or manifest path) in the approved `brand.logo.masters` answer, else one tagged `logo` + `master`, else the only approved logo; several unnamed logos give a designed `ambiguous` state. Only approved, checksummed, previewable, non-example files qualify; the public edition still needs the file published. The internal edition marks a master that carries a `draft` tag or is not published. en/fa/tr.
+
+## Unreleased — Fix: canonical question ids in legacy brand queries (BUG-01)
+
+### Fixed
+
+- `get_logo_rules` and `get_motion_guidelines` (MCP and `brand:query`) asked for `brand.logo.primary`, `brand.logo.clearspace` and `brand.motion.easing`, which no question owns, so they always reported those fields missing. They now read `brand.logo.masters|variants|clear_space|min_size|misuse` and `brand.motion.principles|duration|reduced`, the same ids as the Task Context `logo_rules` / `motion_rules` keys. The response envelope, permissions and missing/withheld markers are unchanged; each tool lists more ids. Easing curves and milliseconds remain tokens (`get_brand_tokens`).
+- Every named fact tool reads its ids from one exported map, `NAMED_FACT_TOOL_IDS`. Test: `tests/named-tool-ids.test.ts` (registry coverage, approved/draft/unanswered, guest, wrong profile, cross-brand, stdio MCP).
+- Skills `motion-designer` and `mascot-animator` name the real motion ids.
+
 ## Unreleased — Visual V2.2: competitor share path and comparison matrix
 
 ### Added

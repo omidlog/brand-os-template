@@ -103,12 +103,14 @@ Personal rows count only when `modules.personal.enabled` is true; mascot rows on
 
 ## Findings from the audit
 
-1. **`get_logo_rules` and `get_motion_guidelines` ask for ids that do not exist.** They request
-   `brand.logo.primary`, `brand.logo.clearspace`, `brand.motion.easing`; the bank has `brand.logo.masters`,
-   `brand.logo.clear_space`, `brand.motion.principles`, `brand.motion.duration`. Both tools therefore always report
-   those fields missing, even for a brand that answered and approved them. Task-context does not inherit the bug (it
-   uses the real ids and a test pins every id against the bank), and the two legacy tools are left alone here: fixing
-   them changes existing tool output and belongs in its own small PR. **Owner decision needed.**
+1. **Fixed (BUG-01): `get_logo_rules` and `get_motion_guidelines` asked for ids that do not exist.** They requested
+   `brand.logo.primary`, `brand.logo.clearspace`, `brand.motion.easing`, so both tools always reported those fields
+   missing, even for a brand that answered and approved them. Every named fact tool now reads its ids from
+   `NAMED_FACT_TOOL_IDS` in `packages/brand-core/src/query.ts`; logo and motion use the same ids as the `logo_rules`
+   and `motion_rules` keys here (`brand.logo.masters|variants|clear_space|min_size|misuse`,
+   `brand.motion.principles|duration|reduced`). The response envelope is unchanged; each tool now lists more ids.
+   Easing curves and milliseconds are tokens (`get_brand_tokens`), not facts. `tests/named-tool-ids.test.ts` pins
+   every id against the question bank and the field registry.
 2. **There is no "list the assets I may read" reader.** `brandRetrieve(kind: 'asset')` answers by id only. Task-context
    collects candidate ids from `brand/assets/asset-manifest.yaml` and then asks `brandRetrieve` for them, so the
    authorization, rights, checksum and SVG gates still decide every item and nothing unreadable is disclosed. A
@@ -160,13 +162,40 @@ approved source it cites has changed. `stale_pin` arrives with pinned calendar r
 
 ### Not in Slice 1 (and not pretended)
 
-- No MCP tool. `task_context` is CLI only in this slice; exposing it over stdio MCP, with its negative security tests,
-  is the next slice (the package's P2).
+- No MCP tool in Slice 1. Added afterwards: see "MCP tool (GAP-02)" below.
 - No calendar or per-slot brief in the pack (`scope_id`, `content_calendar`, `content_brief` pins): next slice. A
   ten-post request today therefore produces an **on-demand draft brief** and no approved slot — which is the required
   behaviour anyway, since an on-demand request is not an approved calendar week.
-- No `task_context_validate`, no skill update, no Studio view, no LLM classification path.
+- No `task_context_validate`, no Studio view, no LLM classification path. (The skill handoff came with the MCP tool.)
 - No deliverable is produced by this code. The pack is context for a drafting agent; it renders nothing.
+
+## MCP tool (GAP-02)
+
+`scripts/mcp.ts` registers one read-only stdio tool, `task_context`. It and the CLI call the same function,
+`runTaskContextTool` (`task-context/agent.ts`), which calls `buildTaskContext`. No second retrieval path was added.
+
+- **Identity.** The server resolves `BRAND_OS_AGENT_TOKEN` once at startup (`resolveAgentContext`) and passes that one
+  context to every reader. No input names a brand, role, profile, token or audience; unknown keys are stripped by the
+  schema. Contexts from different profiles are never combined: a `design` token gets no paid strategy, a
+  `strategy-ads-read` token gets no content strategy.
+- **Access first.** `taskContextAccess` runs before the request is classified, so a guest, an unprofiled agent or a
+  token of another brand gets `denied` (logged) and learns nothing. An unknown, revoked or other-brand token stops the
+  server at startup, as for every other tool.
+- **Inputs.** `task_type` (enum) or `request` (at most 500 characters, classified in en/fa/tr, then dropped);
+  `channel`, `deliverable_count` (1 to 50), `locale` (`en`, `fa`, `tr`), `request_mode`, `output_format`, `scope_id`.
+  Explicit inputs win over the classifier. An unclear request returns `need_task_type` with the tied candidates.
+- **No leaks.** The request text is not in the result, the access log or the pack digest. The log line holds ids only.
+- **No writes** apart from the normal access-log line. `authorizes` is `[]` and every permission flag is `false`.
+- **Readiness is context readiness.** `ready` means the approved context for the task is complete. It does not mean an
+  asset file is deliverable, a renderer exists or a human reviewed anything.
+
+Skill: `agent-skills/task-context/SKILL.md`. The social, UI, marketing and brand designer skills call it first, once.
+Tests: `tests/task-context-agent.test.ts` (real stdio server: listing, the Persian ten-post request, digest equal to
+the core pack, guest, cross-brand, revoked, forged arguments, profile isolation, schema bounds, no request text in the
+log).
+
+Setting it up in a new Claude Code session: `docs-internal/AI_CONNECTORS.md`, "Task context in a new Claude Code
+session".
 
 ## Usage
 
