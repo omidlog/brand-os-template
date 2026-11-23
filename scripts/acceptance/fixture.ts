@@ -9,7 +9,9 @@ import { approveRevision, proposeRevision } from '@brand-os/brand-core/strategy'
  * model_use, an approved content strategy) plus what journeys 3 and 4 need to be tested at all:
  *
  * - a restricted, approved `business.marketing.budget` fact whose value is a canary that must never reach an agent;
- * - an approved `paid_media` strategy whose restricted budget block carries a second canary.
+ * - an approved `paid_media` strategy whose restricted budget block carries a second canary;
+ * - an approved `brand.motion.principles` fact (FIX-01 positive case);
+ * - a draft, unapproved `brand.logo.clear_space` answer that the named logo tool must withhold.
  *
  * Everything lives in a fresh temp directory and is removed by `cleanup()`. No real brand is read.
  */
@@ -17,6 +19,10 @@ import { approveRevision, proposeRevision } from '@brand-os/brand-core/strategy'
 export const FIXTURE_BUDGET_FACT_CANARY = 'ACCEPTANCE-BUDGET-FACT-CANARY 7310 EUR'
 export const FIXTURE_BUDGET_AMOUNT_CANARY = 7310731
 export const FIXTURE_RESTRICTED_NOTE_CANARY = 'ACCEPTANCE-RESTRICTED-NOTE-CANARY'
+/** An approved motion principle (synthetic), so get_motion_guidelines has an approved value to serve (FIX-01). */
+export const FIXTURE_MOTION_PRINCIPLES = 'SYNTHETIC: short, calm transitions; no flashing'
+/** A DRAFT (never approved) logo clear-space answer: get_logo_rules must not serve it (FIX-01). */
+export const FIXTURE_DRAFT_LOGO_CANARY = 'ACCEPTANCE-DRAFT-LOGO-CANARY clear space 3x'
 
 export interface AcceptanceFixture extends DemoBrand {
   /** Strings that must never appear in any agent-visible output. */
@@ -32,10 +38,15 @@ export function createAcceptanceFixture(): AcceptanceFixture {
     const approved = demo.engine.approve('business.marketing.budget', 'owner', proof)
     if (approved.kind !== 'recorded') throw new Error(`fixture budget fact was not approved (${approved.kind})`)
 
+    const motion = demo.engine.changeAnswer('brand.motion.principles', FIXTURE_MOTION_PRINCIPLES)
+    if (motion.kind !== 'recorded' || demo.engine.approve('brand.motion.principles', 'owner', proof).kind !== 'recorded') throw new Error('fixture motion fact was not approved')
+    const draft = demo.engine.changeAnswer('brand.logo.clear_space', FIXTURE_DRAFT_LOGO_CANARY)
+    if (draft.kind !== 'recorded') throw new Error(`fixture draft logo answer was not recorded (${draft.kind})`)
+
     const ws = openWorkspace(demo.root, { now: () => DEMO_NOW })
     const revision = proposeRevision(ws, { strategy_id: 'paid-acceptance', proposal: paidProposal() }).revision
     approveRevision(ws, { strategy_id: 'paid-acceptance', revision: revision.revision, expected_sha256: revision.content_sha256, proof })
-    return { ...demo, canaries: [FIXTURE_BUDGET_FACT_CANARY, String(FIXTURE_BUDGET_AMOUNT_CANARY), FIXTURE_RESTRICTED_NOTE_CANARY] }
+    return { ...demo, canaries: [FIXTURE_BUDGET_FACT_CANARY, String(FIXTURE_BUDGET_AMOUNT_CANARY), FIXTURE_RESTRICTED_NOTE_CANARY, FIXTURE_DRAFT_LOGO_CANARY] }
   } catch (error) {
     demo.cleanup()
     throw error
@@ -48,7 +59,7 @@ function paidProposal(): Record<string, unknown> {
     title: 'Synthetic paid social test',
     type: 'paid_media',
     locale: 'en',
-    scope: { markets: ['synthetic'], channel: 'paid-social', period: '2027-Q1' },
+    scope: { markets: ['en-US'], channel: 'paid-social', period: '2027-Q1' },
     valid_from: '2026-11-01',
     valid_until: '2030-12-31',
     review_due_at: '2030-06-30',

@@ -12,6 +12,7 @@ import {
   ensureApprovalSecret,
   InterviewEngine,
   issueAgentToken,
+  NAMED_FACT_TOOL_IDS,
   packDigest,
   readFacts,
   revokeAgentToken,
@@ -302,6 +303,8 @@ interface Context {
   tokens: Record<'content' | 'design' | 'marketing' | 'ads', string>
   facts: Record<string, { status: string; revision_hash: string | null; value: unknown; classification: string }>
   bank: Set<string>
+  /** Draft (unapproved) values that differ from the approved one: never served by a named fact tool. */
+  drafts: Record<string, string>
   secrets: string[]
   /** Restricted values only (budget facts, fixture canaries): the no-leak checks of journey 4. */
   restricted: string[]
@@ -331,6 +334,11 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
     const otherBrand = issueAgentToken(snap, { brandId: `${slug}-other-brand`, profile: 'content-read', label }).token
 
     const facts = readFacts(snap, 'approved', slug) as unknown as Context['facts']
+    const drafts: Record<string, string> = {}
+    for (const [id, fact] of Object.entries(readFacts(snap, 'draft', slug) as unknown as Context['facts'])) {
+      const value = fact.value === null || fact.value === undefined ? '' : String(fact.value)
+      if (value.length >= 6 && value !== String(facts[id]?.value ?? '')) drafts[id] = value
+    }
     const restricted = [
       ...Object.values(facts)
         .filter((fact) => fact.classification === 'restricted' && fact.value !== null && fact.value !== undefined)
@@ -346,6 +354,7 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
       tokens,
       facts,
       bank: new Set(allQuestions().map((question) => question.id)),
+      drafts,
       secrets: [...Object.values(tokens), revoked.token, otherBrand, ...privateValues, ...restricted],
       restricted,
       tmp,
@@ -401,7 +410,7 @@ function privateSecrets(dir: string): string[] {
 // Journey 2 (FIX-03): one visual
 
 async function singleVisual(ctx: Context): Promise<CaseRecord> {
-  const run = new CaseRun('single_visual', 2, ['FIX-03', 'FIX-05', 'FIX-06'], 'design')
+  const run = new CaseRun('single_visual', 2, ['FIX-01', 'FIX-03', 'FIX-05', 'FIX-06'], 'design')
   const session = await mcpSession(ctx.snap, run.transcript, ctx.tokens.design)
   try {
     const reply = await session.call('task_context', { task_type: 'visual_design', locale: 'en' })
@@ -452,7 +461,10 @@ async function singleVisual(ctx: Context): Promise<CaseRecord> {
       const drift = path.join(ctx.tmp, 'drift')
       copyWorkspace(ctx.snap, drift)
       const file = path.join(drift, first.asset.path)
-      fs.appendFileSync(file, '\n<!-- acceptance drift -->\n')
+      // One changed byte that keeps the SVG well-formed: a space before the closing tag.
+      const bytes = fs.readFileSync(file, 'utf8')
+      const at = bytes.lastIndexOf('</svg>')
+      fs.writeFileSync(file, at >= 0 ? `${bytes.slice(0, at)} ${bytes.slice(at)}` : `${bytes} `)
       const driftSession = await mcpSession(drift, run.transcript, ctx.tokens.design)
       try {
         const again = (await driftSession.call('visual_dna', { asset_ids: [first.asset_id] })) as { references?: Array<{ state: string; reason: string | null }> }
@@ -464,7 +476,41 @@ async function singleVisual(ctx: Context): Promise<CaseRecord> {
       }
     })
 
-    const prod = (await session.call('production_readiness', { task_type: 'visual_design', locale: 'fa' })) as ProductionReply
+    // FIX-01: the legacy named logo/motion tools read real question ids and serve approved values only.
+    await run.check('legacy.logo_motion_ids', 'FIX-01', async () => {
+      const guest = await mcpSession(ctx.snap, run.transcript)
+      const problems: string[] = []
+      const evidence: string[] = []
+      try {
+        for (const tool of ['get_logo_rules', 'get_motion_guidelines'] as const) {
+          const reply = (await session.call(tool, {})) as { status?: string; data?: { facts?: Array<{ id: string; value: unknown; revision?: string; withheld?: boolean; missing?: boolean }> } }
+          const guestReply = (await guest.call(tool, {})) as { status?: string; data?: { facts?: Array<{ id: string; value: unknown }> } }
+          run.calls += 2
+          const rows = reply.data?.facts ?? []
+          const expected = [...NAMED_FACT_TOOL_IDS[tool]]
+          if (JSON.stringify(rows.map((row) => row.id)) !== JSON.stringify(expected)) problems.push(`${tool}:ids_differ`)
+          for (const id of expected) if (!ctx.bank.has(id)) problems.push(`${tool}:not_in_bank:${id}`)
+          let served = 0
+          for (const row of rows) {
+            if (row.value === null || row.value === undefined) continue
+            served += 1
+            const fact = ctx.facts[row.id]
+            if (!fact || fact.status !== 'approved' || fact.revision_hash !== row.revision || String(fact.value) !== String(row.value)) problems.push(`${tool}:served_not_approved:${row.id}`)
+          }
+          const draftLeaks = expected.filter((id) => ctx.drafts[id] && JSON.stringify(reply).includes(ctx.drafts[id]!))
+          for (const id of draftLeaks) problems.push(`${tool}:draft_served:${id}`)
+          // A guest (no token) reads published public facts at most: never an internal or restricted value.
+          const guestServed = (guestReply.data?.facts ?? []).filter((row) => row.value !== null && row.value !== undefined)
+          for (const row of guestServed) if (ctx.facts[row.id]?.classification !== 'public') problems.push(`${tool}:guest_served_non_public:${row.id}`)
+          evidence.push(`${tool}:${reply.status ?? 'none'}:ids:${rows.length}:served:${served}:drafts_checked:${expected.filter((id) => ctx.drafts[id]).length}`, `${tool}:guest:${guestReply.status ?? 'none'}:served:${guestServed.length}`)
+        }
+      } finally {
+        await guest.close()
+      }
+      return { verdict: problems.length === 0 ? 'PASS' : 'FAIL', evidence: [...evidence, ...problems.slice(0, 10)] }
+    })
+
+    const prod = productionOf(await session.call('production_readiness', { task_type: 'visual_design', locale: 'fa' }))
     run.calls += 1
     await run.check('production.honest_block', 'FIX-06', () => honestBrief(prod, 'rtl'))
     run.production = prod.production_ready === 'ready' ? 'produced' : 'blocked'
@@ -483,6 +529,16 @@ interface ProductionReply {
   review?: { visual_taste: string; semantic: string }
   authorizes?: unknown[]
   permissions?: Record<string, unknown>
+}
+
+/** MCP wraps the projection in an envelope ({ status, data, authorizes }); the CLI prints the projection itself. */
+function productionOf(reply: Record<string, unknown>): ProductionReply {
+  const envelope = reply as Envelope & { data?: unknown }
+  if (envelope.data && typeof envelope.data === 'object') {
+    const data = envelope.data as ProductionReply
+    return { ...data, authorizes: Array.isArray(envelope.authorizes) && envelope.authorizes.length === 0 ? data.authorizes : ['envelope_not_empty'] }
+  }
+  return { status: envelope.status ?? 'none' }
 }
 
 const checkOf = (reply: ProductionReply, id: string) => reply.checks?.find((entry) => entry.check_id === id)
@@ -575,7 +631,7 @@ async function tenPosts(ctx: Context, revokedToken: string, otherBrandToken: str
     // The owner renders it (no token in this shell), with the owner checkout for Coach and logo.
     const skipLog = (rel: string): boolean => rel === ACCESS_LOG
     const brandBefore = treeDigest(path.join(ctx.snap, 'brand'), skipLog)
-    const postsDir = path.join(dir, 'posts')
+    const postsDir = path.join(dir, 'batch')
     const rendered = await runScript('scripts/runtime.ts', ['social-batch', '--pack', packFile, '--root', ctx.snap, '--out', postsDir, '--json'], { cwd: ctx.tmp })
     run.calls += 1
     const brandAfter = treeDigest(path.join(ctx.snap, 'brand'), skipLog)
@@ -706,8 +762,9 @@ async function tenPosts(ctx: Context, revokedToken: string, otherBrandToken: str
       run.calls += 2
       const parsed = safeJson(readiness.stdout) as ProductionReply | null
       const posts = fs.existsSync(path.join(target, 'posts')) ? fs.readdirSync(path.join(target, 'posts')).length : 0
-      const ok = parsed?.production_ready === 'not_ready' && readiness.code === 3 && render.code !== 0 && posts === 0
-      return { verdict: ok ? 'PASS' : 'FAIL', evidence: [`changed:${changed}`, `readiness:${parsed?.production_ready ?? 'none'}`, `readiness_exit:${readiness.code}`, `render_exit:${render.code}`, `render_code:${errorCode(render.stderr)}`, `posts_written:${posts}`] }
+      const drift = parsed ? checkOf(parsed, 'context.source_drift') : undefined
+      const ok = parsed?.production_ready === 'not_ready' && drift?.verdict === 'fail' && drift.blocks && readiness.code === 3 && render.code !== 0 && errorCode(render.stderr) === 'stale_pack' && posts === 0
+      return { verdict: ok ? 'PASS' : 'FAIL', evidence: [`changed:${changed}`, `readiness:${parsed?.production_ready ?? 'none'}`, `source_drift:${drift?.verdict ?? 'none'}`, `readiness_exit:${readiness.code}`, `render_exit:${render.code}`, `render_code:${errorCode(render.stderr)}`, `posts_written:${posts}`] }
     })
     await run.check('no_secrets', 'FIX-02', () => noLeak(run.transcript, ctx.secrets))
   } finally {
@@ -801,9 +858,13 @@ function changeCitedFact(root: string, pack: TaskContextPack, facts: Context['fa
   const preferred = ['brand.strategy.purpose', 'brand.verbal.tagline', 'brand.strategy.promise', 'brand.strategy.differentiation']
   const order = [...new Set([...preferred.filter((id) => cited.includes(id)), ...cited])]
   for (const id of order) {
-    const changed = engine.changeAnswer(id, `${String(facts[id]!.value)} (revised)`)
-    if (changed.kind !== 'recorded') continue
-    if (engine.approve(id, 'owner', proof).kind === 'recorded') return id
+    // An approved fact changes only through a change request the owner approves (the normal owner flow).
+    try {
+      const change = engine.requestChange(id, `${String(facts[id]!.value)} (revised)`)
+      if (engine.approveChange(change.id, proof, change.expected_version).kind === 'recorded') return id
+    } catch {
+      continue
+    }
   }
   return null
 }
@@ -838,7 +899,7 @@ async function websiteBrief(ctx: Context): Promise<CaseRecord> {
       const ok = prints[0] !== 'none' && prints.every((print) => print === prints[0])
       return { verdict: ok ? 'PASS' : 'FAIL', evidence: prints.map((print, index) => `${['fa', 'en', 'tr'][index]}:${short(print)}`) }
     })
-    const prod = (await session.call('production_readiness', { task_type: 'website_design', locale: 'fa' })) as ProductionReply
+    const prod = productionOf(await session.call('production_readiness', { task_type: 'website_design', locale: 'fa' }))
     run.calls += 1
     await run.check('brief.no_deployment_claim', 'FIX-07', () => honestBrief(prod, 'rtl'))
     run.production = prod.production_ready === 'ready' ? 'produced' : 'brief_only'
@@ -878,7 +939,7 @@ async function paidBrief(ctx: Context): Promise<CaseRecord> {
       if (item?.state === 'approved') return { verdict: 'PASS', evidence: [`strategy:${item.source_id}`, `revision:${short(item.source_revision)}`] }
       return { verdict: 'NOT_TESTED', evidence: [`ads:${item?.state ?? 'absent'}:${paidMissing(pack)?.reason ?? 'none'}`, 'no approved, current paid_media strategy'] }
     })
-    const prod = (await ads.call('production_readiness', { task_type: 'paid_campaign_brief', locale: 'tr' })) as ProductionReply
+    const prod = productionOf(await ads.call('production_readiness', { task_type: 'paid_campaign_brief', locale: 'tr' }))
     run.calls += 1
     await run.check('paid.no_spend_or_publish', 'FIX-08', () => {
       const brief = honestBrief(prod, 'ltr')
