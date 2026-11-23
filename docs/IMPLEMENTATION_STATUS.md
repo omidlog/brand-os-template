@@ -289,6 +289,25 @@ Branch `feat/content-bridge-slice-d`. Guides: `docs-internal/CONTENT_BRIDGE.md`,
 | CLI journey demo (real output) | Done | Owner journey, mock agent via `brand:query`, report over MCP, `reports`, revoke. `tests/content-journey.test.ts` runs it and checks the documents name only real commands, tools and schemas. |
 | Hosted API, per-channel tokens, Studio view of reports | Not started | Not in the brief. |
 
+## Task Context Engine (Slice 1: core and CLI)
+
+Branch `feat/task-context-p0`. Preflight audit, permission and field-coverage matrices, and the guide:
+`docs-internal/TASK_CONTEXT.md`. Contract: `schemas/task-context.schema.json` (`brand-os/task-context/v1`).
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Preflight audit | Done | Reuse matrix (which existing reader owns each piece of context), permission matrix per agent profile and source, field coverage per pack key, two findings and the PR #25 overlap. No new store, no new profile. |
+| Pack contract | Done | `brand-os/task-context/v1` in draft-07, validated with Ajv in `tests/task-context.test.ts`. `$id` is an identifier; there is no hosted API. |
+| Task classifier | Done (deterministic) | `classifyTask`: en/fa/tr keywords, Persian/Arabic digits, channel words. Strong cues are task nouns; weak verbs decide nothing. Zero cues or a tie returns `need_task_type`. CLI only, no model, and the request text is never stored, logged or copied into the pack. |
+| Selectors and renderer | Done | Seven task recipes select a bounded key set over `brandRetrieve` (facts, hash-approved tokens, approved assets by role, approved mascot artwork), the Strategy Feed and `creative_context`. One caller context for every reader; nothing is merged across principals. |
+| Gaps, readiness, staleness | Done | Gaps carry an existing FieldQuestion id; an approved "TBD" is a gap, not a source. `blocked` only when no readable identity exists (or the module is off), `ready` when every requirement for the task is met, `partial` otherwise. `staleness` is `needs_review` when a served strategy is review-due. |
+| Digest | Done | `digests.context_sha256` over the canonical JSON of the pack without its digest; `verifyPack` recomputes it. Same sources, same digest. |
+| `brand:query --tool task_context` | Done | `--task-type`, `--request`, `--channel`, `--count`, `--locale`, `--mode`, `--output-format`, `--scope-id`. Needs an owner-issued token of this brand; guests, unprofiled agents and the owner process are denied. |
+| Writes | None | Reading a pack creates no file. `tests/task-context.test.ts` compares the whole `brand/` tree before and after. |
+| MCP tool, skill handoff | Not started | Next slice (P2): one gated stdio MCP tool with negative security tests, then the `task-context` skill and the preflight call in the social, UI and marketing skills. |
+| Calendar slots in the pack | Not started | Next slice: `scope_id` for an approved week, pinned `content_calendar` / `content_brief`, and `stale_pin`. Today a ten-post request is an on-demand draft brief, which is the required behaviour anyway. |
+| `task_context_validate`, Studio view | Not started | P2 and P4 of the plan. Studio stays read-only and untouched here. |
+
 ## SVG checker, normalizer and asset approval
 
 Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for example a brand's mascot stages) were refused everywhere as "active SVG" because of a harmless `<style>` block, with no reason given and no fix.

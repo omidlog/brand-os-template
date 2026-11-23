@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased — Task Context Engine, core and CLI (Slice 1)
+
+### Added
+
+- `npm run brand:query -- --tool task_context`: one read-only, source-cited context pack for one task
+  (`visual_design`, `social_batch`, `website_design`, `product_ui`, `paid_campaign_brief`, `brand_identity`,
+  `personal_content`). It reuses the existing readers — `brandRetrieve` for facts, hash-approved tokens, approved
+  assets and mascot artwork, the Strategy Feed for an approved content / paid-media / SEO revision, `creative_context`
+  for scoped preferences — with the caller's own token deciding every source. No new store and no new agent profile.
+- `--request` runs a deterministic en/fa/tr classifier in the CLI (task type, deliverable count including Persian and
+  Arabic digits, channel). An unclear or ambiguous request returns `need_task_type`; the engine never guesses a task.
+  The request text is not stored, not logged and not copied into the pack. No model is called.
+- Every pack reports `authorizes: []` with `publish`, `schedule`, `spend` and `deploy` false, cites `source_id` and
+  `source_revision` per item, lists gaps as existing FieldQuestion ids, and carries `digests.context_sha256` over its
+  canonical JSON (`verifyPack`). An approved value that says "not decided" is a gap, never a source. A source the
+  caller may not read is a `missing[]` entry with reason `not_authorized`, with no hint of what it holds; withheld
+  facts are named only by category (`facts.restricted`).
+- Contract `schemas/task-context.schema.json` (`brand-os/task-context/v1`), checked with Ajv in the tests.
+- Preflight audit and guide `docs-internal/TASK_CONTEXT.md`: reuse matrix, permission matrix per profile and source,
+  field coverage per pack key, and what this slice does not ship. Tests: `task-context` (12), `task-context-cli` (1).
+
+### Notes
+
+- Reading a pack writes nothing; a test compares the whole `brand/` tree before and after. An on-demand batch request
+  is not an approved calendar week, and creates none.
+- No MCP tool, no skill change and no Studio change in this slice. Found on the way and not fixed here:
+  `get_logo_rules` and `get_motion_guidelines` ask for question ids that do not exist in the bank.
+
 ## Unreleased — Content planner skill and agent integration guide (Content Bridge Slice D)
 
 ### Added

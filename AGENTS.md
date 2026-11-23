@@ -100,6 +100,25 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - As an execution agent with a `strategy-seo-read` or `strategy-ads-read` token, read through `strategy_list` / `strategy_get` and pin `revision` + `content_sha256`. On `stale_pin`, stop and re-read. Never treat the strategy as permission to act.
 - As a content agent with a `content-read` token, read `content_calendar`, then `content_brief` per slot with the week `pin`. Write only what the brief allows (its `must_avoid` holds the banned claims). On `stale_pin` or `not_found`, stop. After producing or publishing, call `content_report` with the pin and the https URL; it is an observation, not permission to publish. Skill: `agent-skills/content-planner/SKILL.md`; connecting an external bot: `docs-internal/CONTENT_AGENT_INTEGRATION.md`.
 
+## Task context
+
+Before drafting for a task — one visual, ten posts, a website, a product screen, an ad concept, an identity brief or a
+personal page — read the context instead of asking the owner to paste it again:
+
+`npm run brand:query -- --tool task_context --task-type <type> [--channel …] [--count …] [--locale en|fa|tr]`
+(guide: `docs-internal/TASK_CONTEXT.md`; `--request "<the owner's sentence>"` classifies the task deterministically).
+
+- It needs an owner-issued agent token of this brand. A guest gets `denied`; ask the owner for a token.
+- `readiness` is `ready`, `partial` or `blocked`. On `partial` work from what is there and name the gaps; on `blocked`
+  stop and hand the owner the question ids. Every entry in `missing[]` is an existing question id to ask — never fill
+  one in, and never substitute a similar asset, token, colour or claim for a missing one.
+- Apply `guardrails` as written, quote approved sentences unchanged, and cite `source_id` and `source_revision` in your
+  handoff. A pack is context, not permission: `authorizes` is empty and publishing, scheduling, spending and deploying
+  stay false. Assembling a brief produced no deliverable; say what you drafted and what is still missing.
+- An on-demand batch is not an approved calendar week. For approved slots use `content_calendar` and `content_brief`
+  with a pin; for an exact mascot pose use `brand_retrieve --kind mascot` with filters.
+- There is no `task_context` MCP tool yet. If the CLI is not available, say so instead of answering from memory.
+
 ## Brand OS Studio
 
 Studio (`apps/studio`, guide `docs-internal/STUDIO.md`) is a private, read-only viewer. It shows the merged default branch of each brand repository and has exactly two GitHub writes: creating a new private repository from this template, and opening (never merging) a template update pull request on a new `template-update/<sha>` branch in a brand repository. It never edits brand content.
