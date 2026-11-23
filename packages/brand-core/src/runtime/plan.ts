@@ -3,6 +3,7 @@ import { splitItems } from '../content-bridge/sources.js'
 import { parseStructured } from '../structured.js'
 import type { PackItem, TaskContextPack, TaskLocale } from '../task-context/model.js'
 import { SOCIAL_BATCH_COUNT, type UsedSource } from './model.js'
+import { typeSpecOf, type TypeSpec } from './type.js'
 
 /**
  * The deterministic planner: one `social_batch` pack in, ten distinct post plans out.
@@ -59,6 +60,8 @@ export interface BatchPlan {
   locale: TaskLocale
   direction: 'ltr' | 'rtl'
   palette: Palette
+  /** The approved type scale per text slot (`type.ts`), or the renderer defaults, labelled as such. */
+  type: TypeSpec
   posts: PostPlan[]
   /** Approved messages found, before the count limit. Fewer than ten blocks the batch. */
   available_messages: number
@@ -169,5 +172,5 @@ export function planSocialBatch(pack: TaskContextPack): BatchPlan {
           colors: pairs[Math.floor(offset / 2) % 2 === 0 ? offset % 2 : (offset + 1) % 2]!,
         }
       })
-  return { locale, direction, palette, posts, available_messages: candidates.length, blockers }
+  return { locale, direction, palette, type: typeSpecOf(pack, direction), posts, available_messages: candidates.length, blockers }
 }

@@ -81,7 +81,18 @@ export function postChecks(pack: TaskContextPack, plan: BatchPlan, post: PostPla
       [`format:${POST_FORMAT.id}`, `declared:${dims.join('x') || 'none'}`],
     ),
   )
-  out.push(check('post.headline_fit', 'runtime.manifest', rendered.headline.fits ? 'pass' : 'warn', [`size:${rendered.headline.size}`, `lines:${rendered.headline.lines}`, 'method:estimated_advance_width']))
+  // With an approved headline size, drawing it smaller to fit is a deviation from the scale and is reported as `warn`.
+  const approvedSize = plan.type.slots.headline.size_source === 'approved'
+  out.push(
+    check(
+      'post.headline_fit',
+      'runtime.manifest',
+      !rendered.headline.fits || (approvedSize && rendered.headline.reduced) ? 'warn' : 'pass',
+      [`size:${rendered.headline.size}`, `start:${rendered.headline.start}`, `start_source:${plan.type.slots.headline.size_source}`, `lines:${rendered.headline.lines}`, 'method:estimated_advance_width'],
+    ),
+  )
+
+  if (post.brand_name) out.push(check('post.signoff_fit', 'runtime.manifest', rendered.signoff.fits ? 'pass' : 'warn', [`lines:${rendered.signoff.lines}`, 'method:estimated_advance_width']))
 
   const rules = bannedRules(pack)
   const texts: Array<[string, string | null]> = [
