@@ -127,7 +127,7 @@ Agents read the brand through `npm run mcp:serve` or `npm run brand:query`. Iden
 - A valid token: the owner-chosen profile (`internal-read`, `design`, `marketing`, `finance`). Approved items in that profile's modules, published or not. Drafts are never returned.
 - An unknown, revoked or other-brand token: the server exits. It never falls back to guest.
 
-Issue a token with `npm run brand:agent-token -- issue --profile internal-read --label "laptop agent"`. It is printed once and stored hashed in `brand/.private/agent-tokens.json` (gitignored). Every profile is read-only, and restricted values come back as `withheld` for every profile, including `finance`. Reads are logged to `brand/.private/access-log.jsonl` without values. See `docs-internal/AI_CONNECTORS.md` and `docs-internal/adr/0003-agent-access.md`.
+Issue a token with `npm run brand:agent-token -- issue --profile internal-read --label "laptop agent"`. It is printed once and stored hashed in `brand/.private/agent-tokens.json` (gitignored). Every profile is read-only, and restricted values come back as `withheld` for every profile, including `finance`. Reads are logged to `brand/.private/access-log.jsonl` without values. Step-by-step owner guide (en, fa, tr): `docs-internal/AGENT_ONBOARDING.md`. See `docs-internal/AI_CONNECTORS.md` and `docs-internal/adr/0003-agent-access.md`.
 
 ## Personal brands
 

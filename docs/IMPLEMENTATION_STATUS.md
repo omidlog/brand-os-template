@@ -446,3 +446,8 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Proposal only, awaiting owner approval:** `docs-internal/FINANCE_SECURITY_DESIGN.md` (threat model, storage, readers, redaction per export profile, audit logging, owner decisions FD1–FD8).
 - **Not done (by design):** any implementation. No finance export service, Studio finance view, MCP tool or agent profile change exists; restricted finance values stay withheld everywhere except the owner's local CLI.
+
+## Nontechnical agent onboarding (fixes pack GAP-11)
+
+- **Done:** owner guide `docs-internal/AGENT_ONBOARDING.md` (+ `.fa.md` RTL, `.tr.md`) for one fresh authorised agent over the existing local stdio MCP server and agent token (create secret, issue, connect Claude Code, verify, refusals, revoke). Test `fresh-agent-setup` runs the guide's exact commands in a temporary synthetic brand and checks every command and profile the guides name exists.
+- **Not done (by design):** hosted / remote MCP and any hosted auth; design note `docs-internal/AGENT_ONBOARDING_HOSTED.md` lists what it would need and requires an owner decision and a new security review. Studio stays read-only and cannot issue tokens. A shell-capable agent on the owner's machine can still read `brand/.private` (ADR 0003); the guide tells the owner to refuse that permission. Windows needs WSL or Git Bash for the commands as written.

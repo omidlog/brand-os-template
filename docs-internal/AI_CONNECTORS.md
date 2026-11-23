@@ -2,6 +2,8 @@
 
 Nothing here grants a model access to a private repository.
 
+Step-by-step owner guide (en, fa, tr) for connecting one agent: [AGENT_ONBOARDING.md](AGENT_ONBOARDING.md).
+
 ## Claude Code and Codex
 
 Open the cloned repository in a session that is allowed to read it. Point the agent at `AGENTS.md` and `CLAUDE.md`. Skills are in `agent-skills/`.
