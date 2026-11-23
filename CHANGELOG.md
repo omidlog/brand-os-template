@@ -4,7 +4,7 @@
 
 ### Added
 
-- `@brand-os/brand-core/assurance`: a pure library with the six-level claim ladder (levels only go down; an unverified edition or unchecked source is `reference_only`; `externally_reviewed` and `certified` need an attestation of the right kind), a methodology registry (one original assessable method, W3C/OWASP/ISO/BMC entries as references only, no edition guessed), 15 typed controls of the original Positioning Readiness v1 rubric over existing question ids, a deterministic evaluator with ten statuses (no ratio unless the denominator is real, changed sources force `needs_review`, restricted inputs withheld), en/fa/tr text for every code, a plain-text gap report and `SYNTHETIC DEMO — NOT A REAL BRAND` fixtures.
+- `@brand-os/brand-core/assurance`: a pure library with the six-level claim ladder (levels only go down; an unverified edition or unchecked source is `reference_only`; `externally_reviewed` and `certified` need an attestation of the right kind), a methodology registry (one original assessable method; unchecked W3C/OWASP/BMC entries at most `informed_by`; ISO named only; no edition guessed), a bridge that checks a visual page's framework claim against the registry, 15 typed controls of the original Positioning Readiness v1 rubric over existing question ids, a deterministic evaluator with ten statuses (no ratio unless the denominator is real, changed sources force `needs_review`, restricted inputs withheld), en/fa/tr text for every code, a plain-text gap report and `SYNTHETIC DEMO — NOT A REAL BRAND` fixtures.
 - Guide `docs-internal/ASSURANCE.md` with the coverage matrix.
 - Tests: `assurance-registry`, `assurance-controls`, `assurance-assess`, `assurance-i18n`.
 

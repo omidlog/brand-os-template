@@ -16,6 +16,7 @@ This is a pure library: `packages/brand-core/src/assurance/`, exported as `@bran
 | Audiences | `auth.ts` `Audience` (`public` / `internal` / `restricted`) | none |
 | Question ids and sensitivity | the question bank (`content/index.ts` `allQuestions`) | none: controls name existing ids only, and a test fails if one disappears |
 | Quotes and evidence text | Knowledge research notes | none: a control cites a note by id and revision; the engine never sees its text |
+| Framework claim on visual pages | `visual/model.ts` `PermittedClaim`, `BMC_FRAMEWORK` | `bridge.ts`: a mapping and a check, no change to the visual layer |
 | Claim ladder, registry, controls, evaluator | — | `claims.ts`, `registry.ts`, `controls.ts`, `assess.ts`, `report.ts` |
 
 ## Claim ladder
@@ -25,17 +26,27 @@ A method may be cited at the lowest of what it declares, what its rules access a
 | Level | Meaning | Reachable when |
 | --- | --- | --- |
 | `reference_only` | We named a source. | always |
-| `informed_by` | The source shaped our own method. | rules access `reference_only` or better, edition and source checked |
+| `informed_by` | The source shaped our own work. A statement about us, so no edition is printed. | rules access `reference_only` or better |
 | `mapped_to` | Selected requirements were mapped, with a scope. | rules `authored` or `licensed`, checked |
 | `internally_assessed` | We assessed against rules we authored or licensed. | rules `authored` or `licensed`, checked |
 | `externally_reviewed` | A named independent reviewer examined a scope. | an attestation of kind `review`, checked |
 | `certified` | An accredited body certified a scope and dates. | an attestation of kind `certificate`, checked |
 
-Cap reasons: `no_attestation`, `rules_access`, `edition_unverified`, `source_unverified`. An entry with `edition: null` or `checked_at: null` is always `reference_only`. A certificate held by someone else can be cited, but never makes a standard we hold no rules for assessable (`assessable()`).
+Cap reasons: `no_attestation`, `edition_unverified`, `source_unverified`, `rules_access`. An entry with `edition: null` or `checked_at: null` is at most `informed_by`, and an unlicensed standard is `reference_only`. A certificate held by someone else can be cited at `certified` once checked, but never makes a standard we hold no rules for assessable (`assessable()`).
 
 The v2 master brief lists `referenced_by` and `externally_assessed`; its own legal taxonomy (doc 09) and schemas use `reference_only` and `externally_reviewed`. This library uses the schema names.
 
-Open PR #25 (Visual P0) carries a different vocabulary (`PermittedClaim`). It is **not** changed here; the reconciliation is proposed in `trust-v2-audit.md` part F.1.
+The visual layer (`visual/model.ts`, merged in PR #25) has its own vocabulary, `PermittedClaim`. It is **not** changed here. `assurance/bridge.ts` maps it onto the ladder and `checkFrameworkClaim()` checks that a visual page never claims more than the registry allows:
+
+| `PermittedClaim` | Ladder level |
+| --- | --- |
+| `informed_by` | `informed_by` |
+| `aligned_with` | `mapped_to` |
+| `verified_against` | `externally_reviewed` |
+| `externally_certified` | `certified` |
+| `original_professional_template` | `internally_assessed` |
+
+The Business Model Canvas page claims `informed_by`, and the registry allows `informed_by`. Replacing `PermittedClaim` inside the visual layer is a separate owner decision.
 
 ## Methodology registry
 
@@ -44,14 +55,14 @@ Open PR #25 (Visual P0) carries a different vocabulary (`PermittedClaim`). It is
 | `method_id` | Issuer | Kind | Rules access | Declared | Effective today | Edition | Checked |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `brand-os.positioning-readiness` | Brand OS | `original_method` | `authored` | `internally_assessed` | `internally_assessed` | `1` | 2026-11-23 |
-| `w3c.prov-o` | W3C | `web_standard` | `reference_only` | `informed_by` | `reference_only` | — | — |
-| `w3c.wcag-2.2` | W3C | `web_standard` | `reference_only` | `informed_by` | `reference_only` | — | — |
-| `owasp.asvs` | OWASP Foundation | `professional_framework` | `reference_only` | `informed_by` | `reference_only` | — | — |
+| `w3c.prov-o` | W3C | `web_standard` | `reference_only` | `informed_by` | `informed_by` | — | — |
+| `w3c.wcag-2.2` | W3C | `web_standard` | `reference_only` | `informed_by` | `informed_by` | — | — |
+| `owasp.asvs` | OWASP Foundation | `professional_framework` | `reference_only` | `informed_by` | `informed_by` | — | — |
 | `iso.20671` | ISO | `formal_standard` | `unlicensed` | `reference_only` | `reference_only` | — | — |
 | `iso.iec.25010` | ISO/IEC | `formal_standard` | `unlicensed` | `reference_only` | `reference_only` | — | — |
-| `strategyzer.bmc` | Alexander Osterwalder / Strategyzer | `professional_framework` | `reference_only` | `informed_by` | `reference_only` | — | — |
+| `strategyzer.bmc` | Alexander Osterwalder / Strategyzer | `professional_framework` | `reference_only` | `informed_by` | `informed_by` | — | — |
 
-Every entry blocks the use `certification`. ISO entries also block `compliance_claim`, `clause_reproduction`, `rule_database` and `llm_training`. To lift an open entry to `informed_by`, a person opens the official source, records the edition, `checked_at` and `checked_by`, and the change is reviewed like code.
+Every entry blocks the use `certification`. ISO entries also block `compliance_claim`, `clause_reproduction`, `rule_database` and `llm_training`. To cite an edition or go beyond `informed_by`, a person opens the official source, records the edition, `checked_at` and `checked_by`, and the change is reviewed like code. Nothing in the registry is externally reviewed or certified.
 
 ## Control statuses
 
@@ -116,7 +127,7 @@ PRR-14 exists so the absence of a budget envelope is visible. Its fact is restri
 
 | File | Covers |
 | --- | --- |
-| `tests/assurance-registry.test.ts` | registry invariants, the ladder never rises, ISO stays a reference, attestations by kind, assessability |
+| `tests/assurance-registry.test.ts` | registry invariants, the ladder never rises, ISO stays a reference, attestations by kind, assessability, the bridge to the visual layer |
 | `tests/assurance-controls.test.ts` | control invariants, real question ids, privacy classification ≥ question sensitivity, applicability with `unknown` |
 | `tests/assurance-assess.test.ts` | fixture results, determinism and order independence, changed-source invalidation, withheld inputs, a privacy canary, reviewer rules, distinct findings, licence block |
 | `tests/assurance-i18n.test.ts` | every emitted code has en/fa/tr text, the gap report in three languages, the demo banner, no ratio when not scoreable, this coverage matrix matches the code |

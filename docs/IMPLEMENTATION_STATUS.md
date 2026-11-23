@@ -295,7 +295,7 @@ Branch `feat/trust-v2-pr-a`. Guide: `docs-internal/ASSURANCE.md`. A pure library
 
 | Item | Status | Note |
 | --- | --- | --- |
-| Claim ladder and methodology registry | Done | Six levels that only go down; unverified editions and unchecked sources are `reference_only`; attestations by kind (review, certificate). One assessable method (our own); ISO entries are named only. |
+| Claim ladder and methodology registry | Done | Six levels that only go down; unverified editions and unchecked sources are at most `informed_by`; attestations by kind (review, certificate). One assessable method (our own); ISO entries are named only. `assurance/bridge.ts` checks the visual layer's `PermittedClaim` against the registry without changing it. |
 | Assessable controls (Positioning Readiness v1) | Done | 15 typed controls over existing question ids; applicability first, `unknown` never read as `no`; privacy classification at least the question's sensitivity. |
 | Deterministic evaluator | Done | Ten statuses; `not_scoreable` unless the denominator is real; changed source forces `needs_review`; restricted inputs withheld; per-domain maturity, no aggregate; byte-identical output for the same inputs. |
 | en/fa/tr text and gap report | Done | Every emitted code has text in three languages; `renderGapReport` prints no ratio when not scoreable. Synthetic fixtures only. |
