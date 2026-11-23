@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { writeAtomic } from '@brand-os/brand-core'
+import { COACH_RULE_VERSION } from '@brand-os/brand-core/coach'
 import type { CommitSummary, GitHubClient, PullSummary } from './github/client.js'
 import { GitHubError } from './github/client.js'
 import { extractTarGz, studioPathAllowed } from './github/tar.js'
@@ -181,8 +182,8 @@ export class SyncService {
       const head = await this.deps.github.getBranchHead(owner, name, repo.default_branch || branch)
       let projection = previous?.projection ?? null
       let previews = previous?.previews ?? {}
-      // A cache written before the knowledge, creative, calendar, coach or visual projection (or the current master-logo rule, or the competitor matrix) existed is rebuilt once at the same commit.
-      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.coach === undefined || projection.visual === undefined || (projection.visual !== null && projection.visual.identity?.master_rule !== IDENTITY_MASTER_RULE) || (projection.visual !== null && projection.visual.competitors === undefined)) {
+      // A cache written before the knowledge, creative, calendar, coach or visual projection (or the current master-logo rule, the competitor matrix or the current coach rule version) existed is rebuilt once at the same commit.
+      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.coach === undefined || (projection.coach !== null && projection.coach.rule_version !== COACH_RULE_VERSION) || projection.visual === undefined || (projection.visual !== null && projection.visual.identity?.master_rule !== IDENTITY_MASTER_RULE) || (projection.visual !== null && projection.visual.competitors === undefined)) {
         const archive = await this.deps.github.getTarball(owner, name, head.sha)
         const checkout = path.join(work, 'checkout')
         extractTarGz(archive, { destRoot: checkout, include: studioPathAllowed })
