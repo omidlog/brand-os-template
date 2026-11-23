@@ -39,6 +39,7 @@ export const SCRIPT_GROUPS: ScriptGroup[] = [
       ['brand:retract', 'Remove an approved claim and unpublish it (owner step).'],
       ['brand:evidence', 'Add, verify or withdraw evidence for a claim.'],
       ['brand:coach', 'Get advisory coaching on one answer: a follow-up question, a quality status or the open contradictions.'],
+      ['brand:assurance', 'Owner-local, read-only: pin approved facts into a reproducible Positioning Readiness snapshot and list what is missing. Never a certification.'],
       ['brand:doctor', 'Find problems in the brand repository and say how to fix them.'],
     ],
   },
