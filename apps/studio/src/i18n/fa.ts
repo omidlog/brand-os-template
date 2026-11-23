@@ -13,6 +13,7 @@ export const fa: Messages = {
   'nav.overview': 'نمای کلی',
   'nav.brandBook': 'کتاب برند',
   'nav.design': 'سیستم طراحی',
+  'nav.visual': 'مدل کسب‌وکار',
   'nav.assets': 'دارایی‌ها و مسکات',
   'nav.business': 'سیستم کسب‌وکار',
   'nav.personal': 'برند شخصی',

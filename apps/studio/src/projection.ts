@@ -14,6 +14,7 @@ import {
 } from '@brand-os/brand-core'
 import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
+import { buildBusinessModelCanvas, canvasApplies, type VisualDocument } from '@brand-os/brand-core/visual'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
 import type { SvgIssueCode } from '@brand-os/asset-catalog'
@@ -136,6 +137,16 @@ export interface StudioProjection {
    * Null when they could not be read. Absent in caches written before this field existed; sync rebuilds those.
    */
   calendar?: StudioCalendarProjection | null
+  /**
+   * Semantic visual documents (Visual Blueprint P0): the business model canvas in its internal and public editions,
+   * built from the same approved facts and drafts as the documents. Null when they could not be built. Absent in
+   * caches written before this field existed; sync rebuilds those.
+   */
+  visual?: StudioVisualProjection | null
+}
+
+export interface StudioVisualProjection {
+  bmc: { applies: boolean; internal: VisualDocument; public: VisualDocument }
 }
 
 export class ProjectionError extends Error {
@@ -205,6 +216,19 @@ function projectCreative(root: string, slug: string): StudioCreativeProjection |
     const creative = buildStudioCreative(root, slug)
     assertNoSecrets(creative)
     return creative
+  } catch {
+    return null
+  }
+}
+
+/** The visual documents; a failure here must not take down the brand view either. */
+function projectVisual(engine: InterviewEngine): StudioVisualProjection | null {
+  try {
+    const visual: StudioVisualProjection = {
+      bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
+    }
+    assertNoSecrets(visual)
+    return visual
   } catch {
     return null
   }
@@ -414,6 +438,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
+    visual: projectVisual(engine),
   }
   assertNoSecrets(projection)
   return { projection, previews }

@@ -181,8 +181,8 @@ export class SyncService {
       const head = await this.deps.github.getBranchHead(owner, name, repo.default_branch || branch)
       let projection = previous?.projection ?? null
       let previews = previous?.previews ?? {}
-      // A cache written before the knowledge, creative or calendar projection existed is rebuilt once at the same commit.
-      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined) {
+      // A cache written before the knowledge, creative, calendar or visual projection existed is rebuilt once at the same commit.
+      if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.visual === undefined) {
         const archive = await this.deps.github.getTarball(owner, name, head.sha)
         const checkout = path.join(work, 'checkout')
         extractTarGz(archive, { destRoot: checkout, include: studioPathAllowed })

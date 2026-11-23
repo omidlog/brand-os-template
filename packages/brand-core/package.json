@@ -11,6 +11,7 @@
     "./identity": "./src/identity/index.ts",
     "./research": "./src/research/index.ts",
     "./seo": "./src/seo/index.ts",
-    "./strategy": "./src/strategy/index.ts"
+    "./strategy": "./src/strategy/index.ts",
+    "./visual": "./src/visual/index.ts"
   }
 }

@@ -14,6 +14,7 @@ export const en = {
   'nav.overview': 'Overview',
   'nav.brandBook': 'Brand Book',
   'nav.design': 'Design System',
+  'nav.visual': 'Business model',
   'nav.assets': 'Assets & Mascot',
   'nav.business': 'Business OS',
   'nav.personal': 'Personal Brand',

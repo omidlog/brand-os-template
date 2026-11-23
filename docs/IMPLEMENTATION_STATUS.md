@@ -303,6 +303,18 @@ Branch `feat/svg-normalizer`. Problem it solves: Illustrator exports (for exampl
 | `brand:assets approve` | Done | Owner approval of an asset's exact bytes (`approved_sha256`), with the same proof rules as `brand:tokens:approve`. Replaces approvals recorded by hand. `validate` flags an approved asset whose bytes changed. Test: `tests/svg-assets.test.ts` (Illustrator, Inkscape and Figma fixtures). |
 | Not done | — | `<use>` stays refused, even when it points inside the file. Raster previews generated on the server were not added. Asset publication (`approved_asset_ids`) still has no CLI. The checker filters attributes with a blocklist plus the regex gate; it does not have a full attribute allowlist. |
 
+## Visual Blueprint P0: semantic visual layer and business model canvas
+
+Guide: `docs-internal/VISUAL.md`. Audit and staged plan: owner notes (`visual-p0-audit.md`), not in this repository.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| `VisualDocument` / `VisualBlock` model | Done (first two block types) | `@brand-os/brand-core/visual`: `business_model_canvas`, `citation_list`; data states, missing reasons, framework claim (`informed_by`). No new store: built through `documents/model.ts` `itemFor`. `tests/visual-bmc.test.ts`. |
+| Business model canvas | Partial | Nine canonical zones from existing questions. Key activities and key resources have no question yet (designed gap, proposed ids); segments, offers, channels and revenue are single prose answers, so no links are drawn. |
+| Studio page and print view | Done | `GET /brands/<slug>/visual`, `GET /brands/<slug>/visual/print[?edition=public]`; no new non-GET route; en/fa/tr. `tests/studio-visual.test.ts`, `tests/studio-visual-browser.test.ts` (five widths, light/dark, A3 PDF via the browser). |
+| Golden example | Done | `npm run visual:golden` (ILLUSTRATIVE / MOCK DATA fixture, en/fa/tr, internal/public, HTML, PDF and PNG when Chrome and pdftoppm exist). |
+| Positioning map, brand book chapters, other frameworks, framework registry file, new interview questions | Not started | Staged in the P1–P5 plan. Competitor data is owner-only (`brand/.private`) and is not visible to Studio. |
+
 ## Commands that this remediation expects to pass
 
 `npm run lint`, `npm run typecheck`, `npm run validate`, `npm run test` (brand suite; `npm run test:full` adds the Studio suite), `npm run build`, and `npm run build:docs:nomascot`.

@@ -84,8 +84,9 @@ test('provisioning writes the intake as an unapproved hint; a request recorded b
   const old = await provisioned(h, { slug: 'old-brand', repo: 'old-brand' })
   const oldCfg = parse(h.github.headTree(OWNER, old.repo).get('brand/brand.config.yaml')!.toString('utf8')) as Record<string, unknown>
   assert.equal(oldCfg.onboarding, undefined, 'no inferred logo status for an old request')
-  // Studio's projection of the brand never carries the intake.
-  for (const slug of [req.slug, old.slug]) assert.doesNotMatch(JSON.stringify(h.sync.get(slug)), /onboarding|identity_intent|unapproved_owner_intake/)
+  // Studio's projection of the brand never carries the intake. (`business.cx.onboarding` is an ordinary interview
+  // question id that visual documents cite; it is not the intake.)
+  for (const slug of [req.slug, old.slug]) assert.doesNotMatch(JSON.stringify(h.sync.get(slug)), /(?<!business\.cx\.)onboarding|identity_intent|unapproved_owner_intake/)
 })
 
 test('server: the wizard asks the questions in en, fa and tr; errors keep the answers; review mirrors them', async () => {
