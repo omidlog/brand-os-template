@@ -399,3 +399,18 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Done:** `--pack <file>` (+ owner `--root`), approved type scale on drafts, `--final` outlines with owner font files (name/cmap checked, nothing substituted), Coach warnings never block, tagline/promise exemption in the Coach. Tests: `runtime-pack`, `runtime-type`, `coach-core`.
 - **Not done:** MCP tool (next slice), `brand.type.rtl` for RTL lines, variable-font instances in final export, logo variant per background.
+
+## Visual V3.1: repeating_entity question type and structured BMC (D3)
+
+Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes the "Business model canvas: Partial" row above for key activities, key resources, segments and cost items.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| `repeating_entity` type, validator, canonical storage | Done | `entities.ts`; canonical `brand-os.entity-list/1`, stable ids, links checked for form, amounts refused in cost items. `tests/repeating-entity.test.ts`. |
+| BMC list questions | Done | `business.model.segments`, `key_activities`, `key_resources`, `cost_items` (optional, internal); bank and field registry regenerated, additions only. |
+| Interview CLI (add, edit, reorder, remove) | Done | `brand:interview --entity add\|edit\|move\|remove\|list`, whole-list `--answer` keeps ids by name; drafts or change proposals, never approval. |
+| Migration of legacy answers | Done | `brand:migrate`: convertible text → system draft or change proposal (approved facts untouched); the rest kept and flagged as legacy; idempotent. |
+| Canvas links and empty state | Done | Items in zones, links by item name, unresolved targets named, links panel, designed empty list zone; en/fa/tr. `tests/visual-bmc.test.ts`, `tests/studio-visual.test.ts`. |
+| Studio answers view | Done (read-only) | Business plan "Business Model Canvas lists" section; Studio never writes (STUDIO.md). Editing is the CLI in the brand repository. |
+| Readers | Partial | `brand_retrieve` returns items in `meta.entity`; Coach reads list ids without quoting items. Task Context packs do not read list questions yet. `tests/repeating-entity-readers.test.ts`. |
+| Offers, channels, revenue streams as lists; SWOT/TOWS, value fit (V3.2), journeys/OKR (V3.3) | Not started | Out of scope for V3.1. |

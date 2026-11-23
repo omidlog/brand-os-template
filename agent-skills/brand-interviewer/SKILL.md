@@ -52,6 +52,7 @@ The owner's own words. If they have not said something, it stays missing.
 - An approved fact is never replaced by a proposal. A correction to it becomes a pending change proposal for a human to approve.
 - Do not invent ids. Use only ids from `brand:next` or the question bank.
 - Answers the owner does not know are recorded as `unknown`. Never record a guess.
+- List questions (`question_type: repeating_entity`: `business.model.segments`, `key_activities`, `key_resources`, `cost_items`) take one item per line: `name | detail | choice | links: seg-1`. Change one item with `npm run brand:interview -- --question <id> --entity add|edit|move|remove --json` (see `--entity list` for ids). Record only items the owner named; never split a paragraph into items or add a link the owner did not state, and never put an amount in a cost item. A list with no items is `not relevant` or `unknown`, not an empty list.
 
 ## Personal brands
 When `modules.personal.enabled` is true, the bank includes `personal.*` questions. With `brand.profile: personal-brand`, company, SaaS and mascot questions do not apply; do not ask them.
