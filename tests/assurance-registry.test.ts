@@ -19,7 +19,11 @@ import {
   SYNTHETIC_DEMO,
   type Attestation,
   type MethodEntry,
+  checkFrameworkClaim,
+  PERMITTED_CLAIM_LEVEL,
+  VISUAL_FRAMEWORK_METHOD,
 } from '@brand-os/brand-core/assurance'
+import { BMC_FRAMEWORK, PERMITTED_CLAIMS } from '@brand-os/brand-core/visual'
 
 /**
  * Trust v2 PR-A: the methodology registry and the claim ladder. Nothing can raise a claim level; an
@@ -61,7 +65,8 @@ test('effectiveClaim never raises a declared level, for every combination of inp
             const decision = effectiveClaim({ declared_claim_level: declared, rules_access: access, checked_at: checked, edition, attestation })
             assert.ok(claimRank(decision.level) <= claimRank(declared), `${declared}/${access} rose to ${decision.level}`)
             if (decision.level !== declared) assert.ok(decision.capped_by.length > 0, 'a lowered claim must say why')
-            if (checked === null || edition === null) assert.equal(decision.level, 'reference_only')
+            if (checked === null || edition === null) assert.ok(claimRank(decision.level) <= claimRank('informed_by'), 'an unchecked entry never cites requirements')
+            if (access === 'unlicensed' && attestation === null) assert.equal(decision.level, 'reference_only')
             if (attestation === null) assert.ok(claimRank(decision.level) <= claimRank('internally_assessed'))
             if (attestation === null && claimRank(declared) <= claimRank('internally_assessed')) assert.ok(claimRank(decision.level) <= claimRank(RULES_ACCESS_CAP[access]))
           }
@@ -76,10 +81,13 @@ test('the original method is the only assessable entry, and it is internally ass
   assert.deepEqual(claim, { level: 'internally_assessed', capped_by: [] })
   for (const entry of REFERENCED_METHODS) {
     const decision = methodClaim(entry)
-    assert.equal(decision.level, 'reference_only', `${entry.method_id} must stay reference_only until someone checks it`)
+    // Unchecked open sources may shape our work ("informed by"); unlicensed standards are only named.
+    assert.equal(decision.level, entry.rules_access === 'unlicensed' ? 'reference_only' : 'informed_by', entry.method_id)
     assert.equal(entry.checked_at, null)
     assert.equal(entry.edition, null, `${entry.method_id}: an edition nobody verified must not be written down`)
     assert.equal(entry.evaluation_rule_version, null)
+    // And none of them may go further until a person checks it, whatever it declares.
+    assert.ok(claimRank(methodClaim({ ...entry, declared_claim_level: 'mapped_to' }).level) <= claimRank('informed_by'))
   }
 })
 
@@ -94,6 +102,7 @@ test('no ISO entry can be assessed against or cited as anything but a reference'
     const checked: MethodEntry = { ...entry, edition: '2021', checked_at: '2026-11-23', checked_by: 'owner', declared_claim_level: 'certified' }
     assert.equal(methodClaim(checked).level, 'reference_only')
     assert.deepEqual(methodClaim(checked).capped_by, ['no_attestation', 'rules_access'])
+    assert.deepEqual(methodClaim(entry), { level: 'reference_only', capped_by: [] })
   }
 })
 
@@ -150,4 +159,15 @@ test('assessing against a method with no controls or no registry entry is refuse
   assert.equal(methodById('iso.20671')?.issuer, 'ISO')
   assert.throws(() => assess({ ...SYNTHETIC_DEMO, method_id: 'iso.20671' }), (error: unknown) => error instanceof AssuranceError && error.code === 'no_controls')
   assert.throws(() => assess({ ...SYNTHETIC_DEMO, method_id: 'nope.method' }), (error: unknown) => error instanceof AssuranceError && error.code === 'unknown_method')
+})
+
+test('bridge: every visual claim maps onto the ladder, and the BMC page claims no more than the registry allows', () => {
+  for (const claim of PERMITTED_CLAIMS) assert.ok(CLAIM_LEVELS.includes(PERMITTED_CLAIM_LEVEL[claim]), claim)
+  const check = checkFrameworkClaim(BMC_FRAMEWORK)
+  assert.deepEqual(check, { framework_id: 'BMC', method_id: 'strategyzer.bmc', page_claim: 'informed_by', allowed: 'informed_by', ok: true })
+  // A page that upgraded itself to "aligned with" would be caught.
+  assert.equal(checkFrameworkClaim({ ...BMC_FRAMEWORK, permitted_claim: 'aligned_with' }).ok, false)
+  // A framework the registry does not know is never ok.
+  assert.equal(checkFrameworkClaim({ ...BMC_FRAMEWORK, framework_id: 'UNKNOWN' }).ok, false)
+  for (const methodId of Object.values(VISUAL_FRAMEWORK_METHOD)) assert.ok(methodById(methodId), `${methodId} must be in the registry`)
 })

@@ -230,7 +230,7 @@ test('a method we cannot assess against yields blocked_by_license everywhere, an
   const controls = POSITIONING_READINESS_CONTROLS.slice(0, 3).map((control) => ({ ...control, method_id: method.method_id }))
   const result = assess({ ...SYNTHETIC_DEMO, method_id: method.method_id }, { controls })
   assert.ok(result.control_results.every((entry) => entry.status === 'blocked_by_license'))
-  assert.equal(result.claim_level, 'reference_only')
+  assert.equal(result.claim_level, 'informed_by', 'an open source may shape our work, but its rules are not ours to assess against')
   assert.deepEqual(result.completeness.blocked_by, ['license_blocked'])
   assert.equal(result.evidence_quality, 'not_assessed')
 })

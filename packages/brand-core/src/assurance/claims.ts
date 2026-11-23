@@ -102,10 +102,12 @@ const ATTESTATION_CAP: Record<Attestation['kind'], ClaimLevel> = { review: 'exte
  *
  * 1. Above `internally_assessed` needs an attestation by someone who is not us, and a review supports
  *    `externally_reviewed` at most.
- * 2. Without an attestation, rules access caps the level (we cannot "internally assess" against rules
- *    we hold no rights to). An attestation is a third party's statement, so it does not need our rules.
- * 3. An unverified edition or an unchecked source drops the entry to `reference_only`, whatever it
- *    declares, because citing an edition nobody checked is itself an unsupported claim.
+ * 2. An unrecorded edition or an unchecked source caps the entry at `informed_by`. "Informed by" is a
+ *    statement about our own work and needs no edition; anything that cites requirements (`mapped_to`
+ *    and up) does, and citing an edition nobody checked is itself an unsupported claim.
+ * 3. At or below our own assessment, rules access caps the level: we cannot assess against rules we
+ *    hold no rights to, and an unlicensed standard is only ever named. An attested level stands on the
+ *    third party's attestation instead, so it does not need our rules.
  */
 export function effectiveClaim(subject: ClaimSubject): ClaimDecision {
   const capped: ClaimCapReason[] = []
@@ -120,11 +122,10 @@ export function effectiveClaim(subject: ClaimSubject): ClaimDecision {
   if (subject.attestation === null) lower('internally_assessed', 'no_attestation')
   else lower(ATTESTATION_CAP[subject.attestation.kind], 'no_attestation')
 
-  // An attested level stands on the attestation; anything at or below our own assessment stands on our rules.
-  if (RANK[level] <= RANK.internally_assessed) lower(RULES_ACCESS_CAP[subject.rules_access], 'rules_access')
+  if (subject.edition === null) lower('informed_by', 'edition_unverified')
+  if (subject.checked_at === null) lower('informed_by', 'source_unverified')
 
-  if (subject.edition === null) lower('reference_only', 'edition_unverified')
-  if (subject.checked_at === null) lower('reference_only', 'source_unverified')
+  if (RANK[level] <= RANK.internally_assessed) lower(RULES_ACCESS_CAP[subject.rules_access], 'rules_access')
   return { level, capped_by: capped }
 }
 
