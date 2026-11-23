@@ -10,6 +10,7 @@ const STATIC_FILES: Record<string, string> = {
   'studio.js': 'text/javascript; charset=utf-8',
   'visual.css': 'text/css; charset=utf-8',
   'visual.js': 'text/javascript; charset=utf-8',
+  'visual-book.css': 'text/css; charset=utf-8',
   'favicon.svg': 'image/svg+xml',
   'logo-omid-ataei-white.svg': 'image/svg+xml',
   'fonts/inter-var.woff2': 'font/woff2',
