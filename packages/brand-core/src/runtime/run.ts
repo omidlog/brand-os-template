@@ -1,9 +1,15 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { effectiveModelUse, inspectAssetForPublication } from '@brand-os/asset-catalog'
+import { effectiveModelUse } from '@brand-os/asset-catalog'
+import { AGENT_TOKEN_ENV } from '../agent-tokens.js'
+import { operatorContext } from '../auth.js'
 import type { CoachSource } from '../coach/model.js'
+import { InterviewEngine } from '../engine.js'
 import { canonicalJson, sha256Hex } from '../strategy/model.js'
 import { TASK_CONTEXT_SCHEMA, verifyPack, type TaskContextPack } from '../task-context/model.js'
+import { ASSET_ID_PATTERN, MAX_ASSET_IDS, VisualDnaError, type VisualReference } from '../visual-dna/model.js'
+import { readVerifiedAsset, type VerifiedAsset } from '../visual-dna/deliver.js'
+import { resolveVisualDna } from '../visual-dna/resolve.js'
 import { assuranceLayer, coachLayer, postChecks, setChecks } from './gate.js'
 import {
   POST_FORMAT,
@@ -68,37 +74,78 @@ const tally = (checks: Array<{ result: CheckResult }>): Record<CheckResult, numb
 })
 
 /**
- * Reads the approved logo the pack names, through the existing publication gate: safe path under `brand/assets`, no
- * symlink, checksum equal to the one the pack pinned, both SVG gates. Anything else returns a reason code and no
- * bytes. Owner-local: it reads the workspace the owner ran the pack in; nothing is sent to a model.
+ * Reads the approved logo the pack names through the Visual DNA resolver (owner decision 6, 2026-11-23): the same
+ * verdict `visual_dna` gives (approval for these bytes, rights, licence, size, safe path, no symlink, both SVG gates),
+ * then the owner-local `readVerifiedAsset` for the renderer, which hashes and checks the very bytes it returns. The
+ * asset must also still be the one the pack pinned: a newer file than the pack saw is `pack_pin_differs`, not used.
+ * Anything else returns a reason code and no bytes.
+ *
+ * Owner-local: it opens the workspace the owner ran the pack in, as the local owner process, and is refused under an
+ * agent token. Nothing is sent to a model. The only write is the resolver's own append-only access-log line in
+ * `brand/.private/access-log.jsonl`, the audit trail every Visual DNA read leaves.
  */
-export function loadApprovedLogo(root: string, pack: TaskContextPack): { logo: ApprovedLogo | null; considered: UsedAsset[] } {
+export function loadApprovedLogo(root: string, pack: TaskContextPack): { logo: ApprovedLogo | null; considered: UsedAsset[]; references: VisualReference[] } {
   const items = Object.values(pack.sections).flat().filter((item) => item.key === 'assets.logo' && item.state === 'approved')
   const considered: UsedAsset[] = []
+  if (items.length === 0) return { logo: null, considered, references: [] }
+  const ownerLocal = !process.env[AGENT_TOKEN_ENV]
+  const engine = ownerLocal ? new InterviewEngine(root) : null
+  const sameBrand = engine !== null && engine.config().brand.slug === pack.brand_id
+  const ctx = sameBrand ? operatorContext(pack.brand_id) : null
+  const ids = [...new Set(items.map((item) => String(((item.value ?? {}) as Record<string, unknown>).id ?? item.source_id)))].filter((id) => ASSET_ID_PATTERN.test(id)).slice(0, MAX_ASSET_IDS)
+  const references = engine && ctx ? resolveVisualDna(engine, ctx, { asset_ids: ids }).references : []
   let logo: ApprovedLogo | null = null
   for (const item of items) {
     const value = (item.value ?? {}) as Record<string, unknown>
     const assetId = String(value.id ?? item.source_id)
-    const checksum = typeof value.checksum_sha256 === 'string' ? value.checksum_sha256 : null
-    const base = { asset_id: assetId, source_revision: item.source_revision, checksum_sha256: checksum, model_use: effectiveModelUse(value), sent_to_model: false as const }
+    const pinned = typeof value.checksum_sha256 === 'string' ? value.checksum_sha256 : null
+    const base = { asset_id: assetId, source_revision: item.source_revision, checksum_sha256: pinned, model_use: effectiveModelUse(value), sent_to_model: false as const }
+    const skip = (reason: string): void => {
+      considered.push({ ...base, embedded: false, not_embedded_reason: reason })
+    }
     if (logo) {
-      considered.push({ ...base, embedded: false, not_embedded_reason: 'one_logo_per_post' })
+      skip('one_logo_per_post')
       continue
     }
-    const assetPath = typeof value.path === 'string' ? value.path : ''
-    if (!checksum || !assetPath.toLowerCase().endsWith('.svg')) {
-      considered.push({ ...base, embedded: false, not_embedded_reason: 'not_svg_or_no_checksum' })
+    if (!engine || !ctx) {
+      skip(ownerLocal ? 'visual_dna:other_brand' : 'visual_dna:owner_only')
       continue
     }
-    const inspected = inspectAssetForPublication(root, assetPath, checksum)
-    if (!inspected.ok) {
-      considered.push({ ...base, embedded: false, not_embedded_reason: `publication_gate:${inspected.reason}` })
+    const ref = references.find((entry) => entry.asset_id === assetId)
+    if (!ref) {
+      skip('visual_dna:missing:not_found')
       continue
     }
-    logo = { asset_id: assetId, source_revision: item.source_revision, checksum_sha256: checksum, model_use: base.model_use, svg: fs.readFileSync(inspected.realPath, 'utf8') }
-    considered.push({ ...base, embedded: true, not_embedded_reason: null })
+    if (ref.state !== 'approved' || !ref.asset) {
+      skip(`visual_dna:${ref.state}:${ref.reason ?? 'unknown'}`)
+      continue
+    }
+    if (!pinned || ref.asset.checksum_sha256 !== pinned) {
+      skip('visual_dna:changed:pack_pin_differs')
+      continue
+    }
+    if (!ref.asset.path.toLowerCase().endsWith('.svg')) {
+      skip('not_svg')
+      continue
+    }
+    let delivered: VerifiedAsset
+    try {
+      delivered = readVerifiedAsset(engine, ctx, assetId, 'renderer')
+    } catch (error) {
+      if (error instanceof VisualDnaError) {
+        skip(`visual_dna_read:${error.code}`)
+        continue
+      }
+      throw error
+    }
+    if (delivered.sha256 !== pinned) {
+      skip('visual_dna:changed:pack_pin_differs')
+      continue
+    }
+    logo = { asset_id: assetId, source_revision: item.source_revision, checksum_sha256: pinned, model_use: ref.model_use, svg: delivered.bytes.toString('utf8') }
+    considered.push({ ...base, model_use: ref.model_use, embedded: true, not_embedded_reason: null })
   }
-  return { logo, considered }
+  return { logo, considered, references }
 }
 
 /** One warning per Coach result that is not `ready`: the status and finding codes only, never answer text. */
