@@ -8,6 +8,7 @@ Specify the character from approved mascot facts and the catalog. Do not generat
 
 ## Tools
 `get_mascot_profile`, `list_mascot_stages`, `search_mascot_assets`, `list_mascot_assets`, and `brand_retrieve` with `kind: mascot` and `filters` (`emotion`, `stage`, `use_case`, `angle`) to find one approved artwork.
+`visual_dna` with `mascot` (the same filters) before using that artwork as a reference: it re-checks the file and reports checksum, usage rights and `model_use`. A wrong angle is `missing`; never use another angle instead. Guide: `docs-internal/VISUAL_DNA.md`.
 
 ## Required inputs
 Role, personality, and any approved stage. 90 slots may stay missing.

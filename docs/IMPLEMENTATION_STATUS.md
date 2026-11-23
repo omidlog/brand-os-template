@@ -394,3 +394,8 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Done:** `packages/brand-core/src/runtime/` and `brand:runtime social-batch --demo`. Ten real SVG drafts (1080×1350, en/fa/tr labels, RTL by copy script) from one `task_context` pack, manifests with source pins, batch summary; schemas `runtime-post-manifest`, `runtime-batch`; asset `model_use` (absent ⇒ `not_allowed`). Tests: `runtime-social-batch`, `asset-model-use`.
 - **Not done:** real brands (CLI is `--demo` only), MCP tool, visual/semantic advisory review (`not_tested`), approved fonts from `brand.type.scale`, website / ads / mascot journeys, Studio view. Nothing is published, scheduled or approved.
+
+## Visual DNA reference resolver (fixes pack PR-C)
+
+- **Done:** `packages/brand-core/src/visual-dna/`, MCP `visual_dna`, `brand:visual-dna resolve|read`. Read-only verdicts (`approved`, `withheld`, `missing`, `changed`) for asset ids, a mascot pose request and creative-memory variants, read through `brand_retrieve` and `creative_context` under one caller context; checksum, size, usage rights, effective `model_use` and a `provider_gate`. Metadata only over MCP. Owner-local `read` returns one checked file's exact bytes for a use its `model_use` allows. Schema `visual-dna`; guide `docs-internal/VISUAL_DNA.md`. Tests: `visual-dna`, `visual-dna-agent`.
+- **Not done:** byte transport over MCP or any network, an export directory, production readiness (PR-E), real-brand runtime (PR-D), canonical mascot view sets, fonts. Nothing is uploaded, published or approved; `model_use: external_allowed` is not an upload permission.
