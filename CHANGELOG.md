@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Owner review judgments for assurance scores (GAP-09 follow-up)
+
+### Added
+
+- `npm run brand:assurance-review -- list | record`: owner-only. `list` shows the Assurance controls that need a person's judgment (today PRR-08) with their state, and `record --control PRR-08 --judgment yes|partly|no --note "…" [--date] [--expect]` records one. Refused under `BRAND_OS_AGENT_TOKEN`; no MCP tool, Studio route or agent profile reaches it. en/fa/tr text.
+- `assurance/reviews.ts`: judgments stored in `brand/.private/assurance/reviews/<control>.json` (brand workspace, gitignored, 0600, atomic, locked), as append-only hash-chained revisions. A tampered, foreign or symlinked history is refused.
+- Tests: `assurance-reviews`, `assurance-review-cli` (synthetic temp brands only).
+
+### Changed
+
+- The bridge (`brand-os.assurance-bridge/2`) reads the judgment in force on the `--as-of` day while what it judged (cited facts and research notes) is unchanged, so `brand:assurance assess` can give a score. A judgment whose basis changed is listed as `stale_judgment` (blocking). The snapshot carries the revision id, never the owner's note. Unconfirmed answers still lower the ratio; notes are still owner-stated; never a certification.
+
 ## Unreleased — Visual DNA owner policy decisions and the `published` status fix
 
 ### Fixed
