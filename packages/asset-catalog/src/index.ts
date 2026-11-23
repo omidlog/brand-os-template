@@ -46,8 +46,8 @@ export const MODEL_USE_VALUES = ['not_allowed', 'local_only', 'external_allowed'
 export type ModelUse = (typeof MODEL_USE_VALUES)[number]
 
 /** The model-use right that applies: the recorded value when it is a known one, otherwise `not_allowed`. */
-export function effectiveModelUse(record: { model_use?: unknown } | null | undefined): ModelUse {
-  const value = record?.model_use
+export function effectiveModelUse(record: object | null | undefined): ModelUse {
+  const value = (record as { model_use?: unknown } | null | undefined)?.model_use
   return typeof value === 'string' && (MODEL_USE_VALUES as readonly string[]).includes(value) ? (value as ModelUse) : 'not_allowed'
 }
 
