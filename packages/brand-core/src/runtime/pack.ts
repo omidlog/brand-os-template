@@ -2,6 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { AGENT_TOKEN_ENV } from '../agent-tokens.js'
 import { InterviewEngine } from '../engine.js'
+import { readFacts } from '../facts.js'
+import { allQuestions } from '../content/index.js'
 import { TASK_CONTEXT_SCHEMA, TASK_CONTEXT_TOOL, type TaskContextPack } from '../task-context/model.js'
 import { RuntimeError } from './model.js'
 
@@ -92,4 +94,23 @@ export function openOwnerWorkspace(root: string, pack: TaskContextPack): Intervi
   const slug = engine.config().brand.slug
   if (slug !== pack.brand_id) throw new RuntimeError('refused', 'The workspace is a different brand than the pack (brand slug and pack brand_id differ).')
   return engine
+}
+
+/**
+ * The pack's approved fact sources whose current approved revision in the owner's workspace differs from the revision
+ * the pack pinned (changed, retracted or no longer approved), as `source_id:reason` (ids only, never values). Empty
+ * when the pack is current. Strategy and asset sources are not compared here: an asset's pinned checksum is checked by
+ * Visual DNA, and a strategy revision is pinned by its own approval record.
+ */
+export function packSourceDrift(engine: InterviewEngine, pack: TaskContextPack): string[] {
+  const bank = new Set(allQuestions().map((question) => question.id))
+  const facts = readFacts(engine.workspaceRoot(), 'approved', pack.brand_id)
+  const drift: string[] = []
+  for (const source of pack.sources) {
+    if (!bank.has(source.id) || source.status !== 'approved') continue
+    const fact = facts[source.id]
+    if (!fact || fact.status !== 'approved') drift.push(`${source.id}:no_longer_approved`)
+    else if (fact.revision_hash !== source.revision) drift.push(`${source.id}:revision_changed`)
+  }
+  return drift.sort()
 }
