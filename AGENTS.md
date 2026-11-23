@@ -81,6 +81,10 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - Restricted questions are refused, and every mode is refused while `BRAND_OS_AGENT_TOKEN` is set. No MCP tool or `brand_retrieve` kind exposes the coach; do not look for one.
 - You rarely need to call it yourself: `brand:interview --question … --answer … --json` returns a `coach` object after an important answer (`shown: true` with one `note`). Relay that one question to the owner in their language, or ask the `canonical_question_id` instead. `shown: false` means stay silent; do not run `brand:coach` to second-guess it. A note never blocks saving or approval (`docs-internal/COACH_UX_DECISION.md`).
 
+## Assurance on a real brand
+
+`npm run brand:assurance` is the owner's local, read-only check of approved facts against the Positioning Readiness method (guide: `docs-internal/ASSURANCE.md`). It is refused while `BRAND_OS_AGENT_TOKEN` is set, and no MCP tool or `brand_retrieve` kind exposes it; do not look for one. Its result is an internal assessment, never a certification or a compliance claim, and `authorizes` is always empty. Do not quote a completeness ratio it did not print.
+
 ## Knowledge Inbox
 
 `npm run brand:knowledge` keeps the owner's unstructured notes (guide: `docs-internal/KNOWLEDGE.md`). A note is an unapproved idea, never a brand fact, whoever wrote it.

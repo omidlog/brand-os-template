@@ -177,6 +177,10 @@ It is advisory and owner-local: it reads the interview and writes nothing — no
 
 It stays silent on factual or non-strategic questions (names, choices, colours, legal, visual systems…), on `unknown` / `skip` / `not relevant` / `decide later`, on restricted questions, on answers that already meet its criteria, on second and later answers to the same question, and under an agent token. It never scores. `BRAND_OS_COACH=off` turns the automatic moments off for one shell; `npm run brand:coach` keeps working on demand.
 
+## Assurance on a real brand
+
+`npm run brand:assurance -- assess --as-of <YYYY-MM-DD> --paid-media yes|no [--lang fa]` checks your approved facts against Brand OS's own Positioning Readiness method and lists what is missing. It is owner-local and read-only, prints a reproducible snapshot digest (`verify --snapshot <file>` checks a kept one), gives no score while anything blocking is missing, and is an internal assessment — never a certification or a compliance statement. Guide: `docs-internal/ASSURANCE.md`.
+
 ## Studio
 
 One private Studio shows every brand at `/brands/<slug>` and creates new ones. It is a viewer plus a repository provisioner, not an editor:
