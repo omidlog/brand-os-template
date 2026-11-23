@@ -707,6 +707,7 @@
 .vz-bk-do, .vz-bk-dont { margin: 0; font-size: 16px; line-height: 1.55; }
 .vz-bk-do { color: var(--vz-text); }
 .vz-bk-dont { color: var(--vz-text-2); text-decoration: line-through; text-decoration-color: var(--vz-rule-strong); }
+.vz-bk-foot + .vz-bk-ids { margin-block-start: -16px; }
 .vz-bk-foot p { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--vz-text-3); font-variant-numeric: tabular-nums; }
 .vz-bk-id-list { margin: 0; display: grid; gap: 8px; }
 .vz-bk-id-list div { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: 12px; font-size: 12px; }

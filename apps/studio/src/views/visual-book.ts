@@ -87,11 +87,11 @@ function entry(ctx: ViewContext, item: DocumentItem): SafeHtml {
   return html`<article class="vz-bk-entry vz-bk-entry--${item.tag}">
     <header class="vz-bk-entry-head">
       <h3 class="vz-bk-entry-label" dir="auto">${item.label}</h3>
-      ${item.tag === 'approved' ? '' : tagBadge(i, item.tag)}
+      ${item.tag === 'approved' || (item.tag === 'missing' && !item.withheld) ? '' : tagBadge(i, item.tag)}
     </header>
     <div class="vz-bk-entry-value">${value}</div>
     ${note}
-    ${item.note && item.value !== null && !item.withheld && item.tag !== 'missing' ? html`<p class="vz-bk-entry-note" dir="auto">${item.note}</p>` : ''}
+    ${item.note && item.value !== null && !item.withheld && item.tag === 'approved' ? html`<p class="vz-bk-entry-note" dir="auto">${item.note}</p>` : ''}
   </article>`
 }
 

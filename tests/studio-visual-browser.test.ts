@@ -270,3 +270,45 @@ test('Visual identity print view: A4 portrait PDF with the chapter opener, plate
   }
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })
+
+test('Brand Book reader (V2.4): four widths, en and fa, light and dark: no overflow, clean CSP, accessible, AA contrast', { skip }, async () => {
+  // A do/don't spread and an unapproved owner draft, so both editorial forms are drawn.
+  editOutsideStudio(s, SLUG, (engine, root) => {
+    approve(engine, root, { 'brand.verbal.voice_pairs': 'Say what happened | Blame the user\nInvite the next step | Lecture the learner' })
+    engine.answerQuestion('brand.strategy.vision', 'A calmer classroom everywhere.')
+  })
+  await s.studio.sync.refresh(SLUG)
+  for (const lang of ['en', 'fa'] as const) {
+    await page.goto(`${s.url}/brands/${SLUG}/brand/book?lang=${lang}`)
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
+      for (const width of [1440, 1024, 768, 390]) {
+        await page.viewport(width, 900, width < 500)
+        await page.goto(`${s.url}/brands/${SLUG}/brand/book`)
+        await settle()
+        const where = `book ${lang} ${scheme} ${width}px`
+        const widths = await overflow()
+        const wide = widths.scroll > widths.client + 1 ? await page.eval<string[]>(`[...document.querySelectorAll('main *')].filter((el) => !el.closest('.vz-grid-wrap') && el.getBoundingClientRect().right > document.documentElement.clientWidth + 1).slice(0, 6).map((el) => el.tagName + '.' + (el.className.baseVal ?? el.className))`) : []
+        assert.ok(widths.scroll <= widths.client + 1, `${where}: page overflow ${widths.scroll} > ${widths.client} ${wide.join(' ')}`)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-bk-chapter').length`), 7, where)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-bk-specimen .vz-plate').length`), 3, `${where}: three specimen plates`)
+        // The plate heads step aside inside a chapter; the chapter opener titles the specimen.
+        assert.equal(await page.eval<boolean>(`[...document.querySelectorAll('.vz-bk-specimen .vz-plate-head')].every((el) => el.getBoundingClientRect().height === 0)`), true, where)
+        assert.ok(await page.eval<boolean>(`document.querySelector('.vz-bk-specimen .vz-construct image').getBoundingClientRect().width > 0`), `${where}: the approved master is drawn`)
+        // Ids stay closed behind the toggle.
+        assert.equal(await page.eval<boolean>(`[...document.querySelectorAll('.vz-bk-ids')].every((el) => !el.open)`), true, where)
+        if (width === 1440) {
+          assert.deepEqual(await structureIssues(), [], `${where}: structure`)
+          assert.deepEqual(await contrastFailures('.vz-bk'), [], `${where}: contrast`)
+        }
+        if (shots && [1440, 390].includes(width)) {
+          fs.mkdirSync(shots, { recursive: true })
+          await page.screenshot(path.join(shots, `book-${lang}-${scheme}-${width}.png`))
+        }
+      }
+    }
+  }
+  await page.send('Emulation.setEmulatedMedia', { features: [] })
+  await page.viewport(1440, 900)
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
