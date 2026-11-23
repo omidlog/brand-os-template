@@ -657,3 +657,6 @@
   .vz-cmp-row--own > th, .vz-cmp-row--own > td { background: Canvas; }
   .vz-cmp-ghost { background: Canvas; }
 }
+/* The matrix needs the full measure: it is the one plate that does not sit on the inset column. */
+.vz-cmp-plate > .vz-cmp-scroll { margin-inline-start: 0; }
+.vz-cmp .vz-cmp-table { min-inline-size: 920px; }

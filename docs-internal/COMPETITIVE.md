@@ -92,7 +92,7 @@ Every command is refused while `BRAND_OS_AGENT_TOKEN` is set. None of them uses 
 ## Privacy
 
 - Owner-only, local and gitignored.
-- No MCP tool, `brand:query` path, Studio page, public projection or docs build reads `brand/.private/competitive`. `tests/audit.test.ts` pins the MCP tool list.
+- No MCP tool, `brand:query` path, Studio page, public projection or docs build reads `brand/.private/competitive`. Studio reads only the redacted file the owner shares (see "Share path"). `tests/audit.test.ts` pins the MCP tool list.
 - A `knowledge-read` or any other agent token is refused by the owner-process check.
 
 ## Reuse map
@@ -174,5 +174,6 @@ Its state is `missing`, `candidate_only`, `evidence_insufficient` or `evidence_a
 
 - An interview question such as "who do buyers compare us with". The gap checklist asks it, and the CLI records the answers as candidates.
 - The rebrand audit and logo brief (Slice D).
-- Studio views and agent access.
+- Agent access, and Studio views other than the shared comparison matrix (V2.2).
+- A positioning map (V2.3; needs the D2 axes record).
 - Live discovery or search.
