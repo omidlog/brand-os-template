@@ -452,3 +452,9 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Proposal only, awaiting owner approval:** `docs-internal/FINANCE_SECURITY_DESIGN.md` (threat model, storage, readers, redaction per export profile, audit logging, owner decisions FD1–FD8).
 - **Not done (by design):** any implementation. No finance export service, Studio finance view, MCP tool or agent profile change exists; restricted finance values stay withheld everywhere except the owner's local CLI.
+
+## Audit: Runtime area (2026-11-24)
+
+- **Done:** review of `runtime/**`, `task-context`, the runtime parts of Visual DNA and production readiness. Fixed: request locale in `task_context`, withheld logos listed in post manifests, `writeBatch` linked-parent and dangling-link refusal, one refused asset id no longer voiding all asset verdicts, `social-batch --root` and `readiness --root` resolving the same assets. Acceptance cases FIX-02 to FIX-08 run by hand on synthetic brands (report kept outside the repository).
+- **Correction:** the "Visual DNA reference resolver" section above still lists production readiness and wiring Visual DNA into `brand:runtime` as not done. Both are done (PR-E, "Production readiness and quality gate").
+- **Not done:** `social-batch` exits 0 even when production is `not_ready` (owner question); the batch `status` stays `drafted` when a post fails `copy.claims` (production readiness blocks it); website `sitemap` is a classifier word only, not a pack item.

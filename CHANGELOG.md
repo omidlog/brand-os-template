@@ -572,3 +572,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:assurance` reads `runs_paid_media` from the approved answer to `business.marketing.paid_media`. `--paid-media yes|no` is deprecated: it still works, but only while the question has no approved answer, and it prints an en/fa/tr notice on stderr. An approved answer always wins. A missing paid-media item now points at the question instead of the flag.
 - `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
 - Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.
+
+## Unreleased — Audit: Runtime area fixes
+
+### Fixed
+
+- `task_context`: a `request` with no `locale` now builds the pack in the language the request was written in (a Persian request gets `fa`, RTL labels). The classifier detected it before, but the result was dropped. An explicit `locale` still wins.
+- `brand:runtime social-batch`: a logo that is not embedded (changed, unpinned, withheld, owner-only, not SVG) is listed in every post manifest with `embedded: false` and its reason, instead of being silently absent.
+- `writeBatch` refuses a dangling symlink and a linked parent directory that leads into a `brand/` folder (checked on the real path before and after the directory is created).
+- Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
+- `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
