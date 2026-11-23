@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Research notes linked to the evidence register (GAP-09 follow-up)
+
+### Added
+
+- `npm run brand:assurance-link -- list | link --note kn_… --evidence ev-NNNN | unlink --note kn_…` (`[--date] [--expect] [--as-of] [--lang] [--json]`): owner-only. Links an Assurance research note, at its current revision, to an evidence-register entry. Refused under `BRAND_OS_AGENT_TOKEN`; no MCP tool, Studio route or agent profile reaches it. en/fa/tr text.
+- `assurance/links.ts`: links stored in `brand/.private/assurance/evidence-links/<note>.json` (brand workspace, gitignored, 0600, atomic, locked), append-only hash-chained revisions with ids and dates only. A tampered, foreign or non-owner history is refused.
+- Tests: `assurance-links`, `assurance-link-cli` (synthetic temp brands only).
+
+### Changed
+
+- The bridge (`brand-os.assurance-bridge/3`) counts a linked note as `independent` while the register entry qualifies on the `--as-of` day (verified, not owner testimony, same question, not past its review date) and the note is unchanged; otherwise `owner_stated`. The snapshot lists `evidence_links` (ids and a state); a new non-blocking gap `independent_evidence` points at `brand:assurance-link`. A qualifying link makes a PRR-08 judgment stale. Unapproved answers still lower the ratio; never a certification.
+
 ## Unreleased — Coach contradiction and facet rubrics (fixes pack GAP-08)
 
 ### Added

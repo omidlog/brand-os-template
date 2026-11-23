@@ -428,17 +428,17 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 ## Assurance on a real brand: owner-local bridge (GAP-09)
 
 - **Done:** `brand:assurance snapshot | assess | verify` and `@brand-os/brand-core/assurance/workspace`. Approved facts (by `revision_hash`), internal research notes and open contradictions become the frozen input of the existing `assess()`. Reproducible digest, `--pin` / `verify` against a kept snapshot, restricted facts withheld below `restricted`, en/fa/tr output, stdout only, refused under `BRAND_OS_AGENT_TOKEN`, `authorizes: []`, never a certification. Guide: `docs-internal/ASSURANCE.md`.
-- **Not done:** a reviewer-judgment store (so PRR-08 keeps every real brand `not_scoreable`), independent evidence (every note is `owner_stated`), a canonical paid-media question (owner flag for now), observed maturity input, Studio view, MCP or agent access (deliberately none).
+- **Not done:** a reviewer-judgment store (so PRR-08 keeps every real brand `not_scoreable`), independent evidence (every note is `owner_stated`), a canonical paid-media question (owner flag for now), observed maturity input, Studio view, MCP or agent access (deliberately none). (Judgment store, paid-media question and independent evidence through register links are done in the follow-up sections below.)
 
 ## Owner review judgments for assurance scores (GAP-09 follow-up)
 
 - **Done:** `brand:assurance-review list | record` and `assurance/reviews.ts`. Owner-only, versioned judgment store in the brand workspace (`brand/.private/assurance/reviews/`, hash-chained revisions); the bridge uses a judgment while its basis is unchanged, so a real brand gets a completeness ratio once nothing else blocks. Stale judgments block again. Note text never leaves the private file. en/fa/tr. Guide: `docs-internal/ASSURANCE.md`, "Owner review judgments".
-- **Not done:** a Studio page for it (Studio stays read-only; CLI only), linking research notes to the evidence register (notes stay `owner_stated`), withdrawing a judgment without replacing it. (The canonical paid-media question and the company-vs-person subject are done in the next section.)
+- **Not done:** a Studio page for it (Studio stays read-only; CLI only), linking research notes to the evidence register (done in "Research notes linked to the evidence register" below), withdrawing a judgment without replacing it. (The canonical paid-media question and the company-vs-person subject are done in the next section.)
 
 ## GAP-09 follow-ups: paid-media question, company stays company
 
 - **Done (owner decisions 4 and 5, 2026-11-23):** interview question `business.marketing.paid_media` (en/fa/tr) is the source of `runs_paid_media` in `brand:assurance`; `--paid-media` is a deprecated fallback used only while the question has no approved answer. The personal module never makes a company brand a person: only `brand.profile: personal-brand` does, and a founder's personal brand is recorded separately in `snapshot.personal_brand`, outside the subject and the digest. Tests: `assurance-followups`, `assurance-cli`.
-- **Not done:** a Studio page for owner reviews (CLI only, see above), linking notes to the evidence register (later PR), removing the deprecated `--paid-media` flag.
+- **Not done:** a Studio page for owner reviews (CLI only, see above), linking notes to the evidence register (done, see "Research notes linked to the evidence register" below), removing the deprecated `--paid-media` flag.
 
 ## Production readiness and quality gate (fixes pack PR-E, GAP-05)
 
@@ -454,6 +454,11 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Proposal only, awaiting owner approval:** `docs-internal/FINANCE_SECURITY_DESIGN.md` (threat model, storage, readers, redaction per export profile, audit logging, owner decisions FD1–FD8).
 - **Not done (by design):** any implementation. No finance export service, Studio finance view, MCP tool or agent profile change exists; restricted finance values stay withheld everywhere except the owner's local CLI.
+
+## Research notes linked to the evidence register (GAP-09 follow-up)
+
+- **Done:** `brand:assurance-link list | link | unlink` and `assurance/links.ts`. Owner-only, versioned link store (`brand/.private/assurance/evidence-links/<note>.json`, hash-chained revisions, 0600, ids and dates only). A research note counts as `independent` in the bridge only while the link in force on the `--as-of` day names a register entry (`brand/interview/evidence-register.yaml`) that is a verification, not owner testimony, for a question the note is about, verified on or before that day and not past `review_due` (the register's own `isCurrent`), and while the note is the revision that was linked. Otherwise it stays `owner_stated` and the snapshot names why (`evidence_links[].state`). New non-blocking gap `independent_evidence`. A qualifying link makes a PRR-08 judgment stale (its evidence changed). `verify` names a changed link. Bridge version 3; older snapshots still verify. Unapproved answers still lower the score and are not removed; no score while anything blocks; never a certification; `authorizes: []`; refused under `BRAND_OS_AGENT_TOKEN`. en/fa/tr. Tests: `assurance-links`, `assurance-link-cli`.
+- **Not done:** a Studio page for links (CLI only), linking restricted notes (never read), MCP or agent access (deliberately none), checking the content of the source behind a register entry (the register holds references only; the owner's `brand:evidence verify` is the check).
 
 ## Audit: Runtime area (2026-11-24)
 

@@ -41,6 +41,7 @@ export const SCRIPT_GROUPS: ScriptGroup[] = [
       ['brand:coach', 'Get advisory coaching on one answer: a follow-up question, a quality status or the open contradictions.'],
       ['brand:assurance', 'Owner-local, read-only: pin approved facts into a reproducible Positioning Readiness snapshot and list what is missing. Never a certification.'],
       ['brand:assurance-review', 'Owner-only: list the Assurance controls that need a person\'s judgment and record yours (yes, partly or no, with a note), so assess can give a score.'],
+      ['brand:assurance-link', 'Owner-only: link an Assurance research note to a verified evidence-register entry, so assess counts it as independent evidence while that entry qualifies.'],
       ['brand:doctor', 'Find problems in the brand repository and say how to fix them.'],
     ],
   },
