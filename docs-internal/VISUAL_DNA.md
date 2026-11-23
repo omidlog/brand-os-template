@@ -105,7 +105,8 @@ asset as if you had seen it.
 ## Not in this slice
 
 - No byte transport over MCP and no export directory. A network-safe delivery contract needs its own security review.
-- No production-readiness verdict (PR-E) and no real-brand runtime path (PR-D). Visual DNA does not render anything.
+- No production-readiness verdict (PR-E). Visual DNA does not render anything, and `brand:runtime` (including `--pack`)
+  still reads its logo through its own `loadApprovedLogo` gate; using Visual DNA there is later work.
 - Canonical mascot view sets (front / three-quarter / profile as one approved set) are not modelled; each angle is
   its own catalog artwork, and the owner registers and approves it.
 - `published` manifest status is treated as `brand_retrieve` treats it today (only `approved` is served).
