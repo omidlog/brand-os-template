@@ -73,6 +73,8 @@ Every result has `brand_id`, `classification`, `approval_state`, `revision`, `so
 
 `task_context` returns one read-only pack of approved context for one task (`task_type` or the owner's `request`); see the next section and `docs-internal/TASK_CONTEXT.md`.
 
+`visual_dna` checks visual references before they are used: asset ids, a mascot request (emotion, stage, use case, angle) and, for a `creative-read` token, creative-memory variants. Each comes back `approved`, `withheld`, `missing` or `changed`, with checksum, usage rights and the effective `model_use`. Metadata only, never file bytes; a missing pose stays missing. See `docs-internal/VISUAL_DNA.md`.
+
 The older named tools (`search_brand_docs`, `get_brand_tokens`, `get_brand_overview`, `get_business_plan`, and the rest) use the same retrieval path and the same identity.
 
 `brand:query` takes the same token from the environment:

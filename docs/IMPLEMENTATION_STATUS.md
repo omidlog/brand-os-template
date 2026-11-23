@@ -400,6 +400,11 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 - **Done:** `--pack <file>` (+ owner `--root`), approved type scale on drafts, `--final` outlines with owner font files (name/cmap checked, nothing substituted), Coach warnings never block, tagline/promise exemption in the Coach. Tests: `runtime-pack`, `runtime-type`, `coach-core`.
 - **Not done:** MCP tool (next slice), `brand.type.rtl` for RTL lines, variable-font instances in final export, logo variant per background.
 
+## Visual DNA reference resolver (fixes pack PR-C)
+
+- **Done:** `packages/brand-core/src/visual-dna/`, MCP `visual_dna`, `brand:visual-dna resolve|read`. Read-only verdicts (`approved`, `withheld`, `missing`, `changed`) for asset ids, a mascot pose request and creative-memory variants, read through `brand_retrieve` and `creative_context` under one caller context; checksum, size, usage rights, effective `model_use` and a `provider_gate`. Metadata only over MCP. Owner-local `read` returns one checked file's exact bytes for a use its `model_use` allows. Schema `visual-dna`; guide `docs-internal/VISUAL_DNA.md`. Tests: `visual-dna`, `visual-dna-agent`.
+- **Not done:** byte transport over MCP or any network, an export directory, production readiness (PR-E), wiring Visual DNA into `brand:runtime` (it still reads its logo through `loadApprovedLogo`), canonical mascot view sets, fonts. Nothing is uploaded, published or approved; `model_use: external_allowed` is not an upload permission.
+
 ## Visual V3.1: repeating_entity question type and structured BMC (D3)
 
 Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes the "Business model canvas: Partial" row above for key activities, key resources, segments and cost items.

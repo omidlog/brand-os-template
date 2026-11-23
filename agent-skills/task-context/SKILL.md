@@ -35,6 +35,9 @@ sentence as `request`.
 6. Do not call it again for the same task unless the owner changes the task or approves something new. For an exact
    mascot pose use `brand_retrieve` with `kind: mascot`; for approved calendar slots use `content_calendar` and
    `content_brief` with a pin.
+7. Before you use an asset id from the pack (or a mascot pose) as a visual reference, check it once with `visual_dna`
+   (`docs-internal/VISUAL_DNA.md`). Use only `approved` references; name `missing`, `withheld` and `changed` ones to
+   the owner. `model_use` is not permission to send a file to any model, and you never receive file bytes over MCP.
 
 ## Deliverable
 Your draft, the pack digest, the source ids and revisions you used, and the list of what is still missing, by question
