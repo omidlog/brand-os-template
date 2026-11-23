@@ -13,6 +13,7 @@ import {
   rightsBlocker,
 } from '@brand-os/brand-core'
 import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
+import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStatus } from '@brand-os/brand-core/coach'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
@@ -140,6 +141,12 @@ export interface StudioProjection {
    */
   calendar?: StudioCalendarProjection | null
   /**
+   * Strategic Coach notes on the merged drafts awaiting approval (docs-internal/COACH_UX_DECISION.md, moment
+   * `studio_overview`). Advisory, `authorizes: []`, question ids and closed-vocabulary text only — never an
+   * answer. Null when the coach could not run. Absent in caches written before this field existed; sync rebuilds.
+   */
+  coach?: StudioCoachProjection | null
+  /**
    * Semantic visual documents (Visual Blueprint P0): the business model canvas in its internal and public editions,
    * built from the same approved facts and drafts as the documents. Null when they could not be built. Absent in
    * caches written before this field existed; sync rebuilds those.
@@ -205,6 +212,59 @@ const SECRET_PATTERNS = [/bos_at_[A-Za-z0-9_-]{20,}/, /-----BEGIN [A-Z ]*PRIVATE
 export function assertNoSecrets(value: unknown): void {
   const text = JSON.stringify(value)
   if (SECRET_PATTERNS.some((pattern) => pattern.test(text))) throw new ProjectionError('unsafe_projection', 'The repository content looks like it contains a credential. Studio refused to display it.')
+}
+
+export interface StudioCoachNote {
+  question_id: string
+  status: CoachStatus
+  criterion: CoachCriterion
+  canonical_question_id: string | null
+  /** Display text per Studio locale: the criterion name and the one next step. Closed vocabulary only. */
+  text: Record<'en' | 'fa' | 'tr', { criterion: string; next: string }>
+}
+
+export interface StudioCoachProjection {
+  authority: 'derived_advice'
+  authorizes: []
+  rule_version: string
+  /** Drafts checked; notes beyond the cap are counted in `more`. */
+  checked: number
+  more: number
+  notes: StudioCoachNote[]
+}
+
+/** Up to this many notes on the Overview card. */
+export const STUDIO_COACH_LIMIT = 5
+
+/**
+ * The coach on the merged drafts. Same policy as `brand:approve` (strategic, free text or a measure, never
+ * restricted, silent when ready). A coach failure must not take down the brand view: null, and the card hides.
+ */
+function projectCoach(engine: InterviewEngine, review: Array<{ question_id: string; state: string }>): StudioCoachProjection | null {
+  try {
+    const draftIds = review.filter((item) => item.state === 'draft').map((item) => item.question_id)
+    const changeIds = review.filter((item) => item.state === 'change_pending').map((item) => item.question_id)
+    const result = coachBeforeApproval(engine, { draftIds, changeIds }, { moment: 'studio_overview', limit: STUDIO_COACH_LIMIT })
+    if (result.silent.agent_token || result.silent.unavailable === draftIds.length && draftIds.length > 0) return null
+    const coach: StudioCoachProjection = {
+      authority: 'derived_advice',
+      authorizes: [],
+      rule_version: result.rule_version,
+      checked: result.checked,
+      more: result.more,
+      notes: result.notes.map((note) => ({
+        question_id: note.question_id,
+        status: note.status,
+        criterion: note.criterion,
+        canonical_question_id: note.canonical_question_id,
+        text: { en: coachNoteText(note, 'en'), fa: coachNoteText(note, 'fa'), tr: coachNoteText(note, 'tr') },
+      })),
+    }
+    assertNoSecrets(coach)
+    return coach
+  } catch {
+    return null
+  }
 }
 
 export interface PreviewFile {
@@ -504,6 +564,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
     visual: projectVisual(engine, logoCandidates, assetCandidates),
+    coach: projectCoach(engine, dashboard.review_queue.items),
   }
   assertNoSecrets(projection)
   return { projection, previews }
