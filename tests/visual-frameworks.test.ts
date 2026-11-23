@@ -3,7 +3,6 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { parse } from 'yaml'
 import {
   BMC_FRAMEWORK,
   FRAMEWORK_REGISTRY_PATH,
@@ -21,7 +20,7 @@ import {
  */
 const ROOT = path.resolve(import.meta.dirname, '..')
 const schema = JSON.parse(fs.readFileSync(path.join(ROOT, FRAMEWORK_REGISTRY_SCHEMA_PATH), 'utf8')) as object
-const registry = parse(fs.readFileSync(path.join(ROOT, FRAMEWORK_REGISTRY_PATH), 'utf8')) as FrameworkRegistry
+const registry = JSON.parse(fs.readFileSync(path.join(ROOT, FRAMEWORK_REGISTRY_PATH), 'utf8')) as FrameworkRegistry
 
 function withEntry(change: Partial<FrameworkRegistry['frameworks'][number]>): FrameworkRegistry {
   return { ...registry, frameworks: [{ ...registry.frameworks[0]!, ...change }] }
@@ -61,10 +60,10 @@ test('validate: a repository without the registry warns; a broken one fails', ()
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-frameworks-'))
   try {
     assert.equal(frameworkRegistryErrors(root).warnings.length, 1)
-    fs.mkdirSync(path.join(root, '.brand-os'))
+    fs.mkdirSync(path.dirname(path.join(root, FRAMEWORK_REGISTRY_PATH)), { recursive: true })
     fs.mkdirSync(path.join(root, 'schemas'))
     fs.copyFileSync(path.join(ROOT, FRAMEWORK_REGISTRY_SCHEMA_PATH), path.join(root, FRAMEWORK_REGISTRY_SCHEMA_PATH))
-    fs.writeFileSync(path.join(root, FRAMEWORK_REGISTRY_PATH), 'schema_version: 1\nframeworks:\n  - framework_id: X\n')
+    fs.writeFileSync(path.join(root, FRAMEWORK_REGISTRY_PATH), JSON.stringify({ schema_version: 1, frameworks: [{ framework_id: 'X' }] }))
     assert.ok(frameworkRegistryErrors(root).errors.length > 0)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })

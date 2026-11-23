@@ -1,17 +1,17 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import Ajv from 'ajv'
-import { parse } from 'yaml'
 import type { FrameworkRef } from './model.js'
 
 /**
- * Framework registry (Visual Blueprint D5): `.brand-os/frameworks.yaml`, validated against
+ * Framework registry (Visual Blueprint D5): `packages/brand-core/src/visual/frameworks.json`, validated against
  * `schemas/framework-registry.schema.json` plus the claim rules below. Metadata only, never a fact store.
  *
- * The renderers read the registry that ships with this template code (not the brand repository's copy), so a
- * page can only cite a framework this code knows how to draw. `npm run validate` checks a repository's own copy.
+ * It lives in the package (template-owned, `packages/**`) and is imported as JSON, so the production Studio
+ * bundle carries it: the runtime image has no `schemas/` or `.brand-os/` folder. The renderers apply the claim
+ * rules at load; `npm run validate` checks the schema and the claim rules on the repository's copy.
  */
-export const FRAMEWORK_REGISTRY_PATH = '.brand-os/frameworks.yaml'
+export const FRAMEWORK_REGISTRY_PATH = 'packages/brand-core/src/visual/frameworks.json'
 export const FRAMEWORK_REGISTRY_SCHEMA_PATH = 'schemas/framework-registry.schema.json'
 
 /** Claims that state a checked relationship need a person to have checked the source on a recorded date. */
@@ -33,9 +33,15 @@ export function validateFrameworkRegistry(doc: unknown, schema: object): string[
   const ajv = new Ajv({ allErrors: true, strict: false })
   const validate = ajv.compile(schema)
   if (!(validate(doc) as boolean)) return [`${FRAMEWORK_REGISTRY_PATH}: ${ajv.errorsText(validate.errors)}`]
+  return frameworkClaimErrors(doc as FrameworkRegistry)
+}
+
+/** The claim rules alone (no schema): what the runtime checks on the bundled registry. */
+export function frameworkClaimErrors(doc: FrameworkRegistry): string[] {
+  if (!doc || !Array.isArray(doc.frameworks)) return [`${FRAMEWORK_REGISTRY_PATH}: frameworks must be a list`]
   const errors: string[] = []
   const seen = new Set<string>()
-  for (const ref of (doc as FrameworkRegistry).frameworks) {
+  for (const ref of doc.frameworks) {
     const at = `${FRAMEWORK_REGISTRY_PATH} ${ref.framework_id}`
     if (seen.has(ref.framework_id)) errors.push(`${at}: duplicate framework_id`)
     seen.add(ref.framework_id)
@@ -53,7 +59,7 @@ export function validateFrameworkRegistry(doc: unknown, schema: object): string[
 }
 
 export function readRegistry(root: string): { doc: unknown; schema: object } {
-  const doc = parse(fs.readFileSync(path.join(root, FRAMEWORK_REGISTRY_PATH), 'utf8')) as unknown
+  const doc = JSON.parse(fs.readFileSync(path.join(root, FRAMEWORK_REGISTRY_PATH), 'utf8')) as unknown
   const schema = JSON.parse(fs.readFileSync(path.join(root, FRAMEWORK_REGISTRY_SCHEMA_PATH), 'utf8')) as object
   return { doc, schema }
 }

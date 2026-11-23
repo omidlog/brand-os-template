@@ -17,7 +17,7 @@ Core: `packages/brand-core/src/visual/` (`@brand-os/brand-core/visual`). Studio:
 
 - **Renderer registry** `apps/studio/src/views/visual-registry.ts`: one renderer per `VisualBlock['type']`, typed so a new block type without a renderer fails the type check. Compositions call `renderBlock`.
 - **Shared primitives** `apps/studio/src/views/visual-primitives.ts`: state chip, legend, ghost geometry (`lines`, `swatches`, `specimen`, `mark`), source footnote (plain label, version, date; never a field id), topology mini-map. Every block uses these instead of its own copy.
-- **Framework registry** `.brand-os/frameworks.yaml` (template-owned) with `schemas/framework-registry.schema.json`. `npm run validate` checks the schema and the claim rules (`visual/framework-registry.ts`): no `externally_certified`; `aligned_with` / `verified_against` need `verified_on`; `original_professional_template` only for Brand OS layouts; no certification or compliance wording. Metadata only, never a fact. Renderers read the copy that ships with the template code (`frameworkRef(id)`).
+- **Framework registry** `packages/brand-core/src/visual/frameworks.json` (template-owned, bundled into the production Studio image) with `schemas/framework-registry.schema.json`. `npm run validate` checks the schema and the claim rules (`visual/framework-registry.ts`): no `externally_certified`; `aligned_with` / `verified_against` need `verified_on`; `original_professional_template` only for Brand OS layouts; no certification or compliance wording. Metadata only, never a fact. Renderers read the copy that ships with the template code (`frameworkRef(id)`).
 
 ## Brand Book "Visual identity" chapter (V2.1)
 
@@ -33,7 +33,7 @@ Core: `packages/brand-core/src/visual/` (`@brand-os/brand-core/visual`). Studio:
 
 1. Add a block type to `visual/model.ts` (additive; bump nothing unless an existing field changes meaning).
 2. Build it from existing facts through `itemFor` (or another existing projection). If it needs data Studio cannot see (anything under `brand/.private`), it is not a Studio visual yet.
-3. Add the framework to `.brand-os/frameworks.yaml` if it cites one. Add en/fa/tr text, a renderer registered in `views/visual-registry.ts` (built from `visual-primitives.ts`), an illustrative fixture and tests for every state, and a browser check at five widths plus a printed PDF.
+3. Add the framework to `packages/brand-core/src/visual/frameworks.json` if it cites one. Add en/fa/tr text, a renderer registered in `views/visual-registry.ts` (built from `visual-primitives.ts`), an illustrative fixture and tests for every state, and a browser check at five widths plus a printed PDF.
 
 ## Reading layer
 

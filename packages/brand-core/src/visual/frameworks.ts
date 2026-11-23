@@ -1,28 +1,26 @@
-import path from 'node:path'
-import { FRAMEWORK_REGISTRY_PATH, readRegistry, validateFrameworkRegistry, type FrameworkRegistry } from './framework-registry.js'
+import { frameworkClaimErrors, type FrameworkRegistry } from './framework-registry.js'
+import registry from './frameworks.json' with { type: 'json' }
 import type { FrameworkRef } from './model.js'
 
 /**
- * The renderers' view of the framework registry: the copy that ships with this template code (not the brand
+ * The renderers' view of the framework registry: the copy bundled with this template code (not the brand
  * repository's copy), so a page can only cite a framework this code knows how to draw.
  */
-const TEMPLATE_ROOT = path.resolve(import.meta.dirname, '..', '..', '..', '..')
-
 let cached: ReadonlyMap<string, FrameworkRef> | null = null
 
-/** The template's own registry, validated once. Throws when it is invalid, so a bad registry fails CI loudly. */
+/** The bundled registry, claim rules checked once. Throws when it is invalid, so a bad registry fails CI loudly. */
 export function frameworkRegistry(): ReadonlyMap<string, FrameworkRef> {
   if (cached) return cached
-  const { doc, schema } = readRegistry(TEMPLATE_ROOT)
-  const errors = validateFrameworkRegistry(doc, schema)
+  const doc = registry as unknown as FrameworkRegistry
+  const errors = frameworkClaimErrors(doc)
   if (errors.length) throw new Error(`Invalid framework registry: ${errors.join('; ')}`)
-  cached = new Map((doc as FrameworkRegistry).frameworks.map((ref) => [ref.framework_id, Object.freeze({ ...ref })]))
+  cached = new Map(doc.frameworks.map((ref) => [ref.framework_id, Object.freeze({ ...ref })]))
   return cached
 }
 
 export function frameworkRef(id: string): FrameworkRef {
   const ref = frameworkRegistry().get(id)
-  if (!ref) throw new Error(`Framework ${id} is not in ${FRAMEWORK_REGISTRY_PATH}`)
+  if (!ref) throw new Error(`Framework ${id} is not in the framework registry`)
   return ref
 }
 
