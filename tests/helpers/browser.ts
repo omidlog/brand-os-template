@@ -174,8 +174,17 @@ export class Page {
     await this.send('Input.dispatchKeyEvent', { type: 'keyUp', ...base })
   }
 
-  async screenshot(file: string): Promise<void> {
-    const result = (await this.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })) as { data: string }
+  /**
+   * Full page, or only the element matching `selector`. An element shot is taken inside the viewport (scroll it into
+   * view and make the viewport tall enough first): `captureBeyondViewport` re-lays the page out and shifts the clip.
+   */
+  async screenshot(file: string, selector?: string): Promise<void> {
+    const clip = selector
+      ? await this.eval<{ x: number; y: number; width: number; height: number; scale: number }>(
+          `(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return { x: Math.max(0, r.left + scrollX), y: Math.max(0, r.top + scrollY), width: r.width, height: r.height, scale: 1 } })()`,
+        )
+      : undefined
+    const result = (await this.send('Page.captureScreenshot', clip ? { format: 'png', captureBeyondViewport: false, clip } : { format: 'png', captureBeyondViewport: true })) as { data: string }
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.writeFileSync(file, Buffer.from(result.data, 'base64'))
   }

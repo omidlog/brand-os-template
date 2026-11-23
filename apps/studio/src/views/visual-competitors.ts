@@ -1,5 +1,5 @@
-import type { ComparisonCell, ComparisonRow, ComparisonState, CompetitorMatrixBlock, CompetitorText, PriceStripBlock, PriceStripRow, VisualCatalog, VisualDocument, VisualLang } from '@brand-os/brand-core/visual'
-import { competitorText, fillVisual, visualCatalog } from '@brand-os/brand-core/visual'
+import type { ComparisonCell, ComparisonRow, ComparisonState, CompetitorMatrixBlock, CompetitorText, PositioningMapBlock, PriceStripBlock, PriceStripRow, VisualCatalog, VisualDocument, VisualLang } from '@brand-os/brand-core/visual'
+import { competitorText, fillVisual, positioningText, visualCatalog } from '@brand-os/brand-core/visual'
 import { html, join, safeHex, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
 import { dateOnly, illustrativeStamp, stateChip, two } from './visual-primitives.js'
@@ -44,7 +44,7 @@ function cellMark(t: CompetitorText, state: ComparisonState): SafeHtml {
   return html`<span class="vz-cmp-mark vz-cmp--${meta.tone}">${icon(meta.icon)}<span>${t.cellState[state]}</span></span>`
 }
 
-function footnoteRefs(ctx: ComparisonContext, notes: number[]): SafeHtml {
+export function footnoteRefs(ctx: ComparisonContext, notes: number[]): SafeHtml {
   if (!notes.length) return html``
   const fmt = new Intl.NumberFormat(ctx.lang)
   const items = notes.map((n) => (ctx.mode === 'screen' ? html`<a href="#cmp-fn-${n}" aria-label="${ctx.cat.text.sourceShort} ${fmt.format(n)}">${fmt.format(n)}</a>` : html`<span>${fmt.format(n)}</span>`))
@@ -246,11 +246,14 @@ export function comparisonOpener(ctx: ComparisonContext, linked: boolean): SafeH
   const strip = ctx.doc.blocks.find((b): b is PriceStripBlock => b.type === 'price_strip')
   const count = matrix ? matrix.rows.filter((row) => row.kind === 'competitor').length : 0
   const prices = strip ? strip.groups.reduce((sum, g) => sum + g.rows.length, 0) : 0
+  const map = ctx.doc.blocks.find((b): b is PositioningMapBlock => b.type === 'positioning_map')
+  const placed = map?.axes ? map.points.length : 0
   const fmt = new Intl.NumberFormat(ctx.lang)
   const asOf = dateOnly(ctx.doc.as_of ? `${ctx.doc.as_of.slice(0, 10)}T00:00:00Z` : null, ctx.lang)
   const items: Array<[string, string, string, boolean]> = [
     ['cmp-matrix', t.pageMatrix, count ? fmt.format(count) : '—', count > 0],
     ['cmp-prices', t.pagePrices, prices ? fmt.format(prices) : '—', prices > 0],
+    ...(map ? [['cmp-map', positioningText(ctx.lang).page, placed ? fmt.format(placed) : '—', Boolean(map.axes)] as [string, string, string, boolean]] : []),
     ['cmp-sources', t.pageSources, matrix?.footnotes.length ? fmt.format(matrix.footnotes.length) : '—', (matrix?.footnotes.length ?? 0) > 0],
   ]
   return html`<header class="vz-opener">
@@ -287,6 +290,8 @@ export function comparisonPrintDocument(input: ComparisonPrintInput, render: (bl
   const matrix = doc.blocks.find((block) => block.type === 'competitor_matrix')
   const strip = doc.blocks.find((block) => block.type === 'price_strip')
   const stripHtml = strip ? render(strip, ctx) : html``
+  const map = doc.blocks.find((block) => block.type === 'positioning_map')
+  const mapTitle = positioningText(lang).page
   return html`<!doctype html>
 <html lang="${lang}" dir="${cat.dir}">
 <head>
@@ -311,9 +316,10 @@ ${input.toolbar}
   </section>
   ${matrix ? html`<section class="vz-page vz-page--book vz-page--cmp-wide" aria-label="${t.pageMatrix}">${illustrativeStamp(cat, doc)}${render(matrix, ctx)}${foot(t.pageMatrix)}</section>` : ''}
   ${stripHtml.toString().trim() ? html`<section class="vz-page vz-page--book vz-page--plate" aria-label="${t.pagePrices}">${illustrativeStamp(cat, doc)}${stripHtml}${foot(t.pagePrices)}</section>` : ''}
+  ${map && map.type === 'positioning_map' && map.axes ? html`<section class="vz-page vz-page--book vz-page--plate vz-page--pos" aria-label="${mapTitle}">${illustrativeStamp(cat, doc)}${render(map, ctx)}${foot(mapTitle)}</section>` : ''}
   <section class="vz-page vz-page--book vz-page--appendix" aria-label="${t.pageSources}">
     ${illustrativeStamp(cat, doc)}
-    ${comparisonSources(ctx, 3)}
+    ${comparisonSources(ctx, map ? 4 : 3)}
     ${comparisonNever(ctx)}
     ${foot(t.pageSources)}
   </section>
