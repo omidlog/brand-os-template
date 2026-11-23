@@ -12,6 +12,7 @@ import {
   VISUAL_DNA_PERMISSIONS,
   VisualDnaError,
   type AssetUse,
+  type UseScope,
   type VisualDnaPermissions,
   type VisualReference,
 } from './model.js'
@@ -52,14 +53,14 @@ export interface VerifiedAsset {
 
 const STATE_ERROR: Record<string, VisualDnaError['code']> = { changed: 'changed', unsafe_file: 'unsafe_file', too_large: 'too_large' }
 
-export function readVerifiedAsset(engine: InterviewEngine, ctx: AuthContext, assetId: string, use: AssetUse): VerifiedAsset {
+export function readVerifiedAsset(engine: InterviewEngine, ctx: AuthContext, assetId: string, use: AssetUse, useScope: UseScope = 'public'): VerifiedAsset {
   if (ctx.role !== 'owner' || ctx.brand_id !== engine.config().brand.slug) {
     throw new VisualDnaError('owner_only', 'Reading asset bytes is a local owner action. Agents receive metadata only.')
   }
   if (typeof assetId !== 'string' || !ASSET_ID_PATTERN.test(assetId)) throw new VisualDnaError('invalid_input', 'Give one asset id from brand/assets/asset-manifest.yaml. File paths and URLs are not accepted.')
   if (!(ASSET_USES as readonly string[]).includes(use)) throw new VisualDnaError('invalid_input', `--for is one of: ${ASSET_USES.join(', ')}.`)
 
-  const ref = resolveVisualDna(engine, ctx, { asset_ids: [assetId] }).references[0]
+  const ref = resolveVisualDna(engine, ctx, { asset_ids: [assetId], use_scope: useScope }).references[0]
   if (!ref || ref.state !== 'approved' || !ref.asset) {
     const code = ref ? (STATE_ERROR[ref.state] ?? STATE_ERROR[ref.reason ?? ''] ?? 'not_approved') : 'not_approved'
     throw new VisualDnaError(code, `${assetId} is ${ref?.state ?? 'missing'}${ref?.reason ? ` (${ref.reason})` : ''}. Only an approved, verified asset is read.`)

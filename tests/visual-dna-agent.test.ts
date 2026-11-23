@@ -10,7 +10,7 @@ import { issueAgentToken, readAccessLog } from '@brand-os/brand-core'
 import type { VisualDnaResult } from '@brand-os/brand-core/visual-dna'
 import { TEST_DATA_KEY, useTestKey } from './helpers/knowledge.js'
 import { NODE, tsxArgs } from './helpers/tsx-node.js'
-import { fixture, IDS, OUTSIDE_CANARY, sha, SLUG, SVG, SVG_C, trackedSnapshot } from './helpers/visual-dna.js'
+import { editAssets, fixture, IDS, OUTSIDE_CANARY, sha, SLUG, SVG, SVG_C, trackedSnapshot } from './helpers/visual-dna.js'
 
 /**
  * Visual DNA over the real stdio MCP server and the brand:visual-dna CLI (fixes pack PR-C):
@@ -103,9 +103,17 @@ test('brand:visual-dna: resolve as the token or the owner; read delivers exact b
   assert.equal(agentResult.references[0]?.reason, 'not_found')
   assert.equal(agentResult.references[1]?.state, 'approved')
 
-  const asOwner = cli(root, ['resolve', '--ids', IDS.draft, '--json'])
+  // --use-scope internal: internal-scope rights cover the portrait for internal use only.
+  editAssets(root, (assets) => {
+    const portrait = assets.find((asset) => asset.id === IDS.portrait)
+    if (portrait) portrait.rights = { status: 'granted', scope: 'internal', holder: 'Synthetic Person' }
+  })
+  const asOwner = cli(root, ['resolve', '--ids', `${IDS.draft},${IDS.portrait}`, '--use-scope', 'internal', '--json'])
   assert.equal(asOwner.status, 0, asOwner.stderr.toString())
-  assert.equal((JSON.parse(asOwner.stdout.toString()) as VisualDnaResult).references[0]?.reason, 'not_approved')
+  const ownerResult = JSON.parse(asOwner.stdout.toString()) as VisualDnaResult
+  assert.equal(ownerResult.use_scope, 'internal')
+  assert.equal(ownerResult.references[0]?.reason, 'not_approved')
+  assert.equal(ownerResult.references[1]?.state, 'approved')
 
   const persian = cli(root, ['resolve', '--emotion', 'celebrating', '--angle', 'back', '--lang', 'fa'])
   assert.equal(persian.status, 0, persian.stderr.toString())
@@ -141,4 +149,5 @@ test('brand:visual-dna: resolve as the token or the owner; read delivers exact b
   // Usage errors.
   assert.equal(cli(root, ['read', IDS.logo]).status, 2)
   assert.equal(cli(root, ['resolve', '--lang', 'de']).status, 2)
+  assert.equal(cli(root, ['resolve', '--ids', IDS.logo, '--use-scope', 'everyone']).status, 2)
 })
