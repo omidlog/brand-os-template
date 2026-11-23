@@ -156,6 +156,16 @@ export const CAL_TEXT: Record<string, T> = {
     fa: '{week} تمام شده است. هفتهٔ گذشته را نمی‌توان تأیید کرد.',
     tr: '{week} sona erdi. Geçmiş bir hafta onaylanamaz.',
   },
+  cal_block_share_not_approved: {
+    en: '{week} has no approved revision. Approve it before sharing.',
+    fa: '{week} نسخهٔ تأییدشده‌ای ندارد. پیش از اشتراک‌گذاری آن را تأیید کنید.',
+    tr: '{week} için onaylı bir sürüm yok. Paylaşmadan önce onaylayın.',
+  },
+  cal_block_share_not_current: {
+    en: '{week} is {status}, not current. Only a current approved week is shared.',
+    fa: '{week} در وضعیت {status} است، نه جاری. فقط هفتهٔ تأییدشدهٔ جاری به اشتراک گذاشته می‌شود.',
+    tr: '{week} {status} durumunda, güncel değil. Yalnızca güncel onaylı bir hafta paylaşılır.',
+  },
   // CLI
   plan_header: { en: 'Draft calendar (not stored) from {id}@{rev}', fa: 'تقویم پیش‌نویس (ذخیره نشده) از {id}@{rev}', tr: '{id}@{rev} kaynaklı taslak takvim (kaydedilmedi)' },
   week: { en: 'Week', fa: 'هفته', tr: 'Hafta' },
