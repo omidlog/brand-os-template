@@ -63,6 +63,9 @@ const audienceOf = (value: unknown): Audience => (value === 'public' || value ==
 /** The module `brand_retrieve` assigns to an asset; kept identical so profiles decide the same way. */
 const assetModule = (id: string): string => (id.includes('mascot') ? 'mascot-identity' : 'assets')
 
+/** `published` is approved and released: it counts as approved here, with every other check still applied. */
+const approvedStatus = (value: unknown): boolean => value === 'approved' || value === 'published'
+
 function licenseMissing(value: unknown): boolean {
   const license = str(value)
   return license === null || /^(tbd|todo|unknown|none|n\/a)$/i.test(license.trim())
@@ -87,7 +90,7 @@ function notApproved(state: Exclude<ReferenceState, 'approved'>, reason: Referen
 /** Why an asset `brand_retrieve` did not return is not approved here. Never reveals drafts to an agent. */
 function diagnose(root: string, ctx: AuthContext, brandId: string, id: string, row: Row | undefined, detailed: boolean, text: VisualDnaText): Resolved {
   if (!row) return notApproved('missing', 'not_found', text)
-  if (row.status !== 'approved') return notApproved('missing', detailed ? (row.present === false ? 'not_present' : 'not_approved') : 'not_found', text)
+  if (!approvedStatus(row.status)) return notApproved('missing', detailed ? (row.present === false ? 'not_present' : 'not_approved') : 'not_found', text)
   const published = readPublicationPolicy(root).approved_asset_ids.includes(id) && rightsBlocker(root, row) === null
   const decision = authorize(ctx, { brand_id: brandId, classification: audienceOf(row.visibility), status: 'approved', publication: published ? 'published' : 'unpublished', module: assetModule(id) }, 'read')
   if (!decision.allow) return notApproved('withheld', 'not_authorized', text)
