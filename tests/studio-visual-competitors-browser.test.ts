@@ -155,9 +155,11 @@ test('competitor matrix: three widths, en and fa, light and dark: no overflow, c
         assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-pos-margin li').length`), 1, where)
         if (shots && width === 1440 && scheme === 'light') {
           fs.mkdirSync(shots, { recursive: true })
+          await page.viewport(width, 1400)
           await page.eval(`document.getElementById('cmp-map').scrollIntoView()`)
           await settle()
-          await page.screenshot(path.join(shots, `positioning-${lang}-${width}.png`))
+          await page.screenshot(path.join(shots, `positioning-${lang}-${width}.png`), '#cmp-map')
+          await page.viewport(width, 900)
           await page.eval('window.scrollTo(0, 0)')
         }
         if (width === 1440) {
@@ -175,6 +177,77 @@ test('competitor matrix: three widths, en and fa, light and dark: no overflow, c
   await page.viewport(1440, 900)
   const html = await page.eval<string>('document.documentElement.outerHTML')
   assert.equal(html.includes('DRAFT-PRICE-CANARY'), false, 'a draft own price is never shown')
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
+
+interface MapLayout {
+  dir: string
+  lowLeft: number
+  highLeft: number
+  yAxisLeft: number
+  plotLeft: number
+  plotCentre: number
+  highPointX: number
+  lowPointX: number
+}
+
+/** Rendered positions: the x poles, the y-axis column, the plot, and the fixture's high-x (Kestrel) and low-x (Avenra) points. */
+async function mapLayout(): Promise<MapLayout> {
+  return page.eval<MapLayout>(`(() => {
+    const map = document.querySelector('#cmp-map')
+    const box = (sel) => map.querySelector(sel).getBoundingClientRect()
+    const point = (name) => [...map.querySelectorAll('.vz-pos-point')].find((g) => g.getAttribute('aria-label').startsWith(name)).getBoundingClientRect()
+    const plot = box('.vz-pos-plot')
+    const centre = (r) => r.left + r.width / 2
+    return {
+      dir: map.querySelector('.vz-pos-chart').getAttribute('dir'),
+      lowLeft: box('.vz-pos-xaxis .vz-pos-pole--low').left,
+      highLeft: box('.vz-pos-xaxis .vz-pos-pole--high').left,
+      yAxisLeft: box('.vz-pos-yaxis').left,
+      plotLeft: plot.left,
+      plotCentre: centre(plot),
+      highPointX: centre(point('Kestrel')),
+      lowPointX: centre(point('Avenra')),
+    }
+  })()`)
+}
+
+function assertDirection(where: string, lang: string, l: MapLayout): void {
+  if (lang === 'fa') {
+    assert.equal(l.dir, 'rtl', where)
+    assert.ok(l.lowLeft > l.highLeft, `${where}: low pole on the right`)
+    assert.ok(l.yAxisLeft > l.plotLeft, `${where}: vertical axis on the right`)
+    assert.ok(l.highPointX < l.plotCentre && l.lowPointX > l.plotCentre, `${where}: high x on the left, low x on the right`)
+  } else {
+    assert.equal(l.dir, 'ltr', where)
+    assert.ok(l.lowLeft < l.highLeft, `${where}: low pole on the left`)
+    assert.ok(l.yAxisLeft < l.plotLeft, `${where}: vertical axis on the left`)
+    assert.ok(l.highPointX > l.plotCentre && l.lowPointX < l.plotCentre, `${where}: high x on the right, low x on the left`)
+  }
+}
+
+test('positioning map: fa mirrors the horizontal axis, en and tr run left to right, on screen and in the print view', { skip }, async () => {
+  await page.viewport(1440, 900)
+  for (const lang of ['en', 'tr', 'fa'] as const) {
+    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors`)
+    await settle()
+    assertDirection(`screen ${lang}`, lang, await mapLayout())
+    await page.goto(`${s.url}/brands/${SLUG}/visual/competitors/print`)
+    await page.send('Emulation.setEmulatedMedia', { media: 'print' })
+    await settle()
+    assertDirection(`print ${lang}`, lang, await mapLayout())
+    if (shots) {
+      // About an A4 page wide, so the print layout is what the PDF shows.
+      fs.mkdirSync(shots, { recursive: true })
+      await page.viewport(800, 1400)
+      await page.eval(`document.getElementById('cmp-map').scrollIntoView()`)
+      await settle()
+      await page.screenshot(path.join(shots, `positioning-print-${lang}.png`), '#cmp-map')
+      await page.viewport(1440, 900)
+    }
+    await page.send('Emulation.setEmulatedMedia', { media: '' })
+  }
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })
 
