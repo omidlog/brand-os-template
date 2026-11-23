@@ -10,7 +10,8 @@ import crypto from 'node:crypto'
 
 export const CREATIVE_SCHEMA_VERSION = 1
 
-export const SURFACES = ['reel', 'post', 'carousel', 'story'] as const
+/** `logo` holds logo/identity concept rounds (Identity Slice D); selection there is never an approved mark. */
+export const SURFACES = ['reel', 'post', 'carousel', 'story', 'logo'] as const
 export const VARIANT_STATUSES = ['draft', 'selected', 'rejected'] as const
 export const VERDICTS = ['like', 'reject', 'change_request', 'observation'] as const
 /** Owner-words source kinds a feedback note may have. Third-party material is never feedback. */

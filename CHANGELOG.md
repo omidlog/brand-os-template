@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Identity audit and logo brief (Identity Slice D)
+
+### Added
+
+- `npm run brand:identity`: the owner's identity audit and logo brief. `next` and `answer` run a short en/fa/tr diagnosis (path, why change, observed problem or preference, success, what must not change, recognition evidence, real uses, scripts, rollout). `equity` records preserve / refine / replace / evaluate / unknown per element; measured recognition needs a cited study note. `link-creative` links a Creative Learning project for concept rounds. `brief` prints a Markdown or JSON draft; `reviewed` records what the owner read.
+- The brief covers new identities, retain, evolve and rebrand: problem and canonical inputs by fact id, existing assets, the equity matrix and migration risks, the competitor visual landscape from the Slice C identity projection only, 2–3 routes with why / why not / risks / red lines, uses and production checks, an unweighted rubric, the decision record, the approval hand-off and every missing item. It writes nothing and authorizes nothing.
+- Creative Learning gains a `logo` surface. Selection there is never an approved mark.
+- Skill `agent-skills/logo-identity-strategist` (before `logo-designer`). Guide `docs-internal/IDENTITY_BRIEF.md`. Tests: `identity-brief`, `identity-cli`.
+
 ## Unreleased — Cross-functional competitive drafts (Identity Slice C)
 
 ### Added
