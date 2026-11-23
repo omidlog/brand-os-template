@@ -10,6 +10,17 @@
 - Studio Overview: a read-only "Before you approve: coach notes" card (en/fa/tr), hidden when empty. Screenshots in `docs/screenshots/coach-ux/`.
 - `BRAND_OS_COACH=off` silences the automatic moments for one shell.
 - Tests: `coach-moments`, `coach-moments-cli`, `studio-coach`.
+## Unreleased — Visual DNA owner policy decisions and the `published` status fix
+
+### Fixed
+
+- Manifest status `published` was counted as unapproved: `brand_retrieve kind: asset` skipped it and Visual DNA reported it `missing`. `published` now reads exactly like `approved`; `approved_sha256`, checksum, safe-path, SVG, size, rights and licence checks still apply (replaced bytes are `changed`).
+
+### Changed
+
+- Visual DNA: the brand's own logo, wordmark, logomark or brand mark (`asset.logo.*` and the other mark ids, or a mark tag) with an empty or `TBD` licence is `approved` with `rights.license_basis: own_brand_mark`. Third-party assets still need a recorded licence: client logos, marks tagged `third-party`, `partner`, `client-logo`, `stock` or `licensed`, and every icon, photo, illustration and mascot artwork (`withheld / license_missing`). Approved references now carry `license_basis` (`recorded` or `own_brand_mark`).
+- Visual DNA: new `use_scope` (`public` by default; MCP input, `--use-scope` on `resolve` and owner `read`, echoed in the result). Internal-scope rights cover a portrait or other rights-sensitive subject for internal use; public use without public-scope rights stays `withheld / rights`. `rightsBlocker` takes the use and defaults to `public`, so every publication gate is unchanged.
+- Tests: `visual-dna-policy` (own mark with empty/TBD licence approved; third-party, partner, client logo, icon and mascot art with TBD withheld; exemption skips no other check; internal portrait approved for internal use and withheld for public use; public rights cover both; pending, expired, holderless and missing rights cover neither; strict `use_scope`; `published` approved; published with replaced bytes or an approval for other bytes `changed`; other statuses missing). `visual-dna-agent` checks `--use-scope` on the CLI.
 
 ## Unreleased — Assurance: owner-local bridge to approved brand facts (GAP-09)
 

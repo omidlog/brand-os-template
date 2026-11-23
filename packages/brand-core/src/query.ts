@@ -256,7 +256,9 @@ function readableAssets(engine: InterviewEngine, ctx: AuthContext): Row[] {
     // Portraits and other rights-sensitive assets are public only with granted public-use rights.
     const published = policy.approved_asset_ids.includes(asset.id) && rightsBlocker(root, asset) === null
     const module = asset.id.includes('mascot') ? 'mascot-identity' : 'assets'
-    if (!readable(ctx, brandId, { classification: audienceOf(asset.visibility), status: asset.status, published, module }).allow) return false
+    // A manifest `published` asset is approved and also released; it is read exactly like an approved one.
+    const status = asset.status === 'published' ? 'approved' : asset.status
+    if (!readable(ctx, brandId, { classification: audienceOf(asset.visibility), status, published, module }).allow) return false
     return inspectAssetForPublication(root, String(asset.path), asset.checksum_sha256).ok
   })
 }
