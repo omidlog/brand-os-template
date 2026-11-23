@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
 import { SHARED_LANDSCAPE_PATH } from '@brand-os/brand-core/competitive'
-import { illustrativeLandscape } from '@brand-os/brand-core/visual'
+import { illustrativeLandscape, illustrativePositioning } from '@brand-os/brand-core/visual'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
 import { teardown } from './helpers/cleanup.js'
 import { approve, editOutsideStudio } from './helpers/edits.js'
@@ -47,7 +47,7 @@ before(async () => {
       'brand.color.roles': 'primary #123A73; onPrimary #FFFFFF; surface #F7F5F2; accent #D5FE00',
     })
     engine.answerQuestion('business.sales.pricing', 'DRAFT-PRICE-CANARY')
-    const json = JSON.stringify({ ...illustrativeLandscape(), brand_slug: SLUG }).replace(/([a-z-]+)\.example/g, '$1-fictional.app')
+    const json = JSON.stringify({ ...illustrativeLandscape(), positioning: illustrativePositioning(), brand_slug: SLUG }).replace(/([a-z-]+)\.example/g, '$1-fictional.app')
     fs.mkdirSync(path.dirname(path.join(root, SHARED_LANDSCAPE_PATH)), { recursive: true })
     fs.writeFileSync(path.join(root, SHARED_LANDSCAPE_PATH), json)
   })
@@ -151,6 +151,18 @@ test('competitor matrix: three widths, en and fa, light and dark: no overflow, c
         assert.ok(widths.scroll <= widths.client + 1, `${where}: page overflow ${widths.scroll} > ${widths.client} ${wide.join(' ')}`)
         assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-cmp-table tbody tr').length`), 4, where)
         assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-strip-item').length`), 4, where)
+        // V2.3: the positioning map plots the evidenced three and lists the unknown one in the margin.
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-pos-point').length`), 3, where)
+        assert.equal(await page.eval<number>(`document.querySelectorAll('.vz-pos-margin li').length`), 1, where)
+        if (shots && width === 1440 && scheme === 'light') {
+          fs.mkdirSync(shots, { recursive: true })
+          await page.viewport(width, 1400)
+          await page.eval(`document.getElementById('cmp-map').scrollIntoView()`)
+          await settle()
+          await page.screenshot(path.join(shots, `positioning-${lang}-${width}.png`), '#cmp-map')
+          await page.viewport(width, 900)
+          await page.eval('window.scrollTo(0, 0)')
+        }
         if (width === 1440) {
           assert.deepEqual(await structureIssues(), [], `${where}: structure`)
           assert.deepEqual(await contrastFailures('.vz-cmp'), [], `${where}: contrast`)
@@ -169,6 +181,77 @@ test('competitor matrix: three widths, en and fa, light and dark: no overflow, c
   assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
 })
 
+interface MapLayout {
+  dir: string
+  lowLeft: number
+  highLeft: number
+  yAxisLeft: number
+  plotLeft: number
+  plotCentre: number
+  highPointX: number
+  lowPointX: number
+}
+
+/** Rendered positions: the x poles, the y-axis column, the plot, and the fixture's high-x (Kestrel) and low-x (Avenra) points. */
+async function mapLayout(): Promise<MapLayout> {
+  return page.eval<MapLayout>(`(() => {
+    const map = document.querySelector('#cmp-map')
+    const box = (sel) => map.querySelector(sel).getBoundingClientRect()
+    const point = (name) => [...map.querySelectorAll('.vz-pos-point')].find((g) => g.getAttribute('aria-label').startsWith(name)).getBoundingClientRect()
+    const plot = box('.vz-pos-plot')
+    const centre = (r) => r.left + r.width / 2
+    return {
+      dir: map.querySelector('.vz-pos-chart').getAttribute('dir'),
+      lowLeft: box('.vz-pos-xaxis .vz-pos-pole--low').left,
+      highLeft: box('.vz-pos-xaxis .vz-pos-pole--high').left,
+      yAxisLeft: box('.vz-pos-yaxis').left,
+      plotLeft: plot.left,
+      plotCentre: centre(plot),
+      highPointX: centre(point('Kestrel')),
+      lowPointX: centre(point('Avenra')),
+    }
+  })()`)
+}
+
+function assertDirection(where: string, lang: string, l: MapLayout): void {
+  if (lang === 'fa') {
+    assert.equal(l.dir, 'rtl', where)
+    assert.ok(l.lowLeft > l.highLeft, `${where}: low pole on the right`)
+    assert.ok(l.yAxisLeft > l.plotLeft, `${where}: vertical axis on the right`)
+    assert.ok(l.highPointX < l.plotCentre && l.lowPointX > l.plotCentre, `${where}: high x on the left, low x on the right`)
+  } else {
+    assert.equal(l.dir, 'ltr', where)
+    assert.ok(l.lowLeft < l.highLeft, `${where}: low pole on the left`)
+    assert.ok(l.yAxisLeft < l.plotLeft, `${where}: vertical axis on the left`)
+    assert.ok(l.highPointX > l.plotCentre && l.lowPointX < l.plotCentre, `${where}: high x on the right, low x on the left`)
+  }
+}
+
+test('positioning map: fa mirrors the horizontal axis, en and tr run left to right, on screen and in the print view', { skip }, async () => {
+  await page.viewport(1440, 900)
+  for (const lang of ['en', 'tr', 'fa'] as const) {
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors?lang=${lang}`)
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors`)
+    await settle()
+    assertDirection(`screen ${lang}`, lang, await mapLayout())
+    await page.goto(`${s.url}/brands/${SLUG}/market/competitors/print`)
+    await page.send('Emulation.setEmulatedMedia', { media: 'print' })
+    await settle()
+    assertDirection(`print ${lang}`, lang, await mapLayout())
+    if (shots) {
+      // About an A4 page wide, so the print layout is what the PDF shows.
+      fs.mkdirSync(shots, { recursive: true })
+      await page.viewport(800, 1400)
+      await page.eval(`document.getElementById('cmp-map').scrollIntoView()`)
+      await settle()
+      await page.screenshot(path.join(shots, `positioning-print-${lang}.png`), '#cmp-map')
+      await page.viewport(1440, 900)
+    }
+    await page.send('Emulation.setEmulatedMedia', { media: '' })
+  }
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
+
 test('competitor print view: A4 portrait opener and an A4 landscape matrix page, fonts embedded', { skip }, async () => {
   for (const lang of ['en', 'fa'] as const) {
     await page.goto(`${s.url}/brands/${SLUG}/market/competitors?lang=${lang}`)
@@ -181,7 +264,7 @@ test('competitor print view: A4 portrait opener and an A4 landscape matrix page,
     assert.ok(boxes.some(([w, h]) => Math.abs(w - 595.28) < 2 && Math.abs(h - 841.89) < 2), `${lang}: an A4 portrait page`)
     assert.ok(boxes.some(([w, h]) => Math.abs(w - 841.89) < 2 && Math.abs(h - 595.28) < 2), `${lang}: an A4 landscape matrix page`)
     const pages = (text.match(/\/Type\s*\/Page(?![s\w])/g) ?? []).length
-    assert.ok(pages >= 4, `${lang}: opener, matrix, prices and sources (${pages})`)
+    assert.ok(pages >= 5, `${lang}: opener, matrix, prices, positioning map and sources (${pages})`)
     assert.ok(text.includes('/FontFile2') || text.includes('/FontFile'), `${lang}: fonts are embedded`)
     if (shots) fs.writeFileSync(path.join(shots, `competitors-print-${lang}.pdf`), pdf)
   }

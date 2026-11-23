@@ -202,12 +202,22 @@ export interface LogoConstructionBlock extends BlockBase {
   master_state: 'approved' | 'missing' | 'example_only' | 'not_previewable' | 'ambiguous'
 }
 
-export type VisualBlock = BusinessModelCanvasBlock | CitationListBlock | ColorPaletteBlock | TypographySpecimenBlock | LogoConstructionBlock | CompetitorMatrixBlock | PriceStripBlock
+export type VisualBlock =
+  | BusinessModelCanvasBlock
+  | CitationListBlock
+  | ColorPaletteBlock
+  | TypographySpecimenBlock
+  | LogoConstructionBlock
+  | CompetitorMatrixBlock
+  | PriceStripBlock
+  | MascotAtlasBlock
+  | MascotEvolutionBlock
+  | PositioningMapBlock
 
 export interface VisualDocument {
   schema: typeof VISUAL_SCHEMA
   schema_version: 1
-  document_kind: 'business_model_canvas' | 'visual_identity' | 'competitor_comparison'
+  document_kind: 'business_model_canvas' | 'visual_identity' | 'competitor_comparison' | 'mascot_atlas'
   brand_id: string
   brand_name: string
   audience: VisualAudience
@@ -305,4 +315,136 @@ export interface PriceStripBlock extends BlockBase {
   unpriced: string[]
   ranked: false
   currency_conversion: 'none'
+}
+
+// ---- Visual V2.3: positioning map ----------------------------------------------------------------------
+
+/** Where a subject sits on one axis. Only evidenced, stale and conflicting placements are drawn. */
+export const POSITIONING_STATES = ['evidenced', 'stale', 'conflicting', 'needs_review', 'unknown'] as const
+export type PositioningState = (typeof POSITIONING_STATES)[number]
+
+/** An owner-written label: English always, Persian and Turkish when the owner gave them. Never machine-translated. */
+export interface OwnerLabel {
+  en: string
+  fa: string | null
+  tr: string | null
+}
+
+export interface PositioningAxis {
+  label: OwnerLabel
+  low: OwnerLabel
+  high: OwnerLabel
+}
+
+export interface PositioningPlacement {
+  state: PositioningState
+  /** Qualitative bands as recorded, low to high: one, or the disagreeing range. Never a number. */
+  bands: string[]
+}
+
+export interface PositioningPoint {
+  subject_id: string
+  kind: 'own_brand' | 'competitor'
+  name: string
+  /** Key number for plotted competitors (1…n); null for the own brand and for subjects not plotted. */
+  n: number | null
+  x: PositioningPlacement
+  y: PositioningPlacement
+  footnotes: number[]
+}
+
+/**
+ * The positioning map: the owner's two axes, subjects plotted only where both axes have a dated source, and a margin
+ * list of everyone else. Stale and conflicting placements are marked; a conflict is drawn as a range, never resolved.
+ */
+export interface PositioningMapBlock extends BlockBase {
+  type: 'positioning_map'
+  /** Null until the owner chose axes and shared them. */
+  axes: { x: PositioningAxis; y: PositioningAxis } | null
+  bands: string[]
+  stale_after_days: number | null
+  points: PositioningPoint[]
+  unplotted: PositioningPoint[]
+  share_state: 'not_shared' | 'shared' | 'withheld'
+}
+
+// ---- Visual V3.4: mascot atlas and six-stage evolution sheet ------------------------------------------------
+
+/**
+ * One piece of mascot artwork the atlas may draw: an artwork variant from the catalog whose lifecycle is approved
+ * (public: published), backed by an approved, checksummed, previewable, non-example manifest asset. Nothing else is
+ * ever drawn; the file itself is served only by the existing asset route.
+ */
+export interface MascotArtworkView {
+  artwork_id: string
+  asset_id: string
+  /** Manifest name of the asset (shown as recorded, never translated). */
+  name: string
+  version: string | null
+  /** Stage id from `stages.yaml`, or `any`. */
+  stage: string
+  angle: string | null
+  preview_key: string
+  mime: string
+  /** Internal edition only (always empty in public): the file still carries a `draft` tag, or it is not published. */
+  badges: Array<'draft_tag' | 'internal_only'>
+}
+
+/**
+ * Why a slot shows no artwork. `in_review`: artwork exists but is not approved yet (internal edition only).
+ * `not_previewable`: approved but the file cannot be previewed. `example_only`: only template placeholders.
+ * `not_drawn`: no artwork at all. `not_published`: public edition, nothing published for this slot.
+ */
+export const MASCOT_GAP_REASONS = ['in_review', 'not_previewable', 'example_only', 'not_drawn', 'not_published'] as const
+export type MascotGapReason = (typeof MASCOT_GAP_REASONS)[number]
+
+export const MASCOT_CATEGORIES = ['emotion', 'action', 'ui', 'learning', 'prop', 'seasonal', 'other'] as const
+export type MascotCategory = (typeof MASCOT_CATEGORIES)[number]
+
+/** One catalog state (expression, pose, UI state …). Notes are carried only when its artwork is drawn. */
+export interface MascotAtlasEntry {
+  state_id: string
+  category: MascotCategory
+  name: string
+  mvp: boolean
+  /** The primary approved artwork (front angle first, then artwork id), or null. */
+  artwork: MascotArtworkView | null
+  /** Further approved variants of this state (other angles or stages), counted, not drawn. */
+  variants: number
+  gap: MascotGapReason | null
+  /** Recorded usage line, "do" and "don't" notes of an approved state; empty unless `artwork` is set. */
+  usage: string | null
+  do: string[]
+  dont: string[]
+}
+
+export interface MascotAtlasBlock extends BlockBase {
+  type: 'mascot_atlas'
+  /** `modules.mascot.enabled`. When false the page says the module is off and draws nothing. */
+  module_enabled: boolean
+  entries: MascotAtlasEntry[]
+  counts: { states: number; drawn: number; in_review: number; awaiting: number }
+}
+
+/** One slot of the evolution sheet, in stage order. Slots past the recorded stages (up to six) are placeholders. */
+export interface MascotStageSlot {
+  order: number
+  stage_id: string | null
+  /** Recorded stage name; null in the public edition unless the definition is approved, and for placeholders. */
+  name: string | null
+  definition: 'approved' | 'draft' | 'example' | 'not_defined'
+  /** Recorded summary of an approved definition only. */
+  summary: string | null
+  artwork: MascotArtworkView | null
+  gap: MascotGapReason | null
+}
+
+export interface MascotEvolutionBlock extends BlockBase {
+  type: 'mascot_evolution'
+  module_enabled: boolean
+  /** At least six slots (the sheet's standard length); more when the brand records more stages. */
+  slots: MascotStageSlot[]
+  recorded: number
+  /** Any recorded stage still says `configuration: example` (the template's example configuration). */
+  example_configuration: boolean
 }

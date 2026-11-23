@@ -87,8 +87,10 @@ export const PAGE_SECTION_PATHS: ReadonlyArray<readonly [string, BrandSection]> 
 export const LEGACY_SECTION_PATHS: ReadonlyArray<readonly [string, string]> = [
   ['visual/identity/print', 'brand/book/visual-identity/print'],
   ['visual/competitors/print', 'market/competitors/print'],
+  ['visual/mascot/print', 'brand/mascot/print'],
   ['visual/identity', 'brand/book/visual-identity'],
   ['visual/competitors', 'market/competitors'],
+  ['visual/mascot', 'brand/mascot'],
   ['visual/print', 'strategy/business-model/print'],
   ['visual', 'strategy/business-model'],
   ['brand-book', 'brand/book'],

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — Visual V3.5: finance security design (proposal, docs only)
+
+### Added
+
+- `docs-internal/FINANCE_SECURITY_DESIGN.md`: **proposal awaiting owner approval** (decision D4). Finance data classes, threat model, storage and readers (owner vs agent token vs Studio), redaction per audience and export profile, audit logging, invariants that must never reach agents or Studio, open owner decisions FD1–FD8 with a recommendation each, proposed en/fa/tr strings. No code, route, tool or profile changed; restricted finance stays out of Studio, agents and Git.
+
+## Unreleased — Visual V3.4: mascot atlas and evolution sheet
+
+### Added
+
+- Mascot atlas (`mascot_atlas` block): every expression, pose and product state from approved catalog artwork only, backed by an approved, checksummed, previewable, non-example asset; each plate carries the recorded usage and do / don't notes. Draft artwork is never drawn: the internal edition lists it as "in review", the public edition leaves it out. A file still tagged `draft` stays out of the public edition. Designed empty state when nothing is approved.
+- Six-stage evolution sheet (`mascot_evolution` block): stages in order with approved stage artwork; missing or undefined stages are clear placeholders; the template's example configuration is labelled.
+- Studio: `GET /brands/<slug>/visual/mascot[/print[?edition=public]]`, read-only, en/fa/tr with RTL and Vazirmatn, ids only in details and the print appendix; one link on the Assets page's mascot card. Sync rebuilds caches written before the atlas existed.
+- Framework registry entry `MASCOT-MODEL-SHEET`; ILLUSTRATIVE fixture in `npm run visual:golden`.
+- Tests: `visual-mascot`, `studio-visual-mascot`, `studio-visual-mascot-browser`.
+
 ## Unreleased — Visual V2.4: grouped Studio nav, stable routes, Brand Book editorial reader
 
 ### Added
@@ -12,6 +28,7 @@
 ### Changed
 
 - The old flat paths answer **301** to the stable paths for one release (query kept; `/business?doc=marketing-plan` → `/market/marketing-plan`). Auth is unchanged: guests go to `/login?next=<path>`, unregistered slugs get 404. No new non-GET route.
+- The V3.4 mascot atlas moves to the stable path `/brands/<slug>/brand/mascot[/print]` (Brand Studio); `/visual/mascot[/print]` answers 301 like the other old paths.
 - Business OS is split into **Business plan** (Strategy Lab) and **Marketing plan** (Market & Content); both keep `documentView`, as do personal documents.
 
 ## Unreleased — Production readiness and quality gate (fixes pack PR-E, GAP-05)
@@ -38,6 +55,7 @@
 ### Changed
 
 - The bridge (`brand-os.assurance-bridge/2`) reads the judgment in force on the `--as-of` day while what it judged (cited facts and research notes) is unchanged, so `brand:assurance assess` can give a score. A judgment whose basis changed is listed as `stale_judgment` (blocking). The snapshot carries the revision id, never the owner's note. Unconfirmed answers still lower the ratio; notes are still owner-stated; never a certification.
+
 ## Unreleased — Coach UX: automatic, context-aware guidance
 
 ### Added
@@ -120,6 +138,19 @@
 - Every named fact tool reads its ids from one exported map, `NAMED_FACT_TOOL_IDS`. Test: `tests/named-tool-ids.test.ts` (registry coverage, approved/draft/unanswered, guest, wrong profile, cross-brand, stdio MCP).
 - Skills `motion-designer` and `mascot-animator` name the real motion ids.
 
+## Unreleased — Visual V2.3: positioning map (owner axes, evidenced points only)
+
+### Added
+
+- Owner decision D2: `brand/.private/competitive/axes.json` is an owner-only record of two axes (label and pole names in en, optional fa/tr, private rationale). `npm run brand:competitive -- axes set|show|validate`. The tool never suggests, ranks or invents an axis.
+- `brand/.private/competitive/positions.json`: one qualitative band (`low | lower_mid | mid | upper_mid | high`, never a number) per subject (own brand or competitor) and axis, citing a Knowledge market observation like any competitor observation. `position add|remove`, `positions`.
+- `brand:competitive share` adds an optional allow-listed `positioning` section: axis labels and poles, and per subject and axis a state (`evidenced | stale | conflicting | needs_review | unknown`), the bands as recorded and source labels (class, public host, date). Stale = only sources older than 90 days (the research threshold for market observations); conflicting = sources disagree, kept as a range. Never shared: rationale, axis ids, note ids, claim keys, quotes, non-reviewed subjects. A file without the section is still a valid V2.2 file; a tampered section withholds the whole file.
+- Visual block `positioning_map` in the renderer registry, on the existing competitor comparison page (plate 03) and its print view (own A4 portrait page): only subjects with a dated source on both axes are plotted; own brand as a lime diamond; stale = dashed ring; conflicting = dashed range box, never resolved; everyone else in a "Not placed" margin with each axis's state; source footnotes share the matrix numbering. Designed empty and withheld states; en/fa/tr with RTL and Vazirmatn; competitor ids only in the details. Illustrative fixture axes and placements (reserved `.example` hosts).
+- Studio rebuilds a cache written before the map existed, once, at the same commit.
+- Persian edition (owner decision 2026-11-23): the map's horizontal axis is mirrored, low on the right and high on the left, with the vertical axis on the right. Points, conflict ranges, poles and the arrow are mirrored together on screen and in print. en/tr are unchanged. Also decided: the stale threshold stays at 90 days, and the own brand needs one recorded source per axis (an owner statement counts). Screenshots in `docs/screenshots/`.
+- Tests: `competitive-positioning`, `visual-positioning`, `studio-visual-positioning`; `studio-visual-competitors-browser` now covers the map (widths, en/fa, light/dark, contrast, print) and the axis direction in en/tr/fa on screen and in print.
+
+No scores, no fabricated numbers, no axis suggestions. No framework or ISO claim.
 
 ## Unreleased — Visual V2.2: competitor share path and comparison matrix
 
@@ -517,3 +548,15 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:runtime social-batch --pack <file>` renders a real brand's `task_context` pack file, verified like the demo; `--root` (owner only, same brand, read-only) adds the Coach and the approved logo. Coach results are `warnings[]` and never block.
 - Drafts use the approved `brand.type.scale` (family, fallbacks, sizes ×2, line heights; weights only from approved tokens). `--final --font-file` outlines text locally with the owner's TTF/OTF; drafts stay live text.
 - Strategic Coach: `brand.verbal.tagline` and `brand.strategy.promise` are short by design and no longer `too_brief_for_output`.
+
+## Unreleased — GAP-09 follow-ups: paid-media interview question, company stays company
+
+### Added
+
+- Interview question `business.marketing.paid_media` (business marketing module, single choice `undecided` / `yes` / `no`, internal, en/fa/tr). It is in the question bank, field registry and marketing record.
+
+### Changed
+
+- `brand:assurance` reads `runs_paid_media` from the approved answer to `business.marketing.paid_media`. `--paid-media yes|no` is deprecated: it still works, but only while the question has no approved answer, and it prints an en/fa/tr notice on stderr. An approved answer always wins. A missing paid-media item now points at the question instead of the flag.
+- `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
+- Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.

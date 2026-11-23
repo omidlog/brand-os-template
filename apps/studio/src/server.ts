@@ -84,7 +84,7 @@ export function createStudio(deps: StudioDeps): {
       handle: openUpdatePull,
     },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
-    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(strategy/business-model|brand/book/visual-identity|market/competitors)(?:/(print))?$`), auth: 'session', handle: visual },
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(strategy/business-model|brand/book/visual-identity|market/competitors|brand/mascot)(?:/(print))?$`), auth: 'session', handle: visual },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}(?:/(${BRAND_SECTIONS.join('|')}))?$`), auth: 'session', handle: brandPage },
     // Old flat paths (before Visual V2.4): 301 to the stable path, for one release.
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(${LEGACY_PATHS.join('|')})$`), auth: 'session', handle: legacyRedirect },

@@ -7,6 +7,7 @@ import { icon } from './icons.js'
 import { brandPath, type BrandView, type ViewContext } from './layout.js'
 import { brandShell } from './pages.js'
 import { comparisonDetails, comparisonOpener, comparisonPrintDocument, comparisonSources, type ComparisonContext } from './visual-competitors.js'
+import { positioningDetails } from './visual-positioning.js'
 import { renderBlock } from './visual-registry.js'
 
 /**
@@ -42,12 +43,13 @@ export function competitorsPage(ctx: ViewContext, view: BrandView, flash: string
       </div>
       ${comparisonOpener(cctx, true)}
       ${join(doc.blocks.map((block) => renderBlock(block, blockCtx)))}
-      ${comparisonSources(cctx, 3)}
+      ${comparisonSources(cctx, doc.blocks.some((block) => block.type === 'positioning_map') ? 4 : 3)}
       <details class="vz-details">
         <summary class="vz-details-summary">${icon('chevron', 'vz-details-icon')}<span>${cat.text.detailsTitle}</span></summary>
         <div class="vz-details-body">
           <p class="vz-details-lead">${t.internalOnly}</p>
           ${comparisonDetails(cctx)}
+          ${positioningDetails(cctx, doc.blocks.find((block) => block.type === 'positioning_map'))}
         </div>
       </details>
     </div>`

@@ -28,10 +28,26 @@ export const BRIDGE_TEXT: Catalog = {
   bridge: { en: 'Bridge version', fa: 'نسخهٔ پل', tr: 'Köprü sürümü' },
   subject: { en: 'Subject', fa: 'موضوع ارزیابی', tr: 'Değerlendirilen' },
   reproduce: {
-    en: 'Re-run with --as-of {as_of} --audience {audience} --paid-media {paid} on the same workspace to get the same digest.',
-    fa: 'برای گرفتن همین چکیده، روی همین فضای کاری دوباره با ‎--as-of {as_of} --audience {audience} --paid-media {paid}‎ اجرا کنید.',
-    tr: 'Aynı özeti almak için aynı çalışma alanında --as-of {as_of} --audience {audience} --paid-media {paid} ile yeniden çalıştırın.',
+    en: 'Re-run with --as-of {as_of} --audience {audience}{paid} on the same workspace to get the same digest.',
+    fa: 'برای گرفتن همین چکیده، روی همین فضای کاری دوباره با ‎--as-of {as_of} --audience {audience}{paid}‎ اجرا کنید.',
+    tr: 'Aynı özeti almak için aynı çalışma alanında --as-of {as_of} --audience {audience}{paid} ile yeniden çalıştırın.',
   },
+  paid_media_deprecated: {
+    en: '--paid-media is deprecated. Answer the interview question business.marketing.paid_media instead; the flag is used only while that question has no approved answer.',
+    fa: '‎--paid-media‎ منسوخ شده است. به جای آن به پرسش مصاحبهٔ business.marketing.paid_media پاسخ دهید؛ این گزینه فقط تا وقتی آن پرسش پاسخ تأییدشده ندارد به کار می‌رود.',
+    tr: '--paid-media kullanımdan kaldırıldı. Bunun yerine business.marketing.paid_media görüşme sorusunu yanıtlayın; bu seçenek yalnızca o sorunun onaylı yanıtı yokken kullanılır.',
+  },
+  paid_media_ignored: {
+    en: '--paid-media was ignored: the approved answer to business.marketing.paid_media is used.',
+    fa: '‎--paid-media‎ نادیده گرفته شد: پاسخ تأییدشدهٔ business.marketing.paid_media به کار رفت.',
+    tr: '--paid-media yok sayıldı: business.marketing.paid_media sorusunun onaylı yanıtı kullanıldı.',
+  },
+  personal_brand: {
+    en: 'Personal brand (personal module): tracked separately, facets {facets}. It does not change whether this brand is a company or a person.',
+    fa: 'برند شخصی (ماژول personal): جداگانه پیگیری می‌شود، وجه‌ها {facets}. این تعیین نمی‌کند که این برند شرکت است یا شخص.',
+    tr: 'Kişisel marka (personal modülü): ayrı izlenir, yönler {facets}. Bu markanın şirket mi kişi mi olduğunu değiştirmez.',
+  },
+  no_facets: { en: 'none', fa: 'هیچ', tr: 'yok' },
   scoreable: {
     en: 'Nothing blocking: the existing evaluator may give a completeness ratio.',
     fa: 'هیچ مانعی نیست: ارزیاب موجود می‌تواند نسبت کامل‌بودن را بدهد.',
@@ -121,7 +137,11 @@ export const SUBJECT_FIELD_TEXT: Record<SubjectField, T> = {
 export const SUBJECT_SOURCE_TEXT: Record<SubjectSource, T> = {
   approved_fact: { en: 'from an approved fact', fa: 'از یک fact تأییدشده', tr: 'onaylı bir bilgiden' },
   brand_config: { en: 'from brand.config.yaml', fa: 'از brand.config.yaml', tr: 'brand.config.yaml dosyasından' },
-  owner_flag: { en: 'stated by the owner on the command line', fa: 'اعلام‌شده توسط مالک در خط فرمان', tr: 'sahip tarafından komut satırında belirtildi' },
+  owner_flag: {
+    en: 'stated on the command line with the deprecated --paid-media',
+    fa: 'اعلام‌شده در خط فرمان با گزینهٔ منسوخ ‎--paid-media‎',
+    tr: 'kullanımdan kaldırılan --paid-media ile komut satırında belirtildi',
+  },
   none: { en: 'not stated', fa: 'اعلام نشده', tr: 'belirtilmedi' },
 }
 
@@ -129,7 +149,7 @@ export const SUBJECT_SOURCE_TEXT: Record<SubjectSource, T> = {
 export const BRIDGE_HELP: T = {
   en: `brand:assurance <command> [options]   owner-local, read-only
 
-  snapshot [--as-of YYYY-MM-DD] [--audience public|internal|restricted] [--paid-media yes|no|unknown]
+  snapshot [--as-of YYYY-MM-DD] [--audience public|internal|restricted]
            [--pin <snapshot.json>] [--lang en|fa|tr] [--json]
                      pin the brand's approved facts, research notes and contradictions for the
                      Positioning Readiness method, and list what is missing
@@ -138,12 +158,14 @@ export const BRIDGE_HELP: T = {
   verify --snapshot <snapshot.json> [--lang en|fa|tr] [--json]
                      rebuild a kept snapshot from the workspace now and say whether the digest is the same
 
+Paid media comes from the interview question business.marketing.paid_media. --paid-media yes|no is
+deprecated and used only while that question has no approved answer.
 Nothing is written. Print to the terminal and redirect it yourself if you want to keep a snapshot.
 No score is given while anything blocking is missing. This is an internal assessment, never a
 certification or a compliance statement; authorizes is always empty. Refused while BRAND_OS_AGENT_TOKEN is set.`,
   fa: `brand:assurance <command> [options]   فقط محلی و فقط‌خواندنی، برای مالک
 
-  snapshot [--as-of YYYY-MM-DD] [--audience public|internal|restricted] [--paid-media yes|no|unknown]
+  snapshot [--as-of YYYY-MM-DD] [--audience public|internal|restricted]
            [--pin <snapshot.json>] [--lang en|fa|tr] [--json]
                      factهای تأییدشده، یادداشت‌های پژوهشی و تناقض‌های برند را برای متد «آمادگی جایگاه‌یابی»
                      سنجاق می‌کند و آنچه کم است را فهرست می‌کند
@@ -152,12 +174,14 @@ certification or a compliance statement; authorizes is always empty. Refused whi
   verify --snapshot <snapshot.json> [--lang en|fa|tr] [--json]
                      تصویر نگه‌داشته را از فضای کاری کنونی دوباره می‌سازد و می‌گوید چکیده همان است یا نه
 
+اجرای تبلیغات پولی از پرسش مصاحبهٔ business.marketing.paid_media خوانده می‌شود. ‎--paid-media yes|no‎ منسوخ است
+و فقط تا وقتی آن پرسش پاسخ تأییدشده ندارد به کار می‌رود.
 چیزی نوشته نمی‌شود. خروجی در ترمینال چاپ می‌شود؛ اگر می‌خواهید نگهش دارید خودتان آن را هدایت کنید.
 تا وقتی موردی مانع کم است، امتیازی داده نمی‌شود. این ارزیابی داخلی است و هرگز گواهی‌نامه یا اظهار انطباق نیست؛
 authorizes همیشه خالی است. تا وقتی BRAND_OS_AGENT_TOKEN تنظیم است اجرا نمی‌شود.`,
   tr: `brand:assurance <command> [options]   yalnızca sahibin yerel ortamı, salt okunur
 
-  snapshot [--as-of YYYY-MM-DD] [--audience public|internal|restricted] [--paid-media yes|no|unknown]
+  snapshot [--as-of YYYY-MM-DD] [--audience public|internal|restricted]
            [--pin <snapshot.json>] [--lang en|fa|tr] [--json]
                      markanın onaylı bilgilerini, araştırma notlarını ve çelişkilerini Konumlandırma Hazırlığı
                      yöntemi için sabitler ve eksikleri listeler
@@ -166,6 +190,8 @@ authorizes همیشه خالی است. تا وقتی BRAND_OS_AGENT_TOKEN تنظ
   verify --snapshot <snapshot.json> [--lang en|fa|tr] [--json]
                      saklanan bir anlık görüntüyü şimdiki çalışma alanından yeniden kurar ve özetin aynı olup olmadığını söyler
 
+Ücretli medya bilgisi business.marketing.paid_media görüşme sorusundan gelir. --paid-media yes|no kullanımdan
+kaldırıldı ve yalnızca o sorunun onaylı yanıtı yokken kullanılır.
 Hiçbir şey yazılmaz. Çıktı terminale basılır; saklamak isterseniz kendiniz yönlendirin.
 Engelleyen bir eksik varken puan verilmez. Bu bir iç değerlendirmedir; asla sertifika veya uyumluluk beyanı değildir;
 authorizes her zaman boştur. BRAND_OS_AGENT_TOKEN ayarlıyken reddedilir.`,
@@ -187,10 +213,16 @@ export function renderSnapshotSummary(snapshot: AssuranceSnapshot, lang: Assuran
   lines.push(`- ${BRIDGE_TEXT.brand![lang]}: \`${snapshot.brand_id}\``)
   lines.push(`- ${BRIDGE_TEXT.bridge![lang]}: \`${snapshot.bridge_version}\``)
   lines.push(`- ${BRIDGE_TEXT.digest![lang]}: \`${snapshot.source_snapshot_digest}\``)
-  lines.push(`- ${fill(BRIDGE_TEXT.reproduce![lang], { as_of: snapshot.as_of.slice(0, 10), audience: snapshot.audience, paid: snapshot.paid_media_statement })}`)
+  const paid = snapshot.paid_media_statement === 'unknown' ? '' : ` --paid-media ${snapshot.paid_media_statement}`
+  lines.push(`- ${fill(BRIDGE_TEXT.reproduce![lang], { as_of: snapshot.as_of.slice(0, 10), audience: snapshot.audience, paid })}`)
   lines.push(`- ${BRIDGE_TEXT.subject![lang]}:`)
   for (const entry of snapshot.subject_provenance) {
     lines.push(`  - ${SUBJECT_FIELD_TEXT[entry.field][lang]}: \`${entry.value}\` (${SUBJECT_SOURCE_TEXT[entry.source][lang]}${entry.question_id ? `, \`${entry.question_id}\`` : ''})`)
+  }
+  // A company brand's founder: tracked beside the company, never folded into the subject.
+  if (snapshot.personal_brand.enabled && snapshot.personal_brand.brand_entity_kind === 'company') {
+    const facets = snapshot.personal_brand.facets.length > 0 ? snapshot.personal_brand.facets.map((facet) => `\`${facet}\``).join(', ') : BRIDGE_TEXT.no_facets![lang]
+    lines.push(`- ${fill(BRIDGE_TEXT.personal_brand![lang], { facets })}`)
   }
   lines.push('')
   const blocking = snapshot.missing.filter((entry) => entry.blocking)

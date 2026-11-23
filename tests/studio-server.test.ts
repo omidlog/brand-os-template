@@ -529,6 +529,8 @@ test('V2.4: brand pages live at stable paths, grouped by intent; old flat paths 
       ['/visual/identity/print', '/brand/book/visual-identity/print'],
       ['/visual/competitors', '/market/competitors'],
       ['/visual/competitors/print', '/market/competitors/print'],
+      ['/visual/mascot', '/brand/mascot'],
+      ['/visual/mascot/print?edition=public', '/brand/mascot/print?edition=public'],
     ]
     for (const [from, to] of legacy) {
       const res = await owner.get(`/brands/acme-learning${from}`)

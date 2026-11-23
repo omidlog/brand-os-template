@@ -3,6 +3,7 @@ import { brandIsReady } from '../sync.js'
 import type { BrandView } from '../views/layout.js'
 import { identityPage, identityPrintPage, visualPage, visualPrintPage } from '../views/visual-page.js'
 import { competitorsPage, competitorsPrintPage } from '../views/visual-competitors-page.js'
+import { mascotPage, mascotPrintPage } from '../views/visual-mascot-page.js'
 import type { Handler, StudioCore } from './context.js'
 
 /**
@@ -27,6 +28,13 @@ export function visualRoutes(core: StudioCore): { visual: Handler } {
     if (match[2] === 'market/competitors') {
       if (match[3] !== 'print') return render(ctx, 200, competitorsPage(view(ctx), brand, flashValue))
       const printed = competitorsPrintPage(view(ctx), brand)
+      if (!printed) return notFound(ctx)
+      return render(ctx, 200, printed)
+    }
+    // match[2] === 'brand/mascot': the mascot atlas and evolution sheet (V3.4); print may show the public edition.
+    if (match[2] === 'brand/mascot') {
+      if (match[3] !== 'print') return render(ctx, 200, mascotPage(view(ctx), brand, flashValue))
+      const printed = mascotPrintPage(view(ctx), brand, ctx.url.searchParams.get('edition') === 'public' ? 'public' : 'internal')
       if (!printed) return notFound(ctx)
       return render(ctx, 200, printed)
     }

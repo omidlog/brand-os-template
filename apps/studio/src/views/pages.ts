@@ -1,6 +1,7 @@
 import { normalizeCommand, SVG_ISSUE_CODES } from '@brand-os/asset-catalog'
 import { CHANGE_DEPTHS, IDENTITY_INTENTS, LOGO_PRESENCE } from '@brand-os/brand-core'
 import type { DocumentKind, IdentityField } from '@brand-os/brand-core'
+import { isVisualLang } from '@brand-os/brand-core/visual'
 import type { MessageKey } from '../i18n/index.js'
 import type { ProjectionAsset, ProjectionToken, StudioProjection } from '../projection.js'
 import type { BrandRecord, ProvisionRequest } from '../registry.js'
@@ -26,6 +27,7 @@ import {
 import { html, join, safeGitHubUrl, safeHex, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
 import { brandAvatar, brandPath, plainShell, refreshButton, shell, type BrandSection, type BrandView, type ViewContext } from './layout.js'
+import { mascotLink } from './visual-mascot.js'
 
 /* ---------------------------------------------------------------- sign in */
 
@@ -752,6 +754,7 @@ export function assetsPage(ctx: ViewContext, view: BrandView, flash: string | nu
           <h2 class="card-title" id="mascot-title">${i.t('assets.mascot')}</h2>
           <div class="facts-strip">${badge(i.t('assets.mascotStates', { count: i.number(p.mascot.states) }), 'neutral', 'layers')}${badge(i.t('assets.mascotReady', { count: i.number(p.mascot.artwork_ready) }), p.mascot.artwork_ready ? 'success' : 'neutral', 'image')}</div>
           <p class="muted">${i.t('assets.mascotHonest')}</p>
+          ${mascotLink(isVisualLang(ctx.i.locale) ? ctx.i.locale : 'en', view.record.slug)}
           <div class="three-col">
             ${countTable(ctx, i.t('assets.mascotByStatus'), p.mascot.by_status)}
             ${countTable(ctx, i.t('assets.mascotByCategory'), p.mascot.by_category)}

@@ -3,6 +3,8 @@ import type { SafeHtml } from './html.js'
 import { canvasView, citationTable } from './visual.js'
 import { colorPaletteView, identitySources, logoConstructionView, typographySpecimenView, type IdentityContext } from './visual-identity.js'
 import { competitorMatrixView, priceStripView } from './visual-competitors.js'
+import { positioningMapView } from './visual-positioning.js'
+import { mascotAtlasView, mascotEvolutionView } from './visual-mascot.js'
 
 /**
  * Renderer registry (Visual Blueprint V1.1): one renderer per block type. The map is typed over every
@@ -43,6 +45,9 @@ const RENDERERS: RendererMap = {
   logo_construction: logoConstructionView,
   competitor_matrix: competitorMatrixView,
   price_strip: priceStripView,
+  positioning_map: positioningMapView,
+  mascot_atlas: mascotAtlasView,
+  mascot_evolution: mascotEvolutionView,
 }
 
 export function renderBlock(block: VisualBlock, ctx: BlockContext): SafeHtml {

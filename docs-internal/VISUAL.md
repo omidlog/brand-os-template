@@ -39,6 +39,18 @@ Profiles are typed in `packages/brand-core/src/visual/print-profiles.ts` (`PRINT
 - **Export command.** `npm run brand:export-visual -- [--doc identity|bmc] [--lang en|fa|tr|all] [--edition internal|public] [--out dir] [--fixture] [--no-pdf]`. Writes `<doc>.<edition>.<lang>.html` (fonts and the approved master embedded, opens offline) and `.pdf` when Chrome is found (`CHROME_PATH`). Default folder `dist/visual-export` (git-ignored). It reads through Studio's projection, so drafts are not carried and restricted values stay withheld, and it refuses output inside `brand/` or a `.private` folder, refuses to run under an agent token and refuses an HTML that looks like it carries a credential. Studio never writes files.
 - **Not claimed.** The PDF is a browser PDF: no bleed, crop marks, colour profile or PDF/X claim.
 
+## Mascot atlas and six-stage evolution sheet (V3.4)
+
+`visual/mascot.ts` builds a `mascot_atlas` document (blocks `mascot_atlas`, `mascot_evolution`) from `brand/mascot/catalog.yaml`, `brand/mascot/stages.yaml` and the asset manifest. Nothing is generated, traced or inferred. Rules:
+
+- **Approved artwork only.** A state or stage is drawn only when the catalog row and the artwork variant are `approved`/`published` and the asset is approved, checksummed, previewable and not a template example. The file is shown through the existing asset route. Usage, do and don't notes travel only with a drawn state.
+- **Drafts.** Artwork that is `created`/`reviewed` (or approved artwork on an unapproved row or asset) is never drawn. The internal edition names the state under "Not yet drawn" with "Artwork in review, not approved"; the public edition does not mention it.
+- **Public edition.** Needs the artwork and the row `published`, the asset published (publication policy), and no `draft` tag on the file. A draft-tagged file stays hidden from public view until it is published without the tag; the internal edition shows it with "File still tagged draft" and "Internal only, not published".
+- **Evolution sheet.** Stages in `order`, at least six frames; frames past the recorded stages are "Not defined" placeholders. A stage's picture is approved artwork recorded for that stage id (front angle first, then catalog order, then artwork id). The template's `configuration: example` stages are labelled "Example configuration" internally; in public, only approved stage names are shown.
+- **Module off.** `modules.mascot.enabled: false` gives a designed "module is off" plate; nothing is read.
+- **Studio.** `GET /brands/<slug>/brand/mascot[/print[?edition=public]]` (V2.4 stable path; the old `/visual/mascot` path answers 301), linked once from the Assets page's mascot card. Ids (state, artwork, asset, stage) are only in the details disclosure and the print appendix. Print uses the book's A4 portrait page on the existing browser print path; the V1.2 engine is not on main.
+- **Registry.** `MASCOT-MODEL-SHEET` (`original_professional_template`, Brand OS layout). Fixture: `illustrativeMascotAtlas` (ILLUSTRATIVE / MOCK DATA; mock artwork is a labelled frame, not a character), in `npm run visual:golden`.
+
 ## Adding a visual
 
 1. Add a block type to `visual/model.ts` (additive; bump nothing unless an existing field changes meaning).

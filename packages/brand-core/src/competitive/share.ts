@@ -25,7 +25,20 @@ import {
   type Relationship,
   type TaxInclusion,
 } from './model.js'
-import { assertOwnerProcess } from './store.js'
+import { assertOwnerProcess, scanCandidates } from './store.js'
+import {
+  OWN_SUBJECT,
+  PLACEMENT_STATES,
+  placementOf,
+  POSITION_BANDS,
+  POSITION_STALE_DAYS,
+  positioningLandscape,
+  POSITIONING_LIMITS,
+  type AxisDefinition,
+  type LocalizedLabel,
+  type PlacementState,
+  type PositionBand,
+} from './positioning.js'
 
 /**
  * Competitor share path (Visual V2.2, owner decision D1).
@@ -49,6 +62,10 @@ import { assertOwnerProcess } from './store.js'
  * claimed but unverified domains, same-name reasons, gap texts, the target-market fact, scope, research adapter state,
  * private (owner testimony, first-party) source hosts. A label that matches a recorded quote, or that the knowledge
  * safety scan flags (credentials, contact or personal data, restricted financial passages), is dropped and counted.
+ *
+ * Positioning (V2.3, D2): when the owner chose axes, their labels and the evidenced placements of the own brand and
+ * the shared competitors are added under `positioning` (see positioning.ts). Unknown stays unknown; stale and
+ * conflicting placements are flagged, never resolved. Axis ids, rationale, note ids and claim keys never leave.
  *
  * Deterministic: the same records, notes and day produce the same bytes; nothing is rewritten when unchanged, and a
  * competitor that is no longer owner-reviewed (or was archived) disappears on the next run.
@@ -134,6 +151,35 @@ export interface SharedLandscape {
   /** Labels and scopes dropped because they matched a quote or failed the safety scan. */
   withheld_text: number
   authorizes: []
+  /**
+   * Visual V2.3 (D2): the owner's positioning axes (labels only) and evidenced placements. Present only when the owner
+   * chose axes; a file without it is still a valid V2.2 file.
+   */
+  positioning?: SharedPositioning
+}
+
+/** One owner axis as shared: labels and pole names only. No axis id, no rationale. */
+export interface SharedAxis {
+  label: LocalizedLabel
+  low: LocalizedLabel
+  high: LocalizedLabel
+}
+
+/** A subject's place on one axis: state, the bands as recorded (a range when conflicting), and who said it when. */
+export interface SharedPlacement {
+  state: PlacementState
+  bands: PositionBand[]
+  sources: SharedSource[]
+}
+
+export interface SharedPositioning {
+  axes: { x: SharedAxis; y: SharedAxis }
+  bands: PositionBand[]
+  /** Sources older than this many days are stale (the research threshold for market observations). */
+  stale_after_days: number
+  own: { x: SharedPlacement; y: SharedPlacement }
+  /** One entry per shared competitor, in the competitors' order. */
+  competitors: Array<{ competitor_id: string; x: SharedPlacement; y: SharedPlacement }>
 }
 
 // ---- text checks ------------------------------------------------------------------------------------
@@ -291,8 +337,10 @@ export function buildSharedLandscape(ws: KnowledgeWorkspace, opts: { capability:
   const nameOf = new Map(competitors.map((c) => [c.competitor_id, c.display_name]))
   // Listed, never ranked: grouped by currency, then by competitor name and offer. The amount is never a sort key.
   prices.sort((a, b) => compareText(a.currency, b.currency) || compareText(nameOf.get(a.competitor_id)!, nameOf.get(b.competitor_id)!) || compareText(a.offer_name, b.offer_name) || compareText(a.market, b.market) || compareText(a.source.observed_on, b.source.observed_on))
-  const days = [...competitors.flatMap((c) => c.cells.flatMap((cell) => cell.sources.map((s) => s.observed_on))), ...prices.map((p) => p.source.observed_on)].sort()
-  return {
+  const positioning = sharedPositioning(ws, evidence, day, competitors, gate)
+  const placements = positioning ? [positioning.own, ...positioning.competitors].flatMap((p) => [...p.x.sources, ...p.y.sources]) : []
+  const days = [...competitors.flatMap((c) => c.cells.flatMap((cell) => cell.sources.map((s) => s.observed_on))), ...prices.map((p) => p.source.observed_on), ...placements.map((s) => s.observed_on)].sort()
+  const doc: SharedLandscape = {
     schema: SHARED_LANDSCAPE_SCHEMA,
     schema_version: 1,
     kind: 'competitive_shared_landscape',
@@ -304,6 +352,50 @@ export function buildSharedLandscape(ws: KnowledgeWorkspace, opts: { capability:
     not_shared: notShared,
     withheld_text: gate.withheld,
     authorizes: [],
+  }
+  if (positioning) doc.positioning = positioning
+  return doc
+}
+
+function hostOfNote(evidence: EvidenceSet, noteId: string): string | null {
+  const item = evidence.items.find((candidate) => candidate.note.id === noteId)
+  if (!item) return null
+  try {
+    return validateDomain(hostOf(item.source.final_url || item.source.url))
+  } catch {
+    return null
+  }
+}
+
+function sharedAxis(axis: AxisDefinition, gate: TextGate): SharedAxis {
+  const check = (label: LocalizedLabel): LocalizedLabel => {
+    for (const text of [label.en, label.fa, label.tr]) {
+      if (text && (matchesQuote(text, gate.quotes) || unsafeText(text))) throw new CompetitiveError('refused', 'An axis label looks like a source quote or private data. Nothing was shared; edit the axes and run share again.')
+    }
+    return { en: label.en, fa: label.fa, tr: label.tr }
+  }
+  return { label: check(axis.label), low: check(axis.low), high: check(axis.high) }
+}
+
+/**
+ * Axes (labels only) and placements for the own brand and the shared competitors. Positions of anyone not shared
+ * stay private. The owner's rationale, the axis ids, the note ids and claim keys never leave.
+ */
+function sharedPositioning(ws: KnowledgeWorkspace, evidence: EvidenceSet, day: Date, competitors: SharedCompetitor[], gate: TextGate): SharedPositioning | null {
+  const domains = new Map(scanCandidates(ws).records.map((r) => [r.competitor_id, r.domain_claim]))
+  const { axes, views } = positioningLandscape(ws, { now: day, domains, publicHost: (noteId) => hostOfNote(evidence, noteId), evidence })
+  if (!axes) return null
+  const place = (subject: string, axisId: string): SharedPlacement => {
+    const p = placementOf(views.filter((v) => v.subject === subject && v.axis_id === axisId))
+    return { state: p.state, bands: [...p.bands], sources: p.sources.map((s) => ({ source_class: s.source_class, host: s.host, observed_on: s.observed_on })) }
+  }
+  const both = (subject: string) => ({ x: place(subject, axes.x.axis_id), y: place(subject, axes.y.axis_id) })
+  return {
+    axes: { x: sharedAxis(axes.x, gate), y: sharedAxis(axes.y, gate) },
+    bands: [...POSITION_BANDS],
+    stale_after_days: POSITION_STALE_DAYS,
+    own: both(OWN_SUBJECT),
+    competitors: competitors.map((c) => ({ competitor_id: c.competitor_id, ...both(c.competitor_id) })),
   }
 }
 
@@ -360,6 +452,13 @@ const KEYS = {
   prices: ['rows', 'ranked', 'currency_conversion'],
   price: ['competitor_id', 'offer_name', 'amount', 'currency', 'market', 'billing_period', 'billing_commitment', 'tax_inclusion', 'promotion', 'feature_scope', 'rate_label', 'state', 'source'],
   not_shared: ['candidates', 'disputed', 'archived'],
+  positioning: ['axes', 'bands', 'stale_after_days', 'own', 'competitors'],
+  axes: ['x', 'y'],
+  axis: ['label', 'low', 'high'],
+  localized: ['en', 'fa', 'tr'],
+  pair: ['x', 'y'],
+  placed: ['competitor_id', 'x', 'y'],
+  placement: ['state', 'bands', 'sources'],
 } as const
 
 function text(value: unknown, max: number): value is string {
@@ -452,14 +551,59 @@ function validPrice(value: unknown, ids: Set<string>): value is SharedPrice {
   )
 }
 
+function validLocalized(value: unknown, max: number): value is LocalizedLabel {
+  return isObj(value) && exactKeys(value, KEYS.localized) && text(value.en, max) && (value.fa === null || text(value.fa, max)) && (value.tr === null || text(value.tr, max))
+}
+
+function validAxis(value: unknown): value is SharedAxis {
+  return isObj(value) && exactKeys(value, KEYS.axis) && validLocalized(value.label, POSITIONING_LIMITS.maxAxisLabelChars) && validLocalized(value.low, POSITIONING_LIMITS.maxPoleChars) && validLocalized(value.high, POSITIONING_LIMITS.maxPoleChars)
+}
+
+/** Bands in order, unique; none for unknown or needs_review; one for evidenced or stale; one or more when conflicting. */
+function validPlacement(value: unknown): value is SharedPlacement {
+  if (!isObj(value) || !exactKeys(value, KEYS.placement)) return false
+  if (!(PLACEMENT_STATES as readonly unknown[]).includes(value.state)) return false
+  const bands = value.bands
+  if (!Array.isArray(bands) || !bands.every((b) => (POSITION_BANDS as readonly unknown[]).includes(b))) return false
+  const order = bands.map((b) => POSITION_BANDS.indexOf(b as PositionBand))
+  if (!order.every((n, i) => i === 0 || n > order[i - 1]!)) return false
+  const sources = value.sources
+  if (!Array.isArray(sources) || sources.length > POSITIONING_LIMITS.maxSourcesPerPlacement || !sources.every(validSource)) return false
+  if (value.state === 'unknown' || value.state === 'needs_review') return bands.length === 0 && sources.length === 0
+  if (value.state === 'conflicting') return bands.length >= 1 && sources.length >= 1
+  return bands.length === 1 && sources.length >= 1
+}
+
+function validPair(value: unknown, keys: readonly string[]): value is { x: SharedPlacement; y: SharedPlacement } & Record<string, unknown> {
+  return isObj(value) && exactKeys(value, keys) && validPlacement(value.x) && validPlacement(value.y)
+}
+
+function validPositioning(value: unknown, ids: Set<string>): value is SharedPositioning {
+  if (!isObj(value) || !exactKeys(value, KEYS.positioning)) return false
+  const axes = value.axes
+  if (!isObj(axes) || !exactKeys(axes, KEYS.axes) || !validAxis(axes.x) || !validAxis(axes.y)) return false
+  if (!Array.isArray(value.bands) || value.bands.length !== POSITION_BANDS.length || !value.bands.every((b, i) => b === POSITION_BANDS[i])) return false
+  if (!(typeof value.stale_after_days === 'number' && Number.isInteger(value.stale_after_days) && value.stale_after_days > 0 && value.stale_after_days <= 3650)) return false
+  if (!validPair(value.own, KEYS.pair)) return false
+  const list = value.competitors
+  if (!Array.isArray(list) || list.length > ids.size) return false
+  const seen = new Set<string>()
+  for (const entry of list) {
+    if (!isObj(entry) || !validPair(entry, KEYS.placed) || typeof entry.competitor_id !== 'string' || !ids.has(entry.competitor_id) || seen.has(entry.competitor_id)) return false
+    seen.add(entry.competitor_id)
+  }
+  return true
+}
+
 /** Strict shape check: anything unexpected withholds the whole file rather than showing part of it. */
 export function validSharedLandscape(value: unknown): value is SharedLandscape {
   if (!isObj(value)) return false
+  const hasPositioning = Object.prototype.hasOwnProperty.call(value, 'positioning')
   const prices = value.prices as Record<string, unknown> | undefined
   const notShared = value.not_shared as Record<string, unknown> | undefined
   if (
     !(
-      exactKeys(value, KEYS.root) &&
+      exactKeys(value, hasPositioning ? [...KEYS.root, 'positioning'] : KEYS.root) &&
       value.schema === SHARED_LANDSCAPE_SCHEMA &&
       value.schema_version === 1 &&
       value.kind === 'competitive_shared_landscape' &&
@@ -492,6 +636,7 @@ export function validSharedLandscape(value: unknown): value is SharedLandscape {
   }
   const ids = new Set((value.competitors as SharedCompetitor[]).map((c) => c.competitor_id))
   if (ids.size !== (value.competitors as SharedCompetitor[]).length) return false
+  if (hasPositioning && !validPositioning(value.positioning, ids)) return false
   return (prices.rows as unknown[]).every((row) => validPrice(row, ids))
 }
 
@@ -564,7 +709,21 @@ export function readSharedLandscape(root: string, brandSlug: string): SharedLand
     withheld_text: doc.withheld_text,
     authorizes: [],
   }
-  const texts = [...landscape.competitors.flatMap((c) => [c.display_name, ...c.cells.flatMap((cell) => cell.labels)]), ...landscape.prices.rows.flatMap((p) => [p.offer_name, p.feature_scope ?? ''])]
+  if (doc.positioning) {
+    const pos = doc.positioning
+    const loc = (l: LocalizedLabel): LocalizedLabel => ({ en: l.en, fa: l.fa, tr: l.tr })
+    const axis = (a: SharedAxis): SharedAxis => ({ label: loc(a.label), low: loc(a.low), high: loc(a.high) })
+    const placed = (p: SharedPlacement): SharedPlacement => ({ state: p.state, bands: [...p.bands], sources: p.sources.map(copySource) })
+    landscape.positioning = {
+      axes: { x: axis(pos.axes.x), y: axis(pos.axes.y) },
+      bands: [...POSITION_BANDS],
+      stale_after_days: pos.stale_after_days,
+      own: { x: placed(pos.own.x), y: placed(pos.own.y) },
+      competitors: pos.competitors.map((c) => ({ competitor_id: c.competitor_id, x: placed(c.x), y: placed(c.y) })),
+    }
+  }
+  const axisTexts = landscape.positioning ? [landscape.positioning.axes.x, landscape.positioning.axes.y].flatMap((a) => [a.label, a.low, a.high]).flatMap((l) => [l.en, l.fa ?? '', l.tr ?? '']) : []
+  const texts = [...axisTexts, ...landscape.competitors.flatMap((c) => [c.display_name, ...c.cells.flatMap((cell) => cell.labels)]), ...landscape.prices.rows.flatMap((p) => [p.offer_name, p.feature_scope ?? ''])]
   if (texts.some((t) => t && unsafeText(t))) return { state: 'withheld', reason: 'unsafe_text' }
   return { state: 'shared', landscape }
 }
