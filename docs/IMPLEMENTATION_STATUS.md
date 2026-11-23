@@ -317,6 +317,7 @@ Branch `feat/task-context-p0`. Preflight audit, permission and field-coverage ma
 | Digest | Done | `digests.context_sha256` over the canonical JSON of the pack without its digest; `verifyPack` recomputes it. Same sources, same digest. |
 | `brand:query --tool task_context` | Done | `--task-type`, `--request`, `--channel`, `--count`, `--locale`, `--mode`, `--output-format`, `--scope-id`. Needs an owner-issued token of this brand; guests, unprofiled agents and the owner process are denied. |
 | Writes | None | Reading a pack creates no file. `tests/task-context.test.ts` compares the whole `brand/` tree before and after. |
+| Legacy `get_logo_rules` / `get_motion_guidelines` ids (BUG-01) | Fixed | Audit finding 1. Every named fact tool reads `NAMED_FACT_TOOL_IDS` (`query.ts`); logo and motion use the `logo_rules` / `motion_rules` ids. Same envelope, more ids listed. `tests/named-tool-ids.test.ts` pins each id against the question bank and field registry. |
 | MCP tool, skill handoff | Not started | Next slice (P2): one gated stdio MCP tool with negative security tests, then the `task-context` skill and the preflight call in the social, UI and marketing skills. |
 | Calendar slots in the pack | Not started | Next slice: `scope_id` for an approved week, pinned `content_calendar` / `content_brief`, and `stale_pin`. Today a ten-post request is an on-demand draft brief, which is the required behaviour anyway. |
 | `task_context_validate`, Studio view | Not started | P2 and P4 of the plan. Studio stays read-only and untouched here. |
