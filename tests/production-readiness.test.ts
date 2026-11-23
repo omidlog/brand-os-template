@@ -164,6 +164,26 @@ test('an asset id visual_dna would refuse does not void the other verdicts: it s
     ],
   )
   assert.equal(result.production_ready, 'ready', 'an optional asset that was not tested never blocks')
+
+  // social-batch --root resolves every pack asset (as readiness --root does), not only the logo.
+  const extra = repack((copy) => {
+    const item = copy.sections.creative.find((entry) => entry.key === 'assets.logo')!
+    copy.sections.creative.push({ ...item, key: 'assets.icon', source_id: 'icon.synthetic-extra', value: { ...(item.value as Record<string, unknown>), id: 'icon.synthetic-extra' } })
+  })
+  const both = loadApprovedLogo(demo.root, extra)
+  assert.ok(both.logo, 'the logo is still embedded')
+  assert.deepEqual(
+    both.references.filter((ref) => ref.via === 'asset').map((ref) => [ref.asset_id, ref.state]),
+    [
+      [DEMO_LOGO_ID, 'approved'],
+      ['icon.synthetic-extra', 'missing'],
+    ],
+  )
+  const verdicts = productionReadiness({ pack: extra, references: both.references }).asset_delivery.references
+  assert.deepEqual(verdicts.map((asset) => [asset.asset_id, asset.state]), [
+    [DEMO_LOGO_ID, 'approved'],
+    ['icon.synthetic-extra', 'missing'],
+  ])
 })
 
 test('blocked usage rights and a missing required logo are deterministic blockers; not verifiable is not a pass', () => {

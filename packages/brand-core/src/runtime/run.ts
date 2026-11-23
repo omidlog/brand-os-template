@@ -30,6 +30,7 @@ import {
 import type { Outliner } from './outline.js'
 import { assertPackShape } from './pack.js'
 import { planSocialBatch } from './plan.js'
+import { packAssetIds } from './production.js'
 import { logoMarkup, renderPost, type EmbeddedLogo } from './render.js'
 
 export interface ApprovedLogo {
@@ -92,13 +93,17 @@ const tally = (checks: Array<{ result: CheckResult }>): Record<CheckResult, numb
 export function loadApprovedLogo(root: string, pack: TaskContextPack): { logo: ApprovedLogo | null; considered: UsedAsset[]; references: VisualReference[] } {
   const items = Object.values(pack.sections).flat().filter((item) => item.key === 'assets.logo' && item.state === 'approved')
   const considered: UsedAsset[] = []
-  if (items.length === 0) return { logo: null, considered, references: [] }
+  const logoIds = items.map((item) => String(((item.value ?? {}) as Record<string, unknown>).id ?? item.source_id)).filter((id) => ASSET_ID_PATTERN.test(id))
+  // Logos first, so the cap never drops the asset the renderer needs.
+  const assetIds = [...new Set([...logoIds, ...packAssetIds(pack)])].slice(0, MAX_ASSET_IDS)
+  if (items.length === 0 && assetIds.length === 0) return { logo: null, considered, references: [] }
   const ownerLocal = !process.env[AGENT_TOKEN_ENV]
   const engine = ownerLocal ? new InterviewEngine(root) : null
   const sameBrand = engine !== null && engine.config().brand.slug === pack.brand_id
   const ctx = sameBrand ? operatorContext(pack.brand_id) : null
-  const ids = [...new Set(items.map((item) => String(((item.value ?? {}) as Record<string, unknown>).id ?? item.source_id)))].filter((id) => ASSET_ID_PATTERN.test(id)).slice(0, MAX_ASSET_IDS)
-  const references = engine && ctx ? resolveVisualDna(engine, ctx, { asset_ids: ids }).references : []
+  // Every approved asset of the pack, not only the logos: the same ids `brand:runtime readiness --root` resolves, so the
+  // production-readiness.json a social-batch run writes has the same asset verdicts as that command.
+  const references = engine && ctx ? resolveVisualDna(engine, ctx, { asset_ids: assetIds }).references : []
   let logo: ApprovedLogo | null = null
   for (const item of items) {
     const value = (item.value ?? {}) as Record<string, unknown>
@@ -110,6 +115,10 @@ export function loadApprovedLogo(root: string, pack: TaskContextPack): { logo: A
     }
     if (logo) {
       skip('one_logo_per_post')
+      continue
+    }
+    if (!ASSET_ID_PATTERN.test(assetId)) {
+      skip('visual_dna:invalid:asset_id')
       continue
     }
     if (!engine || !ctx) {

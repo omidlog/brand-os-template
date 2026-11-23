@@ -278,7 +278,7 @@ export function productionReadiness(input: ProductionInput): ProductionReadiness
   }
   if (required.includes('logo')) {
     const logos = assets.filter((asset) => asset.role === 'logo')
-    const usable = logos.find((asset) => asset.state === 'approved' && input.references?.find((ref) => ref.asset_id === asset.asset_id)?.asset?.path.toLowerCase().endsWith('.svg'))
+    const usable = logos.find((asset) => asset.state === 'approved' && input.references?.find((ref) => ref.via === 'asset' && ref.asset_id === asset.asset_id)?.asset?.path.toLowerCase().endsWith('.svg'))
     if (usable) add('asset.required_logo', 'owner.task_input', `asset:${usable.asset_id}`, 'pass', true, ['required:logo', `asset:${usable.asset_id}`])
     else if (logos.length === 0) add('asset.required_logo', 'owner.task_input', 'role:logo', 'fail', true, ['required:logo', 'code:missing_required_logo'])
     else if (logos.every((asset) => asset.state === 'not_tested')) add('asset.required_logo', 'owner.task_input', 'role:logo', 'not_tested', true, ['required:logo', 'code:required_logo_not_verified', 'resolver:not_run'], true)
