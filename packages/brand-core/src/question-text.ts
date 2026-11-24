@@ -10,6 +10,44 @@ import type { FieldQuestion } from './types.js'
  */
 const TEXT_FIELDS = ['prompt', 'why_it_matters', 'why_it_matters_i18n', 'examples', 'examples_i18n'] as const
 
+/** The question-bank file a question belongs in, as the starter workspace writes it. */
+export function bankName(question: FieldQuestion): string {
+  if (question.id.startsWith('brand.mascot.')) return 'mascot.yaml'
+  if (question.id.startsWith('brand.gamification.')) return 'gamification.yaml'
+  if (question.module.startsWith('business')) return 'business.yaml'
+  if (question.module.startsWith('personal')) return 'personal.yaml'
+  return 'brand.yaml'
+}
+
+/**
+ * Adds every question the template defines but the brand's question bank lacks (a question a later template version
+ * introduced, such as `brand.color.semantic_map`). `brand/**` is brand-owned, so a template update never rewrites the
+ * bank; without this, `validate` reports "missing starter question" after an update. Only appends: stored questions,
+ * answers, facts and approvals are untouched. Returns the bank files it changed. Idempotent.
+ */
+export function addMissingQuestions(root: string): string[] {
+  const dir = path.join(root, 'brand', 'interview', 'question-bank')
+  if (!fs.existsSync(dir)) return []
+  const files = fs.readdirSync(dir).filter((entry) => entry.endsWith('.yaml')).sort()
+  const stored = new Set<string>()
+  for (const name of files) for (const question of readYaml<{ questions?: FieldQuestion[] }>(path.join(dir, name)).questions ?? []) stored.add(question.id)
+  const additions = new Map<string, FieldQuestion[]>()
+  for (const question of allQuestions()) {
+    if (stored.has(question.id)) continue
+    const name = bankName(question)
+    additions.set(name, [...(additions.get(name) ?? []), question])
+  }
+  const touched: string[] = []
+  for (const [name, questions] of additions) {
+    const file = path.join(dir, name)
+    const bank = fs.existsSync(file) ? readYaml<{ schema_version?: number; questions?: FieldQuestion[] }>(file) : { schema_version: 1, questions: [] }
+    const merged = [...(bank.questions ?? []), ...questions].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+    writeYaml(file, { ...bank, questions: merged })
+    touched.push(path.relative(root, file).split(path.sep).join('/'))
+  }
+  return touched
+}
+
 /**
  * Brings the question text in `brand/interview/question-bank/*.yaml` up to the template's wording. Only the text
  * fields above change, and only for question ids the template defines; ids, types, conditions, priorities and every
