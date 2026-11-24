@@ -164,6 +164,12 @@ export class FakeGitHub {
   deleteForbidden = false
   /** Answer tarball requests with a redirect to this URL instead of the archive. */
   tarballRedirect: string | null = null
+  /** Published engine release tags of the template (newest first), for example engine-v0.3.0-abc1234. */
+  engineReleases: string[] = []
+  /** Workflow dispatches received: workflow file, ref and inputs. */
+  readonly dispatches: Array<{ repo: string; workflow: string; ref: string; inputs: Record<string, unknown> }> = []
+  /** Topics per repository (owner/name, lower case). */
+  readonly topics = new Map<string, string[]>()
   private nextId = 1000
   private pendingReads = new Map<string, number>()
 
@@ -313,6 +319,20 @@ export class FakeGitHub {
       return json(201, this.repoJson(created))
     }
     if (!repo) return json(404, { message: 'Not Found' })
+    if (method === 'GET' && rest[0] === 'releases' && rest.length === 1) {
+      return json(200, this.engineReleases.map((tag) => ({ tag_name: tag, draft: false, prerelease: false })))
+    }
+    if (method === 'POST' && rest[0] === 'actions' && rest[1] === 'workflows' && rest[3] === 'dispatches') {
+      this.dispatches.push({ repo: key, workflow: rest[2] ?? '', ref: String(body.ref ?? ''), inputs: (body.inputs as Record<string, unknown>) ?? {} })
+      return new Response(null, { status: 204 })
+    }
+    if (rest[0] === 'topics' && rest.length === 1) {
+      if (method === 'GET') return json(200, { names: this.topics.get(key) ?? [] })
+      if (method === 'PUT') {
+        this.topics.set(key, Array.isArray(body.names) ? body.names.map(String) : [])
+        return json(200, { names: this.topics.get(key) })
+      }
+    }
     if (rest.length === 0) {
       if (method === 'GET') return json(200, this.repoJson(repo))
       if (method === 'DELETE') {

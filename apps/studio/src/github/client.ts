@@ -227,6 +227,39 @@ export class GitHubClient {
     return toRepo(raw)
   }
 
+  /**
+   * The newest published Brand OS engine release (`engine-v<version>`) of the template, or null when there is none.
+   * Read-only; the release itself is made by the template's engine-release workflow.
+   */
+  async latestEngineRelease(owner: string, repo: string): Promise<string | null> {
+    const raw = await this.json<Array<Record<string, unknown>>>('GET', `/repos/${seg(owner)}/${seg(repo)}/releases?per_page=30`, 'Read engine releases')
+    for (const release of Array.isArray(raw) ? raw : []) {
+      const tag = text(release.tag_name, 80)
+      if (release.draft === true || release.prerelease === true) continue
+      const match = tag.match(/^engine-v([0-9A-Za-z.+-]{1,60})$/)
+      if (match?.[1]) return match[1]
+    }
+    return null
+  }
+
+  /**
+   * Starts the template's engine-release workflow (`workflow_dispatch`), which opens engine update pull requests in
+   * brand repositories. Studio never writes to a brand repository for an update itself and never merges.
+   */
+  async dispatchEngineUpdate(owner: string, repo: string, input: { repos: string; ref?: string }): Promise<void> {
+    if (!/^[A-Za-z0-9_.,/-]{0,2000}$/.test(input.repos)) throw new GitHubError('invalid', 0, 'Invalid repository list.')
+    await this.request('POST', `/repos/${seg(owner)}/${seg(repo)}/actions/workflows/engine-release.yml/dispatches`, 'Start engine update', { ref: input.ref ?? 'main', inputs: { repos: input.repos } })
+  }
+
+  /** Adds topics to a repository Studio just created (for example brand-os-brand), keeping any it already has. */
+  async addTopics(owner: string, repo: string, names: string[]): Promise<void> {
+    const current = await this.json<Record<string, unknown>>('GET', `/repos/${seg(owner)}/${seg(repo)}/topics`, 'Read topics')
+    const have = Array.isArray(current.names) ? current.names.filter((name): name is string => typeof name === 'string') : []
+    const next = [...new Set([...have, ...names])]
+    if (next.length === have.length) return
+    await this.request('PUT', `/repos/${seg(owner)}/${seg(repo)}/topics`, 'Set topics', { names: next })
+  }
+
   async getBranchHead(owner: string, repo: string, branch: string): Promise<BranchHead> {
     if (!BRANCH_RE.test(branch)) throw new GitHubError('invalid', 0, 'Invalid branch name.')
     const raw = await this.json<Record<string, unknown>>('GET', `/repos/${seg(owner)}/${seg(repo)}/commits/${seg(branch)}`, 'Read default branch')

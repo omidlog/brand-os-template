@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -306,31 +306,4 @@ test('brand initialization writes the template record and keeps a known commit',
   const record = readTemplateRecord(fresh)
   assert.equal(record?.commit, null)
   assert.equal(record?.source, 'brand:init')
-})
-
-test('template:update CLI: dry run by default, --apply makes the branch, --json is machine readable', () => {
-  const { template, brand } = fixture()
-  const to = templateV2(template)
-  const cli = (...args: string[]) =>
-    spawnSync(process.execPath, ['--import', 'tsx', path.join(repo, 'scripts/template-update.ts'), '--template', template, '--repo', brand, ...args], { cwd: repo, encoding: 'utf8' })
-
-  const dry = cli()
-  assert.equal(dry.status, 0, dry.stderr)
-  assert.match(dry.stdout, /Dry run/)
-  assert.equal(git(brand, 'branch', '--list'), '* main')
-
-  const json = cli('--json')
-  const parsed = JSON.parse(json.stdout) as { to: string; applied: unknown; changes: Array<{ path: string; action: string; content?: unknown }> }
-  assert.equal(parsed.to, to)
-  assert.equal(parsed.applied, null)
-  assert.ok(parsed.changes.every((change) => change.content === undefined))
-
-  const applied = cli('--apply', '--branch', 'template-update/test')
-  assert.equal(applied.status, 0, applied.stderr)
-  assert.match(applied.stdout, /Committed \d+ file\(s\) on branch template-update\/test/)
-  assert.equal(git(brand, 'rev-parse', '--abbrev-ref', 'HEAD'), 'template-update/test')
-
-  const missing = spawnSync(process.execPath, ['--import', 'tsx', path.join(repo, 'scripts/template-update.ts')], { cwd: repo, encoding: 'utf8' })
-  assert.equal(missing.status, 1)
-  assert.match(missing.stderr, /needs --template/)
 })

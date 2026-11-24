@@ -1,3 +1,5 @@
+> **Replaced.** Brand repositories are data-only and get engine updates through pull requests opened by the template's `engine-release` workflow: see [engine-updates.md](engine-updates.md). The text below describes the older copy-and-merge model, kept for brands converted from it and for `brand-os convert`, which reuses its file rules (`.brand-os/sync.json`).
+
 # Template sync
 
 How a fix in the Brand OS template reaches every brand repository, in plain words.

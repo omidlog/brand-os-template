@@ -8,7 +8,6 @@ import { Registry } from './registry.js'
 import { createStudio } from './server.js'
 import { SyncService } from './sync.js'
 import { TemplateUpdateService } from './template-update.js'
-import { TemplateUpdateJob } from './template-update-job.js'
 
 /** Wires the services. Tests pass `fetch` (an in-memory GitHub) and `sleep`; production uses the defaults. */
 export function buildStudio(config: StudioConfig, options: { fetch?: FetchLike; sleep?: (ms: number) => Promise<void>; now?: () => number; log?: (line: string) => void } = {}) {
@@ -29,7 +28,13 @@ export function buildStudio(config: StudioConfig, options: { fetch?: FetchLike; 
     workDir,
     sleep: options.sleep,
     now: () => new Date(now()),
-    onReady: (slug) => void sync.refresh(slug).catch(() => undefined),
+    onReady: (slug) => {
+      void sync.refresh(slug).catch(() => undefined)
+      // A new brand starts as a template copy: mark it as a Brand OS brand and start its first engine update, which
+      // converts it into a data-only repository through a pull request (Studio itself writes nothing more).
+      const record = registry.get(slug)
+      if (record) void templateUpdates.enrollNewBrand(record, 'provisioning')
+    },
     log: options.log,
   })
   const templateUpdates = new TemplateUpdateService({
@@ -42,10 +47,8 @@ export function buildStudio(config: StudioConfig, options: { fetch?: FetchLike; 
     now,
     log: options.log,
   })
-  // Built here, started only by main.ts, so tests and CLI commands never leave a timer behind.
-  const templateJob = new TemplateUpdateJob({ registry, sync, updates: templateUpdates, dataDir: config.dataDir, intervalMs: config.templateCheck.intervalMs, autoOpen: config.templateCheck.autoOpen, now, log: options.log })
   // BOS-11: also started only by main.ts. One GET per brand per interval; a moved head triggers a background refresh.
   const headPoll = new HeadPollJob({ registry, sync, github: readClient, intervalMs: config.headPollMs, log: options.log })
   const studio = createStudio({ config, registry, sync, provisioning, templateUpdates, readClient, provisionClient, now, log: options.log })
-  return { ...studio, registry, sync, provisioning, templateUpdates, templateJob, headPoll, readClient, provisionClient }
+  return { ...studio, registry, sync, provisioning, templateUpdates, headPoll, readClient, provisionClient }
 }

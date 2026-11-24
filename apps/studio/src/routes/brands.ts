@@ -27,6 +27,7 @@ export interface BrandRoutes {
   brands: Handler
   refresh: Handler
   openUpdatePull: Handler
+  updateAll: Handler
   assetFile: Handler
   brandPage: Handler
   legacyRedirect: Handler
@@ -71,7 +72,9 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
       synced.set(record.slug, { sha: status.sha, at: status.committed_at ?? status.synced_at })
       if (brandIsReady(record) && cached.projection) updates.set(record.slug, templateUpdates.status(cached.projection, head, cached.history?.pulls ?? []))
     }
-    render(ctx, 200, pages.brandsPage(view(ctx), { canCreate: provisioning.configured, synced, updates, discarded: ctx.url.searchParams.get('discarded') === '1' }))
+    const flash = ctx.url.searchParams.get('update')
+    const updateFlash = flash === 'dispatched' || flash === 'not_configured' || flash === 'busy' || flash === 'failed' || flash === 'pending' || flash === 'too_soon' ? flash : null
+    render(ctx, 200, pages.brandsPage(view(ctx), { canCreate: provisioning.configured, synced, updates, discarded: ctx.url.searchParams.get('discarded') === '1', canUpdateAll: templateUpdates.configured, updateFlash }))
   }
 
   const refresh: Handler = async (ctx, match) => {
@@ -92,14 +95,17 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
 
   function updateFlash(ctx: RequestContext, record: BrandRecord): pages.UpdatePanel['flash'] {
     const code = ctx.url.searchParams.get('update')
-    const allowed = ['opened', 'exists', 'current', 'untracked', 'not_configured', 'busy', 'failed', 'pending', 'too_soon'] as const
+    const allowed = ['dispatched', 'not_configured', 'busy', 'failed', 'pending', 'too_soon'] as const
     if (!allowed.includes(code as (typeof allowed)[number])) return null
     const number = Number(ctx.url.searchParams.get('pr') ?? '')
     const url = Number.isInteger(number) && number > 0 && number < 1e7 ? `https://github.com/${record.repo.owner}/${record.repo.name}/pull/${number}` : null
     return { code: code as (typeof allowed)[number], number: url ? number : null, url }
   }
 
-  /** Studio's second GitHub write: opens (never merges) one template update pull request. */
+  /**
+   * Studio's second GitHub write: starts the template's engine-release workflow for this brand. The workflow opens the
+   * engine-update pull request; Studio writes nothing to the brand repository and never merges.
+   */
   const openUpdatePull: Handler = async (ctx, match) => {
     const record = brandRecord(ctx, match[1] ?? '')
     if (!record) return
@@ -107,14 +113,21 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
     if (!brandIsReady(record)) return redirect(ctx.res, `${back}/provisioning`)
     if (!updateLimiter.take('owner').ok) return redirect(ctx.res, `${back}?update=too_soon#template-update`)
     const actor = ctx.session?.login ?? 'owner'
-    const result = await withTimeout(templateUpdates.openUpdatePull(record.slug, actor), 90_000)
+    const result = await withTimeout(templateUpdates.openUpdatePull(record.slug, actor), 30_000)
     if (!result) return redirect(ctx.res, `${back}?update=pending#template-update`)
-    if (result.ok && (result.code === 'opened' || result.code === 'exists')) {
-      // The brand's open pull requests changed; the next view re-reads them.
-      sync.markDirty(record.slug)
-      return redirect(ctx.res, `${back}?update=${result.code}&pr=${result.pull.number}#template-update`)
-    }
+    // The brand's open pull requests will change; the next view re-reads them.
+    if (result.ok) sync.markDirty(record.slug)
     redirect(ctx.res, `${back}?update=${result.code}#template-update`)
+  }
+
+  /** The same, for every brand at once ("Update all brands" on the brand list). */
+  const updateAll: Handler = async (ctx) => {
+    if (!updateLimiter.take('owner').ok) return redirect(ctx.res, '/brands?update=too_soon')
+    const actor = ctx.session?.login ?? 'owner'
+    const result = await withTimeout(templateUpdates.updateAll(actor), 30_000)
+    if (!result) return redirect(ctx.res, '/brands?update=pending')
+    if (result.ok) for (const record of registry.list()) sync.markDirty(record.slug)
+    redirect(ctx.res, `/brands?update=${result.code}`)
   }
 
   const assetFile: Handler = (ctx, match) => {
@@ -218,5 +231,5 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
     redirect(ctx.res, `/brands/${slug}/${target}${query ? `?${query}` : ''}`, 301)
   }
 
-  return { home, brands, refresh, openUpdatePull, assetFile, brandPage, legacyRedirect }
+  return { home, brands, refresh, openUpdatePull, updateAll, assetFile, brandPage, legacyRedirect }
 }

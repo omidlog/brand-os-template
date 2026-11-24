@@ -49,7 +49,7 @@ export function createStudio(deps: StudioDeps): {
 
   const { loginForm, login, logout } = authRoutes(core, { clientIp, sameOrigin })
 
-  const { home, brands, refresh, openUpdatePull, assetFile, brandPage, legacyRedirect } = brandRoutes(core)
+  const { home, brands, refresh, openUpdatePull, updateAll, assetFile, brandPage, legacyRedirect } = brandRoutes(core)
 
   const { newBrandForm, repoCheck, createBrand, provisioningStatus, provisioningJson, retryProvisioning, discardForm, discardProvisioning } = provisioningRoutes(core)
 
@@ -82,8 +82,15 @@ export function createStudio(deps: StudioDeps): {
       method: 'POST',
       pattern: new RegExp(`^/brands/${SLUG}/template-update$`),
       auth: 'session',
-      writes: 'opens one template update pull request on a new template-update/<sha> branch in the brand repository (never the default branch, never a merge)',
+      writes: "starts the template's engine-release workflow for this brand, which opens one engine-update/<version> pull request in the brand repository (Studio writes nothing to the brand, never the default branch, never a merge)",
       handle: openUpdatePull,
+    },
+    {
+      method: 'POST',
+      pattern: /^\/brands\/update-all$/,
+      auth: 'session',
+      writes: "starts the template's engine-release workflow for every brand, which opens one engine-update/<version> pull request per brand repository (Studio writes nothing to a brand, never a merge)",
+      handle: updateAll,
     },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(strategy/business-model|brand/book/visual-identity|market/competitors|brand/mascot|strategy/swot-tows|strategy/value-proposition)(?:/(print))?$`), auth: 'session', handle: visual },

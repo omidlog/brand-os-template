@@ -4,6 +4,19 @@
 
 
 
+
+## Unreleased — Studio starts engine updates (engine + data, part D)
+
+### Changed
+
+- Studio compares each brand's engine (`.brand-os/engine/VERSION`, the one file outside `brand/` it reads) with the template's newest `engine-v…` release. **Update this brand** (`POST /brands/<slug>/template-update`) and the new **Update all brands** (`POST /brands/update-all`) start the template's `engine-release` workflow; that workflow opens the pull requests. Studio no longer builds update pull requests itself, writes nothing to a brand for an update, and never merges.
+- A brand Studio creates gets the topic `brand-os-brand` and its first engine update (which converts it to a data-only repository) right after provisioning.
+- The provisioning token needs **Actions: write** on the template repository to start the workflow.
+
+### Removed
+
+- The periodic template check (`STUDIO_TEMPLATE_CHECK_MINUTES`, `STUDIO_TEMPLATE_AUTO_PR` are ignored), `npm run template:update`, `scripts/template-update-pr.ts` and the brand-side `template-update.yml` workflow. Engine releases replace them.
+
 ## Unreleased — engine releases and fleet updates (engine + data, part C)
 
 ### Added

@@ -2,7 +2,12 @@ import type { GitHubClient } from './github/client.js'
 import { GitHubError } from './github/client.js'
 import type { Registry } from './registry.js'
 import { brandIsReady, type SyncService } from './sync.js'
-import type { Scheduler } from './template-update-job.js'
+
+/** Timer functions, replaceable in tests. */
+export interface Scheduler {
+  setTimeout(callback: () => void, ms: number): unknown
+  clearTimeout(handle: unknown): void
+}
 
 /**
  * BOS-11: a light poll of each brand's default-branch head, so a merged change shows up without Refresh.

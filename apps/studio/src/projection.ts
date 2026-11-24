@@ -93,6 +93,8 @@ export interface StudioProjection {
   schema_version: 1
   /** The template commit recorded in brand/template-version.json; null when the brand has no record. Absent in caches built before template sync. */
   template?: { commit: string | null; repository: string | null } | null
+  /** The engine version in `.brand-os/engine/VERSION`; null for a brand not on the engine yet. Absent in older caches. */
+  engine?: { version: string } | null
   brand: {
     name: string
     name_status: string
@@ -403,6 +405,14 @@ function projectPublishing(engine: InterviewEngine, visual: StudioVisualProjecti
   }
 }
 
+/** The brand's engine version, when the brand is a data-only repository on the Brand OS engine. */
+function engineRecord(root: string): StudioProjection['engine'] {
+  const file = path.join(root, '.brand-os', 'engine', 'VERSION')
+  if (!fs.existsSync(file)) return null
+  const version = fs.readFileSync(file, 'utf8').trim()
+  return /^[0-9A-Za-z.+-]{1,60}$/.test(version) ? { version } : null
+}
+
 function templateRecord(root: string): StudioProjection['template'] {
   try {
     const record = readTemplateRecord(root)
@@ -652,6 +662,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
+    engine: engineRecord(root),
     visual,
     coach: projectCoach(engine, dashboard.review_queue.items),
     publishing: projectPublishing(engine, visual),

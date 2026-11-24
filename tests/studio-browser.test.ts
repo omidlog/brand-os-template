@@ -528,21 +528,19 @@ test('Knowledge page: shared notes render without overflow, accessibly and with 
   assertClean('knowledge pages')
 })
 
-// Runs last: it moves the shared fake template forward, which changes the overview of every later page.
-test('template updates: the indicator is visible, accessible and RTL-safe, and "Open update PR" opens one pull request', { skip }, async () => {
-  s.github.pushEdit('omidlog', 'brand-os-template', (tree) => {
-    tree.set('.brand-os/sync.json', Buffer.from(JSON.stringify({ schema_version: 1, template: { repository: 'omidlog/brand-os-template' }, record: 'brand/template-version.json', rules: [{ kind: 'brand', paths: ['brand/**'] }, { kind: 'core', paths: ['scripts/**', '.brand-os/**'] }] })))
-    tree.set('scripts/fix.ts', Buffer.from('export const fixed = true\n'))
-  }, 'fix: template release')
+// Runs last: it publishes an engine release on the shared fake template, which changes the overview of later pages.
+test('engine updates: the indicator is visible, accessible and RTL-safe, and "Update this brand" starts the template workflow', { skip }, async () => {
+  s.github.engineReleases = ['engine-v0.3.0-abc1234']
   await s.studio.templateUpdates.templateHead({ force: true })
   await page.viewport(1440, 900)
   await page.goto(`${s.url}/brands?lang=en`)
-  assert.match(await text('.brand-card-badges'), /Updates available/)
+  assert.match(await text('.brand-card-badges'), /Not on the engine yet/)
+  assert.ok(await page.eval<boolean>(`Boolean(document.querySelector('form[action="/brands/update-all"] button'))`), 'Update all brands is offered')
   await assertAccessible('brands with update')
 
   await page.goto(`${s.url}/brands/acme-learning`)
-  assert.equal(await page.eval<string>(`document.getElementById('template-update').dataset.updateState`), 'available')
-  assert.match(await text('#template-update'), /Updates available/)
+  assert.equal(await page.eval<string>(`document.getElementById('template-update').dataset.updateState`), 'untracked')
+  assert.match(await text('#template-update'), /Not on the engine yet/)
   assert.equal(await page.eval<string>(`document.querySelector('#template-update button').getAttribute('aria-describedby')`), 'update-hint')
   await assertAccessible('overview with update')
   assert.deepEqual(await contrastFailures(), [], 'update panel: text contrast')
@@ -553,19 +551,19 @@ test('template updates: the indicator is visible, accessible and RTL-safe, and "
   await page.viewport(1440, 900)
   await page.goto(`${s.url}/brands/acme-learning?lang=fa`)
   assert.equal(await page.eval<string>('document.documentElement.dir'), 'rtl')
-  assert.match(await text('#template-update'), /به‌روزرسانی موجود است/)
+  assert.match(await text('#template-update'), /هنوز روی موتور نیست/)
   assert.equal(await page.eval<string>(`getComputedStyle(document.querySelector('#template-update .mono')).direction`), 'ltr')
   await assertNoOverflow('fa update panel')
   await capture('fa-template-update')
   await page.goto(`${s.url}/brands/acme-learning?lang=en`)
   await capture('template-update')
 
+  const before = s.github.dispatches.length
   await page.click('#template-update button[type=submit]')
-  await page.waitFor(`location.search.includes('update=opened')`)
-  assert.match(await text('#template-update [role=status]'), /Update pull request #1 is open/)
-  assert.equal(await page.eval<string>(`document.querySelector('#template-update [role=status] a').getAttribute('href')`), `https://github.com/${OWNER}/acme-learning/pull/1`)
-  const repo = s.github.repo(OWNER, 'acme-learning')!
-  assert.equal(repo.pulls.length, 1)
-  assert.ok(repo.pulls[0]!.head.startsWith('template-update/'))
+  await page.waitFor(`location.search.includes('update=dispatched')`)
+  assert.match(await text('#template-update [role=status]'), /The engine update has started/)
+  assert.equal(s.github.dispatches.length, before + 1)
+  assert.equal(s.github.dispatches.at(-1)?.inputs.repos, `${OWNER}/acme-learning`)
+  assert.equal(s.github.repo(OWNER, 'acme-learning')!.pulls.filter((pull) => pull.head.startsWith('template-update/')).length, 0, 'Studio opens no pull request itself')
   assertClean('template update')
 })

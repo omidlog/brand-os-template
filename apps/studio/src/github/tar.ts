@@ -189,7 +189,11 @@ export function studioCompetitivePathAllowed(relative: string): boolean {
   return SHARED_LANDSCAPE.test(relative)
 }
 
+/** The one file outside brand/ Studio reads: the engine version of a data-only brand (a short text, never code). */
+export const ENGINE_VERSION_PATH = '.brand-os/engine/VERSION'
+
 export function studioPathAllowed(relative: string): boolean {
+  if (relative === ENGINE_VERSION_PATH) return true
   if (!relative.startsWith('brand/')) return false
   if (relative.toLowerCase().startsWith('brand/competitive/') || relative.toLowerCase() === 'brand/competitive') return studioCompetitivePathAllowed(relative)
   if (relative.toLowerCase().startsWith('brand/content-calendar/') || relative.toLowerCase() === 'brand/content-calendar') return studioCalendarPathAllowed(relative)
