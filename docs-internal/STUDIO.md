@@ -66,13 +66,13 @@ The brand sidebar is grouped by the reader's question, with standard page names.
 
 | Group | Pages (stable path under `/brands/<slug>`) |
 | --- | --- |
-| Command | Overview (`/`), Coach notes (an anchor to the Overview card, only when it has notes) |
+| Command | Command Center (`/`; called Overview before V4.1), Coach notes (an anchor to the Command Center card, only when it has notes) |
 | Strategy Lab | Business Model Canvas (`/strategy/business-model`, `/print`), Business plan (`/strategy/business-plan`) |
 | Brand Studio | Brand Book (`/brand/book`; Visual identity chapter `/brand/book/visual-identity`, `/print`), Design System (`/brand/design-system`), Assets & Mascot (`/brand/assets`), Creative decisions (`/brand/creative-decisions`), Personal Brand (`/brand/personal`) |
 | Market & Content | Marketing plan (`/market/marketing-plan`), Competitor analysis (`/market/competitors`, `/print`), Content calendar (`/market/content-calendar`), Knowledge (`/market/knowledge`) |
-| Publishing & Governance | History & Review (`/governance/history`), GitHub & Claude Code (`/governance/github`) |
+| Publishing & Governance | Publishing gallery (`/governance/documents`, V4.1), History & Review (`/governance/history`), GitHub & Claude Code (`/governance/github`) |
 
-The old flat paths (`/brand-book`, `/design`, `/assets`, `/business[?doc=]`, `/personal`, `/knowledge`, `/creative`, `/calendar`, `/history`, `/handoff`, `/visual`, `/visual/print`, `/visual/identity[/print]`, `/visual/competitors[/print]`) answer **301** to the stable path for one release, keeping the query (`/business?doc=marketing-plan` goes to `/market/marketing-plan`). They are GET-only session routes like every brand page: a guest is sent to `/login?next=<old path>`, and an unregistered slug gets the same 404 as any other brand route. The asset preview route (`/brands/<slug>/assets/file/<sha256>`) is unchanged. Group labels are in en/fa/tr. `tests/studio-server.test.ts` pins every redirect.
+The old flat paths (`/brand-book`, `/design`, `/assets`, `/business[?doc=]`, `/personal`, `/knowledge`, `/creative`, `/calendar`, `/history`, `/handoff`, `/visual`, `/visual/print`, `/visual/identity[/print]`, `/visual/competitors[/print]`, `/visual/mascot[/print]`) answer **301** to the stable path for one release, keeping the query (`/business?doc=marketing-plan` goes to `/market/marketing-plan`). They are GET-only session routes like every brand page: a guest is sent to `/login?next=<old path>`, and an unregistered slug gets the same 404 as any other brand route. The asset preview route (`/brands/<slug>/assets/file/<sha256>`) is unchanged. Group labels are in en/fa/tr. `tests/studio-server.test.ts` pins every redirect.
 
 ## Look and feel
 
@@ -216,10 +216,17 @@ The provisioning credential therefore also needs **Pull requests: write** on the
 - Audit: each run appends `{"action":"template_update_check","actor":"periodic-job",...}` with counts (brands, available, opened, linked, failed) to `STUDIO_DATA_DIR/audit.jsonl`; each pull request it opens is a `template_update_pull` entry with the actor `periodic-job`.
 - Without a provisioning credential the job does not start.
 
+### Command Center and Publishing gallery (Visual V4.1)
+
+- **Command Center** (`/brands/<slug>`, R4): a 30-second strip leads the page: decisions needed (drafts awaiting approval, linking to History & Review), review due (approved facts past their review date), contradictions, and exports ready (from the gallery). Below it, a coverage mini-map per framework (Brand Book chapters, the nine canvas zones in canonical order, Visual identity blocks, Mascot atlas, Business and Marketing plans): one square per zone, block or section, its state said in words beside the row, never by colour alone. The older panels follow; the template update panel moved below the coverage table.
+- **Publishing gallery** (`/governance/documents`): document types × export profiles (`public`, `investor`, `internal`). Each cell shows its readiness (ready, partly ready, nothing to show yet, not used by this brand, not for this audience), counts of shown values, open gaps and values hidden for that audience, and a link to the print view where one exists today. Counts are measured at sync time on the redacted output each profile would receive (`buildPublishingGallery`, `packages/brand-core/src/visual/publishing.ts`). The gallery carries no values. It never creates, renders or sends a file.
+- **Audience redaction** (core, `redactVisualDocument` / `redactDocumentModel`): a restricted value never appears in any profile; finance values, values that cite a `.private` source, unapproved values, unknown question ids and draft marks (an asset still tagged `draft`, every badge) never reach `public` or `investor`. Competitor analysis is internal only; business and marketing plans are never public. Every public visual edition Studio serves goes through the public profile; the builders are a fixed point of it (`tests/visual-publishing.test.ts`).
+
 ## Tests
 
 All GitHub traffic is an in-memory fake at the HTTP level (`tests/helpers/fake-github.ts`), which refuses any non-GitHub host; no test reaches the network or creates a real repository.
 
+- `tests/studio-publishing.test.ts`: Command Center strip and mini-map, the 7 × 3 gallery, blocked cells, no values in the gallery, public prints without restricted, finance or draft data or draft marks, GET-only, guest and forged-slug handling, fa (RTL, Persian digits) and tr.
 - `tests/studio-github.test.ts`: client retries and redaction, tar safety, redirect handling, webhook signatures.
 - `tests/studio-provision.test.ts`: creation, personal profile, validation, duplicates, concurrent create, retry, partial-create cleanup, public-repository refusal, missing template, interrupted jobs.
 - `tests/studio-static.test.ts`: in-memory static files, ETag and `304`, versioned CSS/JS links and the cache policy.

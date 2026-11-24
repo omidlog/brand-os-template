@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — Runtime: batch not-ready exits non-zero (PR-E owner decisions)
+
+### Changed
+
+- `brand:runtime social-batch` exits **3** when production readiness is `not_ready` (was 0). The drafts, `batch-summary.json` and `production-readiness.json` are still written; one en/fa/tr line goes to stderr so `--json` stdout stays clean. Scripts that ran `social-batch` with `--require logo` and no `--root` now see exit 3.
+- `docs-internal/BRAND_RUNTIME.md` records the seven PR-E owner decisions (contrast and duplicates review only, only the logo requirable, partial data a warning, no signing, access-log line ids only in `brand/.private`, not-ready exit 3).
+
+## Unreleased — Visual V4.1: Command Center, Publishing gallery, audience redaction
+
+### Added
+
+- `packages/brand-core/src/visual/publishing.ts`: export profiles `public`, `investor`, `internal`; `redactVisualDocument` and `redactDocumentModel` (restricted never shown; finance, `.private`-sourced, unapproved and unknown-id values and draft marks never in public or investor; competitor analysis internal only; business and marketing plans never public); `buildPublishingGallery` (document types × profiles, readiness on redacted output, counts only, review-due count); `coverageCells`.
+- Studio Publishing gallery at `/brands/<slug>/governance/documents` (GET only, en/fa/tr, RTL), in the Publishing & Governance group.
+- Tests: `visual-publishing`, `studio-publishing` (synthetic brands only).
+
+### Changed
+
+- Overview is now the **Command Center** (R4): a 30-second strip (decisions needed, review due, contradictions, exports ready) and a coverage mini-map per framework lead the page; the template update panel moved lower. Labels in en/fa/tr (Command Center / مرکز فرمان / Komuta Merkezi).
+- Public visual editions in the Studio projection pass the core public-profile redactor; the projection gains `publishing` (older caches rebuild on sync).
 ## Unreleased — Pilot and workflow acceptance (fixes pack PR-F)
 
 ### Added
@@ -663,6 +682,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `writeBatch` refuses a dangling symlink and a linked parent directory that leads into a `brand/` folder (checked on the real path before and after the directory is created).
 - Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
 - `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
+
+## Unreleased — Audit: Visual V2 area fixes
+
+### Fixed
+
+- Brand Book reader (V2.4): an agent suggestion is labelled "Agent suggestion. Not approved and not an owner decision." instead of "Template guidance"; tentative and estimated drafts say so; a question the owner marked unknown, skipped, not applicable or deprecated says that instead of "Still to answer". en/fa/tr. Test: `studio-visual-book`.
+- Docs: `IMPLEMENTATION_STATUS.md` rows for V2.1, V2.2, V2.3 and the print engine use the stable V2.4 paths; `STUDIO.md` lists `/visual/mascot[/print]` among the 301 legacy paths.
 
 ## Unreleased — Audit: Visual V2 stale states at view time
 

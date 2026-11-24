@@ -380,7 +380,7 @@ test('Persian renders right-to-left and Turkish left-to-right from locale data; 
     assert.equal(switched.headers.get('location'), '/brands/acme-learning')
     const fa = await client.page('/brands/acme-learning')
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
-    assert.match(fa.text, /نمای کلی/)
+    assert.match(fa.text, /مرکز فرمان/)
     assert.match(fa.text, /class="mono[^"]*" dir="ltr"/, 'code and SHAs stay left-to-right inside RTL')
     await client.get('/brands?lang=tr')
     const tr = await client.page('/brands')
@@ -537,7 +537,7 @@ test('V2.4: brand pages live at stable paths, grouped by intent; old flat paths 
       assert.equal(res.status, 301, from)
       assert.equal(res.headers.get('location'), `/brands/acme-learning${to}`, from)
     }
-    for (const pathname of ['/brand/book', '/brand/design-system', '/brand/assets', '/strategy/business-plan', '/market/marketing-plan', '/governance/history', '/governance/github', '/strategy/business-model', '/brand/book/visual-identity', '/market/competitors']) {
+    for (const pathname of ['/brand/book', '/brand/design-system', '/brand/assets', '/strategy/business-plan', '/market/marketing-plan', '/governance/history', '/governance/github', '/strategy/business-model', '/brand/book/visual-identity', '/market/competitors', '/governance/documents']) {
       assert.equal((await owner.get(`/brands/acme-learning${pathname}`)).status, 200, pathname)
     }
     // A redirect never confirms a brand: an unregistered slug is 404 for the owner and a sign-in redirect for a guest,
@@ -564,7 +564,7 @@ test('V2.4: brand pages live at stable paths, grouped by intent; old flat paths 
       ['market', 'Market &amp; Content'],
       ['governance', 'Publishing &amp; Governance'],
     ])
-    for (const label of ['Overview', 'Business Model Canvas', 'Business plan', 'Brand Book', 'Design System', 'Assets &amp; Mascot', 'Marketing plan', 'Competitor analysis', 'History &amp; Review', 'GitHub &amp; Claude Code']) {
+    for (const label of ['Command Center', 'Business Model Canvas', 'Business plan', 'Brand Book', 'Design System', 'Assets &amp; Mascot', 'Marketing plan', 'Competitor analysis', 'Publishing gallery', 'History &amp; Review', 'GitHub &amp; Claude Code']) {
       assert.ok(nav.includes(`<span>${label}</span>`), label)
     }
     assert.match(nav, /<a class="nav-link nav-sub is-active" href="\/brands\/acme-learning\/brand\/book" aria-current="page">/)

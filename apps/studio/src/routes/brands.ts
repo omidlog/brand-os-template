@@ -9,6 +9,7 @@ import { creativePage } from '../views/creative.js'
 import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from '../views/knowledge.js'
 import { LEGACY_SECTION_PATHS, PAGE_SECTION_PATHS, type BrandSection, type BrandView } from '../views/layout.js'
 import * as pages from '../views/pages.js'
+import { publishingPage } from '../views/publishing.js'
 import { brandBookPage } from '../views/visual-book.js'
 import { withTimeout, type Handler, type RequestContext, type StudioCore } from './context.js'
 
@@ -175,6 +176,9 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
       case 'calendar':
         // Read only: approved weeks the owner shared and merged. No query parameter changes anything.
         return render(ctx, 200, calendarPage(v, brand, flashValue))
+      case 'publishing':
+        // Read only: the gallery is counts measured at sync time; nothing here exports, renders a file or writes.
+        return render(ctx, 200, publishingPage(v, brand, flashValue))
       case 'history':
         return render(ctx, 200, pages.historyPage(v, brand, flashValue))
       case 'handoff':
