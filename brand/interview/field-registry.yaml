@@ -1732,6 +1732,67 @@ fields:
       - brand/generated/drafts/business-partnerships.md
     validator: non_empty
     related_ids: []
+  - id: business.model.segments
+    module: business-company
+    field_path: business.model.segments
+    label: Customer segments
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.model.segments
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.customer.primary_segment
+      - business.sales.buyer
+  - id: business.model.key_activities
+    module: business-company
+    field_path: business.model.key_activities
+    label: Key activities
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.model.key_activities
+    documents:
+      - brand/generated/drafts/business-company.md
+    validator: structured
+    related_ids:
+      - business.ops.sop
+      - business.product.mvp
+  - id: business.model.key_resources
+    module: business-company
+    field_path: business.model.key_resources
+    label: Key resources
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.model.key_resources
+    documents:
+      - brand/generated/drafts/business-company.md
+    validator: structured
+    related_ids:
+      - business.ops.roles
+      - business.engineering.stack
+  - id: business.model.cost_items
+    module: business-company
+    field_path: business.model.cost_items
+    label: Cost items
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.model.cost_items
+    documents:
+      - brand/generated/drafts/business-company.md
+    validator: structured
+    related_ids:
+      - business.finance.costs
+      - business.finance.economics_note
   - id: business.marketing.objective
     module: business-marketing
     field_path: business.marketing.objective

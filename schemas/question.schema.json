@@ -18,12 +18,22 @@
         "tr": { "type": "string", "minLength": 1 }
       }
     },
-    "question_type": { "enum": ["short_text", "long_text", "single_choice", "boolean", "number", "url", "color", "font", "logo_spec", "voice_pairs", "relationships"] },
+    "question_type": { "enum": ["short_text", "long_text", "single_choice", "boolean", "number", "url", "color", "font", "logo_spec", "voice_pairs", "relationships", "repeating_entity"] },
     "priority": { "enum": ["critical", "high", "medium", "low"] },
     "sensitivity": { "enum": ["public", "internal", "restricted"] },
     "approval_grant": { "enum": ["financial", "visual", "public_copy", "canonical"] },
     "publication_requires": { "type": "array", "items": { "enum": ["verified_evidence", "rights_permission"] }, "uniqueItems": true },
     "contact_field": { "type": "boolean" },
+    "entity": {
+      "type": "object",
+      "required": ["id_prefix", "max_items", "fields", "links"],
+      "properties": {
+        "id_prefix": { "type": "string", "pattern": "^[a-z]{2,8}$" },
+        "max_items": { "type": "integer", "minimum": 1 },
+        "fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "links": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "related_outputs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "depends_on": { "type": "array", "items": { "type": "string" } },
     "why_it_matters": { "type": "string", "minLength": 1 }

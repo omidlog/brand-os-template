@@ -11,6 +11,7 @@ import { publicationBlockers, readEvidence, reviewEvidence as reviewEvidenceReco
 import { privateDataRefusal } from './personal-privacy.js'
 import { readPublicationPolicy } from './publication.js'
 import { isStructuredType, normalizeStructured } from './structured.js'
+import { entitySpec, normalizeEntityAnswer } from './entities.js'
 import type { AnswerRecord, Authority, FieldQuestion, ProposalState, SourceType, Status } from './types.js'
 
 /**
@@ -739,6 +740,8 @@ export function isPersonalQuestion(question: Pick<FieldQuestion, 'id'>): boolean
 export function normalizeAnswer(
   question: FieldQuestion,
   rawValue: string,
+  /** The current stored value. Repeating-entity lines use it to keep item ids stable; other types ignore it. */
+  previous: unknown = null,
 ): { ok: true; value: string | number | boolean } | { ok: false; message: string } {
   const value = rawValue.trim()
   if (!value) return { ok: false, message: 'Empty answer. Use unknown, skip, or decide later.' }
@@ -751,6 +754,11 @@ export function normalizeAnswer(
     const word = booleanWord(value)
     if (word) return { ok: true, value: word }
     return { ok: false, message: 'Answer yes or no. Or say unknown.' }
+  }
+  if (question.question_type === 'repeating_entity') {
+    const spec = entitySpec(question.id)
+    if (!spec) return { ok: false, message: `${question.id} has no item definition in this engine version. Nothing was recorded.` }
+    return normalizeEntityAnswer(spec, value, previous)
   }
   if (isStructuredType(question.question_type)) return normalizeStructured(question.question_type, value)
   if (question.question_type === 'single_choice') {

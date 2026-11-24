@@ -662,6 +662,54 @@
 .vz-cmp-plate > .vz-cmp-scroll { margin-inline-start: 0; }
 .vz-cmp .vz-cmp-table { min-inline-size: 920px; }
 
+/* ---- Visual V3.1: list items on the canvas, links panel, legacy text ---------------------------------------- */
+.vz-items { margin: 0 0 8px; padding: 0; list-style: none; counter-reset: vz-item; display: flex; flex-direction: column; gap: 6px; }
+.vz-item { counter-increment: vz-item; display: block; padding-block-end: 6px; border-block-end: 1px solid var(--vz-rule); line-height: 1.4; }
+.vz-item:last-child { border-block-end: 0; padding-block-end: 0; }
+.vz-item-name { font-weight: 600; overflow-wrap: anywhere; }
+.vz-item-name::before { content: counter(vz-item, decimal-leading-zero) "\2002"; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--vz-text-3); }
+.vz-item-tag { display: inline-block; margin-inline-start: 4px; padding: 0 5px; border: 1px solid var(--vz-rule); border-radius: 999px; font-size: 10px; line-height: 1.5; letter-spacing: 0.02em; color: var(--vz-text-2); white-space: nowrap; vertical-align: 1px; }
+.vz-item-detail { display: block; font-size: 12px; line-height: 1.45; color: var(--vz-text-2); overflow-wrap: anywhere; text-wrap: pretty; }
+.vz-item-links { display: block; font-size: 11px; color: var(--vz-text-3); }
+.vz-item-links-k { font-variant-caps: all-small-caps; letter-spacing: 0.04em; }
+.vz-item-link { color: var(--vz-text-2); }
+.vz-item-link--hidden { font-style: italic; color: var(--vz-text-3); }
+[dir="rtl"] .vz-item-link--hidden { font-style: normal; }
+.vz-entry--draft .vz-item-name, .vz-entry--suggestion .vz-item-name { font-style: italic; font-weight: 500; }
+[dir="rtl"] .vz-entry--draft .vz-item-name, [dir="rtl"] .vz-entry--suggestion .vz-item-name { font-style: normal; }
+.vz-legacy { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 11px; color: var(--vz-text-3); }
+.vz-legacy svg { width: 13px; height: 13px; }
+.vz-legacy-hint { flex-basis: 100%; }
+.vz-links-table .vz-link--unresolved td { color: var(--vz-text-3); }
+/* Print (A3 canvas page): lists stay compact so the nine zones keep to one page. */
+.vz-page .vz-items { gap: 1.2mm; margin-block-end: 1.2mm; }
+.vz-page .vz-item { padding-block-end: 1.2mm; line-height: 1.3; break-inside: avoid; }
+.vz-page .vz-item-tag { font-size: 6.6pt; padding: 0 1.2mm; }
+.vz-page .vz-item-detail { font-size: 7.4pt; line-height: 1.3; }
+.vz-page .vz-item-detail { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; line-clamp: 1; overflow: hidden; }
+/* Links are listed on page 2 (links panel); page 1 keeps the reading. */
+.vz-page .vz-item-links { display: none; }
+.vz-items-more { margin: 0 0 8px; font-size: 11px; font-style: italic; color: var(--vz-text-3); }
+[dir="rtl"] .vz-items-more { font-style: normal; }
+.vz-page .vz-items-more { font-size: 7pt; margin-block-end: 1.2mm; }
+/* The two bottom zones span half the sheet each: in print their entries run in two columns, so a list plus the
+   existing answers keep the canvas on one A3 page. */
+.vz-page .vz-zone--cost_structure .vz-entries, .vz-page .vz-zone--revenue_streams .vz-entries { display: block; columns: 2; column-gap: 6mm; }
+.vz-page .vz-zone--cost_structure .vz-entry, .vz-page .vz-zone--revenue_streams .vz-entry { break-inside: avoid; margin-block-end: 2.8mm; }
+/* Sources page (print): four list questions add rows; tighter rows keep sources and links on page 2. */
+.vz-page--sources .vz-table { line-height: 1.22; }
+.vz-page--sources .vz-table th, .vz-page--sources .vz-table td { padding: 0.6mm 1.4mm; }
+.vz-page--sources .vz-side { gap: 4mm; }
+.vz-page--sources .vz-side .vz-panel { padding: 3mm 4mm; }
+/* V3.1: the owner's next questions sit under the sources table (left column), leaving the side for summary,
+   framework and links. */
+.vz-page--sources .vz-main { display: flex; flex-direction: column; gap: 4mm; }
+.vz-page--sources .vz-next-panel { break-inside: avoid; }
+.vz-page--sources .vz-next-all { flex-direction: row; flex-wrap: wrap; gap: 1.2mm 6mm; }
+.vz-page--sources .vz-table tbody th > .vz-zone-ref, .vz-page--sources .vz-table tbody th > .vz-entry-label { display: inline; }
+.vz-page--sources .vz-table tbody th > .vz-zone-ref::after { content: " · "; }
+.vz-page--sources .vz-table tbody th > .vz-zone-ref:empty::after { content: none; }
+
 /* Visual V2.4 (R3): the Brand Book editorial chapter reader. Chapters reuse the opener, plate and details styles. */
 .vz-bk-chapter { display: flex; flex-direction: column; gap: 32px; padding-block: 72px 48px; border-block-end: 1px solid var(--vz-rule); scroll-margin-block-start: 24px; }
 .vz-bk-opener { display: grid; grid-template-columns: 120px minmax(0, 1fr); grid-template-areas: "num title" ". lead" ". counts"; column-gap: 32px; row-gap: 14px; align-items: baseline; padding-block-start: 18px; border-block-start: 2px solid var(--vz-text); }

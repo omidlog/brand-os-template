@@ -34,6 +34,8 @@ export const QUESTION_TYPES = [
   'voice_pairs',
   // Personal Brand OS: a person's organizations with an explicit relation, dates and ownership.
   'relationships',
+  // Visual V3.1 (D3): a list of items with their own fields, stable ids and links; see entities.ts.
+  'repeating_entity',
 ] as const
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 
@@ -103,6 +105,8 @@ export interface FieldQuestion {
   publication_requires?: PublicationRequirement[]
   /** A professional contact field. Email addresses and contact URLs are expected here and nowhere else in the personal modules. */
   contact_field?: boolean
+  /** `repeating_entity` only: the item shape (entities.ts `ENTITY_SPECS` is the source; this is its summary). */
+  entity?: { id_prefix: string; max_items: number; fields: string[]; links: string[] }
   language: Array<'en' | 'fa' | 'tr'>
   source_types: SourceType[]
   related_outputs: string[]

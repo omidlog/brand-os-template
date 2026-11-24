@@ -16,13 +16,14 @@ const HELP = `brand:acceptance (--demo | --root <brand checkout>) --out <empty d
 
   --demo        Synthetic fixture brand (a temporary directory, removed afterwards).
   --root <dir>  An owner's brand checkout. Read only: the harness works on a temporary
-                copy of brand/ and reports whether the checkout changed.
+                copy of brand/; a run that changed the checkout fails.
   --out <dir>   New or empty directory outside any brand/ folder. Receives the drafted
                 posts and acceptance-report.json (ids, counts, codes and checksums only).
   --lang        Language of the printed summary (default en). The JSON is language-neutral.
 
 Every case is PASS, FAIL or NOT_TESTED with evidence; nothing untested is reported as a pass.
-Exit 0 when no case failed, 4 when a case failed, 2 on a usage error.
+Exit 0 when nothing failed, 4 when a case failed or the checkout changed, 2 on a usage
+error, 1 when the run could not start or stopped.
 The harness calls no model and no network, and publishes, schedules, spends and deploys nothing.`
 
 function usage(message: string): never {
@@ -61,7 +62,7 @@ async function main(): Promise<void> {
   const file = path.join(path.resolve(values.out), 'acceptance-report.json')
   fs.writeFileSync(file, `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' })
   console.log(values.json ? JSON.stringify(report, null, 2) : renderReport(report, locale))
-  process.exitCode = report.totals.FAIL > 0 ? 4 : 0
+  process.exitCode = report.verdict === 'FAIL' ? 4 : 0
 }
 
 main().catch((error: unknown) => {
