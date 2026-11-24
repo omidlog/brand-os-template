@@ -19,6 +19,31 @@ export function bankName(question: FieldQuestion): string {
   return 'brand.yaml'
 }
 
+/** The field-registry row of a question, as the starter workspace writes it. */
+export function fieldRegistryEntry(question: FieldQuestion) {
+  return {
+    id: question.field_path,
+    module: question.module,
+    field_path: question.field_path,
+    label: question.label,
+    required: question.required,
+    weight: question.weight,
+    sensitivity: question.sensitivity,
+    question_ids: [question.id],
+    documents: question.related_outputs,
+    validator: question.completion_rule,
+    related_ids: question.related_ids,
+  }
+}
+
+/** The knowledge-graph edges a question defines, as the starter workspace writes them. */
+export function knowledgeGraphEdges(question: FieldQuestion): Array<{ from: string; to: string; relation: string }> {
+  return [
+    ...question.depends_on.map((dependency) => ({ from: dependency, to: question.id, relation: 'prerequisite' })),
+    ...question.related_ids.map((related) => ({ from: question.id, to: related, relation: 'related' })),
+  ]
+}
+
 /**
  * Adds every question the template defines but the brand's question bank lacks (a question a later template version
  * introduced, such as `brand.color.semantic_map`). `brand/**` is brand-owned, so a template update never rewrites the
@@ -26,6 +51,7 @@ export function bankName(question: FieldQuestion): string {
  * answers, facts and approvals are untouched. Returns the bank files it changed. Idempotent.
  */
 export function addMissingQuestions(root: string): string[] {
+  // Also adds the field-registry rows and knowledge-graph edges the template defines and the brand's copies lack.
   const dir = path.join(root, 'brand', 'interview', 'question-bank')
   if (!fs.existsSync(dir)) return []
   const files = fs.readdirSync(dir).filter((entry) => entry.endsWith('.yaml')).sort()
@@ -44,6 +70,35 @@ export function addMissingQuestions(root: string): string[] {
     const merged = [...(bank.questions ?? []), ...questions].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
     writeYaml(file, { ...bank, questions: merged })
     touched.push(path.relative(root, file).split(path.sep).join('/'))
+  }
+  // The field registry and the knowledge graph are brand-owned copies too: add the rows and edges the template defines.
+  const template = allQuestions()
+  const registryFile = path.join(root, 'brand', 'interview', 'field-registry.yaml')
+  if (fs.existsSync(registryFile)) {
+    const registry = readYaml<{ schema_version?: number; fields?: Array<{ id: string }> }>(registryFile)
+    const fields = registry.fields ?? []
+    const known = new Set(fields.map((field) => field.id))
+    const added = template.filter((question) => !known.has(question.field_path)).map(fieldRegistryEntry)
+    if (added.length) {
+      writeYaml(registryFile, { ...registry, fields: [...fields, ...added] })
+      touched.push('brand/interview/field-registry.yaml')
+    }
+  }
+  const graphFile = path.join(root, 'brand', 'interview', 'knowledge-graph.yaml')
+  if (fs.existsSync(graphFile)) {
+    const graph = readYaml<{ schema_version?: number; edges?: Array<{ from: string; to: string; relation: string }> }>(graphFile)
+    const edges = graph.edges ?? []
+    const key = (edge: { from: string; to: string; relation: string }) => `${edge.from}>${edge.to}>${edge.relation}`
+    const known = new Set(edges.map(key))
+    const added = template.flatMap(knowledgeGraphEdges).filter((edge) => {
+      if (known.has(key(edge))) return false
+      known.add(key(edge))
+      return true
+    })
+    if (added.length) {
+      writeYaml(graphFile, { ...graph, edges: [...edges, ...added] })
+      touched.push('brand/interview/knowledge-graph.yaml')
+    }
   }
   return touched
 }
