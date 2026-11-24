@@ -41,6 +41,8 @@ export interface FrameworkRef {
   license_status: string
   permitted_claim: PermittedClaim
   verified_on: string | null
+  /** Who checked the source on `verified_on` (a name or role), or `pending` when nobody has (V5.1). */
+  reviewer: string
   /** Plain statement of what this rendering is and is not, printed next to the visual. */
   usage_note: string
 }

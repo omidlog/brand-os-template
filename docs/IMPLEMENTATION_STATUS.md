@@ -573,3 +573,13 @@ Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas).
 | Public edition | Done (empty by design) | The lists are internal, so the public edition shows designed "Not published" states. Making any of them public is an owner question. |
 | Per-segment canvases, Task Context, Coach | Not started | One canvas for all segments (segment names on items). Task Context packs and the Coach do not read the V3.2 lists yet. |
 | Full Business Report chapter | Not started | The V4.2 Business Report does not include SWOT / TOWS or the canvas yet. |
+
+## Visual V5.1: standards verification, module audit, cross-brand pilot, release gate (2026-11-24)
+
+- **Done:** the framework registry has a `reviewer` field (claim rules: date and named reviewer together, never in the future). `npm run visual:audit` scores every visual module 0–5 from real checks (rubric in `docs-internal/VISUAL.md`; JSON, table or Markdown; en/fa/tr). A cross-brand pilot runs on two synthetic brands (`--pilot`, `tests/visual-audit.test.ts`). `npm run visual:gate` checks public modules ≥ 4 and registry validity, and (`--release`) cited external standards verified. It has an owner-only override with an expiry and runs in the template's `validate` CI job. Scores today: every present module 4/5; V3.x modules pending.
+- **Not done:** no standard has been verified by a person. BMC, WCAG-CONTRAST, BRAND-IDENTITY-GUIDE and MASCOT-MODEL-SHEET are `verified_on: null`, `reviewer: pending`, so `visual:gate -- --release` fails on BMC and WCAG-CONTRAST until the owner checks them. No module is at 5: the mascot atlas, competitor matrix, positioning map and Publishing gallery have no reference screenshots, and the other modules wait on standards. The Studio framework panel does not show the reviewer yet.
+
+## Visual V5.1: main merge and V3.2/V3.3 scoring (2026-11-24)
+
+- **Done:** `origin/main` (V3.2, V3.3, owner decisions) merged into `feat/visual-v5-1`. The audit scores the five new modules from real checks: `swot_tows`, `value_proposition`, `customer_journey`, `sostac_overview`, `okr_tree`, all internal, all 4/5 (next: reference screenshots, then standards). Their Studio public editions are inspected for drafts and badges. `PENDING_VISUAL_MODULES` is empty; the mechanism stays for later slices. `tests/visual-audit.test.ts`.
+- **Not done:** no reference screenshots for the V3.2/V3.3 pages; `SWOT`, `TOWS`, `VPC`, `CUSTOMER-JOURNEY-MAP`, `SOSTAC` and `OKR` are `reviewer: pending`, so `visual:gate -- --release` now also lists them. The cross-brand pilot does not build the V3.2/V3.3 documents yet.

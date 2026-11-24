@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Visual V5.1: standards verification, module audit, cross-brand pilot, release gate
+
+### Added
+
+- `npm run visual:audit` (`scripts/visual-audit.ts`, core `visual/audit.ts`): per-module visual audit on the 0–5 rubric (defined in `docs-internal/VISUAL.md`), computed from checks on the checkout. Output: table, `--md` or `--json`, en/fa/tr (`--lang`). V3.x modules not yet built show as pending.
+- `npm run visual:gate [-- --release]`: release gate. Fails when a public module scores below 4, the registry or policy is invalid, or (release mode) a cited external standard has no `verified_on` and reviewer. Owner-only, expiring overrides go in `visual/release-gate.json`. Runs in the template's `validate` CI job with `--pilot`.
+- Cross-brand pilot (`visual/pilot.ts`, `visual/fixtures-pilot.ts`): two synthetic brands built through the normal engine path prove the visual modules are brand-agnostic.
+- Tests: `visual-audit`.
+
+### Changed
+
+- Framework registry: required `reviewer` field (`"pending"` until a person checks the source). A `verified_on` without a named reviewer, a reviewer without a date, or a future date is refused. The V5.1 pass verified nothing that had not been checked: every entry stays pending.
+- After merging main (V3.2, V3.3): the audit scores `swot_tows`, `value_proposition`, `customer_journey`, `sostac_overview` and `okr_tree` (all internal, 4/5) instead of listing them as pending; the `strategy` and `plan` catalogs are checked; an internal module that Studio still renders in a public edition has that edition inspected for drafts and badges. The V3.2/V3.3 registry entries (`SWOT`, `TOWS`, `VPC`, `CUSTOMER-JOURNEY-MAP`, `SOSTAC`, `OKR`) gain `reviewer: "pending"` and are listed as release blockers until checked. Tests: `visual-audit` (V3.2/V3.3 scoring, a leaky public edition fails, pending mechanism).
+
 ## Unreleased — Visual V3.3: Customer journey swimlane, SOSTAC overview, OKR tree
 
 ### Added
