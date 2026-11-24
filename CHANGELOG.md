@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Visual V3.3: Customer journey swimlane, SOSTAC overview, OKR tree
+
+### Added
+
+- Three optional list questions on the V3.1 `repeating_entity` model (`packages/brand-core/src/entities-plan.ts`): `business.marketing.journey_stages` (stage name, customer goal, touchpoints, actions, emotion on a five-point scale, pain points, opportunities, evidence; links to customer segments), `business.goals.objectives` (name, why, period) and `business.goals.key_results` (target, unit and source required; current, baseline and measured-on optional; one objective link). Question bank, field registry and module records regenerated (additions only).
+- `entities.ts`: `number` and `date` field kinds (Persian digits accepted, stored canonical), a per-field refusal rule and `max_links`. Key-result units refuse currencies in any script: money stays in the restricted finance answers.
+- Visual documents `customer_journey`, `sostac_overview`, `okr_tree` (`visual/plan.ts`, blocks in `visual/model-plan.ts`), built through `itemFor` like the canvas: labelled drafts, named gaps, public edition approved and published only. Progress is drawn only from a recorded baseline; key results whose objective is not visible are listed apart, never re-parented. Framework registry: `CUSTOMER-JOURNEY-MAP`, `SOSTAC` (registered trade mark of PR Smith), `OKR`, all `informed_by`.
+- Studio (GET only): `/market/customer-journey`, `/strategy/sostac`, `/strategy/okrs`, each with an A3 landscape print view (`/print[?edition=public]`). The swimlane (a real table with an emotion curve) and the OKR tree follow the page direction, so Persian mirrors them; SOSTAC keeps its canonical stage order in the reading direction. Ids only in the details disclosure and the internal print appendix; Persian folios, versions and counters in Persian digits. Designed empty states. en/fa/tr text (`visual/i18n-plan.ts`), nav entries, ILLUSTRATIVE fixtures in `npm run visual:golden`.
+- Tests: `visual-plan` (validator, documents, public edition, legacy text, fixtures, catalogs), `studio-visual-plan` (pages, print, public edition, no ids in the main view, fa/tr, empty states, cache rebuild).
+
 ## Unreleased — Visual V3.1: repeating_entity question type and structured BMC (D3)
 
 ### Added
