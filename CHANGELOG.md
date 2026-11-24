@@ -12,6 +12,7 @@
 ### Changed
 
 - Framework registry: required `reviewer` field (`"pending"` until a person checks the source). A `verified_on` without a named reviewer, a reviewer without a date, or a future date is refused. The V5.1 pass verified nothing that had not been checked: every entry stays pending.
+- After merging main (V3.2, V3.3): the audit scores `swot_tows`, `value_proposition`, `customer_journey`, `sostac_overview` and `okr_tree` (all internal, 4/5) instead of listing them as pending; the `strategy` and `plan` catalogs are checked; an internal module that Studio still renders in a public edition has that edition inspected for drafts and badges. The V3.2/V3.3 registry entries (`SWOT`, `TOWS`, `VPC`, `CUSTOMER-JOURNEY-MAP`, `SOSTAC`, `OKR`) gain `reviewer: "pending"` and are listed as release blockers until checked. Tests: `visual-audit` (V3.2/V3.3 scoring, a leaky public edition fails, pending mechanism).
 
 ## Unreleased — Visual V3.3: Customer journey swimlane, SOSTAC overview, OKR tree
 

@@ -27,8 +27,8 @@ import registryJson from '../packages/brand-core/src/visual/frameworks.json' wit
 
 /**
  * Visual V5.1: standards verification, per-module audit on the 0–5 rubric, cross-brand pilot and release gate.
- * Scores come from checks on the checkout; nothing passes by default and V3.x modules in flight are pending, never a
- * failure.
+ * Scores come from checks on the checkout; nothing passes by default and modules still in flight are pending, never a
+ * failure. V3.2 (SWOT/TOWS, Value Proposition Canvas) and V3.3 (journey, SOSTAC, OKR tree) are scored.
  */
 const ROOT = path.resolve(import.meta.dirname, '..')
 const registry = registryJson as unknown as FrameworkRegistry
@@ -82,15 +82,62 @@ test('audit: level 5 needs verified standards; an unverified cited entry keeps a
   }
 })
 
-test('audit: V3.x modules are pending when absent and never part of the gate failures', () => {
+test('audit: V3.2 and V3.3 modules are scored like the others, cite their own frameworks, and are internal', () => {
   const result = report()
-  for (const pending of PENDING_VISUAL_MODULES) {
-    const module = result.modules.find((m) => m.id === pending.id)
-    if (VISUAL_MODULES.some((spec) => spec.id === pending.id)) continue
-    assert.ok(module && ['pending', 'unregistered'].includes(module.status) && module.score === null, pending.id)
+  const expected: Record<string, string[]> = {
+    swot_tows: ['SWOT', 'TOWS'],
+    value_proposition: ['VPC'],
+    customer_journey: ['CUSTOMER-JOURNEY-MAP'],
+    sostac_overview: ['SOSTAC'],
+    okr_tree: ['OKR'],
   }
+  for (const [id, frameworks] of Object.entries(expected)) {
+    const module = result.modules.find((m) => m.id === id)
+    assert.ok(module, `${id} is declared`)
+    assert.equal(module.status, 'present', id)
+    assert.equal(module.audience, 'internal', `${id}: the V4.1 public profile does not permit it`)
+    assert.ok(module.score !== null && module.score >= 4, `${id}: ${module.score}`)
+    assert.deepEqual(module.cites.map((cite) => cite.framework_id), frameworks, `${id}: cites`)
+    const redaction = module.checks.find((check) => check.id === 'redaction')!
+    assert.equal(redaction.status, 'pass', `${id}: ${redaction.evidence}`)
+    assert.match(redaction.evidence, /public edition carries no draft/, `${id}: its Studio public edition is inspected, not waved through`)
+    for (const check of ['print', 'rtl', 'empty_state'] as const) assert.equal(module.checks.find((c) => c.id === check)!.status, 'pass', `${id}/${check}`)
+  }
+  assert.deepEqual(PENDING_VISUAL_MODULES, [], 'no V3.x module is pending any more')
+  assert.deepEqual(result.modules.filter((m) => m.status !== 'present'), [])
   const gate = evaluateGate(result, policy, { release: false, today: TODAY })
-  for (const failure of gate.failures) for (const pending of PENDING_VISUAL_MODULES) assert.equal(failure.includes(pending.id), false)
+  assert.equal(gate.ok, true)
+  for (const id of ['SWOT', 'TOWS', 'VPC', 'CUSTOMER-JOURNEY-MAP', 'SOSTAC', 'OKR']) assert.match(gate.release_blockers.join('\n'), new RegExp(`^${id}:`, 'm'), `${id}: unverified, would stop a release`)
+})
+
+test('audit: an internal module whose public edition shows a draft fails redaction and drops below 4', () => {
+  const spec = VISUAL_MODULES.find((m) => m.id === 'okr_tree')!
+  const leaky: VisualModuleSpec = {
+    ...spec,
+    id: 'leaky_okr_tree',
+    public_fixture: () => [{ id: 'kr-1', state: 'draft', value: 'DRAFT-KR', badges: ['draft'] }],
+  }
+  const module = auditVisualModules({ root: ROOT, modules: [leaky], pending: [] }).modules[0]!
+  const redaction = module.checks.find((check) => check.id === 'redaction')!
+  assert.equal(redaction.status, 'fail')
+  assert.match(redaction.evidence, /kr-1 \(draft\) carries a value/)
+  assert.match(redaction.evidence, /draft or internal badge in public/)
+  assert.equal(module.score, 3)
+  assert.equal(module.next, 'redaction')
+})
+
+test('audit: a module still in flight is pending (or "landed, not yet scored") and never part of the gate failures', () => {
+  const pending = [
+    { id: 'future_module', title: 'Future module', slice: 'V9.9', probe: /no-such-visual-source-token-xyz/ },
+    { id: 'landed_module', title: 'Landed module', slice: 'V9.9', probe: /buildSwotTows/ },
+  ]
+  const result = auditVisualModules({ root: ROOT, pending })
+  assert.equal(result.modules.find((m) => m.id === 'future_module')!.status, 'pending')
+  assert.equal(result.modules.find((m) => m.id === 'landed_module')!.status, 'unregistered')
+  const gate = evaluateGate(result, policy, { release: false, today: TODAY })
+  assert.equal(gate.ok, true)
+  assert.deepEqual(gate.pending, ['future_module (V9.9)'])
+  assert.match(gate.notes.join(), /landed_module \(V9\.9\) seems to have landed/)
 })
 
 test('audit: a missing test file, builder or catalog fails its check; nothing passes by default', () => {

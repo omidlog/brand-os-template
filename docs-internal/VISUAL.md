@@ -122,7 +122,7 @@ Core: `packages/brand-core/src/visual/plan.ts` (builders), `model-plan.ts` (bloc
 
 ## Module audit, standards verification, cross-brand pilot and release gate (V5.1)
 
-Core: `visual/audit.ts` (module catalog, rubric, checks, gate), `visual/i18n-audit.ts` (en/fa/tr report text), `visual/pilot.ts` with `visual/fixtures-pilot.ts` (two synthetic brands), policy `visual/release-gate.json`. Command: `scripts/visual-audit.ts`. Tests: `tests/visual-audit.test.ts`. V3.1 (structured BMC list zones) merged inside the Business Model Canvas, so it is scored there, its `i18n-entities.ts` catalog included.
+Core: `visual/audit.ts` (module catalog, rubric, checks, gate), `visual/i18n-audit.ts` (en/fa/tr report text), `visual/pilot.ts` with `visual/fixtures-pilot.ts` (two synthetic brands), policy `visual/release-gate.json`. Command: `scripts/visual-audit.ts`. Tests: `tests/visual-audit.test.ts`. V3.1 (structured BMC list zones) merged inside the Business Model Canvas, so it is scored there, its `i18n-entities.ts` catalog included. V3.2 (`swot_tows`, `value_proposition`) and V3.3 (`customer_journey`, `sostac_overview`, `okr_tree`) are scored as modules of their own.
 
 ```
 npm run visual:audit [-- --lang en|fa|tr] [--json | --md] [--out file] [--pilot]
@@ -144,7 +144,9 @@ A module scores the highest level whose checks, and every lower level's checks, 
 | 4 | Publication-safe | `print`: a test exercises the print view (n/a for a screen such as the Publishing gallery); `rtl`: a test asserts the Persian page is right-to-left; `redaction`: public modules: the public fixture in en/fa/tr carries no value in a draft, withheld or other non-approved state, no draft or internal badge, no fixture sentinel, and the V4.1 redaction test builds this module's public edition; internal modules: the public profile refuses the document type |
 | 5 | Release-grade | `visual_qa`: en and fa reference screenshots in `tests/visual-baselines` used by `tests/studio-visual-qa.test.ts`; `standards`: every framework the module's output cites is `verified` in the registry (n/a when it cites none) |
 
-Public modules are the document types the V4.1 `public` profile permits (Brand Book, Visual identity, Business Model Canvas, Mascot atlas). V3.x modules not in the catalog yet (SWOT/TOWS, value fit, customer journey, SOSTAC, OKR tree) are listed as **pending** and never fail anything; when a probe finds their code in `visual/` before they are declared, the report says "landed, not yet scored". A new module is added to `VISUAL_MODULES` with its builder, test files, catalogs, fixtures and evidence patterns.
+Public modules are the document types the V4.1 `public` profile permits (Brand Book, Visual identity, Business Model Canvas, Mascot atlas). The V3.2 and V3.3 modules are **internal**: SWOT/TOWS and the Value Proposition Canvas have no publishing document type, the journey map and SOSTAC overview are views of the marketing plan, and the OKR tree of the business plan, which the public profile refuses. They are scored and reported, not gated. Studio still renders a public edition of each (`/print?edition=public`), so their `redaction` check inspects that edition's fixture in en/fa/tr (no value in a non-approved state, no draft or internal badge) and requires the test that builds it; "the public profile refuses it" alone is not enough. None has reference screenshots yet, and SWOT, TOWS, VPC, CUSTOMER-JOURNEY-MAP, SOSTAC and OKR are unverified, so all five sit at 4.
+
+Modules planned by later slices go in `PENDING_VISUAL_MODULES` (empty today). They are listed as **pending** and never fail anything; when a probe finds their code in `visual/` before they are declared, the report says "landed, not yet scored". A new module is added to `VISUAL_MODULES` with its builder, test files, catalogs, fixtures and evidence patterns.
 
 ### Standards verification
 

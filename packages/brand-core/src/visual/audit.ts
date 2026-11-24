@@ -5,6 +5,8 @@ import { illustrativeCompetitorComparison } from './fixtures-competitors.js'
 import { FIXTURE_DRAFT_SENTINEL, FIXTURE_RESTRICTED_SENTINEL, illustrativeBook } from './fixtures-full-book.js'
 import { illustrativeVisualIdentity } from './fixtures-identity.js'
 import { illustrativeMascotAtlas } from './fixtures-mascot.js'
+import { illustrativeJourney, illustrativeOkr, illustrativeSostac } from './fixtures-plan.js'
+import { illustrativeSwotTows, illustrativeValueProposition } from './fixtures-strategy.js'
 import { illustrativeBusinessModelCanvas } from './fixtures.js'
 import registryJson from './frameworks.json' with { type: 'json' }
 import { BOOK_TEXT } from './i18n-book.js'
@@ -13,7 +15,9 @@ import { ENTITY_TEXT } from './i18n-entities.js'
 import { FULL_BOOK_TEXT } from './i18n-full-book.js'
 import { IDENTITY_TEXT } from './i18n-identity.js'
 import { MASCOT_TEXT } from './i18n-mascot.js'
+import { PLAN_TEXT } from './i18n-plan.js'
 import { POSITIONING_TEXT } from './i18n-positioning.js'
+import { STRATEGY_TEXT } from './i18n-strategy.js'
 import { VISUAL_LANGS, visualCatalog, type VisualLang } from './i18n.js'
 import type { FrameworkRef } from './model.js'
 import { profilePermits, type PublishingDocumentType } from './publishing.js'
@@ -63,11 +67,14 @@ export interface VisualModuleSpec {
   catalogs: string[]
   /** Designed empty or awaiting state: a fixture that is inspected for gaps, or a test that asserts one. */
   empty: (() => unknown) | TestEvidence
-  /** Public edition fixture, inspected for values and draft marks that must not be there. */
+  /**
+   * Public edition fixture, inspected for values and draft marks that must not be there. Internal modules that still
+   * render a public edition in Studio (V3.2, V3.3) declare one too, and it is inspected the same way.
+   */
   public_fixture?: () => unknown
   /** Values that must never appear in the public edition. */
   sentinels?: string[]
-  /** The redaction test that builds this module's public edition (public modules). */
+  /** The test that builds this module's public edition (public modules, and internal modules with a public fixture). */
   redaction_test?: TestEvidence
   /** Print view (or `null`: the module is a screen, not a document). */
   print: TestEvidence | null
@@ -100,8 +107,12 @@ export function coreCatalogs(): CatalogSet {
     mascot: MASCOT_TEXT,
     competitor: COMPETITOR_TEXT,
     positioning: POSITIONING_TEXT,
+    strategy: STRATEGY_TEXT,
+    plan: PLAN_TEXT,
   }
 }
+
+const allLangs = (build: (lang: VisualLang) => unknown) => () => VISUAL_LANGS.map(build)
 
 const positioningOnly = (variant: 'complete' | 'no_axes') => illustrativeCompetitorComparison(variant).blocks.filter((block) => block.type === 'positioning_map')
 
@@ -236,17 +247,97 @@ export const VISUAL_MODULES: readonly VisualModuleSpec[] = [
     baselines: null,
     cites: () => null,
   },
+  {
+    id: 'swot_tows',
+    title: 'SWOT / TOWS',
+    slice: 'V3.2',
+    // No publishing document type: the lists are internal; Studio still renders a public edition of designed gaps.
+    builder: { file: 'packages/brand-core/src/visual/strategy-lists.ts', export: 'buildSwotTows' },
+    core_tests: ['tests/visual-strategy.test.ts'],
+    studio_tests: ['tests/studio-visual-strategy.test.ts'],
+    catalogs: ['visual', 'strategy'],
+    empty: { file: 'tests/studio-visual-strategy.test.ts', pattern: /a designed empty quadrant/ },
+    public_fixture: allLangs((lang) => illustrativeSwotTows(lang, 'public')),
+    redaction_test: { file: 'tests/visual-strategy.test.ts', pattern: /public shows nothing unpublished/ },
+    print: { file: 'tests/studio-visual-strategy.test.ts', pattern: /swot-tows\/print/ },
+    rtl: { file: 'tests/studio-visual-strategy.test.ts', pattern: /text inside the quadrants is right-to-left/ },
+    baselines: null,
+    cites: () => illustrativeSwotTows('en', 'internal'),
+  },
+  {
+    id: 'value_proposition',
+    title: 'Value Proposition Canvas',
+    slice: 'V3.2',
+    builder: { file: 'packages/brand-core/src/visual/strategy-lists.ts', export: 'buildValueProposition' },
+    core_tests: ['tests/visual-strategy.test.ts'],
+    studio_tests: ['tests/studio-visual-strategy.test.ts'],
+    catalogs: ['visual', 'strategy'],
+    empty: { file: 'tests/studio-visual-strategy.test.ts', pattern: /Public edition: these lists are internal[\s\S]*value-proposition[\s\S]*Not published/ },
+    public_fixture: allLangs((lang) => illustrativeValueProposition(lang, 'public')),
+    redaction_test: { file: 'tests/visual-strategy.test.ts', pattern: /the public edition drops internal sources/ },
+    print: { file: 'tests/studio-visual-strategy.test.ts', pattern: /value-proposition\/print/ },
+    rtl: { file: 'tests/studio-visual-strategy.test.ts', pattern: /faVpc\.text, \/<html lang="fa" dir="rtl">/ },
+    baselines: null,
+    cites: () => illustrativeValueProposition('en', 'internal'),
+  },
+  {
+    id: 'customer_journey',
+    title: 'Customer journey swimlane',
+    slice: 'V3.3',
+    document_type: 'marketing_plan',
+    builder: { file: 'packages/brand-core/src/visual/plan.ts', export: 'journeyDocument' },
+    core_tests: ['tests/visual-plan.test.ts'],
+    studio_tests: ['tests/studio-visual-plan.test.ts'],
+    catalogs: ['visual', 'plan'],
+    empty: () => illustrativeJourney('en', 'internal', 'empty'),
+    public_fixture: allLangs((lang) => illustrativeJourney(lang, 'public')),
+    redaction_test: { file: 'tests/visual-plan.test.ts', pattern: /public edition: drafts never appear/ },
+    print: { file: 'tests/studio-visual-plan.test.ts', pattern: /'market\/customer-journey'[\s\S]*\$\{pathname\}\/print/ },
+    rtl: { file: 'tests/studio-visual-plan.test.ts', pattern: /the swimlane is not forced left-to-right: it mirrors/ },
+    baselines: null,
+    cites: () => illustrativeJourney('en', 'internal'),
+  },
+  {
+    id: 'sostac_overview',
+    title: 'SOSTAC overview',
+    slice: 'V3.3',
+    document_type: 'marketing_plan',
+    builder: { file: 'packages/brand-core/src/visual/plan.ts', export: 'sostacDocument' },
+    core_tests: ['tests/visual-plan.test.ts'],
+    studio_tests: ['tests/studio-visual-plan.test.ts'],
+    catalogs: ['visual', 'plan'],
+    empty: () => illustrativeSostac('en', 'internal', 'empty'),
+    public_fixture: allLangs((lang) => illustrativeSostac(lang, 'public')),
+    redaction_test: { file: 'tests/visual-plan.test.ts', pattern: /public edition: drafts never appear/ },
+    print: { file: 'tests/studio-visual-plan.test.ts', pattern: /strategy\/sostac\/print/ },
+    rtl: { file: 'tests/studio-visual-plan.test.ts', pattern: /faPrint\.text, \/<html lang="fa" dir="rtl">/ },
+    baselines: null,
+    cites: () => illustrativeSostac('en', 'internal'),
+  },
+  {
+    id: 'okr_tree',
+    title: 'OKR tree',
+    slice: 'V3.3',
+    document_type: 'business_plan',
+    builder: { file: 'packages/brand-core/src/visual/plan.ts', export: 'okrDocument' },
+    core_tests: ['tests/visual-plan.test.ts'],
+    studio_tests: ['tests/studio-visual-plan.test.ts'],
+    catalogs: ['visual', 'plan'],
+    empty: () => illustrativeOkr('en', 'internal', 'empty'),
+    public_fixture: allLangs((lang) => illustrativeOkr(lang, 'public')),
+    redaction_test: { file: 'tests/visual-plan.test.ts', pattern: /public edition: drafts never appear/ },
+    print: { file: 'tests/studio-visual-plan.test.ts', pattern: /strategy\/okrs\/print/ },
+    rtl: { file: 'tests/studio-visual-plan.test.ts', pattern: /the progress bar fills from the right in Persian/ },
+    baselines: null,
+    cites: () => illustrativeOkr('en', 'internal'),
+  },
 ]
 
 /**
- * V3.x modules in flight in other slices (V3.1, structured BMC, landed inside `business_model_canvas`). The probe scans `packages/brand-core/src/visual/*.ts` (not this file). */
-export const PENDING_VISUAL_MODULES: readonly PendingModuleSpec[] = [
-  { id: 'swot_tows', title: 'SWOT / TOWS', slice: 'V3.2', probe: /\bswot|\btows\b/i },
-  { id: 'value_fit', title: 'Value proposition fit', slice: 'V3.2', probe: /value[_-]?fit|value_proposition_canvas/i },
-  { id: 'customer_journey', title: 'Customer journey swimlane', slice: 'V3.3', probe: /customer[_-]?journey|journey[_-]?swimlane/i },
-  { id: 'sostac', title: 'SOSTAC overview', slice: 'V3.3', probe: /\bsostac/i },
-  { id: 'okr_tree', title: 'OKR tree', slice: 'V3.3', probe: /\bokr[_-]?tree|\bokr_/i },
-]
+ * Modules planned by other slices, listed as pending until they land. V3.1 (structured BMC) is scored inside
+ * `business_model_canvas`; V3.2 and V3.3 are scored above. The probe scans `packages/brand-core/src/visual/*.ts`.
+ */
+export const PENDING_VISUAL_MODULES: readonly PendingModuleSpec[] = []
 
 export type CheckStatus = 'pass' | 'fail' | 'n/a'
 
@@ -423,7 +514,7 @@ function auditModule(spec: VisualModuleSpec, ctx: { root: string; catalogs: Cata
   }
   const rtl = evidenceCheck(root, spec.rtl)
   add('rtl', rtl.ok ? 'pass' : 'fail', rtl.detail)
-  if (audience === 'public') {
+  if (audience === 'public' || spec.public_fixture) {
     const coverage = spec.redaction_test ? evidenceCheck(root, spec.redaction_test) : { ok: false, detail: 'no redaction test declared' }
     const built = spec.public_fixture ? run(spec.public_fixture) : null
     const leaks: string[] = []
@@ -438,7 +529,8 @@ function auditModule(spec: VisualModuleSpec, ctx: { root: string; catalogs: Cata
       for (const sentinel of spec.sentinels ?? []) if (json.includes(sentinel)) leaks.push('a draft or restricted sentinel reached the public edition')
     }
     if (!coverage.ok) leaks.push(coverage.detail)
-    add('redaction', leaks.length === 0 ? 'pass' : 'fail', leaks.length ? leaks.slice(0, 3).join('; ') : 'public edition carries no draft, withheld or badge; redaction test covers it')
+    const scope = audience === 'public' ? '' : `internal${spec.document_type ? ` (the public profile refuses ${spec.document_type})` : ''}; `
+    add('redaction', leaks.length === 0 ? 'pass' : 'fail', leaks.length ? leaks.slice(0, 3).join('; ') : `${scope}public edition carries no draft, withheld or badge; redaction test covers it`)
   } else if (spec.document_type) {
     add('redaction', 'pass', `internal only: the public profile refuses ${spec.document_type}`)
   } else {
