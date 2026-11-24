@@ -17,7 +17,7 @@ import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStat
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
-import { buildPublishingGallery, questionClassifier, redactVisualDocument, type PublishingGallery, type QuestionClassifier } from '@brand-os/brand-core/visual'
+import { buildPublishingGallery, questionClassifier, redactBook, redactVisualDocument, type PublishingGallery, type QuestionClassifier } from '@brand-os/brand-core/visual'
 import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
@@ -186,7 +186,8 @@ export interface StudioVisualProjection {
    * Approved values only (drafts keep their label, restricted values are withheld in every edition). Absent in caches
    * written before it existed; sync rebuilds those.
    */
-  books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: BookDocument } }
+  /** The Business Report is the business plan as a book: never public (Visual V4.1 profiles), so its public slot is null. */
+  books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: null } }
 }
 
 /**
@@ -333,8 +334,8 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
     const book = (kind: 'brand_book' | 'business_report', edition: 'internal' | 'public') =>
       buildBook(engine, kind, edition, { identity: visual.identity?.[edition] ?? null, canvas: visual.bmc[edition], competitors: visual.competitors ?? null })
     visual.books = {
-      brand_book: { internal: book('brand_book', 'internal'), public: book('brand_book', 'public') },
-      business_report: { internal: book('business_report', 'internal'), public: book('business_report', 'public') },
+      brand_book: { internal: book('brand_book', 'internal'), public: publicBook(book('brand_book', 'public'), classify) },
+      business_report: { internal: book('business_report', 'internal'), public: null },
     }
     assertNoSecrets(visual)
     return visual
@@ -350,6 +351,13 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
 function publicEdition(doc: VisualDocument, classify: QuestionClassifier): VisualDocument {
   const redacted = redactVisualDocument(doc, 'public', classify)
   if (!redacted) throw new ProjectionError('unsafe_projection', 'A public visual edition was refused by the public profile.')
+  return redacted.document
+}
+
+/** The public Brand Book passes the same public-profile redactor as every other public print (finance, `.private`). */
+function publicBook(book: BookDocument, classify: QuestionClassifier): BookDocument {
+  const redacted = redactBook(book, 'public', classify)
+  if (!redacted) throw new ProjectionError('unsafe_projection', 'A public book was refused by the public profile.')
   return redacted.document
 }
 

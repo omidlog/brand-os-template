@@ -40,6 +40,9 @@ export interface BookText {
   exportRefusedPath: string
   exportRefusedAgent: string
   exportNoDocument: string
+  imprintUncommitted: string
+  exportUncommitted: string
+  exportMeasureFailed: string
 }
 
 const en: BookText = {
@@ -77,6 +80,9 @@ const en: BookText = {
   exportRefusedPath: 'Refused: the output folder must be outside brand/ and .private folders, so generated files never mix with brand truth.',
   exportRefusedAgent: 'Refused: brand:export-visual is an owner command and does not run under an agent token.',
   exportNoDocument: 'This brand has no {doc} document to export (the module may be off, or the brand has no answers yet).',
+  imprintUncommitted: 'plus changes in brand/ not yet committed',
+  exportUncommitted: 'note: brand/ has changes that are not committed yet. The export shows this working copy, and the imprint says so next to the commit.',
+  exportMeasureFailed: 'warning: measuring in Chrome failed; pagination uses the built-in estimates, and the overflow check still runs',
 }
 
 const fa: BookText = {
@@ -114,6 +120,9 @@ const fa: BookText = {
   exportRefusedPath: 'رد شد: پوشهٔ خروجی باید بیرون از brand/ و پوشه‌های .private باشد تا فایل‌های ساخته‌شده با اطلاعات اصلی برند قاطی نشوند.',
   exportRefusedAgent: 'رد شد: brand:export-visual فرمان مالک است و با توکن عامل اجرا نمی‌شود.',
   exportNoDocument: 'این برند سند {doc} برای خروجی ندارد (شاید ماژول خاموش است یا هنوز پاسخی ثبت نشده).',
+  imprintUncommitted: 'به‌همراه تغییرهایی در brand/ که هنوز کامیت نشده‌اند',
+  exportUncommitted: 'توجه: در brand/ تغییرهایی هست که هنوز کامیت نشده‌اند. خروجی همین نسخهٔ فعلی را نشان می‌دهد و شناسنامه هم کنار کامیت این را می‌گوید.',
+  exportMeasureFailed: 'هشدار: اندازه‌گیری در Chrome انجام نشد؛ صفحه‌بندی از برآورد داخلی استفاده می‌کند و بررسی سرریز همچنان انجام می‌شود',
 }
 
 const tr: BookText = {
@@ -151,6 +160,9 @@ const tr: BookText = {
   exportRefusedPath: 'Reddedildi: çıktı klasörü brand/ ve .private klasörlerinin dışında olmalı; üretilen dosyalar marka gerçeğiyle karışmaz.',
   exportRefusedAgent: 'Reddedildi: brand:export-visual bir sahip komutudur ve ajan belirteciyle çalışmaz.',
   exportNoDocument: 'Bu markanın dışa aktarılacak {doc} belgesi yok (modül kapalı olabilir ya da henüz yanıt yok).',
+  imprintUncommitted: 've brand/ içinde henüz commit edilmemiş değişiklikler',
+  exportUncommitted: 'not: brand/ içinde henüz commit edilmemiş değişiklikler var. Dışa aktarım bu çalışma kopyasını gösterir; künye bunu commit bilgisinin yanında belirtir.',
+  exportMeasureFailed: "uyarı: Chrome'da ölçüm başarısız oldu; sayfalama yerleşik tahminleri kullanıyor, taşma denetimi yine çalışıyor",
 }
 
 export const BOOK_TEXT: Record<VisualLang, BookText> = { en, fa, tr }

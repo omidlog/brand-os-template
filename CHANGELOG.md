@@ -703,3 +703,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `premium-vs-lowest-price`: a negated cheap price ("we are never cheap", «ارزان نیستیم», "ucuz değil") no longer raises a trade-off question. The cheap-price markers use the same negation guard as `sensitive-claim-wording`; Persian `نیست` and Turkish `değil` with personal endings count after the word.
 - Coach registry rules no longer read a question the owner's config turned off (module disabled, skip condition). `consistency_review` said `needs_verification` for such a field while `quality_review` said `not_applicable`.
 - `COACH_RULE_VERSION` is `coach-rules/4` (verdicts changed for the same input). Tests: `coach-rules`.
+
+## Unreleased — Audit: Visual V1 area fixes
+
+### Fixed
+
+- `brand:export-visual`: an output folder reached through a link (the folder itself or a parent) into `brand/` or a `.private` folder is refused. The check runs on the real path, before and after the folder is created. A link left in place of an output file (HTML, PDF or a temporary galley/check file) is refused, not followed.
+- `brand:export-visual` reads the working copy. When `brand/` has uncommitted changes, it says so, and the book imprint prints "plus changes in brand/ not yet committed" next to the source commit (en/fa/tr). It also says when the Chrome measuring pass fails and the estimates are used.
+- `tests/studio-visual-browser.test.ts`: restored the V1.2 print-book checks on real Studio data (one PDF page per sheet, no text block overflow, contents numbers = printed folios, folios on the outer edge in en/fa). The merge of #40 had dropped them, but `docs/IMPLEMENTATION_STATUS.md` still listed them.
+- `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
+- `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
