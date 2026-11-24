@@ -25,8 +25,12 @@ function measure(key: string, kind: 'number' | 'date', label: LocalizedPrompt, r
   return { key, kind, required, max: 0, label }
 }
 
-/** Currency codes, names and symbols (any script): a key result in money is a finance figure, which stays restricted. */
-const CURRENCY = /[$€£¥₺﷼]|\b(?:usd|eur|gbp|try|tl|irr|irt|toman|tomans|rial|rials|lira|dollars?|euros?)\b|تومان|ریال|لیر|دلار|یورو/i
+/**
+ * Currency codes, names and symbols (any script): a key result in money is a finance figure, which stays restricted.
+ * The Turkish spellings (`dolar`, `avro`, `lirası`) and the spoken Persian `تومن` take no trailing word boundary, so a
+ * suffix (`lirası`, `dolarlık`) is still refused.
+ */
+const CURRENCY = /[$€£¥₺﷼₹₽₩₪]|\b(?:usd|eur|gbp|try|tl|irr|irt|toman|tomans|rial|rials|dollars?|euros?)\b|\b(?:lira|dolar|avro)|تومان|تومن|ریال|لیر|دلار|یورو/i
 
 export const PLAN_ENTITY_SPECS: Readonly<Record<string, EntitySpec>> = {
   'business.marketing.journey_stages': {

@@ -574,6 +574,12 @@ Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas).
 | Per-segment canvases, Task Context, Coach | Not started | One canvas for all segments (segment names on items). Task Context packs and the Coach do not read the V3.2 lists yet. |
 | Full Business Report chapter | Not started | The V4.2 Business Report does not include SWOT / TOWS or the canvas yet. |
 
+## Audit: Visual V3 area, batched fixes (2026-11-24)
+
+- **Done:** key-result units and cost items refuse Persian and Turkish currency spellings («تومن», `dolar`, `avro`, `lirası`) and ₹ ₽ ₩ ₪ (`tests/visual-plan.test.ts`, `tests/repeating-entity.test.ts`). `knowledge-graph.yaml` has the V3.3 journey and OKR edges; a drift test compares it with the question bank.
+- **Checked, no change:** after the parallel V3.1/V3.2/V3.3 merges, routes, nav entries, the renderer registry, `frameworks.json`, the document-kind union, `visual/index.ts` exports, the golden script and the sync rebuild conditions carry both V3.2 and V3.3 once each. The Studio projection builds both under `assertNoSecrets`, and Studio stays GET-only for these pages.
+- **Not done (owner questions in the audit report):** whether SWOT/TOWS and the Value Proposition Canvas become publishing document types; English framework provenance notes on Persian pages (all visual pages, by design); ids in the public print appendix of SWOT/VPC.
+
 ## Visual V5.1: standards verification, module audit, cross-brand pilot, release gate (2026-11-24)
 
 - **Done:** the framework registry has a `reviewer` field (claim rules: date and named reviewer together, never in the future). `npm run visual:audit` scores every visual module 0–5 from real checks (rubric in `docs-internal/VISUAL.md`; JSON, table or Markdown; en/fa/tr). A cross-brand pilot runs on two synthetic brands (`--pilot`, `tests/visual-audit.test.ts`). `npm run visual:gate` checks public modules ≥ 4 and registry validity, and (`--release`) cited external standards verified. It has an owner-only override with an expiry and runs in the template's `validate` CI job. Scores today: every present module 4/5; V3.x modules pending.

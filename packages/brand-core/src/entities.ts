@@ -353,8 +353,9 @@ function fail<T>(spec: EntitySpec, message: string): Result<T> {
 
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f]/
+// Turkish `dolar`/`avro`/`lira` take suffixes (`2000 lirası`), so they need no trailing boundary; `تومن` is spoken Persian.
 const AMOUNT =
-  /[$€£¥₺﷼]|\d[\d.,]*\s*(?:usd|eur|gbp|try|tl|irr|irt|toman|tomans|rial|rials|lira|dollars?|euros?)\b|\b(?:usd|eur|gbp|try|tl|irr|irt)\s*\d|تومان|ریال|لیر|دلار|یورو/i
+  /[$€£¥₺﷼₹₽₩₪]|\d[\d.,]*\s*(?:(?:usd|eur|gbp|try|tl|irr|irt|toman|tomans|rial|rials|dollars?|euros?)\b|lira|dolar|avro)|\b(?:usd|eur|gbp|try|tl|irr|irt)\s*\d|تومان|تومن|ریال|لیر|دلار|یورو/i
 
 function cleanText(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
