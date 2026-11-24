@@ -132,7 +132,7 @@ use the same negation guard as `sensitive-claim-wording` ("we are never cheap", 
 | `premium-vs-lowest-price` | `brand.strategy.differentiation`, `brand.strategy.promise`, `business.offer.value_proposition`; `business.sales.pricing` | a positioning answer uses a premium word (premium, luxury, high-end, لوکس, ممتاز, lüks, seçkin, …) **and** the pricing answer calls the price cheapest / cheap / lowest / bargain (ارزان‌ترین, en ucuz, …) | the pricing answer names an entry tier, plan, starter, trial, launch offer, first month, student or nonprofit price (پلن, ورودی, ماه اول, giriş, başlangıç, paket, …). A plain figure never fires, and neither does "affordable": the coach cannot know what is cheap in a given market |
 | `availability-held-back` | `business.product.public_status`, `business.marketing.availability_claim` | the product is `available` while marketing may say only `coming-soon` or nothing (`do-not-claim`): a staged launch is allowed, so it is a question | any other pair. The reverse (`available` claim, `unshipped` product) is the existing confirmed conflict and is not re-implemented |
 | `evidence-claim-unverified` | every answered question with `publication_requires: verified_evidence` | `claimVerification` is `unverified` or `owner_stated` | an independent source has been verified with `brand:evidence`. Owner testimony alone never settles it |
-| `sensitive-claim-wording` | every other answered, non-restricted free-text question, except `brand.verbal.forbidden` and `personal.governance.public_claim_policy` (they list such words) | the answer asserts a guarantee, certification, accreditation, "number one", award or proof (تضمینی, گواهی‌شده, garantili, sertifikalı, …) and the field has no verified independent source | the term is negated in the three words before it ("we never promise guaranteed results", هرگز, بدون, نمی…) or followed by Turkish `değil` or Persian `نیست` (with personal endings) |
+| `sensitive-claim-wording` | every other answered, non-restricted free-text question, except `brand.verbal.forbidden`, `personal.governance.public_claim_policy`, `business.marketing.availability_claim`, `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` (they list words or things to leave out) | the answer asserts a guarantee, certification, accreditation, "number one", award or proof (تضمینی, گواهی‌شده, garantili, sertifikalı, …) and the field has no verified independent source | the term is negated in the three words before it ("we never promise guaranteed results", هرگز, بدون, نمی…) or followed by Turkish `değil` or Persian `نیست` (with personal endings) |
 
 **Sensitive claims stay unverified.** The coach reads the evidence register through `claimVerification` and
 never writes to it: a test adds a pending source and asserts the brand is byte-for-byte unchanged, and only
@@ -149,7 +149,8 @@ pricing without a premium claim — and asserts no conflict **and** no tension f
 **`rule_checks`.** A `consistency_review` result carries one entry per rule (the four adapted
 `findContradictions` rules first): `outcome` (`confirmed_conflict`, `potential_tension`, `needs_verification`,
 `no_finding`, `not_tested`), `basis` (`rule_fired`, `rule_silent`, `guard_matched`, `inputs_open`) and the
-question ids involved. The printed result lists them under "Rules checked" in the result's locale, so silence
+question ids involved. A review scoped to one question keeps the checks that name it and the brand-wide checks
+(no question ids), which read it too. The printed result lists them under "Rules checked" in the result's locale, so silence
 from a rule that could not run is never read as "consistent". A tension outside the registered rules is not
 assessed; the result's `notes` says so.
 
@@ -217,7 +218,7 @@ Findings:
    Read: question:business.customer.primary_segment, answer:ans-0002
 
 No model was called. Every finding is deterministic.
-engine coach/1 · rules coach-rules/4 · authorizes: []
+engine coach/1 · rules coach-rules/5 · authorizes: []
 ```
 
 (Line-wrapped here for the page; the command prints each field on one line.)
@@ -279,7 +280,7 @@ The result's `notes` lists `facet_rubrics_checked: …`.
 | --- | --- | --- | --- | --- |
 | founder-executive | `founder-role-not-ownership` | `personal.founder.ventures`, `personal.experience.roles` | `facet_ownership_separate` → `personal.experience.relationships` (`evidence_missing`) | the answer uses ownership words (owner, owns, ownership, stake, shareholder, مالک, سهام, sahibi, hisse, …). "Product owner" and similar role titles do not count |
 | consultant-expert | `consultant-client-permission` | engagements, methodology, highlights, testimonials | `facet_companion_open` → `personal.consulting.confidentiality` | the confidentiality rule is still open (not answered, not deferred, not a disposition) |
-| creator-educator | `creator-dated-audience-claim` | `personal.creator.metrics` | `facet_claim_undated` | the answer has no year (Gregorian 19xx/20xx or Solar Hijri 13xx/14xx, Persian digits folded) |
+| creator-educator | `creator-dated-audience-claim` | `personal.creator.metrics` | `facet_claim_undated` | the answer has no year (Gregorian 19xx/20xx or Solar Hijri 13xx/14xx, Persian digits folded); a year-shaped count next to an audience word ("2000 subscribers", "followers: 1450", «۲۰۰۰ نفر», "2000 abone") is a count, not a year |
 | creator-educator | `creator-sponsorship-disclosure` | `personal.creator.sponsorship` | `facet_companion_open` → `personal.creator.disclosure` | the disclosure rule is still open |
 | artist-designer | `artist-portfolio-rights` | portfolio taxonomy, exhibitions | `facet_companion_open` → `personal.artist.usage_rights` | the usage-rights rule is still open |
 | speaker-author | `speaker-dated-history` | `personal.speaking.prior_talks`, `personal.author.publications` | `facet_claim_undated` | the answer has no year; "none" (هیچ, yok) is a valid answer and never fires |
@@ -306,7 +307,7 @@ cannot reach a coach result.
 | restricted value leaking into advice, a log or an error | restricted questions are refused before any rule runs; the refusal names the question id only; no digest is computed; asserted on every stream of the real CLI |
 | owner wording leaking through a reason | findings interpolate closed-vocabulary values only; canary tests on JSON and rendered text |
 | an agent reading the coach | denied while `BRAND_OS_AGENT_TOKEN` is set; no MCP tool, no `brand_retrieve` kind; a test asserts `brand:query --tool coach_analyze` does not exist |
-| unbounded work on a huge answer or ledger | answer text truncated to 4000 chars for the rules (and never returned), findings capped (2 deficits, 1 follow-up, 20 conflicts), output size validated |
+| unbounded work on a huge answer or ledger | answer text truncated to 4000 chars for the rules (and never returned), findings capped (2 deficits, 1 follow-up, 20 conflicts; when registry findings are cut, one slot is kept for a `potential_tension`), output size validated |
 | a rule inventing a code, a score or an authorization | every result is validated against the Zod contract before it is returned; an out-of-vocabulary value raises `invalid_output` |
 | stale advice outliving the fact it was about | `answer_ref.digest` and `analysis_scope.context_digest` change with the record and with the rule version |
 | advice mistaken for a decision | `authority: derived_advice`, `authorizes: []`, the advisory banner in all three locales, and `requires_change_request` on anything that would touch an approved fact |

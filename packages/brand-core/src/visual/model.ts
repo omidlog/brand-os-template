@@ -10,6 +10,8 @@
  * and instruction comes from the renderer's en/fa/tr catalog (`visual/i18n.ts`).
  */
 
+import type { JourneySwimlaneBlock, OkrTreeBlock, PlanDocumentKind, SostacBlock } from './model-plan.js'
+
 export const VISUAL_SCHEMA = 'brand-os.visual-document/1'
 
 /** Every state is shown as text plus an icon plus a colour, never colour alone. */
@@ -253,11 +255,14 @@ export type VisualBlock =
   | TowsMatrixBlock
   | ValuePropositionCanvasBlock
   | SourceNotesBlock
+  | JourneySwimlaneBlock
+  | SostacBlock
+  | OkrTreeBlock
 
 export interface VisualDocument {
   schema: typeof VISUAL_SCHEMA
   schema_version: 1
-  document_kind: 'business_model_canvas' | 'visual_identity' | 'competitor_comparison' | 'mascot_atlas' | 'swot_tows' | 'value_proposition'
+  document_kind: 'business_model_canvas' | 'visual_identity' | 'competitor_comparison' | 'mascot_atlas' | 'swot_tows' | 'value_proposition' | PlanDocumentKind
   brand_id: string
   brand_name: string
   audience: VisualAudience
@@ -584,3 +589,5 @@ export interface SourceNotesBlock extends BlockBase {
   /** Public edition: item sources left out because they are internal (knowledge notes, evidence, unpublished answers). */
   hidden: number
 }
+// ---- Visual V3.3: customer journey swimlane, SOSTAC overview, OKR tree (types in model-plan.ts) --------------
+export * from './model-plan.js'

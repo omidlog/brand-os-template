@@ -20,6 +20,7 @@ import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate 
 import { buildPublishingGallery, questionClassifier, redactBook, redactVisualDocument, type PublishingGallery, type QuestionClassifier } from '@brand-os/brand-core/visual'
 import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
 import { buildSwotTows, buildValueProposition } from '@brand-os/brand-core/visual'
+import { buildPlanDocuments, type PlanDocuments } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -196,6 +197,12 @@ export interface StudioVisualProjection {
    * the profile redactor. Absent in caches written before it existed; sync rebuilds.
    */
   strategy?: { swot: { internal: VisualDocument; public: VisualDocument }; value_proposition: { internal: VisualDocument; public: VisualDocument } }
+  /**
+   * Customer journey swimlane, SOSTAC overview and OKR tree (V3.3), in both editions. Internal: approved, labelled
+   * drafts, gaps; public: approved and published only. `applies` follows the canvas (business brands, and personal
+   * brands with a business facet). Absent in caches written before it existed; sync rebuilds those.
+   */
+  plans?: { applies: boolean; internal: PlanDocuments; public: PlanDocuments }
 }
 
 /**
@@ -351,6 +358,7 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
       swot: { internal: buildSwotTows(engine, 'internal', { sharedNotes }), public: buildSwotTows(engine, 'public', { sharedNotes }) },
       value_proposition: { internal: buildValueProposition(engine, 'internal', { sharedNotes }), public: buildValueProposition(engine, 'public', { sharedNotes }) },
     }
+    visual.plans = { applies: canvasApplies(engine), internal: buildPlanDocuments(engine, 'internal'), public: buildPlanDocuments(engine, 'public') }
     assertNoSecrets(visual)
     return visual
   } catch {

@@ -1,5 +1,6 @@
 import { asciiDigits } from './structured.js'
 import type { LocalizedPrompt } from './types.js'
+import { PLAN_ENTITY_SPECS } from './entities-plan.js'
 
 /**
  * `repeating_entity` answers (Visual V3.1, owner decision D3): a list of structured items, each with its own fields,
@@ -27,7 +28,8 @@ export const ENTITY_LIST_SCHEMA = 'brand-os.entity-list/1'
 
 export interface EntityFieldSpec {
   key: string
-  kind: 'text' | 'choice'
+  /** Visual V3.3: `number` (canonical decimal, Persian digits accepted) and `date` (YYYY-MM-DD) for structured key results. */
+  kind: 'text' | 'choice' | 'number' | 'date'
   required: boolean
   /** Maximum characters for text; ignored for choices. */
   max: number
@@ -35,6 +37,8 @@ export interface EntityFieldSpec {
   label: LocalizedPrompt
   /** Choice option labels, en/fa/tr. */
   option_labels?: Record<string, LocalizedPrompt>
+  /** Visual V3.3: text this field refuses (e.g. a currency as a key-result unit), with the reason shown to the owner. */
+  refuse?: { pattern: RegExp; message: string }
 }
 
 export interface EntitySpec {
@@ -60,6 +64,8 @@ export interface EntitySpec {
    * opportunities). Option → allowed target question ids; an item without the choice may link to any `links` target.
    */
   link_rule?: { field: string; targets: Readonly<Record<string, readonly string[]>> }
+  /** Visual V3.3: at most this many links per item (a key result belongs to one objective). Default `ENTITY_LIMITS.links`. */
+  max_links?: number
 }
 
 export interface EntityItem {
@@ -316,6 +322,8 @@ export const ENTITY_SPECS: Readonly<Record<string, EntitySpec>> = {
     fields: [NAME, detail({ en: 'How it creates the gain', fa: 'چطور دستاورد را می‌سازد', tr: 'Kazanımı nasıl yaratıyor' })],
     links: ['business.fit.gains', 'business.fit.products'],
   },
+  // Visual V3.3: customer journey stages and structured OKRs (entities-plan.ts).
+  ...PLAN_ENTITY_SPECS,
 }
 
 export const ENTITY_QUESTION_IDS: readonly string[] = Object.keys(ENTITY_SPECS)
@@ -375,11 +383,29 @@ function checkField(spec: EntitySpec, field: EntityFieldSpec, raw: unknown, wher
     if (!option) return fail(spec, `${where}: ${field.key} “${value}” must be one of ${(field.options ?? []).join(', ')}.`)
     return { ok: true, value: option }
   }
+  if (field.kind === 'number' || field.kind === 'date') return checkMeasure(spec, field, value, where)
+  if (field.refuse && field.refuse.pattern.test(asciiDigits(value))) return fail(spec, `${where}: ${field.key} ${field.refuse.message}`)
   if (value.length > field.max) return fail(spec, `${where}: ${field.key} is at most ${field.max} characters.`)
   if (spec.no_amounts && AMOUNT.test(asciiDigits(value))) {
     return fail(spec, `${where}: ${field.key} looks like a money amount. Cost items name what costs money, never how much; amounts belong in the restricted business.finance.costs answer.`)
   }
   return { ok: true, value }
+}
+
+/**
+ * Visual V3.3: a number is stored as its canonical decimal (`012.50` → `12.5`; Persian and Arabic digits and the
+ * Arabic decimal separator are accepted). Thousands separators are refused rather than guessed. A date is a real
+ * calendar day, `YYYY-MM-DD`.
+ */
+function checkMeasure(spec: EntitySpec, field: EntityFieldSpec, value: string, where: string): Result<string | null> {
+  const ascii = asciiDigits(value).replace(/[٫]/g, '.').replace(/\s+/g, '')
+  if (field.kind === 'date') {
+    const at = /^\d{4}-\d{2}-\d{2}$/.test(ascii) ? Date.parse(`${ascii}T00:00:00Z`) : Number.NaN
+    const ok = Number.isFinite(at) && new Date(at).toISOString().slice(0, 10) === ascii
+    return ok ? { ok: true, value: ascii } : fail(spec, `${where}: ${field.key} “${value}” must be a date such as 2026-11-30.`)
+  }
+  if (!/^-?\d{1,12}(?:\.\d{1,4})?$/.test(ascii)) return fail(spec, `${where}: ${field.key} “${value}” must be a plain number such as 40 or 12.5 (no thousands separators, no unit).`)
+  return { ok: true, value: String(Number(ascii)) }
 }
 
 function checkLinks(spec: EntitySpec, raw: unknown, where: string, fields: Record<string, string> = {}): Result<string[]> {
@@ -401,7 +427,8 @@ function checkLinks(spec: EntitySpec, raw: unknown, where: string, fields: Recor
     }
     if (!out.includes(id)) out.push(id)
   }
-  if (out.length > ENTITY_LIMITS.links) return fail(spec, `${where}: at most ${ENTITY_LIMITS.links} links.`)
+  const maxLinks = spec.max_links ?? ENTITY_LIMITS.links
+  if (out.length > maxLinks) return fail(spec, `${where}: at most ${maxLinks} link${maxLinks === 1 ? '' : 's'}.`)
   return { ok: true, value: out }
 }
 

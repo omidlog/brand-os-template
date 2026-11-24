@@ -85,6 +85,42 @@
       "permitted_claim": "informed_by",
       "verified_on": null,
       "usage_note": "Original Brand OS layout of the value map (square) and customer profile (circle). Not Strategyzer artwork; commercial embedding terms are under review. Fit is shown only where the owner linked a reliever to a pain or a creator to a gain."
+    },
+    {
+      "framework_id": "CUSTOMER-JOURNEY-MAP",
+      "title": "Customer journey map",
+      "kind": "professional_framework",
+      "authority": "Service design and UX practice (for example Nielsen Norman Group)",
+      "edition": "Common practice: stages by lanes (touchpoints, actions, emotions, pain points, opportunities)",
+      "source_url": "https://www.nngroup.com/articles/journey-mapping-101/",
+      "license_status": "public-method",
+      "permitted_claim": "informed_by",
+      "verified_on": null,
+      "usage_note": "Original Brand OS swimlane of the owner's recorded journey stages. Not a research finding: every stage is an owner answer, and evidence is shown as recorded."
+    },
+    {
+      "framework_id": "SOSTAC",
+      "title": "SOSTAC planning model",
+      "kind": "professional_framework",
+      "authority": "PR Smith",
+      "edition": "SOSTAC® planning system (situation, objectives, strategy, tactics, action, control)",
+      "source_url": "https://prsmith.org/sostac/",
+      "license_status": "trademark-attribution",
+      "permitted_claim": "informed_by",
+      "verified_on": null,
+      "usage_note": "SOSTAC® is a registered trade mark of PR Smith. Original Brand OS overview of existing answers by stage; not PR Smith material and not endorsed by PR Smith."
+    },
+    {
+      "framework_id": "OKR",
+      "title": "Objectives and key results (OKR)",
+      "kind": "professional_framework",
+      "authority": "Andrew Grove (Intel), popularised by John Doerr",
+      "edition": "Objectives with measurable key results",
+      "source_url": "https://www.whatmatters.com/faqs/okr-meaning-definition-example",
+      "license_status": "public-method",
+      "permitted_claim": "informed_by",
+      "verified_on": null,
+      "usage_note": "Original Brand OS tree of the owner's objectives and structured key results. Progress is drawn only from a recorded baseline and current value; a target is a plan, not a result."
     }
   ]
 }

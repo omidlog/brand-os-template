@@ -21,6 +21,8 @@ import { mascotPrintDocument } from '../apps/studio/src/views/visual-mascot.js'
 import { strategyPrintDocument } from '../apps/studio/src/views/visual-strategy.js'
 import { illustrativeSwotTows, illustrativeValueProposition } from '@brand-os/brand-core/visual'
 import { renderBlock } from '../apps/studio/src/views/visual-registry.js'
+import { planPrintDocument } from '../apps/studio/src/views/visual-plan.js'
+import { illustrativeJourney, illustrativeOkr, illustrativeSostac, type PlanFixtureVariant } from '@brand-os/brand-core/visual'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const STATIC = path.join(ROOT, 'apps', 'studio', 'static')
@@ -78,6 +80,14 @@ export function renderStrategyGolden(lang: VisualLang, edition: 'internal' | 'pu
   return strategyPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html`` }, (block, ctx) => renderBlock(block, { ...ctx, idPrefix: 'p', assetUrl: () => null })).value
 }
 
+/** Visual V3.3 fixtures (A3 landscape): the journey swimlane, SOSTAC overview and OKR tree, full and empty. */
+export const PLAN_GOLDEN_KINDS = ['journey', 'sostac', 'okr'] as const
+
+export function renderPlanGolden(kind: (typeof PLAN_GOLDEN_KINDS)[number], lang: VisualLang, edition: 'internal' | 'public', variant: PlanFixtureVariant): string {
+  const doc = kind === 'journey' ? illustrativeJourney(lang, edition, variant) : kind === 'sostac' ? illustrativeSostac(lang, edition, variant) : illustrativeOkr(lang, edition, variant)
+  return planPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html``, render: (block, ctx) => renderBlock(block, ctx) }).value
+}
+
 function print(chrome: string | null, png: boolean, out: string, name: string): void {
   if (!chrome) return
   const file = path.join(out, `${name}.html`)
@@ -116,6 +126,15 @@ function main(): void {
         fs.writeFileSync(path.join(out, `${strategy}.html`), renderStrategyGolden(lang, edition, kind))
         console.log(`wrote ${path.relative(ROOT, path.join(out, `${strategy}.html`))}`)
         print(chrome, Boolean(png), out, strategy)
+      }
+      // Visual V3.3: customer journey map, SOSTAC overview and OKR tree (A3 landscape).
+      for (const kind of PLAN_GOLDEN_KINDS) {
+        for (const variant of ['full', 'empty'] as const) {
+          const plan = `${kind}-illustrative.${variant}.${edition}.${lang}`
+          fs.writeFileSync(path.join(out, `${plan}.html`), renderPlanGolden(kind, lang, edition, variant))
+          console.log(`wrote ${path.relative(ROOT, path.join(out, `${plan}.html`))}`)
+          print(chrome, Boolean(png), out, plan)
+        }
       }
     }
   }

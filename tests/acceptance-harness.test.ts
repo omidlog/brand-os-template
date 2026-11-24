@@ -8,7 +8,7 @@ import Ajv from 'ajv'
 import { ensureApprovalSecret } from '@brand-os/brand-core'
 import { createDemoBrand, demoPack, openOwnerWorkspace, packSourceDrift, productionReadiness } from '@brand-os/brand-core/runtime'
 import { createAcceptanceFixture } from '../scripts/acceptance/fixture.js'
-import { runAcceptance, treeDigest } from '../scripts/acceptance/harness.js'
+import { leaks, runAcceptance, treeDigest } from '../scripts/acceptance/harness.js'
 import { caseVerdict, type AcceptanceReport } from '../scripts/acceptance/model.js'
 import { renderReport } from '../scripts/acceptance/report.js'
 import { useTestKey } from './helpers/knowledge.js'
@@ -41,6 +41,13 @@ test('caseVerdict never rounds up: one FAIL fails, NOT_TESTED is not PASS, empty
   assert.equal(caseVerdict([check('PASS'), check('PASS')]), 'PASS')
   assert.equal(caseVerdict([check('PASS'), check('NOT_TESTED')]), 'NOT_TESTED')
   assert.equal(caseVerdict([check('NOT_TESTED'), check('FAIL'), check('PASS')]), 'FAIL')
+})
+
+test('leak check: a restricted value is found in a JSON reply also when JSON escapes it (audit O-10)', () => {
+  const secrets = ['SYNTHETIC "quoted" budget', 'SYNTHETIC line one\nline two', 'SYNTHETIC back\\slash value', 'SYNTHETIC plain value']
+  const replies = secrets.map((secret) => JSON.stringify({ ok: true, value: secret }))
+  assert.deepEqual(leaks(replies, secrets), secrets)
+  assert.deepEqual(leaks([JSON.stringify({ ok: true, value: 'nothing here' })], secrets), [])
 })
 
 test('production readiness: a cited fact changed since the pack was built blocks (owner-local source drift)', () => {

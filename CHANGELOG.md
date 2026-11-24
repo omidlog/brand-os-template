@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Visual V3.3: Customer journey swimlane, SOSTAC overview, OKR tree
+
+### Added
+
+- Three optional list questions on the V3.1 `repeating_entity` model (`packages/brand-core/src/entities-plan.ts`): `business.marketing.journey_stages` (stage name, customer goal, touchpoints, actions, emotion on a five-point scale, pain points, opportunities, evidence; links to customer segments), `business.goals.objectives` (name, why, period) and `business.goals.key_results` (target, unit and source required; current, baseline and measured-on optional; one objective link). Question bank, field registry and module records regenerated (additions only).
+- `entities.ts`: `number` and `date` field kinds (Persian digits accepted, stored canonical), a per-field refusal rule and `max_links`. Key-result units refuse currencies in any script: money stays in the restricted finance answers.
+- Visual documents `customer_journey`, `sostac_overview`, `okr_tree` (`visual/plan.ts`, blocks in `visual/model-plan.ts`), built through `itemFor` like the canvas: labelled drafts, named gaps, public edition approved and published only. Progress is drawn only from a recorded baseline; key results whose objective is not visible are listed apart, never re-parented. Framework registry: `CUSTOMER-JOURNEY-MAP`, `SOSTAC` (registered trade mark of PR Smith), `OKR`, all `informed_by`.
+- Studio (GET only): `/market/customer-journey`, `/strategy/sostac`, `/strategy/okrs`, each with an A3 landscape print view (`/print[?edition=public]`). The swimlane (a real table with an emotion curve) and the OKR tree follow the page direction, so Persian mirrors them; SOSTAC keeps its canonical stage order in the reading direction. Ids only in the details disclosure and the internal print appendix; Persian folios, versions and counters in Persian digits. Designed empty states. en/fa/tr text (`visual/i18n-plan.ts`), nav entries, ILLUSTRATIVE fixtures in `npm run visual:golden`.
+- Tests: `visual-plan` (validator, documents, public edition, legacy text, fixtures, catalogs), `studio-visual-plan` (pages, print, public edition, no ids in the main view, fa/tr, empty states, cache rebuild).
+
 ## Unreleased — Visual V3.2: SWOT / TOWS and Value Proposition Canvas
 
 ### Added
@@ -765,3 +775,14 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `tests/studio-visual-browser.test.ts`: restored the V1.2 print-book checks on real Studio data (one PDF page per sheet, no text block overflow, contents numbers = printed folios, folios on the outer edge in en/fa). The merge of #40 had dropped them, but `docs/IMPLEMENTATION_STATUS.md` still listed them.
 - `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
 - `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
+
+## Unreleased — Audit: fixes pack minor findings (batched)
+
+### Fixed
+
+- `brand:coach` creator / speaker rubrics: a year-shaped count next to an audience word ("2000 subscribers", "followers: 1450", «۲۰۰۰ نفر», "2000 abone") is a count, not a year, so `facet_claim_undated` now fires when the number has no date. Test: `coach-rules`.
+- `brand:coach` `sensitive-claim-wording`: `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` list things to leave out, so a marker there is not a claim (like `brand.verbal.forbidden`). Test: `coach-rules`.
+- `brand:coach consistency_review`: when registry findings are cut at the 20-finding cap, one slot is kept for a `potential_tension`, so a tension named in `rule_checks` is never missing from the findings. A review scoped to one question keeps the brand-wide rule checks (no question ids). Tests: `coach-rules`.
+- `COACH_RULE_VERSION` is `coach-rules/5` (verdicts changed for the same input).
+- `brand:assurance-link link --date <past day>` reports the link's state as of today, not as of the backdated day. Test: `assurance-links`.
+- `brand:acceptance`: the restricted-value and secret leak check also finds a value in its JSON-escaped form (a value with `"`, `\` or a newline). Test: `acceptance-harness`.

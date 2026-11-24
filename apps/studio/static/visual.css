@@ -1120,3 +1120,248 @@
   .vz-vpc-map, .vz-vpc-profile, .vz-swot, .vz-tows { border-color: CanvasText; }
   .vz-vpc-fit span { background: CanvasText; }
 }
+/* ---------- Visual V3.3: customer journey swimlane, SOSTAC overview, OKR tree ---------- */
+.vz-sr { position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.vz-plan { display: flex; flex-direction: column; gap: 20px; min-inline-size: 0; }
+.vz-plan-lead { margin: 0; max-inline-size: 120ch; font-size: 10pt; color: var(--vz-text-2); }
+
+/* designed empty state: ghost geometry in the shape the content will take */
+.vz-plan-empty { display: grid; grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1.4fr); gap: 32px; align-items: center; padding: 32px; border: 1px dashed var(--vz-rule-strong); border-radius: 16px; background: repeating-linear-gradient(135deg, transparent 0 11px, var(--vz-subtle) 11px 12px); }
+.vz-plan-ghost { display: grid; gap: 8px; min-block-size: 140px; }
+.vz-plan-ghost span { display: block; border-radius: 6px; background: var(--vz-paper); border: 1px solid var(--vz-rule); }
+.vz-plan-ghost--journey { grid-template-columns: repeat(4, 1fr); grid-template-rows: 28px repeat(3, 1fr); }
+.vz-plan-ghost--journey span:nth-child(1) { grid-column: 1 / -1; }
+.vz-plan-ghost--okr { grid-template-columns: 1fr 1.4fr; grid-template-rows: repeat(3, 1fr); }
+.vz-plan-ghost--okr span:nth-child(1) { grid-row: 1 / -1; }
+.vz-plan-ghost--okr span:nth-child(4) { display: none; }
+.vz-plan-empty-title { margin: 0 0 8px; font: 600 22px/1.2 var(--vz-display); color: var(--vz-text); }
+[dir="rtl"] .vz-plan-empty-title { font-weight: 700; line-height: 1.5; }
+.vz-plan-empty-body { margin: 0; color: var(--vz-text-2); max-inline-size: 60ch; }
+.vz-plan-empty-steps-title { margin: 16px 0 6px; font: 600 11px/1.3 var(--vz-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--vz-text-3); }
+.vz-plan-empty-steps { margin: 0; padding-inline-start: 1.3em; display: grid; gap: 4px; color: var(--vz-text); }
+.vz-plan-legacy { padding: 16px 20px; border: 1px solid var(--vz-rule); border-radius: 12px; background: var(--vz-paper); }
+
+/* journey swimlane: a real table (lanes are rows, stages are columns), so it mirrors with the page direction */
+.vz-jm-hypo { padding: 16px 20px; border-inline-start: 3px solid var(--vz-lime); background: var(--vz-paper); border-radius: 0 12px 12px 0; }
+[dir="rtl"] .vz-jm-hypo { border-radius: 12px 0 0 12px; }
+.vz-jm-hypo .vz-overline { display: flex; align-items: center; gap: 8px; }
+.vz-jm-hypo-text { margin: 0; font-size: 15px; line-height: 1.6; color: var(--vz-text); max-inline-size: 90ch; }
+.vz-jm-scroll { overflow-x: auto; border: 1px solid var(--vz-rule); border-radius: 16px; background: var(--vz-paper); }
+.vz-jm-scroll:focus-visible { outline: 2px solid var(--vz-violet); outline-offset: 3px; }
+.vz-jm { inline-size: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; line-height: 1.5; color: var(--vz-text); }
+.vz-jm--n1, .vz-jm--n2 { min-inline-size: 560px; }
+.vz-jm--n3 { min-inline-size: 740px; }
+.vz-jm--n4 { min-inline-size: 920px; }
+.vz-jm--n5 { min-inline-size: 1100px; }
+.vz-jm--n6 { min-inline-size: 1280px; }
+.vz-jm--n7 { min-inline-size: 1460px; }
+.vz-jm--n8 { min-inline-size: 1640px; }
+.vz-jm--n9 { min-inline-size: 1820px; }
+.vz-jm--n10 { min-inline-size: 2000px; }
+.vz-jm th, .vz-jm td { padding: 14px 16px; vertical-align: top; text-align: start; border-block-end: 1px solid var(--vz-rule); border-inline-start: 1px solid var(--vz-rule); }
+.vz-jm tr > :first-child { border-inline-start: 0; }
+.vz-jm tbody tr:last-child > * { border-block-end: 0; }
+.vz-jm-corner, .vz-jm-lane { inline-size: 168px; position: sticky; inset-inline-start: 0; z-index: 1; background: var(--vz-paper); }
+.vz-jm-corner { vertical-align: bottom; font: 600 10px/1.3 var(--vz-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--vz-text-3); }
+.vz-jm-stage { background: var(--vz-subtle); border-block-end: 2px solid var(--vz-grid); }
+.vz-jm-stage > span { display: block; }
+.vz-jm-stage-num { font: 600 10px/1.3 var(--vz-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--vz-text-3); }
+.vz-jm-stage-name { margin-block: 4px 6px; font: 600 21px/1.15 var(--vz-display); color: var(--vz-text); }
+[dir="rtl"] .vz-jm-stage-name { font-weight: 700; line-height: 1.45; }
+.vz-jm-goal, .vz-jm-segs { font: 400 12px/1.45 var(--vz-font); color: var(--vz-text-2); margin-block-start: 4px; }
+.vz-jm-segs { display: flex !important; flex-wrap: wrap; gap: 4px; align-items: center; }
+.vz-jm-k { font: 600 10px/1.3 var(--vz-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--vz-text-3); }
+.vz-jm-lane-name { display: block; font: 600 12px/1.3 var(--vz-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--vz-text); }
+.vz-jm-lane-hint { display: block; margin-block-start: 3px; font: 400 11.5px/1.4 var(--vz-font); color: var(--vz-text-3); }
+[dir="rtl"] .vz-jm-lane-name, [dir="rtl"] .vz-jm-k, [dir="rtl"] .vz-jm-stage-num, [dir="rtl"] .vz-jm-corner { letter-spacing: 0; }
+.vz-jm-cell p { margin: 0; overflow-wrap: anywhere; }
+.vz-jm-none { color: var(--vz-text-3); }
+.vz-jm-row--pains td { background: color-mix(in srgb, var(--vz-danger-bg) 60%, transparent); }
+.vz-jm-row--opportunities td { background: color-mix(in srgb, var(--vz-ok-bg) 70%, transparent); }
+.vz-jm-row--evidence td { font-size: 12px; color: var(--vz-text-2); }
+.vz-jm-row--evidence .icon { inline-size: 12px; block-size: 12px; vertical-align: -1px; }
+.vz-jm-cell--emotion { padding: 0 !important; background: var(--vz-canvas); }
+.vz-jm-emo { position: relative; block-size: 104px; }
+.vz-jm-curve { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
+.vz-jm-axis { stroke: var(--vz-rule); stroke-width: 1; stroke-dasharray: 3 4; }
+.vz-jm-line { stroke: var(--vz-violet); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.vz-jm-dot { position: absolute; inset-inline-start: 50%; inline-size: 14px; block-size: 14px; margin-inline-start: -7px; margin-block-start: -7px; border-radius: 50%; background: var(--vz-violet); box-shadow: 0 0 0 3px var(--vz-paper); }
+.vz-jm-emo--very_positive .vz-jm-dot { top: 14%; background: var(--vz-ok); }
+.vz-jm-emo--positive .vz-jm-dot { top: 32%; background: var(--vz-ok); }
+.vz-jm-emo--neutral .vz-jm-dot { top: 50%; background: var(--vz-neutral); }
+.vz-jm-emo--negative .vz-jm-dot { top: 68%; background: var(--vz-danger); }
+.vz-jm-emo--very_negative .vz-jm-dot { top: 86%; background: var(--vz-danger); }
+.vz-jm-emo-label { position: absolute; inset-inline: 8px; inset-block-end: 6px; text-align: center; font: 600 11px/1.2 var(--vz-font); color: var(--vz-text-2); }
+.vz-jm-emo--negative .vz-jm-emo-label, .vz-jm-emo--very_negative .vz-jm-emo-label { inset-block: 6px auto; }
+.vz-jm-row--emotion .vz-jm-cell--empty { padding: 14px 16px !important; vertical-align: middle; }
+.vz-plan--journey > .vz-foot, .vz-okr-sources .vz-foot { margin: 0; }
+
+/* SOSTAC overview: the six stages in order, one column each on wide screens and in print */
+.vz-sostac { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--vz-grid); border: 1px solid var(--vz-grid); border-radius: 16px; overflow: hidden; }
+.vz-sos { position: relative; display: flex; flex-direction: column; gap: 12px; min-inline-size: 0; padding: 22px 20px 24px; background: var(--vz-paper); }
+.vz-sos-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "letter num chip" "letter title chip"; column-gap: 12px; align-items: end; }
+.vz-sos-letter { grid-area: letter; font: 700 54px/0.85 var(--vz-display); color: var(--vz-text); box-shadow: inset 0 -0.16em 0 var(--vz-lime); padding-inline: 2px; }
+.vz-sos-num { grid-area: num; font: 600 10px/1.3 var(--vz-display); letter-spacing: 0.16em; color: var(--vz-text-3); }
+.vz-sos-title { grid-area: title; margin: 0; font: 600 22px/1.1 var(--vz-display); color: var(--vz-text); }
+[dir="rtl"] .vz-sos-title { font-weight: 700; line-height: 1.4; }
+.vz-sos-head .vz-zchip { grid-area: chip; align-self: start; }
+.vz-sos-prompt { margin: 0; padding-block-end: 10px; border-block-end: 1px solid var(--vz-rule); font-size: 13px; color: var(--vz-text-2); font-style: italic; }
+[dir="rtl"] .vz-sos-prompt { font-style: normal; }
+.vz-sos-note { margin: auto 0 0; padding-block-start: 8px; font-size: 12px; color: var(--vz-text-3); }
+.vz-sos .vz-entries { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.vz-sos .vz-entry-meta { margin: 0 0 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.vz-sos .vz-entry-label { font: 600 11px/1.3 var(--vz-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--vz-text-2); }
+[dir="rtl"] .vz-sos .vz-entry-label { letter-spacing: 0; }
+@media (min-width: 1500px) { .vz-plan-screen .vz-sostac { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .vz-sostac { grid-template-columns: minmax(0, 1fr); }
+  .vz-plan-empty { grid-template-columns: 1fr; padding: 20px; }
+}
+
+/* OKR tree: root → objectives → key results, drawn in the page direction (mirrored in Persian) */
+.vz-okr-counts { margin: 0; font: 600 11px/1.3 var(--vz-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--vz-text-3); }
+.vz-okr-tree { display: grid; grid-template-columns: minmax(170px, 0.75fr) minmax(0, 3.25fr); column-gap: 40px; align-items: start; }
+.vz-okr-root { position: relative; padding: 18px 20px; border-radius: 14px; background: var(--vz-ink); color: #f9fafb; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.vz-okr-root::after { content: ""; position: absolute; inset-inline-end: -20px; inset-block-start: 30px; inline-size: 20px; border-block-start: 2px solid var(--vz-rule-strong); }
+.vz-okr-tree > .vz-okr-root:only-child::after, .vz-plan--okr > .vz-okr-root::after { display: none; }
+.vz-okr-k { margin: 0; font: 600 10px/1.3 var(--vz-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--vz-text-3); }
+.vz-okr-root .vz-okr-k { color: var(--vz-lime); }
+.vz-okr-root-text { margin: 0; font: 600 17px/1.35 var(--vz-display); }
+[dir="rtl"] .vz-okr-root-text, [dir="rtl"] .vz-okr-obj-name { font-weight: 700; line-height: 1.6; }
+.vz-okr-root-text--ghost { color: #c9ced3; font-weight: 400; }
+.vz-okr-objectives, .vz-okr-krs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.vz-okr-objectives { gap: 24px; }
+.vz-okr-branch { position: relative; display: grid; grid-template-columns: minmax(190px, 1fr) minmax(0, 1.7fr); column-gap: 32px; align-items: start; }
+.vz-okr-branch::before, .vz-okr-leaf::before { content: ""; position: absolute; inset-block-start: 30px; border-block-start: 2px solid var(--vz-rule-strong); }
+.vz-okr-branch::before { inset-inline-start: -20px; inline-size: 20px; }
+.vz-okr-branch::after, .vz-okr-leaf::after { content: ""; position: absolute; inset-block: 0; border-inline-start: 2px solid var(--vz-rule-strong); }
+.vz-okr-branch::after { inset-inline-start: -20px; inset-block-end: -24px; }
+.vz-okr-branch:first-child::after { inset-block-start: 30px; }
+.vz-okr-branch:last-child::after { inset-block-end: auto; block-size: 30px; }
+.vz-okr-branch:first-child:last-child::after { display: none; }
+.vz-okr-obj { position: relative; padding: 16px 18px; border: 1px solid var(--vz-grid); border-radius: 14px; background: var(--vz-paper); box-shadow: inset 0 3px 0 var(--vz-lime); }
+.vz-okr-obj::after { content: ""; position: absolute; inset-inline-end: -16px; inset-block-start: 30px; inline-size: 16px; border-block-start: 2px solid var(--vz-rule-strong); }
+.vz-okr-branch > .vz-okr-krs--empty { padding: 16px; }
+.vz-okr-obj-name { margin: 6px 0 4px; font: 600 18px/1.3 var(--vz-display); color: var(--vz-text); }
+.vz-okr-obj-detail { margin: 0; font-size: 13px; color: var(--vz-text-2); }
+.vz-okr-period { margin: 8px 0 0; font-size: 12px; color: var(--vz-text-2); }
+.vz-okr-krs { gap: 12px; }
+.vz-okr-leaf { position: relative; }
+.vz-okr-leaf::before { inset-inline-start: -16px; inline-size: 16px; }
+.vz-okr-leaf::after { inset-inline-start: -16px; inset-block-end: -12px; }
+.vz-okr-leaf:first-child::after { inset-block-start: 30px; }
+.vz-okr-leaf:last-child::after { inset-block-end: auto; block-size: 30px; }
+.vz-okr-leaf:first-child:last-child::after { display: none; }
+.vz-kr { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--vz-rule); border-radius: 12px; background: var(--vz-paper); }
+.vz-kr-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.vz-kr-k { font: 600 10px/1.3 var(--vz-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--vz-text-3); }
+[dir="rtl"] .vz-kr-k, [dir="rtl"] .vz-okr-k, [dir="rtl"] .vz-okr-counts { letter-spacing: 0; }
+.vz-kr-name { margin: 0; font-size: 14px; font-weight: 600; color: var(--vz-text); }
+.vz-kr-fig { display: grid; grid-template-columns: repeat(3, minmax(0, auto)); justify-content: start; gap: 4px 24px; margin: 0; }
+.vz-kr-fig dt { font: 600 10px/1.3 var(--vz-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--vz-text-3); }
+[dir="rtl"] .vz-kr-fig dt { letter-spacing: 0; }
+.vz-kr-fig dd { margin: 0; white-space: nowrap; }
+.vz-kr-num { font: 600 24px/1.1 var(--vz-display); color: var(--vz-text); font-variant-numeric: tabular-nums; }
+.vz-kr-fig--target .vz-kr-num, .vz-kr-fig--baseline .vz-kr-num { font-size: 17px; color: var(--vz-text-2); }
+.vz-kr-unit { font-size: 12px; color: var(--vz-text-2); }
+.vz-kr-none { color: var(--vz-text-3); }
+.vz-kr-progress { display: flex; flex-direction: column; gap: 4px; }
+.vz-kr-bar { display: block; inline-size: 100%; block-size: 6px; }
+.vz-kr-track { fill: var(--vz-neutral-bg); }
+.vz-kr-fill { fill: var(--vz-violet); }
+.vz-kr--measured .vz-kr-fill { fill: var(--vz-violet); }
+.vz-kr-progress-text { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--vz-text-2); }
+.vz-kr-flag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.vz-kr-flag .icon, .vz-kr-measure .icon, .vz-kr-orphan .icon { inline-size: 12px; block-size: 12px; }
+.vz-kr-flag--done { color: var(--vz-ok); background: var(--vz-ok-bg); }
+.vz-kr-flag--behind { color: var(--vz-danger); background: var(--vz-danger-bg); }
+.vz-kr-measure { margin: 0; display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--vz-text-2); }
+.vz-kr-measure--not_measured, .vz-kr-measure--no_baseline { color: var(--vz-draft); }
+.vz-kr-source { margin: 0; font-size: 12px; color: var(--vz-text-2); }
+.vz-kr-orphan { margin: 0; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--vz-draft); }
+.vz-okr-unlinked { display: flex; flex-direction: column; gap: 10px; padding-block-start: 16px; border-block-start: 1px dashed var(--vz-rule-strong); }
+.vz-okr-unlinked-title { margin: 0; font: 600 16px/1.3 var(--vz-display); color: var(--vz-text); }
+.vz-okr-unlinked .vz-muted { margin: 0; font-size: 12.5px; }
+.vz-okr-unlinked-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.vz-okr-note { margin: 0; font-size: 12px; color: var(--vz-text-3); }
+.vz-okr-sources { display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 980px) {
+  .vz-okr-tree, .vz-okr-branch { grid-template-columns: minmax(0, 1fr); row-gap: 12px; }
+  .vz-okr-objectives { padding-inline-start: 18px; border-inline-start: 2px solid var(--vz-rule-strong); margin-block-start: 12px; }
+  .vz-okr-krs { padding-inline-start: 18px; }
+  .vz-okr-root::after, .vz-okr-obj::after, .vz-okr-branch::before, .vz-okr-branch::after { display: none; }
+}
+
+/* sources and ids (details disclosure, print appendix) */
+.vz-plan-idlist { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.vz-plan-ids .vz-panel-title + .vz-muted, .vz-plan-sources .vz-muted { margin: 0 0 8px; }
+
+/* print (A3 landscape): one fitted page for the visual, then sources; folios in the page language, no margin counter */
+.vz-page--plan { page: vz-plan; }
+.vz-page--plan .vz-plan { gap: 4mm; }
+.vz-page--plan .vz-jm-scroll { overflow: visible; border-radius: 2mm; }
+.vz-page--plan .vz-jm { min-inline-size: 0; font-size: 8.4pt; line-height: 1.4; }
+.vz-page--plan .vz-jm--dense { font-size: 7.4pt; }
+.vz-page--plan .vz-jm th, .vz-page--plan .vz-jm td { padding: 2.4mm 2.8mm; }
+.vz-page--plan .vz-jm-corner, .vz-page--plan .vz-jm-lane { inline-size: 36mm; position: static; }
+.vz-page--plan .vz-jm-stage-name { font-size: 14pt; }
+.vz-page--plan .vz-jm-goal, .vz-page--plan .vz-jm-segs, .vz-page--plan .vz-jm-lane-hint { font-size: 7.4pt; }
+.vz-page--plan .vz-jm-emo { block-size: 22mm; }
+.vz-page--plan .vz-jm-emo-label { font-size: 7.2pt; }
+.vz-page--plan .vz-jm-hypo { padding: 2.6mm 4mm; }
+.vz-page--plan .vz-jm-hypo-text { font-size: 9pt; }
+.vz-page--plan .vz-sostac { grid-template-columns: repeat(6, minmax(0, 1fr)); border-radius: 2mm; }
+.vz-page--plan .vz-sos { padding: 4mm 3.6mm; gap: 2.6mm; font-size: 8.2pt; }
+.vz-page--plan .vz-sos-letter { font-size: 34pt; }
+.vz-page--plan .vz-sos-title { font-size: 13pt; }
+.vz-page--plan .vz-sos-prompt { font-size: 7.6pt; padding-block-end: 2mm; }
+.vz-page--plan .vz-sos .vz-entries { gap: 2.4mm; }
+.vz-page--plan .vz-sos .vz-entry-label, .vz-page--plan .vz-chip, .vz-page--plan .vz-zchip { font-size: 6.8pt; }
+.vz-page--plan .vz-sos .vz-entry-value { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; line-clamp: 6; overflow: hidden; margin: 0; }
+.vz-page--plan .vz-sos .vz-gap { min-block-size: 24mm; }
+.vz-page--plan .vz-okr-tree { column-gap: 12mm; }
+.vz-page--plan .vz-okr-root { padding: 4mm; border-radius: 3mm; }
+.vz-page--plan .vz-okr-root::after { inset-inline-end: -6mm; inline-size: 6mm; inset-block-start: 7mm; }
+.vz-page--plan .vz-okr-objectives { gap: 4mm; }
+.vz-page--plan .vz-okr-branch { column-gap: 10mm; }
+.vz-page--plan .vz-okr-branch::before { inset-inline-start: -6mm; inline-size: 6mm; inset-block-start: 7mm; }
+.vz-page--plan .vz-okr-branch::after { inset-inline-start: -6mm; inset-block-end: -4mm; }
+.vz-page--plan .vz-okr-branch:first-child::after { inset-block-start: 7mm; }
+.vz-page--plan .vz-okr-branch:last-child::after { inset-block-end: auto; block-size: 7mm; }
+.vz-page--plan .vz-okr-obj { padding: 3.4mm 4mm; border-radius: 3mm; }
+.vz-page--plan .vz-okr-obj::after { inset-inline-end: -5mm; inline-size: 5mm; inset-block-start: 7mm; }
+.vz-page--plan .vz-okr-krs { gap: 2.6mm; }
+.vz-page--plan .vz-okr-leaf::before { inset-inline-start: -5mm; inline-size: 5mm; inset-block-start: 7mm; }
+.vz-page--plan .vz-okr-leaf::after { inset-inline-start: -5mm; inset-block-end: -2.6mm; }
+.vz-page--plan .vz-okr-leaf:first-child::after { inset-block-start: 7mm; }
+.vz-page--plan .vz-okr-leaf:last-child::after { inset-block-end: auto; block-size: 7mm; }
+.vz-page--plan .vz-okr-obj-name, .vz-page--plan .vz-okr-root-text { font-size: 11.5pt; }
+.vz-page--plan .vz-kr { padding: 2.6mm 3.4mm; gap: 1.4mm; border-radius: 2.4mm; font-size: 8pt; break-inside: avoid; }
+.vz-page--plan .vz-kr-fig { display: flex; flex-wrap: wrap; column-gap: 7mm; }
+.vz-page--plan .vz-kr-name { font-size: 9pt; }
+.vz-page--plan .vz-kr-num { font-size: 14pt; }
+.vz-page--plan .vz-kr-fig--target .vz-kr-num, .vz-page--plan .vz-kr-fig--baseline .vz-kr-num { font-size: 11pt; }
+.vz-page--plan .vz-kr-source, .vz-page--plan .vz-kr-progress-text, .vz-page--plan .vz-kr-measure, .vz-page--plan .vz-okr-note, .vz-page--plan .vz-okr-unlinked .vz-muted { font-size: 7.4pt; }
+.vz-page--plan .vz-okr-unlinked { padding-block-start: 3mm; gap: 2mm; }
+.vz-page--plan .vz-okr-unlinked-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3mm; }
+.vz-page--plan .vz-plan-empty { padding: 8mm; border-radius: 3mm; }
+.vz-page--plan .vz-plan-idlist { font-size: 7.8pt; gap: 1mm; }
+.vz-page--plan .vz-foot { font-size: 7.4pt; }
+@page vz-plan {
+  size: A3 landscape;
+  margin: 10mm 14mm 12mm;
+  @bottom-right { content: none; }
+}
+@media print {
+  .vz-page--plan-main { block-size: 275mm; overflow: hidden; }
+  .vz-page--plan-sources { block-size: auto; overflow: visible; }
+  .vz-page--plan-sources .vz-print-foot { margin-block-start: 0; padding-block: 0 3mm; border-block-start: 0; border-block-end: 0.3mm solid #9aa3ab; }
+}
+.vz-page--plan-sources .vz-print-foot { margin-block-start: 0; padding-block: 0 3mm; border-block-start: 0; border-block-end: 0.3mm solid #9aa3ab; }
+.vz-page--plan .vz-plan-idlist { font-size: 7pt; gap: 0.6mm; margin-block-end: 2mm; }
+.vz-page--plan .vz-plan-ids .vz-panel-title { margin-block: 2mm 1mm; }
+.vz-page--plan .vz-plan-sources .vz-table { font-size: 7.2pt; }
+[lang="fa"] .vz-plan .vz-item-name::before { content: counter(vz-item, persian) "\2002"; }
+.vz-plan-ghost--journey { grid-template-columns: repeat(3, 1fr); grid-template-rows: 28px minmax(100px, 1fr); }
+.vz-page--plan .vz-plan-empty { grid-template-columns: minmax(70mm, 0.9fr) minmax(0, 1.4fr); gap: 10mm; }
+.vz-page--plan .vz-plan-ghost { min-block-size: 45mm; }

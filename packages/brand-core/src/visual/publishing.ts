@@ -208,6 +208,10 @@ const VISUAL_TYPE: Partial<Record<VisualDocument['document_kind'], PublishingDoc
   visual_identity: 'visual_identity',
   competitor_comparison: 'competitor_comparison',
   mascot_atlas: 'mascot_atlas',
+  // Visual V3.3: the journey map and SOSTAC overview are views of the marketing plan, the OKR tree of the business plan.
+  customer_journey: 'marketing_plan',
+  sostac_overview: 'marketing_plan',
+  okr_tree: 'business_plan',
 }
 
 export interface RedactedVisual {

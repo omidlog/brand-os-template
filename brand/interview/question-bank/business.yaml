@@ -1589,6 +1589,63 @@ questions:
     weight: 2
     sector_hints: []
     status: unanswered
+  - id: business.marketing.journey_stages
+    module: business-marketing
+    field_path: business.marketing.journey_stages
+    label: Customer journey stages
+    prompt:
+      en: "List the stages of the customer journey in order. For each: touchpoints, what the customer
+        does, how they feel, pains and opportunities."
+      fa: "مرحله‌های سفر مشتری را به ترتیب بنویسید. برای هر مرحله: نقاط تماس، کاری که مشتری می‌کند، حسی که
+        دارد، دردها و فرصت‌ها."
+      tr: "Müşteri yolculuğunun aşamalarını sırayla yazın. Her biri için: temas noktaları, müşterinin
+        yaptıkları, nasıl hissettiği, sorunlar ve fırsatlar."
+    why_it_matters: A journey map shows where customers struggle stage by stage, so fixes and content
+      target a real moment instead of the whole funnel.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Discover | find a trustworthy option | Instagram, a friend | reads reviews |
+        neutral | too many choices | short comparison guide | 12 interviews | links: seg-1"
+    required_when: always
+    depends_on:
+      - business.marketing.journey
+    priority: medium
+    order: 129
+    sensitivity: internal
+    entity:
+      id_prefix: stage
+      max_items: 10
+      fields:
+        - name
+        - goal
+        - touchpoints
+        - actions
+        - emotion
+        - pains
+        - opportunities
+        - evidence
+      links:
+        - business.model.segments
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-marketing.md
+    related_ids:
+      - business.marketing.journey
+      - business.model.segments
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
   - id: business.product.portfolio
     module: business-product
     field_path: business.product.portfolio
@@ -3848,6 +3905,107 @@ questions:
     allows_unknown: true
     required: true
     weight: 2
+    sector_hints: []
+    status: unanswered
+  - id: business.goals.objectives
+    module: business-goals
+    field_path: business.goals.objectives
+    label: Objectives (OKR)
+    prompt:
+      en: List the objectives for the current period, one per line, each qualitative and short.
+      fa: هدف‌های این دوره را، هر کدام در یک خط، کیفی و کوتاه بنویسید.
+      tr: Bu dönemin amaçlarını, her satıra bir tane, nitel ve kısa yazın.
+    why_it_matters: Key results hang under an objective; without one they become a pile of numbers.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Prove the primary segment is real | before building a full brand | 2027 Q1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 306
+    sensitivity: internal
+    entity:
+      id_prefix: obj
+      max_items: 8
+      fields:
+        - name
+        - detail
+        - period
+      links: []
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-goals.md
+    related_ids:
+      - business.goals.annual
+      - business.goals.quarter
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.goals.key_results
+    module: business-goals
+    field_path: business.goals.key_results
+    label: Key results (OKR)
+    prompt:
+      en: List the key results. Each needs a target number, a unit and the source system that measures it;
+        add the current value and a baseline when you have them.
+      fa: نتیجه‌های کلیدی را بنویسید. هر کدام یک عدد هدف، یک واحد و سامانه‌ای که آن را اندازه می‌گیرد لازم
+        دارد؛ مقدار فعلی و مقدار پایه را اگر دارید اضافه کنید.
+      tr: Anahtar sonuçları yazın. Her biri bir hedef sayı, bir birim ve onu ölçen kaynak sistem ister;
+        varsa güncel değeri ve başlangıç değerini ekleyin.
+    why_it_matters: A key result without a target, unit and source is a sentence, not a measure.
+      Progress is only drawn from a recorded baseline.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Learners finishing week one | 20 | 6 | learners | product analytics | 0 |
+        2026-11-20 | links: obj-1"
+    required_when: always
+    depends_on:
+      - business.goals.objectives
+    priority: medium
+    order: 307
+    sensitivity: internal
+    entity:
+      id_prefix: kr
+      max_items: 30
+      fields:
+        - name
+        - target
+        - current
+        - unit
+        - source
+        - baseline
+        - measured_on
+      links:
+        - business.goals.objectives
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-goals.md
+    related_ids:
+      - business.goals.sources
+      - business.goals.plan_vs_actual
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
     sector_hints: []
     status: unanswered
   - id: business.partners.channels
