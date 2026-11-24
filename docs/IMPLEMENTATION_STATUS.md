@@ -536,3 +536,9 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 
 - **Done:** negated cheap-price wording does not fire `premium-vs-lowest-price` (en/fa/tr); registry rules skip questions that do not apply under the config; `coach-rules/4`.
 - **Not done (reported in the audit):** `YEAR` in the creator rubric also matches counts such as 2000 or 1450; negation of symbol terms ("#1") and a wider window; Turkish verb-suffix negation; one slot per verdict under the finding cap; empty-id rule checks in scoped reviews; evidence and deferrals in `contextDigest`.
+
+## Owner decisions: Visual V4 audit (2026-11-24)
+
+- **Done:** Q1 the Business Report stays internal only; confirmed in code (no public or investor edition is built or exported), no change needed. Q2 investor draws a published logo still tagged `draft` without its mark, same as public (unpublished draft-tagged masters and draft-tagged mascot artwork stay hidden in both). Q3 the Publishing gallery shows `npm run brand:export-visual -- --doc brand-book --edition public|internal` for the Brand Book (en/fa/tr). Tests: `visual-publishing`, `studio-publishing`.
+- **Correction:** the first two items in the Visual V4 audit's "Not done" line above are resolved by this change. The Persian mascot label is a separate PR.
+- **Not done:** the gallery's internal Business plan cell still reads "Print layout not built yet", although `--doc business-report --edition internal` exists (not part of the owner's decision); there is no investor composer for any document.
