@@ -227,7 +227,9 @@ test('an ambiguous master shows the reason, the candidates and the one-line fix 
       const cat = visualCatalog(lang)
       const html = String(logoConstructionView(block, { cat, lang, mode: 'screen', doc, showNext: true, assetUrl: () => null }))
       assert.ok(html.includes(cat.identity.awaitingMaster.ambiguous), `${lang}: reason`)
-      assert.ok(html.includes(cat.identity.stepMasterAmbiguous), `${lang}: fix`)
+      // BOS-21 isolates Latin runs inside Persian text with <bdi>; compare the visible text.
+      const text = html.replace(/<\/?bdi[^>]*>/g, '')
+      assert.ok(text.includes(cat.identity.stepMasterAmbiguous), `${lang}: fix`)
       assert.match(html, /asset\.logo\.symbol, asset\.logo\.wordmark-dark, asset\.logo\.wordmark-light/, `${lang}: candidates`)
       assert.match(cat.identity.stepMasterAmbiguous, /master/)
       assert.match(cat.identity.stepMasterAmbiguous, /on-light/)
