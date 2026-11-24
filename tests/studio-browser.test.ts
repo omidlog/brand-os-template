@@ -361,7 +361,7 @@ test('Persian mirrors the layout right-to-left while code, SHAs and URLs stay le
 
 test('BOS-21: a mixed Persian/English value (parentheses, a file name, a URL) reads in logical order in the English and the Persian UI', { skip }, async () => {
   const mixed = 'Wordmark تیره (logo-omid-ataei-black.svg) برای پس‌زمینهٔ روشن؛ نمونه در https://omidataei.com/work (۲۰۲۴).'
-  editOutsideStudio(s, 'acme-learning', (engine, root) => approve(engine, root, { 'brand.strategy.purpose': mixed }))
+  editOutsideStudio(s, 'acme-learning', (engine, root) => approve(engine, root, { 'brand.strategy.vision': mixed }))
   s.studio.sync.markDirty('acme-learning')
   await s.studio.sync.refresh('acme-learning')
   await page.viewport(1440, 900)
