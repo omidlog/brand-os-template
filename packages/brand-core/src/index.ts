@@ -20,6 +20,8 @@ export { canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSO
 export type { CanonicalReference } from './personal.js'
 export {
   addEvidence,
+  CLAIM_VERIFICATIONS,
+  claimEvidence,
   claimVerification,
   EVIDENCE_KINDS,
   EVIDENCE_SOURCES,
@@ -27,11 +29,17 @@ export {
   evidenceFor,
   evidencePath,
   gatePasses,
+  isIndependentSource,
+  ownerPartLabel,
   publicationBlockers,
   readEvidence,
   unpublishBlocked,
+  verificationNote,
+  withOwnership,
 } from './evidence.js'
-export type { AddEvidenceInput, ClaimVerification, EvidenceItem, EvidenceKind, EvidenceSource, EvidenceStatus } from './evidence.js'
+export { locationsIn, OWNED_LOCATION_FACTS, ownedLocations, ownedLocationsFrom, ownedMatch, SHARED_PLATFORM_HOSTS } from './evidence-ownership.js'
+export type { OwnedLocation } from './evidence-ownership.js'
+export type { AddEvidenceInput, ClaimEvidence, ClaimVerification, EvidenceItem, EvidenceKind, EvidenceSource, EvidenceStatus } from './evidence.js'
 export { RIGHTS_SUBJECTS, rightsBlocker, rightsSubject } from './asset-rights.js'
 export type { RightsSubject } from './asset-rights.js'
 export { moduleEnabled, personalConfig } from './conditions.js'

@@ -757,11 +757,21 @@ export class ApprovalService {
    * Owner review of an evidence or permission record. Verified and rejected both need the proof.
    * A rejection can make a published claim fail its gate; such claims are unpublished at once.
    */
-  reviewEvidence(id: string, decision: 'verified' | 'rejected', proof: string | undefined, reason: string | null = null, actor = 'owner'): { ok: boolean; message: string; unpublished: string[] } {
+  reviewEvidence(id: string, decision: 'verified' | 'rejected', proof: string | undefined, reason: string | null = null, actor = 'owner'): { ok: boolean; message: string; unpublished: string[]; unchanged?: boolean } {
     if (!this.proofMatches(proof)) return { ok: false, message: 'Evidence review requires the human proof. Nothing was changed.', unpublished: [] }
     const item = reviewEvidenceRecord(this.root, id, decision, actor, new Date(this.now()), reason)
+    // Already in this state: nothing was written, so verified_at keeps its date and Git stays clean.
+    if (item.unchanged) return { ok: true, message: `${id} already ${decision} for ${item.claim_id}. Nothing was changed.`, unpublished: [], unchanged: true }
     const unpublished = unpublishBlocked(this.root, this.host.brandId(), new Date(this.now()))
-    const kind = item.source_type === 'owner_testimony' && item.kind === 'verification' ? ' Owner testimony stays owner-stated; it never counts as independent verification.' : ''
+    const owned = item.owned === true || readEvidence(this.root).find((entry) => entry.id === id)?.owned === true
+    const kind =
+      item.kind !== 'verification'
+        ? ''
+        : item.source_type === 'owner_testimony'
+          ? ' Owner testimony stays owner-stated; it never counts as independent verification.'
+          : owned
+            ? ' The owner controls this source, so it stays owner-published; it never counts as independent verification.'
+            : ''
     return { ok: true, message: `${id} ${decision} for ${item.claim_id}.${kind}`, unpublished }
   }
 

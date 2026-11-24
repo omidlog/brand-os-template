@@ -251,6 +251,8 @@ export const fa: Messages = {
   'doc.section.partial': 'ناقص',
   'doc.section.missing': 'ناموجود',
   'doc.verification.verified': 'تأییدشده با شاهد',
+  'doc.verification.partly_verified': 'بخشی تأییدشده',
+  'doc.verification.owner_published': 'منتشرشده توسط خود مالک',
   'doc.verification.owner_stated': 'به گفتهٔ مالک',
   'doc.verification.unverified': 'تأییدنشده',
   'doc.verification.not_required': 'نیازی به شاهد نیست',

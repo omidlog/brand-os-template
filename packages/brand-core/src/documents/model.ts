@@ -4,7 +4,7 @@ import type { InterviewEngine } from '../engine.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
 import { factIsPublic } from '../publication.js'
 import { isStructuredType, parseStructured, type StructuredType, type StructuredValue } from '../structured.js'
-import { claimVerification, evidenceFor, readEvidence, type ClaimVerification, type EvidenceItem } from '../evidence.js'
+import { claimEvidence, evidenceFor, readEvidence, verificationNote, type ClaimVerification, type EvidenceItem } from '../evidence.js'
 import { answerProvenance } from '../provenance.js'
 import type { AnswerRecord, FieldQuestion, PersonalFacet } from '../types.js'
 
@@ -51,8 +51,10 @@ export interface DocumentItem {
   withheld: boolean
   note: string | null
   /**
-   * Personal claims only: verified (independent, current evidence), owner_stated (the owner's word),
-   * unverified (needs evidence, has none) or not_required. Null for non-personal items.
+   * Personal claims only: verified (only independent, current evidence), partly_verified (independent
+   * evidence plus an owner-stated part, named in the note), owner_published (only sources the owner
+   * controls), owner_stated (the owner's word), unverified (needs evidence, has none) or not_required.
+   * Null for non-personal items.
    */
   verification: ClaimVerification | null
   /**
@@ -219,17 +221,14 @@ export function itemFor(question: FieldQuestion, context: ItemContext): Document
   if (!question.id.startsWith('personal.') || item.tag === 'missing' || item.tag === 'recommendation') return item
   const evidence = context.evidence ?? []
   const now = context.now ?? new Date()
-  const verification = claimVerification(question, evidence, now)
+  const summary = claimEvidence(question, evidence, now)
+  const verification = summary.verification
   const found = evidenceFor(question.id, evidence, now)
-  const ids = context.audience === 'public' ? [] : [...found.independent, ...found.permissions].map((entry) => `evidence:${entry.id}`)
-  const label =
-    verification === 'verified'
-      ? 'Verified by an independent, current source.'
-      : verification === 'owner_stated'
-        ? 'Owner-stated. Not independently verified.'
-        : verification === 'unverified'
-          ? 'Unverified. Needs a source before public release.'
-          : null
+  // The owner's own part is cited too, so a reader sees which evidence is not independent.
+  const ownerIds = verification === 'partly_verified' || verification === 'owner_published' ? summary.owner_parts : []
+  const ids = context.audience === 'public' ? [] : [...found.independent, ...ownerIds, ...found.permissions].map((entry) => `evidence:${entry.id}`)
+  // A public reader never sees register entries, so the owner part is not named there.
+  const label = verificationNote(summary, context.audience !== 'public')
   return {
     ...item,
     verification,

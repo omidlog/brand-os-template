@@ -252,6 +252,8 @@ export const en = {
   'doc.section.partial': 'Partial',
   'doc.section.missing': 'Missing',
   'doc.verification.verified': 'Verified',
+  'doc.verification.partly_verified': 'Partly verified',
+  'doc.verification.owner_published': 'Owner-published',
   'doc.verification.owner_stated': 'Owner-stated',
   'doc.verification.unverified': 'Unverified',
   'doc.verification.not_required': 'Evidence not required',

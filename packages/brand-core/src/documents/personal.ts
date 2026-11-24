@@ -1,6 +1,6 @@
 import { moduleEnabled } from '../conditions.js'
 import type { InterviewEngine } from '../engine.js'
-import { claimVerification, evidenceFor, publicationBlockers, readEvidence } from '../evidence.js'
+import { claimEvidence, evidenceFor, ownerPartLabel, publicationBlockers, readEvidence } from '../evidence.js'
 import { readFacts } from '../facts.js'
 import { buildDocument, type DocumentAudience, type DocumentItem, type DocumentModel, type DocumentSection, type DocumentSpec, type ItemTag, type PersonalDocumentKind } from './model.js'
 
@@ -209,7 +209,8 @@ export function buildEvidenceRegister(engine: InterviewEngine, audience: Documen
     const fact = facts[question.id]
     const found = evidenceFor(question.id, evidence, now)
     const blockers = publicationBlockers(question, fact?.value ?? null, evidence, now)
-    const verification = claimVerification(question, evidence, now)
+    const summary = claimEvidence(question, evidence, now)
+    const verification = summary.verification
     const claim: DocumentItem = {
       id: question.id,
       label: question.label,
@@ -223,6 +224,7 @@ export function buildEvidenceRegister(engine: InterviewEngine, audience: Documen
       note: [
         `Requires: ${(question.publication_requires ?? []).join(', ')}.`,
         `Verification: ${verification}.`,
+        verification === 'partly_verified' ? `Owner-stated part, not independently verified: ${summary.owner_parts.map(ownerPartLabel).join('; ')}.` : null,
         fact?.status === 'approved' ? null : 'Claim not approved.',
         blockers.length ? `Not eligible for public release: ${blockers.join(' ')}` : 'Eligible for public release once approved and published.',
         fact?.publication === 'published' ? 'Currently published.' : null,
@@ -231,7 +233,7 @@ export function buildEvidenceRegister(engine: InterviewEngine, audience: Documen
     }
     const sources: DocumentItem[] = found.all.map((item) => ({
       id: item.id,
-      label: `${item.kind === 'permission' ? 'Permission' : 'Source'} ${item.id} (${item.source_type})`,
+      label: `${item.kind === 'permission' ? 'Permission' : 'Source'} ${item.id} (${item.source_type}${item.kind === 'verification' && item.source_type !== 'owner_testimony' && item.owned === true ? ', owner-published' : ''})`,
       tag: (item.status === 'verified' ? 'approved' : 'assumption') as ItemTag,
       kind: 'text',
       value: item.reference,
@@ -243,6 +245,7 @@ export function buildEvidenceRegister(engine: InterviewEngine, audience: Documen
         `Status: ${item.status}${item.status_reason ? ` (${item.status_reason})` : ''}.`,
         item.kind === 'permission' ? `Scope: ${item.scope ?? 'none'}${item.granted_by ? `, granted by ${item.granted_by}` : ''}.` : null,
         item.source_type === 'owner_testimony' ? 'Owner testimony: never counts as independent verification.' : null,
+        item.source_type !== 'owner_testimony' && item.owned === true ? 'Owner-published (a source the owner controls): never counts as independent verification.' : null,
         item.review_due ? `Re-verify by ${item.review_due}.` : null,
         'Remove with brand:evidence withdraw; dependent public claims are unpublished at once.',
       ].filter(Boolean).join(' '),
