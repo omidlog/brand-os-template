@@ -417,10 +417,14 @@ function resolveEvidence(w: Workspace, control: AssessableControl, pins: Map<str
   const add = (noteId: string, revision: string, isPinned: boolean) => {
     const ref: EvidenceRef = { ref: `knowledge:${noteId}@${revision}`, note_id: noteId, revision }
     // A note is the owner's own writing: owner-stated, unless the owner linked this very revision to a
-    // register entry that qualifies on the day assessed (`links.ts`). Nothing else raises it.
+    // register entry that qualifies on the day assessed (`links.ts`). Nothing else raises it. The entry
+    // verifies one question, so the note is independent only for a control that names that question; for
+    // the note's other questions it stays the owner's own statement.
     const current = w.notes.find((entry) => entry.id === noteId)
     const linked = current && current.revision === revision ? noteLink(w, noteId, day) : null
-    out.set(noteId, { ref, state: isPinned ? evidenceState(w.ws, ref) : 'current', independence: linked?.state === 'qualifies' ? 'independent' : 'owner_stated' })
+    const claim = linked ? w.register.get(linked.link.evidence_id!)?.claim_id : undefined
+    const independent = linked?.state === 'qualifies' && claim !== undefined && ids.has(claim)
+    out.set(noteId, { ref, state: isPinned ? evidenceState(w.ws, ref) : 'current', independence: independent ? 'independent' : 'owner_stated' })
   }
   for (const note of w.notes.filter((entry) => entry.question_ids.some((id) => ids.has(id)))) add(note.id, pinned.get(note.id) ?? note.revision, pinned.has(note.id))
   // A note the previous snapshot cited and that is gone (archived, deleted, retagged) stays visible.

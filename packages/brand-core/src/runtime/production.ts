@@ -168,6 +168,11 @@ export interface ProductionInput {
   references: VisualReference[] | null
   /** Present for the artifact stage. */
   batch?: BatchArtifacts | null
+  /**
+   * Owner-local only (`--root`): the pack's fact sources whose current approved revision differs from the pinned one
+   * (`packSourceDrift`). Undefined or null: not compared, and no check is added. Non-empty blocks: rebuild the pack.
+   */
+  source_drift?: string[] | null
 }
 
 const short = (sha: string | null | undefined): string => (sha ? sha.slice(0, 12) : 'none')
@@ -239,6 +244,10 @@ export function productionReadiness(input: ProductionInput): ProductionReadiness
   const blockingMissing = pack.missing.filter((entry) => entry.blocking).map((entry) => entry.id)
   add('context.readiness', 'task-context.pack', packInput, pack.readiness === 'blocked' ? 'fail' : pack.readiness === 'partial' ? 'warn' : 'pass', true, [`readiness:${pack.readiness}`, ...blockingMissing.map((id) => `blocking_missing:${id}`)])
   add('context.staleness', 'task-context.pack', packInput, pack.staleness === 'current' ? 'pass' : 'warn', false, [`staleness:${pack.staleness}`])
+  if (Array.isArray(input.source_drift)) {
+    const drift = input.source_drift
+    add('context.source_drift', 'task-context.pack', packInput, drift.length > 0 ? 'fail' : 'pass', true, drift.length > 0 ? ['code:stale_pack_sources', ...drift] : [`sources_compared:${pack.sources.length}`])
+  }
 
   // Renderer and format: only what this repository can actually produce.
   const renderer = RENDERERS.find((spec) => spec.task_type === pack.task.type) ?? null

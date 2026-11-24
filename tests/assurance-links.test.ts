@@ -128,6 +128,23 @@ test('a linked note counts as independent only once its register entry is verifi
   assert.deepEqual(after.snapshot.authorizes, [])
 })
 
+test('a link verifies one question: a note about two questions is independent only for the controls of the verified one', () => {
+  const DIFF = 'brand.strategy.differentiation'
+  const brand = coachBrand({ slug: 'link-two-questions' })
+  approved(brand, 'business.stage.current', 'established')
+  approved(brand, 'business.sales.motion', 'self-serve')
+  approved(brand, SEGMENT, 'SYNTHETIC DEMO segment')
+  approved(brand, DIFF, 'SYNTHETIC DEMO difference')
+  const note = captureNote(openWorkspace(brand.root), { title: 'SYNTHETIC DEMO research', body: 'SYNTHETIC DEMO survey summary', kind: 'research', status: 'active', question_ids: [SEGMENT, DIFF] })
+  const entry = register(brand)
+  verify(brand, entry.id)
+  link(brand, note.id, entry.id)
+  const independence = (controlId: string) =>
+    result(brand).snapshot.controls.find((control) => control.control_id === controlId)!.evidence.find((item) => item.ref.note_id === note.id)?.independence
+  assert.equal(independence('PRR-03'), 'independent', 'the segment control names the verified question')
+  assert.equal(independence('PRR-08'), 'owner_stated', 'the differentiation control does not: the register entry says nothing about it')
+})
+
 test('owner decision: unapproved answers still lower the score and are not removed; no score while anything blocks', () => {
   const { brand, note } = company('link-score')
   const entry = register(brand)

@@ -26,6 +26,39 @@
 - The canvas zones Key activities and Key resources are answered by the new list questions instead of a "no question yet" gap; Customer segments and Cost structure also read their list. `relationships` is `{ modeled: true, links }` when list items exist, else `{ modeled: false, reason: 'no_list_items' }`.
 - Full Brand Book / Business Report (V4.2, after merging main): an approved list prints as its items (name, choice labels in the page language, detail, links by item name, numbered in the page's digits), never an item id. A draft, withheld or unpublished list carries no items into a book, and a report no longer embeds the canvas zone block (drafts, item ids); it keeps the framework reference. fa/tr book labels for the four list questions. Book reference screenshots unchanged.
 
+## Unreleased — CI
+
+- CI: the `brand tests` step timeout in `validate.yml` rises from 10 to 18 minutes (the suite now takes about 10 minutes on GitHub runners) and the `verify` job timeout from 20 to 28.
+
+## Unreleased — Runtime: batch not-ready exits non-zero (PR-E owner decisions)
+
+### Changed
+
+- `brand:runtime social-batch` exits **3** when production readiness is `not_ready` (was 0). The drafts, `batch-summary.json` and `production-readiness.json` are still written; one en/fa/tr line goes to stderr so `--json` stdout stays clean. Scripts that ran `social-batch` with `--require logo` and no `--root` now see exit 3.
+- `docs-internal/BRAND_RUNTIME.md` records the seven PR-E owner decisions (contrast and duplicates review only, only the logo requirable, partial data a warning, no signing, access-log line ids only in `brand/.private`, not-ready exit 3).
+
+## Unreleased — Visual V4.1: Command Center, Publishing gallery, audience redaction
+
+### Added
+
+- `packages/brand-core/src/visual/publishing.ts`: export profiles `public`, `investor`, `internal`; `redactVisualDocument` and `redactDocumentModel` (restricted never shown; finance, `.private`-sourced, unapproved and unknown-id values and draft marks never in public or investor; competitor analysis internal only; business and marketing plans never public); `buildPublishingGallery` (document types × profiles, readiness on redacted output, counts only, review-due count); `coverageCells`.
+- Studio Publishing gallery at `/brands/<slug>/governance/documents` (GET only, en/fa/tr, RTL), in the Publishing & Governance group.
+- Tests: `visual-publishing`, `studio-publishing` (synthetic brands only).
+
+### Changed
+
+- Overview is now the **Command Center** (R4): a 30-second strip (decisions needed, review due, contradictions, exports ready) and a coverage mini-map per framework lead the page; the template update panel moved lower. Labels in en/fa/tr (Command Center / مرکز فرمان / Komuta Merkezi).
+- Public visual editions in the Studio projection pass the core public-profile redactor; the projection gains `publishing` (older caches rebuild on sync).
+## Unreleased — Pilot and workflow acceptance (fixes pack PR-F)
+
+### Added
+
+- `npm run brand:acceptance -- (--demo | --root <checkout>) --out <empty dir> [--lang en|fa|tr] [--json]`: runs the four journeys of the fixes pack (single visual, ten Instagram posts, website brief, paid-ad brief) end to end through the real stdio MCP server and the real `brand:runtime` / `brand:visual-dna` CLIs, and records PASS / FAIL / NOT_TESTED per check with id-only evidence for FIX-01…FIX-08. Owner checkouts are read through a temporary snapshot and hashed before and after; refused under an agent token; no model, no network, `authorizes: []`. Report contract `schemas/acceptance-report.schema.json` (`brand-os/acceptance-report/v1`); printed summary in en/fa (RTL)/tr. Synthetic fixture in `scripts/acceptance/fixture.ts` (demo brand plus restricted canaries, an approved paid strategy, an approved motion fact and a draft logo answer). Guide and end-to-end setup guide: `docs-internal/ACCEPTANCE.md`. Tests: `acceptance-harness`.
+
+### Fixed
+
+- A stale pack is no longer rendered: with `--root`, `brand:runtime social-batch --pack` stops with `stale_pack` before writing when an approved fact the pack cites changed or is no longer approved, and `brand:runtime readiness` adds the blocking check `context.source_drift`. Without `--root` nothing changes. (`packSourceDrift`, found by the acceptance harness.)
+
 ## Unreleased — Nontechnical agent onboarding (fixes pack GAP-11, docs and test only)
 
 ### Added
@@ -679,3 +712,40 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `writeBatch` refuses a dangling symlink and a linked parent directory that leads into a `brand/` folder (checked on the real path before and after the directory is created).
 - Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
 - `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
+
+## Unreleased — Audit: Visual V2 area fixes
+
+### Fixed
+
+- Brand Book reader (V2.4): an agent suggestion is labelled "Agent suggestion. Not approved and not an owner decision." instead of "Template guidance"; tentative and estimated drafts say so; a question the owner marked unknown, skipped, not applicable or deprecated says that instead of "Still to answer". en/fa/tr. Test: `studio-visual-book`.
+- Docs: `IMPLEMENTATION_STATUS.md` rows for V2.1, V2.2, V2.3 and the print engine use the stable V2.4 paths; `STUDIO.md` lists `/visual/mascot[/print]` among the 301 legacy paths.
+
+## Unreleased — Audit: Visual V2 stale states at view time
+
+### Fixed
+
+- Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
+
+## Unreleased — Audit: fixes pack area (GAP-08 coach rules)
+
+### Fixed
+
+- `premium-vs-lowest-price`: a negated cheap price ("we are never cheap", «ارزان نیستیم», "ucuz değil") no longer raises a trade-off question. The cheap-price markers use the same negation guard as `sensitive-claim-wording`; Persian `نیست` and Turkish `değil` with personal endings count after the word.
+- Coach registry rules no longer read a question the owner's config turned off (module disabled, skip condition). `consistency_review` said `needs_verification` for such a field while `quality_review` said `not_applicable`.
+- `COACH_RULE_VERSION` is `coach-rules/4` (verdicts changed for the same input). Tests: `coach-rules`.
+
+## Unreleased — Audit: fixes pack area (GAP-09 evidence links)
+
+### Fixed
+
+- `brand:assurance`: a research note linked to a verified evidence-register entry counts as `independent` only for a control that names the entry's claim question. A note tagged with two questions no longer makes the other question's control look independently evidenced; there it stays `owner_stated`. Test: `assurance-links`.
+
+## Unreleased — Audit: Visual V1 area fixes
+
+### Fixed
+
+- `brand:export-visual`: an output folder reached through a link (the folder itself or a parent) into `brand/` or a `.private` folder is refused. The check runs on the real path, before and after the folder is created. A link left in place of an output file (HTML, PDF or a temporary galley/check file) is refused, not followed.
+- `brand:export-visual` reads the working copy. When `brand/` has uncommitted changes, it says so, and the book imprint prints "plus changes in brand/ not yet committed" next to the source commit (en/fa/tr). It also says when the Chrome measuring pass fails and the estimates are used.
+- `tests/studio-visual-browser.test.ts`: restored the V1.2 print-book checks on real Studio data (one PDF page per sheet, no text block overflow, contents numbers = printed folios, folios on the outer edge in en/fa). The merge of #40 had dropped them, but `docs/IMPLEMENTATION_STATUS.md` still listed them.
+- `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
+- `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.

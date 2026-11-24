@@ -18,9 +18,9 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # A brand-content change takes about 2 minutes, a code change under 10; never let a stuck step
-    # burn the 6-hour default.
-    timeout-minutes: 20
+    # A brand-content change takes about 2 minutes, a code change about 10 to 15; never let a stuck
+    # step burn the 6-hour default. Keep this at least 7 minutes above the step timeouts.
+    timeout-minutes: 28
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,7 +53,7 @@ jobs:
       - name: brand tests
         if: steps.scope.outputs.code == 'true'
         run: npm run test
-        timeout-minutes: 10
+        timeout-minutes: 18
       - name: public docs build and scan
         if: steps.docs.outputs.publish == 'public'
         run: |
