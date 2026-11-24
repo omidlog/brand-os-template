@@ -9,7 +9,9 @@ import { buildNamedDocument } from '@brand-os/brand-core'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import {
   buildBusinessModelCanvas,
+  buildBook,
   buildCompetitorComparison,
+  composeBook,
   buildMascotAtlas,
   buildPublishingGallery,
   buildVisualIdentity,
@@ -18,6 +20,7 @@ import {
   illustrativeMascotAtlas,
   PUBLISHING_DOCUMENT_TYPES,
   questionClassifier,
+  redactBook,
   redactDocumentModel,
   redactVisualDocument,
   type ExportProfile,
@@ -218,4 +221,46 @@ test('coverage cells: nine canvas zones in canonical order, prose sections by st
   const book = coverageCells(buildNamedDocument(engine, 'brand-book', 'internal'))
   assert.ok(book.length > 0)
   assert.ok(book.every((item) => ['complete', 'partial', 'missing'].includes(item.state)))
+})
+
+test('full books: the public Brand Book passes the public profile (finance, .private); the Business Report is never public', () => {
+  const { engine, proof } = brand()
+  const classify = questionClassifier(engine)
+  // A public book the way a buggy builder could hand it over: approved, but finance, .private-sourced and unknown values.
+  const leaky = (audience: 'public' | 'internal') =>
+    composeBook({
+      kind: 'brand_book',
+      audience,
+      brand_id: 'publishing-brand',
+      brand_name: 'Publishing Brand',
+      illustrative: false,
+      sections: {
+        overview: [entry('business.finance.economics_note', SECRET.finance)],
+        strategy: [entry('brand.strategy.purpose', SECRET.privateSource, 'approved', ['brand.strategy.purpose', 'brand/.private/strategy/records/r1.json']), entry('brand.strategy.vision', 'Calm lessons for every family')],
+        verbal: [entry('made.up.question', SECRET.unknown)],
+      },
+    })
+  const pub = redactBook(leaky('public'), 'public', classify)!
+  const text = JSON.stringify(pub.document)
+  for (const value of [SECRET.finance, SECRET.privateSource, SECRET.unknown]) assert.equal(text.includes(value), false, value)
+  assert.equal(text.includes('.private'), false, 'no .private source is cited')
+  assert.ok(text.includes('Calm lessons for every family'), 'an approved, permitted value stays')
+  assert.equal(pub.redacted, 3)
+  const states = pub.document.chapters.flatMap((chapter) => (chapter.kind === 'facts' || chapter.kind === 'plate' ? chapter.entries : chapter.kind === 'unavailable' ? chapter.awaiting : []))
+  assert.ok(!states.some((item) => item.state === 'withheld'), 'the public edition shows no withheld mark')
+  const overview = pub.document.chapters.find((chapter) => chapter.chapter_id === 'overview')!
+  assert.equal(overview.kind, 'unavailable', 'a chapter left without a value becomes a designed gap')
+  if (overview.kind === 'unavailable') assert.deepEqual(overview.awaiting, [], 'public never lists what is awaited')
+  assert.equal(redactBook(leaky('internal'), 'public', classify), null, 'a public profile refuses an internal book')
+  assert.ok(JSON.stringify(redactBook(leaky('internal'), 'internal', classify)!.document).includes(SECRET.finance), 'the internal profile keeps owner data')
+  // The Business Report is the business plan as a book: never public, investor and internal may receive it.
+  assert.equal(redactBook(buildBook(engine, 'business_report', 'public'), 'public', classify), null)
+  assert.ok(redactBook(buildBook(engine, 'business_report', 'internal'), 'investor', classify))
+  // The real builder is a fixed point of public redaction.
+  approve(engine, proof, { 'business.identity.trade_name': 'Calm Trade Name' })
+  assert.equal(engine.publishFact('business.identity.trade_name', proof).kind, 'recorded')
+  const real = buildBook(engine, 'brand_book', 'public')
+  const fixed = redactBook(real, 'public', classify)!
+  assert.equal(fixed.redacted, 0)
+  assert.deepEqual(fixed.document, real)
 })

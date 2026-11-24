@@ -29,6 +29,8 @@ export interface FullBookText {
   /** Field labels by question id. */
   labels: Record<string, string>
   exportUnknownDoc: string
+  /** The Business Report is the business plan as a book; the business plan is never public. */
+  exportReportNotPublic: string
 }
 
 const en: FullBookText = {
@@ -89,6 +91,7 @@ const en: FullBookText = {
   zoneGap: 'No approved entry yet',
   labels: {},
   exportUnknownDoc: '--doc must be identity, bmc, brand-book or business-report (got {doc}).',
+  exportReportNotPublic: 'The Business Report is never public: it is the business plan, which only the internal edition may print. Use --edition internal.',
 }
 
 const fa: FullBookText = {
@@ -218,6 +221,7 @@ const fa: FullBookText = {
     'business.finance.economics_note': 'یادداشت اقتصاد قیمت‌گذاری',
   },
   exportUnknownDoc: '--doc باید identity، bmc، brand-book یا business-report باشد (داده شد: {doc}).',
+  exportReportNotPublic: 'گزارش کسب‌وکار هرگز عمومی نیست: این همان برنامهٔ کسب‌وکار است و فقط نسخهٔ داخلی چاپ می‌شود. از --edition internal استفاده کنید.',
 }
 
 const tr: FullBookText = {
@@ -347,6 +351,7 @@ const tr: FullBookText = {
     'business.finance.economics_note': 'Fiyatlandırma ekonomisi notu',
   },
   exportUnknownDoc: '--doc identity, bmc, brand-book veya business-report olmalı (verilen: {doc}).',
+  exportReportNotPublic: 'İş Raporu hiçbir zaman herkese açık değildir: iş planının kendisidir ve yalnızca iç sürüm basılabilir. --edition internal kullanın.',
 }
 
 export const FULL_BOOK_TEXT: Record<VisualLang, FullBookText> = { en, fa, tr }

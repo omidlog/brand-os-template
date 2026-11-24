@@ -39,6 +39,8 @@ export interface FullBookInput {
   book: BookDocument
   lang: VisualLang
   commit: string | null
+  /** The export read brand/ with changes not yet committed: the imprint says so next to the commit. */
+  uncommitted?: boolean
   head: SafeHtml
   toolbar: SafeHtml
   assetUrl: (key: string) => string | null
@@ -47,7 +49,7 @@ export interface FullBookInput {
 }
 
 function shell(input: FullBookInput): ShellInput {
-  return { doc: input.book, lang: input.lang, commit: input.commit, head: input.head, toolbar: input.toolbar }
+  return { doc: input.book, lang: input.lang, commit: input.commit, uncommitted: input.uncommitted, head: input.head, toolbar: input.toolbar }
 }
 
 /** The document the plates and the appendix framework note come from; an empty shell when the book has neither. */
