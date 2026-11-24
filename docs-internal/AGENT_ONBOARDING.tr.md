@@ -6,7 +6,8 @@ Bu rehber marka sahibi içindir. Programlama bilmeniz gerekmez. Her komutu sıra
 bir yapay zekâ asistanı (örneğin Claude Code) onaylanmış marka bilgilerinizi yalnızca **okuyabilir**, fazlasını değil.
 Onu istediğiniz zaman kapatabilirsiniz.
 
-Aşağıdaki her komut otomatik olarak test edilir (`tests/fresh-agent-setup.test.ts`). Teknik başvuru:
+Aşağıdaki Brand OS komutları otomatik olarak test edilir (`tests/fresh-agent-setup.test.ts`); `claude mcp` ve `read -rs`
+adımları Claude Code ve kabuk komutlarıdır, test bunları çalıştırmaz. Teknik başvuru:
 [AI_CONNECTORS.md](AI_CONNECTORS.md).
 
 ## Ne elde edersiniz, ne etmezsiniz

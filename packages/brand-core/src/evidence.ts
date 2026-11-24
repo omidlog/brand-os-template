@@ -21,7 +21,8 @@ import type { FieldQuestion, PublicationRequirement } from './types.js'
  * - Owner testimony is recorded and shown as owner-stated. It never counts as independent verification.
  * - Withdrawing evidence needs no proof (it only restricts) and unpublishes every claim whose
  *   publication gate no longer passes.
- * - A `review_due` date in the past makes the evidence stale: it stops counting until re-verified.
+ * - A `review_due` date in the past makes the evidence stale: it stops counting. Verifying again does not move the
+ *   date; the owner records a new entry with a later `review_due` and verifies that.
  */
 
 export const EVIDENCE_KINDS = ['verification', 'permission'] as const

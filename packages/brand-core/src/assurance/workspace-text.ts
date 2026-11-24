@@ -474,7 +474,7 @@ export const LINK_STATE_TEXT: Record<LinkState, T> = {
     fa: 'هنوز حساب نمی‌شود: مالک این مدرک را تأیید نکرده است (brand:evidence verify)',
     tr: 'henüz sayılmaz: sahip kaydı doğrulamadı (brand:evidence verify)',
   },
-  expired: { en: 'does not count: past its review date; verify it again', fa: 'حساب نمی‌شود: تاریخ بازبینی‌اش گذشته؛ دوباره تأیید کنید', tr: 'sayılmaz: inceleme tarihi geçti; yeniden doğrulayın' },
+  expired: { en: 'does not count: past its review date; add a new entry with a later review date, verify it and link the note to it', fa: 'حساب نمی‌شود: تاریخ بازبینی‌اش گذشته؛ یک مورد تازه با تاریخ بازبینی دیرتر ثبت کنید، تأییدش کنید و یادداشت را به آن پیوند دهید', tr: 'sayılmaz: inceleme tarihi geçti; daha geç inceleme tarihli yeni bir kayıt ekleyin, doğrulayın ve notu ona bağlayın' },
   withdrawn: { en: 'does not count: the entry was withdrawn', fa: 'حساب نمی‌شود: مدرک پس گرفته شده است', tr: 'sayılmaz: kayıt geri çekildi' },
   rejected: { en: 'does not count: the owner rejected the entry', fa: 'حساب نمی‌شود: مالک این مدرک را رد کرده است', tr: 'sayılmaz: sahip kaydı reddetti' },
 }

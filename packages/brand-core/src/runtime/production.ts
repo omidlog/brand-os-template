@@ -24,6 +24,7 @@ import { productionText, type ProductionCheckId, type ProductionVerdict } from '
  * | --- | --- | --- |
  * | `context.pack_integrity` | `task-context.pack` (`verifyPack`) | yes |
  * | `context.readiness`, `context.staleness` | `task-context.pack` (as built) | `blocked` only |
+ * | `context.source_drift` | `task-context.pack` (`packSourceDrift`) | yes, only with `--root` (owner-local) |
  * | `renderer.available`, `output.format` | `runtime.renderers` (this file's registry) | yes |
  * | `plan.copy` | `runtime.plan` (`planSocialBatch` blockers) | yes |
  * | `copy.claims` | `content-bridge.claims` (`claimConflicts`) | yes |
