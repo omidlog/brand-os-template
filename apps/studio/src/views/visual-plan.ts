@@ -48,7 +48,9 @@ function labelOf(lang: VisualLang, entry: VisualEntry): string {
 
 /** Plain-label source line for one answer (never its id). */
 function sourceLine(cat: VisualCatalog, lang: VisualLang, entry: VisualEntry): SafeHtml {
-  return sourceFootnote(cat, lang, { label: labelOf(lang, entry), state: entry.state, version: entry.version, approved_at: entry.approved_at })
+  // The version is set in the page's digits (Persian in fa), so it is passed as an extra part.
+  const version = entry.version !== null ? [fillVisual(cat.text.version, { version: numbers(lang).format(entry.version) })] : []
+  return sourceFootnote(cat, lang, { label: labelOf(lang, entry), state: entry.state, version: null, approved_at: entry.approved_at }, version)
 }
 
 const ZONE_ICON: Record<BmcZone['state'], IconName> = { complete: 'checkCircle', partial: 'clock', missing: 'circle', withheld: 'lock', not_applicable: 'skip' }
@@ -459,10 +461,10 @@ ${input.toolbar}
     ${foot(t.common.pageSources, 2)}
     ${illustrativeStamp(cat, doc)}
     <div class="vz-sources-grid">
-      <div class="vz-main">${planSourcesTable(cat, lang, doc)}${internal ? planIdsPanel(cat, lang, doc) : ''}</div>
+      <div class="vz-main">${planSourcesTable(cat, lang, doc)}<p class="vz-muted vz-edition-note">${internal ? cat.text.editionInternalNote : cat.text.editionPublicNote}</p></div>
       <div class="vz-side">
-        <section class="vz-panel"><h2 class="vz-panel-title">${cat.text.summaryTitle}</h2><p class="vz-muted vz-edition-note">${internal ? cat.text.editionInternalNote : cat.text.editionPublicNote}</p></section>
         ${ref ? frameworkPanel(cat, ref, lang, 'print') : ''}
+        ${internal ? planIdsPanel(cat, lang, doc) : ''}
       </div>
     </div>
   </section>

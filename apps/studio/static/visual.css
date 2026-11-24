@@ -1181,3 +1181,10 @@
   .vz-page--plan-sources .vz-print-foot { margin-block-start: 0; padding-block: 0 3mm; border-block-start: 0; border-block-end: 0.3mm solid #9aa3ab; }
 }
 .vz-page--plan-sources .vz-print-foot { margin-block-start: 0; padding-block: 0 3mm; border-block-start: 0; border-block-end: 0.3mm solid #9aa3ab; }
+.vz-page--plan .vz-plan-idlist { font-size: 7pt; gap: 0.6mm; margin-block-end: 2mm; }
+.vz-page--plan .vz-plan-ids .vz-panel-title { margin-block: 2mm 1mm; }
+.vz-page--plan .vz-plan-sources .vz-table { font-size: 7.2pt; }
+[lang="fa"] .vz-plan .vz-item-name::before { content: counter(vz-item, persian) "\2002"; }
+.vz-plan-ghost--journey { grid-template-columns: repeat(3, 1fr); grid-template-rows: 28px minmax(100px, 1fr); }
+.vz-page--plan .vz-plan-empty { grid-template-columns: minmax(70mm, 0.9fr) minmax(0, 1.4fr); gap: 10mm; }
+.vz-page--plan .vz-plan-ghost { min-block-size: 45mm; }
