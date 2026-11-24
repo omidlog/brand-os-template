@@ -195,8 +195,10 @@ test('no mutation endpoints: the route table has exactly the documented non-GET 
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/retry$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/provisioning\\/discard$',
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/refresh$',
-        // Studio's second GitHub write: opens (never merges) a template update pull request.
+        // Studio's second GitHub write: starts the template's engine-release workflow (for one brand, or for all);
+        // that workflow opens the engine update pull request. Studio never merges and writes nothing to a brand.
         'POST ^\\/brands\\/([a-z0-9]+(?:-[a-z0-9]+)*)\\/template-update$',
+        'POST ^\\/brands\\/update-all$',
       ],
     )
     for (const route of writes) assert.ok(route.writes, `${route.pattern} documents what it changes`)

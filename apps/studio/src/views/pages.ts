@@ -113,10 +113,11 @@ function updateBadge(ctx: ViewContext, status: UpdateStatus | undefined): SafeHt
   if (!status) return html``
   if (status.pull) return badge(ctx.i.t('update.pullOpen'), 'info', 'pr')
   if (status.state === 'available') return badge(ctx.i.t('update.available'), 'warning', 'refresh')
+  if (status.state === 'untracked') return badge(ctx.i.t('update.untracked'), 'neutral', 'info')
   return html``
 }
 
-export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced: Map<string, { sha: string | null; at: string | null }>; updates?: Map<string, UpdateStatus>; discarded?: boolean }): SafeHtml {
+export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced: Map<string, { sha: string | null; at: string | null }>; updates?: Map<string, UpdateStatus>; discarded?: boolean; canUpdateAll?: boolean; updateFlash?: 'dispatched' | 'not_configured' | 'busy' | 'failed' | 'pending' | 'too_soon' | null }): SafeHtml {
   const { i } = ctx
   const newButton = input.canCreate ? html`<a class="btn btn-primary" href="/brands/new">${icon('plus')}<span>${i.t('nav.newBrand')}</span></a>` : ''
   const content = ctx.brands.length
@@ -142,7 +143,15 @@ export function brandsPage(ctx: ViewContext, input: { canCreate: boolean; synced
     content: html`${pageHeader({ title: i.t('brands.title'), subtitle: i.t('brands.subtitle'), actions: ctx.brands.length ? newButton || undefined : undefined })}
       ${input.discarded ? banner({ tone: 'success', body: i.t('discard.done'), live: true }) : ''}
       ${!input.canCreate && ctx.brands.length ? banner({ tone: 'info', body: i.t('brands.notConfigured') }) : ''}
-      ${content}`,
+      ${input.updateFlash ? banner({ tone: input.updateFlash === 'dispatched' ? 'success' : input.updateFlash === 'failed' || input.updateFlash === 'not_configured' ? 'danger' : 'info', body: i.t(`update.flash.${input.updateFlash}` as MessageKey, { number: '' }), live: true }) : ''}
+      ${content}
+      ${input.canUpdateAll && ctx.brands.length
+        ? html`<form method="post" action="/brands/update-all" class="inline-form update-all" data-update-form>
+            <input type="hidden" name="_csrf" value="${ctx.csrf ?? ''}">
+            <button type="submit" class="btn btn-secondary btn-sm" aria-describedby="update-all-hint" data-busy-label="${i.t('update.opening')}">${icon('refresh')}<span>${i.t('update.all')}</span></button>
+            <p class="muted small" id="update-all-hint">${i.t('update.allHint')}</p>
+          </form>`
+        : ''}`,
   })
 }
 
@@ -534,15 +543,17 @@ export interface UpdatePanel {
   canOpen: boolean
   busy: boolean
   template: string
-  flash: { code: 'opened' | 'exists' | 'current' | 'untracked' | 'not_configured' | 'busy' | 'failed' | 'pending' | 'too_soon'; number: number | null; url: string | null } | null
+  flash: { code: 'dispatched' | 'not_configured' | 'busy' | 'failed' | 'pending' | 'too_soon'; number: number | null; url: string | null } | null
 }
 
 function updatePanel(ctx: ViewContext, view: BrandView, panel: UpdatePanel): SafeHtml {
   const { i } = ctx
   const { status, flash } = panel
-  const from = shortSha(status.from)
-  const to = shortSha(status.to)
-  const flashTone: Tone = flash?.code === 'opened' || flash?.code === 'current' ? 'success' : flash?.code === 'exists' || flash?.code === 'pending' || flash?.code === 'busy' || flash?.code === 'too_soon' ? 'info' : 'danger'
+  const from = status.from ?? '—'
+  const to = status.to ?? '—'
+  const flashTone: Tone = flash?.code === 'dispatched' ? 'success' : flash?.code === 'pending' || flash?.code === 'busy' || flash?.code === 'too_soon' ? 'info' : 'danger'
+  // An update applies to a brand behind the newest engine, and to one still to be converted to the engine.
+  const due = status.state === 'available' || status.state === 'untracked'
   const flashBody = flash
     ? html`${i.t(`update.flash.${flash.code}` as MessageKey, { number: flash.number ?? '' })}${flash.url ? html` ${externalLink(flash.url, i.t('update.viewPull', { number: flash.number ?? '' }), i, 'link-sm')}` : ''}`
     : null
@@ -561,14 +572,14 @@ function updatePanel(ctx: ViewContext, view: BrandView, panel: UpdatePanel): Saf
     : i.t('update.unknownBody')
   let action: SafeHtml = html``
   if (status.pull && pullUrl) action = externalLink(pullUrl, html`${icon('pr')}<span>${i.t('update.viewPull', { number: status.pull.number })}</span>`, i)
-  else if (status.state === 'available' && panel.busy) action = html`<p class="muted small" role="status"><span class="spinner" aria-hidden="true"></span> ${i.t('update.busy')}</p>`
-  else if (status.state === 'available' && panel.canOpen)
+  else if (due && panel.busy) action = html`<p class="muted small" role="status"><span class="spinner" aria-hidden="true"></span> ${i.t('update.busy')}</p>`
+  else if (due && panel.canOpen)
     action = html`<form method="post" action="/brands/${view.record.slug}/template-update" class="inline-form" data-update-form>
         <input type="hidden" name="_csrf" value="${ctx.csrf ?? ''}">
         <button type="submit" class="btn btn-primary btn-sm" aria-describedby="update-hint" data-busy-label="${i.t('update.opening')}">${icon('pr')}<span>${i.t('update.open')}</span></button>
       </form>
       <p class="muted small" id="update-hint">${i.t('update.openHint')}</p>`
-  else if (status.state === 'available') action = html`<p class="muted small">${i.t('update.cannotOpen')}</p>`
+  else if (due) action = html`<p class="muted small">${i.t('update.cannotOpen')}</p>`
   return html`<section class="card update-card" id="template-update" aria-labelledby="update-title" data-update-state="${status.pull ? 'pull' : status.state}">
     <div class="card-head"><h2 class="card-title" id="update-title">${i.t('update.title')}</h2>${stateBadge}</div>
     ${flashBody ? banner({ tone: flashTone, body: flashBody, live: true }) : ''}

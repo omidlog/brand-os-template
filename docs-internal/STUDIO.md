@@ -4,7 +4,7 @@ Studio (`apps/studio`) is a private, owner-only web app. It has three jobs:
 
 1. **Create** a new brand: one new private GitHub repository from this template, with a safe initial configuration.
 2. **Show** each brand: the approved, source-backed state of its merged default branch.
-3. **Offer template updates**: show **Updates available** when the template moved on, and open (never merge) an update pull request when the owner asks (or, with `STUDIO_TEMPLATE_AUTO_PR=1`, from the periodic check).
+3. **Offer engine updates**: compare each brand's `.brand-os/engine/VERSION` with the template's newest `engine-v…` release, and start the template's `engine-release` workflow for one brand (**Update this brand**) or all (**Update all brands**). The workflow opens the pull requests (`docs/engine-updates.md`); Studio never merges.
 
 Studio does not edit brands. All ongoing work (interviews, proposals, documents, assets, tokens, commits and pull requests) happens in **Claude Code, inside that brand's own repository**. Approval and publication stay with the owner's trusted local CLI. Phase 8 Personal Brand OS remains fully supported. Studio shows personal brands read-only and does not edit them.
 
@@ -12,7 +12,7 @@ One Studio serves every brand, at routes `/brands/<slug>` (for example `https://
 
 ## What Studio will never do
 
-There is no chat, no Claude or other AI integration, no interview UI, no fact edit or save form, no approve or publish button, no upload, no commit, push, merge or revert UI (the update pull request is a branch plus a pull request that a person merges on GitHub), no agent-token issuance and no terminal. A test (`tests/studio-server.test.ts`, "no mutation endpoints") pins the complete list of non-GET routes and fails if one is added.
+There is no chat, no Claude or other AI integration, no interview UI, no fact edit or save form, no approve or publish button, no upload, no commit, push, merge or revert UI (an engine update pull request is opened by the template's workflow and merged on GitHub, by a person or by GitHub auto-merge for a brand that opted in), no agent-token issuance and no terminal. A test (`tests/studio-server.test.ts`, "no mutation endpoints") pins the complete list of non-GET routes and fails if one is added.
 
 | Non-GET route | What it changes |
 | --- | --- |
@@ -21,10 +21,11 @@ There is no chat, no Claude or other AI integration, no interview UI, no fact ed
 | `POST /brands/<slug>/provisioning/retry` | Retries a failed provisioning of that new repository |
 | `POST /brands/<slug>/provisioning/discard` | Removes a failed attempt from Studio's own registry. Never calls GitHub |
 | `POST /brands/<slug>/refresh` | Re-reads GitHub into Studio's read cache |
-| `POST /brands/<slug>/template-update` | **Open update PR**, Studio's second GitHub write: one commit on a new `template-update/<sha>` branch and one pull request in the brand repository. Never the default branch, never a merge |
+| `POST /brands/<slug>/template-update` | **Update this brand**, Studio's second GitHub write: starts the template's `engine-release` workflow for this brand (`workflow_dispatch`). Studio writes nothing to the brand repository and never merges |
+| `POST /brands/update-all` | **Update all brands**: the same workflow for every brand with the topic `brand-os-brand` |
 | `POST /webhooks/github` | Marks a brand's cache stale (signed push events only) |
 
-`PUT`, `PATCH` and `DELETE` answer 405. Once a repository exists, the only thing Studio ever writes to it is an update branch and its pull request, and only when the owner presses **Open update PR** or, if the owner turned on `STUDIO_TEMPLATE_AUTO_PR=1`, when the periodic template check finds a brand behind.
+`PUT`, `PATCH` and `DELETE` answer 405. Once a repository exists, Studio writes nothing more to it except, right after provisioning, the topic `brand-os-brand`. Engine updates are opened by the template's workflow, which also runs after every green release on its own; `STUDIO_TEMPLATE_CHECK_MINUTES` and `STUDIO_TEMPLATE_AUTO_PR` are no longer used.
 
 ## The owner journey
 
@@ -144,7 +145,7 @@ Use fine-grained tokens or a GitHub App installation, limited to the accounts an
 | Credential | Variable | Permissions |
 | --- | --- | --- |
 | Read | `STUDIO_GITHUB_READ_TOKEN` | Contents: read, Metadata: read, Pull requests: read, on brand repositories |
-| Provision | `STUDIO_GITHUB_PROVISION_TOKEN` | Administration: write (create from template; delete a partial repository), Contents: write and Pull requests: write (update pull requests), on the allowlisted destination; read access to the template |
+| Provision | `STUDIO_GITHUB_PROVISION_TOKEN` | Administration: write (create from template, set the brand-os-brand topic, delete a partial repository) and Contents: write on the allowlisted destination; on the template: read access and **Actions: write** (start the engine-release workflow) |
 
 The template repository must be marked as a template on GitHub (see README, "Mark this repository as a template"). If the provisioning credential cannot delete repositories, a failed creation is recorded as *cleanup required* and Studio tells you which repository to remove.
 

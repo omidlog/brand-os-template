@@ -36,7 +36,6 @@
     "build": "npm run tokens:build && npm run docs:build",
     "ci": "npm run lint && npm run typecheck && npm run validate && npm run test:full && npm run build && npm run build:docs:nomascot",
     "brand:init": "tsx scripts/brand.ts init",
-    "template:update": "tsx scripts/template-update.ts",
     "brand:interview": "tsx scripts/brand.ts interview",
     "brand:resume": "tsx scripts/brand.ts resume",
     "brand:next": "tsx scripts/brand.ts next",
@@ -86,6 +85,7 @@
     "studio": "tsx apps/studio/src/cli.ts",
     "studio:hash-password": "tsx apps/studio/src/cli.ts hash-password",
     "studio:build": "tsx scripts/build-studio.ts",
+    "engine:build": "tsx scripts/build-engine.ts",
     "example:education": "tsx scripts/example-run.ts education-app",
     "example:b2b": "tsx scripts/example-run.ts b2b-saas"
   },

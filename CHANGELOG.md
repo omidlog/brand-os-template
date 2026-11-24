@@ -2,6 +2,38 @@
 
 
 
+
+
+
+## Unreleased — Studio starts engine updates (engine + data, part D)
+
+### Changed
+
+- Studio compares each brand's engine (`.brand-os/engine/VERSION`, the one file outside `brand/` it reads) with the template's newest `engine-v…` release. **Update this brand** (`POST /brands/<slug>/template-update`) and the new **Update all brands** (`POST /brands/update-all`) start the template's `engine-release` workflow; that workflow opens the pull requests. Studio no longer builds update pull requests itself, writes nothing to a brand for an update, and never merges.
+- A brand Studio creates gets the topic `brand-os-brand` and its first engine update (which converts it to a data-only repository) right after provisioning.
+- The provisioning token needs **Actions: write** on the template repository to start the workflow.
+
+### Removed
+
+- The periodic template check (`STUDIO_TEMPLATE_CHECK_MINUTES`, `STUDIO_TEMPLATE_AUTO_PR` are ignored), `npm run template:update`, `scripts/template-update-pr.ts` and the brand-side `template-update.yml` workflow. Engine releases replace them.
+
+## Unreleased — engine releases and fleet updates (engine + data, part C)
+
+### Added
+
+- `.github/workflows/engine-release.yml`: after `validate` passes on `main`, build the engine, publish the release `engine-v<version>`, and open one pull request in every brand repository with the topic `brand-os-brand` (`scripts/engine/fleet-update.ts`). Brands with the topic `brand-os-auto-merge` are merged after their own `brand-check` passes. Off until the owner adds `BRAND_OS_FLEET_TOKEN` and `BRAND_OS_FLEET_OWNERS`.
+- `brand-os convert`: one-time conversion of an older brand (a full template copy) into a data-only repository. It removes template code and unchanged template copies (recognised against every version the template ever had), keeps real edits as overrides, turns profile copies into additions-only overrides, and never touches brand data.
+- `docs/engine-updates.md`: how engine updates reach brands, and the one-time setup.
+
+## Unreleased — the bundled engine (engine + data, part B)
+
+### Added
+
+- `npm run engine:build` builds the Brand OS engine into `dist/engine/`. It contains one CLI (`brand-os.mjs`) with every brand command and all npm dependencies inlined, plus its assets (schemas, base tokens, guidance pages, Studio print styles), the agent guides and skills, and a `VERSION`. A data-only brand commits it at `.brand-os/engine/` and needs no `npm ci`.
+- `brand-os check` (`npm run check`) is the brand CI gate. It validates the brand's own data against the engine's definitions in well under a second and runs no test suite.
+- `brand-os scaffold` writes a brand's engine-owned root files: package.json scripts (the same `npm run brand:*` names as today), `.github/workflows/brand.yml` (job `brand-check`), AGENTS.md and CLAUDE.md pointing at `.brand-os/engine/`, and `.gitignore`. `--new` creates a data-only brand in an empty folder.
+- `tests/engine-bundle.test.ts` builds the engine and runs a data-only brand end to end: scaffold, check, next, interview, approve with a proof, document and MCP.
+
 ## Unreleased — engine definitions are read from the engine, not copied into brands (engine + data, part A)
 
 ### Changed

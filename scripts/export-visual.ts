@@ -45,7 +45,8 @@ import { identityBookDocument, identityBookGalley, type BookInput, type Heights 
 import { fullBookDocument, fullBookGalley } from '../apps/studio/src/views/visual-print-full.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
-const STATIC = path.join(ROOT, 'apps', 'studio', 'static')
+// The bundled engine ships Studio's print styles and fonts in its assets; in this monorepo they are in apps/studio/static.
+const STATIC = process.env.BRAND_OS_ENGINE_ASSETS ? path.join(process.env.BRAND_OS_ENGINE_ASSETS, 'studio-static') : path.join(ROOT, 'apps', 'studio', 'static')
 const FONT_MIME: Record<string, string> = { '.woff2': 'font/woff2' }
 const MAX_ASSET_BYTES = 8 * 1024 * 1024
 
@@ -433,4 +434,4 @@ function main(): number {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) process.exitCode = main()
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href || process.env.BRAND_OS_ENTRY === 'export-visual') process.exitCode = main()
