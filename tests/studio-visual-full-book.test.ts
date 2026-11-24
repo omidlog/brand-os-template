@@ -112,3 +112,18 @@ test('brand:export-visual --doc brand-book|business-report writes self-contained
   assert.throws(() => exportVisual({ root: process.cwd(), doc: 'business-report', langs: ['fa'], edition: 'public', profile: null, out: path.join(tmp, 'p'), fixture: true, pdf: false, chrome: null, log: () => {} }), (error: unknown) => error instanceof ExportError && error.code === 'usage' && error.message.includes('--edition internal'))
   assert.throws(() => exportVisual({ root: process.cwd(), doc: 'business-report', langs: ['en'], edition: 'internal', profile: null, out: 'brand/out', fixture: true, pdf: false, chrome: null, log: () => {} }), (error: unknown) => error instanceof ExportError && error.code === 'path')
 })
+
+test('full books: an approved list prints as items (labelled choices, page-language numbers), never an item id or a draft item', () => {
+  const expected = { en: ['Working adults changing jobs', 'Primary', '01'], fa: ['بزرگسالان شاغل در حال تغییر شغل', 'اصلی', '۰۱'], tr: ['İş değiştiren çalışan yetişkinler', 'Birincil', '01'] } as const
+  for (const lang of VISUAL_LANGS) {
+    for (const audience of ['internal', 'public'] as const) {
+      const page = fullBookDocument(input('business_report', lang, audience)).html.value
+      const [name, priority, num] = expected[lang]
+      assert.ok(page.includes(`<span class="fb-item-name" dir="auto">${name}</span>`), `${lang} ${audience}: segment printed as an item`)
+      assert.ok(page.includes(`<span class="fb-item-tag">${priority}</span>`), `${lang} ${audience}: choice printed with its ${lang} label`)
+      assert.ok(page.includes(`<span class="fb-item-num">${num}</span>`), `${lang} ${audience}: item numbered in the page language`)
+      assert.equal(/\b(seg|act|res|cost)-\d+\b/.test(page), false, `${lang} ${audience}: no item id is printed`)
+      for (const draft of ['Lesson production', 'Cloud hosting', 'تولید درس', 'Ders üretimi']) assert.equal(page.includes(draft), false, `${lang} ${audience}: draft item ${draft} not printed`)
+    }
+  }
+})

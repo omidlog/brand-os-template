@@ -1,3 +1,4 @@
+import { entityOptionLabel, entitySpec } from '../entities.js'
 import type { StructuredValue } from '../structured.js'
 import type { DocumentItem, DocumentModel, ItemTag } from './model.js'
 
@@ -38,6 +39,25 @@ function structuredLines(value: StructuredValue): string[] {
         '| --- | --- | --- | --- | --- |',
         ...value.relationships.map((entry) => `| ${entry.relation} | ${escape(entry.organization)} | ${entry.from} | ${entry.to} | ${entry.ownership === 'unstated' ? 'not stated (no ownership claim)' : entry.ownership} |`),
       ]
+    case 'repeating_entity': {
+      const spec = entitySpec(value.question)
+      if (!spec) return []
+      const extra = spec.fields.slice(1)
+      return [
+        `| Id | ${spec.fields.map((field) => field.label.en).join(' | ')} | Links |`,
+        `| --- | ${spec.fields.map(() => '---').join(' | ')} | --- |`,
+        ...value.items.map(
+          (item) =>
+            `| \`${item.id}\` | ${escape(item.fields.name ?? '')} | ${extra
+              .map((field) => {
+                const raw = item.fields[field.key]
+                if (raw === undefined) return '—'
+                return escape(field.kind === 'choice' ? entityOptionLabel(spec, field.key, raw) : raw)
+              })
+              .join(' | ')} | ${item.links.length ? item.links.map((link) => `\`${link}\``).join(', ') : '—'} |`,
+        ),
+      ]
+    }
   }
 }
 

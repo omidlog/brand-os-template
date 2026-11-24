@@ -54,6 +54,14 @@ export const BUSINESS_PLAN: DocumentSpec = {
       purpose: 'Known risks and how they are reviewed.',
       questions: ['business.plan.risks', 'business.partners.risk_process'],
     },
+    {
+      // Visual V3.1: the Business Model Canvas list questions (repeating_entity). Appended, so earlier sections keep
+      // their order; each list shows its items, or a named gap.
+      id: 'canvas-lists',
+      title: 'Business Model Canvas lists',
+      purpose: 'Customer segments, key activities, key resources and cost items as separate items. Cost items never carry amounts.',
+      questions: ['business.model.segments', 'business.model.key_activities', 'business.model.key_resources', 'business.model.cost_items'],
+    },
   ],
 }
 

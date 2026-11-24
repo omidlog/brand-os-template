@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — Visual V3.1: repeating_entity question type and structured BMC (D3)
+
+### Added
+
+- Question type `repeating_entity`: a list of items with their own fields, stable ids (`seg-1`, `act-2` …, never reused) and links to items of other list questions. Stored as one canonical string (`brand-os.entity-list/1`), validated on every path (interview, change proposals, approval). `packages/brand-core/src/entities.ts`.
+- Four optional `business-company` questions: `business.model.segments`, `business.model.key_activities`, `business.model.key_resources`, `business.model.cost_items` (no money amounts). Question bank and field registry regenerated (additions only).
+- `brand:interview -- --question <id> --entity add|edit|move|remove|list`: one item per call; drafts, or a change proposal on an approved list. Nothing is approved.
+- `brand:migrate` converts legacy free text in a list question into a reviewable draft (or a change proposal for an approved fact) and flags text it cannot read as a list; nothing is dropped or silently rewritten.
+- Business Model Canvas: list items in their zones, recorded links by name (unresolved targets named as not shown), a links panel, a designed empty state for a list zone with no items. The business plan gains a "Business Model Canvas lists" section; Studio renders lists read-only. `brand_retrieve` returns list items in `meta.entity`. en/fa/tr throughout.
+- Tests: `repeating-entity` (validator, round trip, operations, approval flow, migration, CLI), `repeating-entity-readers` (brand_retrieve, Coach, canonical ids), V3.1 cases in `visual-bmc` and `studio-visual`.
+
+### Changed
+
+- The canvas zones Key activities and Key resources are answered by the new list questions instead of a "no question yet" gap; Customer segments and Cost structure also read their list. `relationships` is `{ modeled: true, links }` when list items exist, else `{ modeled: false, reason: 'no_list_items' }`.
+- Full Brand Book / Business Report (V4.2, after merging main): an approved list prints as its items (name, choice labels in the page language, detail, links by item name, numbered in the page's digits), never an item id. A draft, withheld or unpublished list carries no items into a book, and a report no longer embeds the canvas zone block (drafts, item ids); it keeps the framework reference. fa/tr book labels for the four list questions. Book reference screenshots unchanged.
+
 ## Unreleased — CI
 
 - CI: the `brand tests` step timeout in `validate.yml` rises from 10 to 18 minutes (the suite now takes about 10 minutes on GitHub runners) and the `verify` job timeout from 20 to 28.

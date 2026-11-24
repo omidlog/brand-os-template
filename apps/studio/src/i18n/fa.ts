@@ -651,6 +651,13 @@ export const fa: Messages = {
   'update.flash.pending': 'GitHub کند است. Studio هنوز درخواست ادغام را آماده می\u200cکند؛ یک دقیقهٔ دیگر صفحه را تازه کنید.',
   'update.flash.too_soon': 'درخواست\u200cهای به\u200cروزرسانی زیاد بود. چند دقیقه صبر کنید و دوباره تلاش کنید.',
   'update.viewPull': 'دیدن درخواست ادغام #{number}',
+  // Visual V3.1: repeating-entity answers (read-only list).
+  'entity.items': '{count} مورد',
+  'entity.idsToggle': 'شناسه‌ها و پیوندها',
+  'entity.links': 'پیوندها',
+  'entity.noLinks': 'بدون پیوند',
+  'entity.legacy': 'متن آزاد قدیمی، دقیقاً همان‌طور که نوشته شده نگه داشته شده است. هنوز فهرستی از موارد نیست؛ برای پیشنهاد تبدیل و بازبینی مالک، npm run brand:migrate را اجرا کنید.',
+  'entity.editHint': 'Studio فقط‌خواندنی است. مالک موارد را در مخزن برند با npm run brand:interview -- --question {id} --entity add|edit|move|remove اضافه، ویرایش، جابه‌جا یا حذف می‌کند؛ پیش‌نویس‌ها و پیشنهادهای تغییر همچنان به تأیید نیاز دارند.',
   // Visual V2.4: grouped navigation and the Brand Book reader.
   "nav.coach": "یادداشت‌های مربی",
   "nav.businessPlan": "طرح کسب‌وکار",

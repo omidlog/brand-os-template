@@ -23,8 +23,13 @@ async function brandWithFacts(s: RunningStudio, owner: Client): Promise<string> 
       'business.offer.value_proposition': 'Fluent <script>alert(1)</script> in ten minutes a day',
       'business.model.revenue': 'APPROVED-REVENUE subscriptions',
       'business.finance.costs': 'CANARY-RESTRICTED-COSTS 42000',
+      // Visual V3.1 list questions (SYNTHETIC DEMO): an approved segment list.
+      'business.customer.primary_segment': 'Working adults',
+      'business.model.segments': 'Independent cafés | weekly supply | primary\nOffice kitchens',
     })
     engine.answerQuestion('business.sales.pricing', 'DRAFT-PRICING one paid tier')
+    // A draft activity list linking to a visible segment and to one that does not exist (unresolved).
+    engine.answerQuestion('business.model.key_activities', 'DRAFT-ACTIVITY roasting | small batches | production | links: seg-1, seg-9')
   })
   await s.studio.sync.refresh(SLUG)
   return sha
@@ -54,7 +59,15 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     assert.match(page.text, /DRAFT-PRICING one paid tier/, 'the internal edition shows the draft …')
     assert.match(page.text, /Draft, not approved/, '… labelled as a draft')
     assert.match(page.text, /Restricted value withheld/)
-    assert.match(page.text, /No question owns this zone yet/, 'a designed gap')
+    // Visual V3.1: list zones. Items in the owner's order, labelled choices, links by name, a designed empty list.
+    assert.match(page.text, /class="vz-item-name" dir="auto">Independent cafés</)
+    assert.match(page.text, /class="vz-item-tag">Primary</)
+    assert.match(page.text, /DRAFT-ACTIVITY roasting/)
+    assert.match(page.text, /Linked to:<\/span> <span class="vz-item-link" dir="auto">Independent cafés<\/span>, <span class="vz-item-link vz-item-link--hidden">an item not shown in this edition/)
+    assert.match(page.text, /No key resources listed yet/, 'a designed empty list zone')
+    assert.match(page.text, /class="vz-panel vz-links"/, 'the links panel lists recorded links')
+    assert.equal(page.text.includes('brand-os.entity-list'), false, 'the stored list format never reaches the page')
+    assert.equal((page.text.split('<details')[0] ?? '').includes('seg-1'), false, 'item ids stay out of the main view')
     assert.match(page.text, /business\.model\.key_activities/, 'the proposed question is named')
     assert.match(page.text, /Informed by/)
     assert.doesNotMatch(page.text, /certified|compliant/i)
@@ -77,6 +90,8 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
     assert.equal(pub.res.status, 200)
     assert.match(pub.text, /Public edition/)
     assert.equal(pub.text.includes('DRAFT-PRICING'), false, 'the public edition leaves drafts out')
+    assert.equal(pub.text.includes('DRAFT-ACTIVITY'), false, 'draft list items stay out of the public edition')
+    assert.equal(pub.text.includes('Independent cafés'), false, 'approved but unpublished list items stay out too')
     assert.equal(pub.text.includes('APPROVED-REVENUE'), false, 'approved but unpublished internal facts stay out of the public edition')
     assert.match(pub.text, /Not published/)
 
@@ -102,12 +117,23 @@ test('Studio: the canvas page and print view are read-only, labelled, escaped an
       assert.equal((await res.text()).includes('Fluent'), false)
     }
 
+    // The business plan shows the list read-only: names first, ids and links behind a toggle, no write form.
+    const business = await owner.page(`/brands/${SLUG}/strategy/business-plan`)
+    assert.equal(business.res.status, 200)
+    assert.match(business.text, /class="entity-name" dir="auto">Independent cafés/)
+    assert.match(business.text, /<summary>Ids and links<\/summary>/)
+    assert.match(business.text, /--entity add\|edit\|move\|remove/, 'edits happen in the brand repository')
+    assert.equal(/<form[^>]*method="post"/i.test(business.text.split('<main')[1] ?? ''), false, 'no write form')
+
     await owner.get(`/brands/${SLUG}/strategy/business-model?lang=fa`)
     const fa = await owner.page(`/brands/${SLUG}/strategy/business-model`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /بوم مدل کسب‌وکار/)
     assert.match(fa.text, /class="vz-bmc" dir="ltr"/, 'the canvas keeps its canonical topology in Persian')
     assert.match(fa.text, /class="vz-cell vz-cell--key_partners" dir="rtl"/, 'text inside the zones is right-to-left')
+    assert.match(fa.text, /هنوز منبع کلیدی‌ای فهرست نشده است/, 'the empty list zone in Persian')
+    assert.match(fa.text, /class="vz-item-tag">اصلی</, 'choice labels are localized; item names are not translated')
+    assert.match(fa.text, /Independent cafés/)
     const faPrint = await owner.page(`/brands/${SLUG}/strategy/business-model/print`)
     assert.match(faPrint.text, /<html lang="fa" dir="rtl">/)
     await owner.get(`/brands/${SLUG}/strategy/business-model?lang=tr`)
