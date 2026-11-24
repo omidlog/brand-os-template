@@ -54,7 +54,8 @@ const HELP = `brand:export-visual [options]
   --doc <doc>                   identity: Brand Book "Visual identity" chapter (default); bmc: Business Model Canvas;
                                 brand-book: the full Brand Book; business-report: the Business Report
   --lang en|fa|tr|all           language of the labels (default: all of en, fa, tr the brand supports)
-  --edition internal|public     internal (default) or the public edition (approved and published only)
+  --edition internal|public     internal (default) or the public edition (approved and published only);
+                                the business report has no public edition
   --profile <id>                book_a4_portrait (identity, brand-book, business-report), canvas_a3_landscape (bmc);
                                 deck_16_9 is planned
   --out <dir>                   output folder (default dist/visual-export); never inside brand/ or .private
@@ -310,6 +311,8 @@ export function exportVisual(options: ExportOptions): ExportedFile[] {
   if (spec.status === 'planned') throw new ExportError('planned', fillVisual(t.exportPlanned, { profile }))
   const expected = bookLike ? 'book_a4_portrait' : 'canvas_a3_landscape'
   if (profile !== expected) throw new ExportError('usage', `--profile ${profile} does not apply to --doc ${options.doc} (use ${expected}).`)
+  // The Business Report is the business plan as a book; no profile prints the business plan publicly (Visual V4.1).
+  if (options.doc === 'business-report' && options.edition === 'public') throw new ExportError('usage', fullBookText(options.langs[0] ?? 'en').exportReportNotPublic)
   const out = checkOutput(options.root, options.out)
   const source = loadSource(options)
   fs.mkdirSync(out, { recursive: true })

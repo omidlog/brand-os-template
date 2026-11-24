@@ -108,5 +108,7 @@ test('brand:export-visual --doc brand-book|business-report writes self-contained
     }
   }
   assert.throws(() => exportVisual({ root: process.cwd(), doc: 'brand-book', langs: ['en'], edition: 'internal', profile: 'canvas_a3_landscape', out: path.join(tmp, 'x'), fixture: true, pdf: false, chrome: null, log: () => {} }), (error: unknown) => error instanceof ExportError && error.code === 'usage')
+  // The Business Report is the business plan as a book: never public, not even the fixture.
+  assert.throws(() => exportVisual({ root: process.cwd(), doc: 'business-report', langs: ['fa'], edition: 'public', profile: null, out: path.join(tmp, 'p'), fixture: true, pdf: false, chrome: null, log: () => {} }), (error: unknown) => error instanceof ExportError && error.code === 'usage' && error.message.includes('--edition internal'))
   assert.throws(() => exportVisual({ root: process.cwd(), doc: 'business-report', langs: ['en'], edition: 'internal', profile: null, out: 'brand/out', fixture: true, pdf: false, chrome: null, log: () => {} }), (error: unknown) => error instanceof ExportError && error.code === 'path')
 })

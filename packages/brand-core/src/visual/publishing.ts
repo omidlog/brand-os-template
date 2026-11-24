@@ -2,6 +2,7 @@ import { buildNamedDocument, type DocumentKind, type DocumentModel } from '../do
 import type { InterviewEngine } from '../engine.js'
 import { readFacts } from '../facts.js'
 import type { Visibility } from '../types.js'
+import type { BookChapter, BookDocument } from './full-book.js'
 import {
   DATA_STATES,
   type DataState,
@@ -262,6 +263,50 @@ export function redactDocumentModel(model: DocumentModel, profile: ExportProfile
     }),
   }))
   return { profile, document: { ...model, sections }, redacted }
+}
+
+export interface RedactedBook {
+  profile: ExportProfile
+  document: BookDocument
+  redacted: number
+}
+
+/**
+ * A full book (V4.2 Brand Book or Business Report) under the same rules, or null when not permitted. The Business
+ * Report is the business plan as a book, so it follows the business plan's permission (never public). The public
+ * edition never carries a withheld mark: a removed value reads "not published", like every other public gap. A facts
+ * or canvas chapter left without any value becomes a designed "not yet available" chapter, as `composeBook` does.
+ */
+export function redactBook(book: BookDocument, profile: ExportProfile, classify: QuestionClassifier): RedactedBook | null {
+  const spec = EXPORT_PROFILE_SPECS[profile]
+  if (!profilePermits(profile, book.book_kind === 'brand_book' ? 'brand_book' : 'business_plan')) return null
+  if (spec.edition === 'public' && book.audience !== 'public') return null
+  const tally: RedactionTally = { redacted: 0, moves: [] }
+  const entries = (list: VisualEntry[]): VisualEntry[] =>
+    list.map((entry) => {
+      const out = redactEntry(entry, spec, classify, tally)
+      return book.audience === 'public' && out.state === 'withheld' ? { ...out, state: 'missing' as const, note: null, missing_reason: 'not_published' as const } : out
+    })
+  const valued = (list: VisualEntry[]) => list.some((entry) => (entry.state === 'approved' || entry.state === 'stale') && entry.value !== null)
+  const gap = (chapter_id: BookChapter['chapter_id'], awaiting: VisualEntry[]): BookChapter => ({ kind: 'unavailable', chapter_id, reason: 'no_approved_facts', awaiting: book.audience === 'internal' ? awaiting : [] })
+  const chapters = book.chapters.map((chapter): BookChapter => {
+    if (chapter.kind === 'facts') {
+      const kept = entries(chapter.entries)
+      return valued(kept) ? { ...chapter, entries: kept } : gap(chapter.chapter_id, kept)
+    }
+    if (chapter.kind === 'plate') return { ...chapter, entries: entries(chapter.entries) }
+    if (chapter.kind === 'canvas') {
+      const zones = chapter.zones.map((zone) => ({ ...zone, entries: entries(zone.entries) }))
+      return valued(zones.flatMap((zone) => zone.entries)) ? { ...chapter, zones } : gap(chapter.chapter_id, zones.flatMap((zone) => zone.entries))
+    }
+    return { ...chapter, awaiting: entries(chapter.awaiting) }
+  })
+  const embedded = (doc: VisualDocument | null): VisualDocument | null => (doc ? (redactVisualDocument(doc, profile, classify)?.document ?? null) : null)
+  const identity = embedded(book.identity)
+  const canvas = embedded(book.canvas)
+  const printed = chapters.flatMap((chapter) => (chapter.kind === 'facts' || chapter.kind === 'plate' ? chapter.entries : chapter.kind === 'canvas' ? chapter.zones.flatMap((zone) => zone.entries) : []))
+  const as_of = [...printed.map((entry) => (entry.value !== null ? entry.approved_at : null)), book.book_kind === 'brand_book' ? identity?.as_of : null].filter((date): date is string => Boolean(date)).sort().at(-1) ?? null
+  return { profile, document: { ...book, identity, canvas, chapters, as_of }, redacted: tally.redacted }
 }
 
 // ---- Coverage mini-map (Command Center) --------------------------------------------------------------------
