@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Audit: Visual V3 area (V3.1 lists, V3.2 SWOT/TOWS and VPC, V3.3 journey, SOSTAC, OKR)
+
+### Fixed
+
+- Key-result units (V3.3) and cost items (V3.1) now refuse the spoken Persian «تومن», the Turkish `dolar`, `avro` and suffixed `lira` (`lirası`), and the ₹ ₽ ₩ ₪ symbols. Before, `هزار تومن` or `Türk lirası` passed as a key-result unit, so a money target could enter a list that is not restricted. Non-currency units (`learners`, `نفر`, `öğrenci`) still pass.
+- `brand/interview/knowledge-graph.yaml` regenerated from the question bank: it gains the V3.3 journey-stage and OKR edges it was missing (additions only). `materialize` writes only missing files, so a new test now fails when the committed graph drifts from the bank.
+
 ## Unreleased — Visual V3.3: Customer journey swimlane, SOSTAC overview, OKR tree
 
 ### Added
