@@ -739,3 +739,14 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `tests/studio-visual-browser.test.ts`: restored the V1.2 print-book checks on real Studio data (one PDF page per sheet, no text block overflow, contents numbers = printed folios, folios on the outer edge in en/fa). The merge of #40 had dropped them, but `docs/IMPLEMENTATION_STATUS.md` still listed them.
 - `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
 - `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
+
+## Unreleased — Audit: fixes pack minor findings (batched)
+
+### Fixed
+
+- `brand:coach` creator / speaker rubrics: a year-shaped count next to an audience word ("2000 subscribers", "followers: 1450", «۲۰۰۰ نفر», "2000 abone") is a count, not a year, so `facet_claim_undated` now fires when the number has no date. Test: `coach-rules`.
+- `brand:coach` `sensitive-claim-wording`: `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` list things to leave out, so a marker there is not a claim (like `brand.verbal.forbidden`). Test: `coach-rules`.
+- `brand:coach consistency_review`: when registry findings are cut at the 20-finding cap, one slot is kept for a `potential_tension`, so a tension named in `rule_checks` is never missing from the findings. A review scoped to one question keeps the brand-wide rule checks (no question ids). Tests: `coach-rules`.
+- `COACH_RULE_VERSION` is `coach-rules/5` (verdicts changed for the same input).
+- `brand:assurance-link link --date <past day>` reports the link's state as of today, not as of the backdated day. Test: `assurance-links`.
+- `brand:acceptance`: the restricted-value and secret leak check also finds a value in its JSON-escaped form (a value with `"`, `\` or a newline). Test: `acceptance-harness`.
