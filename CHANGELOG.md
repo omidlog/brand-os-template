@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — Visual V5.1: standards verification, module audit, cross-brand pilot, release gate
+
+### Added
+
+- `npm run visual:audit` (`scripts/visual-audit.ts`, core `visual/audit.ts`): per-module visual audit on the 0–5 rubric (defined in `docs-internal/VISUAL.md`), computed from checks on the checkout. Output: table, `--md` or `--json`, en/fa/tr (`--lang`). V3.x modules not yet built show as pending.
+- `npm run visual:gate [-- --release]`: release gate. Fails when a public module scores below 4, the registry or policy is invalid, or (release mode) a cited external standard has no `verified_on` and reviewer. Owner-only, expiring overrides go in `visual/release-gate.json`. Runs in the template's `validate` CI job with `--pilot`.
+- Cross-brand pilot (`visual/pilot.ts`, `visual/fixtures-pilot.ts`): two synthetic brands built through the normal engine path prove the visual modules are brand-agnostic.
+- Tests: `visual-audit`.
+
+### Changed
+
+- Framework registry: required `reviewer` field (`"pending"` until a person checks the source). A `verified_on` without a named reviewer, a reviewer without a date, or a future date is refused. The V5.1 pass verified nothing that had not been checked: every entry stays pending.
+
 ## Unreleased — CI
 
 - CI: the `brand tests` step timeout in `validate.yml` rises from 10 to 18 minutes (the suite now takes about 10 minutes on GitHub runners) and the `verify` job timeout from 20 to 28.

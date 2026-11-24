@@ -85,3 +85,60 @@ Two whole books on the V1.2 `book_a4_portrait` engine, exported with `npm run br
 - **Fonts.** Bundled OFL only: Inter, Rajdhani, Vazirmatn (Persian text and Persian display). No licensed Persian display face is added; that is an open owner question.
 - **QA.** `tests/studio-visual-qa.test.ts` adds 10 baselines (Brand Book cover, contents and Strategy; Business Report contents and Executive summary; en and fa), checks no page or heading overflows with built-in estimates, mirrored contents, and reads the measured PDFs back: contents entries point at the printed page, folios in the reader's digits, every font embedded (Vazirmatn on every fa page), and the fixture's draft and restricted sentinel values absent. `tests/visual-full-book.test.ts` and `tests/studio-visual-full-book.test.ts` cover the model and the renderer. Digital PDF only: no bleed or PDF/X claim.
 
+
+## Module audit, standards verification, cross-brand pilot and release gate (V5.1)
+
+Core: `visual/audit.ts` (module catalog, rubric, checks, gate), `visual/i18n-audit.ts` (en/fa/tr report text), `visual/pilot.ts` with `visual/fixtures-pilot.ts` (two synthetic brands), policy `visual/release-gate.json`. Command: `scripts/visual-audit.ts`. Tests: `tests/visual-audit.test.ts`.
+
+```
+npm run visual:audit [-- --lang en|fa|tr] [--json | --md] [--out file] [--pilot]
+npm run visual:gate  [-- --release] [--lang en|fa|tr] [--pilot]
+```
+
+Read-only on the checkout. `--out` refuses `brand/` and any `.private` path. `--pilot` builds the synthetic brands in a temporary folder with a throwaway data key and removes it.
+
+### The 0–5 rubric
+
+A module scores the highest level whose checks, and every lower level's checks, all pass. Every check runs on the checkout; a check that cannot run fails, and the report gives the evidence for each one (file, test count, catalog counts, gap count, citations).
+
+| Level | Name | Checks (all must pass) |
+| --- | --- | --- |
+| 0 | Not built | builder or core tests missing |
+| 1 | Model | `model`: the builder file exports the declared builder; `core_tests`: every declared core test file exists and has tests |
+| 2 | Languages | `i18n`: every English string key is in fa and tr, no empty string, ≥ 90 % of fa strings in Persian script |
+| 3 | States | `empty_state`: a fixture built and found to carry designed gaps (missing, awaiting, unavailable, not drawn), or a named test asserting one; `studio_tests`: Studio renderer test files exist and have tests |
+| 4 | Publication-safe | `print`: a test exercises the print view (n/a for a screen such as the Publishing gallery); `rtl`: a test asserts the Persian page is right-to-left; `redaction`: public modules: the public fixture in en/fa/tr carries no value in a draft, withheld or other non-approved state, no draft or internal badge, no fixture sentinel, and the V4.1 redaction test builds this module's public edition; internal modules: the public profile refuses the document type |
+| 5 | Release-grade | `visual_qa`: en and fa reference screenshots in `tests/visual-baselines` used by `tests/studio-visual-qa.test.ts`; `standards`: every framework the module's output cites is `verified` in the registry (n/a when it cites none) |
+
+Public modules are the document types the V4.1 `public` profile permits (Brand Book, Visual identity, Business Model Canvas, Mascot atlas). V3.x modules not in the catalog yet (structured BMC, SWOT/TOWS, value fit, customer journey, SOSTAC, OKR tree) are listed as **pending** and never fail anything; when a probe finds their code in `visual/` before they are declared, the report says "landed, not yet scored". A new module is added to `VISUAL_MODULES` with its builder, test files, catalogs, fixtures and evidence patterns.
+
+### Standards verification
+
+Every registry entry in `frameworks.json` has `verified_on` and `reviewer`. Both are recorded together, or both stay empty (`verified_on: null`, `reviewer: "pending"`). The claim rules refuse a date without a named reviewer, a reviewer without a date, and a date in the future. A date or reviewer is never invented. The V5.1 pass (2026-11-24) found that no source page had been checked by a person, so every entry is pending. To verify one, open `source_url`, confirm the title, publisher, edition and the part used, then set `verified_on` (that day) and `reviewer` (your name). The claim stays `informed_by` unless you choose a stronger one.
+
+### Release gate
+
+`npm run visual:gate` fails when:
+
+- the registry or `release-gate.json` is invalid;
+- a present **public** module scores below `public_min_score` (agreed threshold **4**: publication-safe);
+- a module cites a framework that is not in the registry;
+- with `--release`, or with `standards_block: "always"`: a cited external standard (`formal_standard` or `professional_framework`) has no `verified_on` and reviewer. Brand OS's own layouts (`editorial_template`) are reported but never block.
+
+Without `--release`, unverified standards are printed as "would stop a release". CI (`validate` workflow, template repository) runs `npm run visual:gate -- --pilot`. Before a release, run `npm run visual:gate -- --release`. Internal modules are scored and reported but not gated.
+
+**Owner override.** Only the owner edits `packages/brand-core/src/visual/release-gate.json`. Change `public_min_score` (0–5) or `standards_block`, or add an entry to `overrides`: `{ "target": "module:<id>" | "standard:<framework_id>", "reason": "…(≥ 10 characters)", "approved_by": "<owner name, never pending>", "approved_on": "YYYY-MM-DD", "expires_on": "YYYY-MM-DD" }`. An override turns that one failure into an "overridden by …" line. An override that has expired, is dated in the future, or has no named approver fails the gate. Agents never add an override.
+
+### Cross-brand pilot
+
+`runCrossBrandPilot` creates two **synthetic** brands (`fixtures-pilot.ts`: an English education brand without a mascot and a Turkish consulting brand with one; every value carries a `PILOT-A` / `PILOT-B` marker) through the normal init, answer, approve and publish path. It then builds the canvas, the identity chapter and the mascot atlas (internal and public), the Brand Book (internal and public), the Business Report and the Publishing gallery for both. It checks that:
+
+- each document names its own brand, and no value crosses to the other brand;
+- each internal Brand Book draws its own approved values;
+- no public edition carries a draft;
+- zones, block types and chapters are identical for both brands;
+- the mascot chapter follows each brand's own module flag;
+- the gallery grid is the same for both;
+- no visual source file (outside fixtures) names a brand.
+
+No real brand data is used or committed.

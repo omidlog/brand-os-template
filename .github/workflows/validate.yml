@@ -50,6 +50,12 @@ jobs:
       - run: npm run prepare:docs
       - run: npm run typecheck
       - run: npm run validate
+      # Visual V5.1 release gate: public modules >= the agreed rubric score, registry valid, cross-brand pilot.
+      # Template only: brand repositories do not carry the module test files the audit reads.
+      - name: visual release gate
+        if: github.repository == 'omidlog/brand-os-template'
+        run: npm run visual:gate -- --pilot
+        timeout-minutes: 5
       - name: brand tests
         if: steps.scope.outputs.code == 'true'
         run: npm run test
