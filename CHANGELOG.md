@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Audit: Visual V4 area (V4.1 Command Center and Publishing gallery, V4.2 full books)
+
+### Fixed
+
+- Publishing gallery: an investor cell never links to a print view (there is no investor edition yet; the internal one shows labelled drafts).
+- Command Center strip in Persian: the coverage heading no longer letter-spaces Persian text, and the half-filled "partial" square mirrors in RTL.
+- Docs: the draft-mark comment in `visual/publishing.ts` matches the code (public draws a published asset without its mark; investor does not draw a draft-tagged asset); `docs-internal/STUDIO.md` screens table lists the Command Center and the Publishing gallery.
+- Tests: investor cells carry no print link; the Persian gallery has no English leftovers.
+- Separate PR (redaction logic): the public Brand Book passes the same public-profile redactor as every other public print, and the Business Report has no public edition.
+
 ## Unreleased — Visual V4.1: Command Center, Publishing gallery, audience redaction
 
 ### Added
