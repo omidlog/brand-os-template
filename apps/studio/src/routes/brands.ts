@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { RateLimiter } from '../auth/rate-limit.js'
 import { first, redirect, safeLocalPath } from '../http.js'
 import type { BrandRecord } from '../registry.js'
-import { brandIsReady } from '../sync.js'
+import { brandIsReady, withDisplayName } from '../sync.js'
 import type { UpdateStatus } from '../template-update.js'
 import { calendarPage } from '../views/calendar.js'
 import { creativePage } from '../views/creative.js'
@@ -54,7 +54,8 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
         void sync.refresh(record.slug).catch(() => undefined)
       }
     }
-    return { record, cached, stale: sync.isStale(record.slug, cached.status), refreshing: sync.isRefreshing(record.slug), refreshStartedAt: sync.refreshStartedAt(record.slug) }
+    // The first view may have just synced: resolve the display name from what this page shows (BOS-20).
+    return { record: withDisplayName(registry.get(record.slug) ?? record, cached.projection), cached, stale: sync.isStale(record.slug, cached.status), refreshing: sync.isRefreshing(record.slug), refreshStartedAt: sync.refreshStartedAt(record.slug) }
   }
 
   const home: Handler = (ctx) => redirect(ctx.res, '/brands', 302)
