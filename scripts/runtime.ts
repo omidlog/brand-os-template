@@ -9,6 +9,7 @@ import {
   demoPack,
   loadApprovedLogo,
   openOwnerWorkspace,
+  packSourceDrift,
   packAssetIds,
   parseRequiredAssets,
   productionReadiness,
@@ -55,7 +56,8 @@ brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require 
              brand:query --tool task_context --task-type social_batch --count 10 [--locale fa]
              verified like the demo pack; the pack's own task locale is used
   --root     with --pack only, owner-local: the owner's checkout of the same brand. Enables the Coach and the
-             approved logo (publication gate + checksum). Read-only; refused under an agent token
+             approved logo (publication gate + checksum), and refuses a stale pack (a cited approved fact
+             changed since the pack was built). Read-only; refused under an agent token
   --as-of    with --pack: ISO date for the Coach and the assessment (default: now)
   --final    final export: convert text to outlines (drafts keep live, editable text). Needs an approved
              brand.type.scale and --font-file for every approved first family; nothing is substituted
@@ -142,9 +144,12 @@ async function main(): Promise<void> {
     if (Number.isNaN(now.getTime())) usage('--as-of must be an ISO date.')
     const pack = readPackFile(values.pack!)
     const engine = values.root ? openOwnerWorkspace(values.root, pack) : null
+    // A brand that changed after the pack was built: stop before anything is written (rebuild the pack instead).
+    const drift = engine ? packSourceDrift(engine, pack) : null
+    if (drift && drift.length > 0) throw new RuntimeError('stale_pack', `The pack is stale: ${drift.length} cited approved fact(s) changed since it was built (${drift.join(', ')}). Rebuild it with brand:query --tool task_context. Nothing was written.`)
     const loaded = engine ? loadApprovedLogo(engine.workspaceRoot(), pack) : null
     result = runSocialBatch(pack, { demo: false, logo: loaded?.logo ?? null, logoConsidered: loaded?.considered ?? null, coach: engine, now, origin: 'pack_file', final })
-    production = productionReadiness({ pack, required_assets: required, references: loaded ? loaded.references : null, batch: result })
+    production = productionReadiness({ pack, required_assets: required, references: loaded ? loaded.references : null, batch: result, source_drift: drift })
   }
   // An additive file next to the summary: batch-summary.json (runtime-batch/v1) is unchanged.
   result.files.set('production-readiness.json', `${JSON.stringify(production, null, 2)}\n`)
@@ -200,16 +205,18 @@ function readiness(args: string[]): void {
   const required = requiredOf(values.require)
   const pack = readPackFile(values.pack)
   let references = null
+  let drift: string[] | null = null
   if (values.root) {
     // Owner-local: openOwnerWorkspace refuses under an agent token and for another brand.
     const engine = openOwnerWorkspace(values.root, pack)
+    drift = packSourceDrift(engine, pack)
     const ids = packAssetIds(pack).slice(0, MAX_ASSET_IDS)
     const dna = ids.length > 0 ? runVisualDnaTool(engine, operatorContext(pack.brand_id), { asset_ids: ids }) : null
     references = dna === null ? [] : dna.status === 'ok' ? dna.references : null
   }
   const batch = values.batch ? readBatchDir(values.batch) : null
   const locale = (values.locale as 'fa' | 'en' | 'tr' | undefined) ?? pack.task.locale
-  const result = productionReadiness({ pack, locale, required_assets: required, references, batch })
+  const result = productionReadiness({ pack, locale, required_assets: required, references, batch, source_drift: drift })
   if (values.json) console.log(JSON.stringify(result, null, 2))
   else {
     const t = productionText(locale)

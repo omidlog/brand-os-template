@@ -17,6 +17,8 @@ import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStat
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
+import { buildPublishingGallery, questionClassifier, redactVisualDocument, type PublishingGallery, type QuestionClassifier } from '@brand-os/brand-core/visual'
+import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -152,6 +154,12 @@ export interface StudioProjection {
    * caches written before this field existed; sync rebuilds those.
    */
   visual?: StudioVisualProjection | null
+  /**
+   * Publishing gallery (Visual V4.1): document types × export profiles (public, investor, internal) with their
+   * readiness, measured on the redacted output each profile would receive. Counts only, never values. Null when it
+   * could not be built. Absent in caches written before it existed; sync rebuilds those.
+   */
+  publishing?: PublishingGallery | null
 }
 
 export interface StudioVisualProjection {
@@ -173,6 +181,12 @@ export interface StudioVisualProjection {
    * assets only, in its internal and public editions. Absent in caches written before it existed; sync rebuilds those.
    */
   mascot?: { internal: VisualDocument; public: VisualDocument }
+  /**
+   * Full Brand Book and Business Report (V4.2), in both editions, for `brand:export-visual --doc brand-book|business-report`.
+   * Approved values only (drafts keep their label, restricted values are withheld in every edition). Absent in caches
+   * written before it existed; sync rebuilds those.
+   */
+  books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: BookDocument } }
 }
 
 /**
@@ -309,14 +323,42 @@ function projectCreative(root: string, slug: string): StudioCreativeProjection |
 /** The visual documents; a failure here must not take down the brand view either. */
 function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], assets: MascotAssetCandidate[]): StudioVisualProjection | null {
   try {
+    const classify = questionClassifier(engine)
     const visual: StudioVisualProjection = {
-      bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
-      identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: buildVisualIdentity(engine, 'public', { masters }), master_rule: IDENTITY_MASTER_RULE },
+      bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: publicEdition(buildBusinessModelCanvas(engine, 'public'), classify) },
+      identity: { internal: buildVisualIdentity(engine, 'internal', { masters }), public: publicEdition(buildVisualIdentity(engine, 'public', { masters }), classify), master_rule: IDENTITY_MASTER_RULE },
       competitors: buildCompetitorComparison(engine, readSharedLandscape(engine.workspaceRoot(), engine.config().brand.slug)),
-      mascot: { internal: buildMascotAtlas(engine, 'internal', { assets }), public: buildMascotAtlas(engine, 'public', { assets }) },
+      mascot: { internal: buildMascotAtlas(engine, 'internal', { assets }), public: publicEdition(buildMascotAtlas(engine, 'public', { assets }), classify) },
+    }
+    const book = (kind: 'brand_book' | 'business_report', edition: 'internal' | 'public') =>
+      buildBook(engine, kind, edition, { identity: visual.identity?.[edition] ?? null, canvas: visual.bmc[edition], competitors: visual.competitors ?? null })
+    visual.books = {
+      brand_book: { internal: book('brand_book', 'internal'), public: book('brand_book', 'public') },
+      business_report: { internal: book('business_report', 'internal'), public: book('business_report', 'public') },
     }
     assertNoSecrets(visual)
     return visual
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Every public edition Studio serves passes the core public-profile redactor (Visual V4.1), so a builder bug cannot put
+ * a restricted, finance, `.private`-sourced or draft value on a public print. The builders are a fixed point of it.
+ */
+function publicEdition(doc: VisualDocument, classify: QuestionClassifier): VisualDocument {
+  const redacted = redactVisualDocument(doc, 'public', classify)
+  if (!redacted) throw new ProjectionError('unsafe_projection', 'A public visual edition was refused by the public profile.')
+  return redacted.document
+}
+
+/** The Publishing gallery; counts only. A failure here must not take down the brand view either. */
+function projectPublishing(engine: InterviewEngine, visual: StudioVisualProjection | null): PublishingGallery | null {
+  try {
+    const gallery = buildPublishingGallery(engine, { bmc: visual?.bmc ?? null, identity: visual?.identity ?? null, mascot: visual?.mascot ?? null, competitors: visual?.competitors ?? null })
+    assertNoSecrets(gallery)
+    return gallery
   } catch {
     return null
   }
@@ -513,6 +555,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     }
   }
 
+  const visual = projectVisual(engine, logoCandidates, assetCandidates)
   const projection: StudioProjection = {
     schema_version: 1,
     brand: {
@@ -563,8 +606,9 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
-    visual: projectVisual(engine, logoCandidates, assetCandidates),
+    visual,
     coach: projectCoach(engine, dashboard.review_queue.items),
+    publishing: projectPublishing(engine, visual),
   }
   assertNoSecrets(projection)
   return { projection, previews }
