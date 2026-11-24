@@ -160,7 +160,8 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
       case 'personal':
         // The section exists only when the Personal Brand OS module is enabled in the repository.
         if (!brand.cached.projection?.personal) return notFound(ctx)
-        return render(ctx, 200, pages.personalPage(v, brand, doc, flashValue))
+        // `locale` only picks which projected language edition of the composed drafts is shown (BOS-19).
+        return render(ctx, 200, pages.personalPage(v, brand, doc, flashValue, ctx.url.searchParams.get('locale')))
       case 'knowledge': {
         // Read only. Query parameters only filter the already safe projection of merged shared notes.
         const query = parseKnowledgeQuery(ctx.url.searchParams)

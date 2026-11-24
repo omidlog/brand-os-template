@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — BOS-17 approved colours become draft tokens; BOS-19 composed personal drafts and personal documents in the gallery
+
+### Added
+
+- New interview question `brand.color.semantic_map` (color-system module, optional, internal; en/fa/tr; in the founder-core and personal-brand profiles): which owner colour role plays each template slot (`primary = <role>; onPrimary = <role>; canvas = <role>; …`, `none` keeps the template example). Core `token-semantic.ts` parses it against the approved roles and reports unknown slots, unknown roles and repeats.
+- `brand:tokens:generate` suggests a semantic mapping when the slots are unmapped (role names, listed order, luminance and measured contrast; a colour meaning such as danger is only suggested for a role with that name). The suggestion is printed with a ready `brand:interview --question brand.color.semantic_map --answer "…"` command and is never applied (`report.semantic` in `--json`).
+- `brand:approve` prints “Run `npm run brand:tokens:generate` to turn these into draft tokens.” after a batch that approved `brand.color.roles`, `brand.color.semantic_map`, `brand.type.scale` or `brand.logo.min_size` (text mode; the JSON contract is unchanged).
+- Studio Design System: with approved colour roles and no generated role tokens, a notice says the approved colours are not tokens yet and gives `npm run brand:tokens:generate`; with role tokens but unmapped slots, a notice names `brand.color.semantic_map`. Template example colours then sit in a collapsed “Template examples (not your brand)” section, never next to the approved colours (en/fa/tr).
+- Personal pack documents (core `documents/compose.ts`): each section carries one composed draft paragraph per language edition, labelled “Draft for owner approval”, built by fixed templates from the facts approved in that language only (language read from the script; approved per-language forms from `personal.identity.localized_headline` / `name_forms`). Facts without an approved translation are listed as untranslated and left out; nothing is machine-translated, and the only added words are per-locale neutral connectors. `brand:document` prints the drafts above a “Sources” heading; `draft_personal_content` returns them per section in `composed`.
+- Studio Personal Brand page: each section leads with the composed draft of one edition, chosen by `?locale=fa|en|tr` (read-only; default language first), the untranslated facts named, and the fact cards below as “Sources” (en/fa/tr).
+- Publishing gallery: for a brand with `modules.personal.enabled`, the personal documents that apply (nine without the speaker-author facet) are listed with the same audience × readiness model (public and internal for the outward packs; content strategy and evidence register internal only; no investor edition), with `npm run brand:document -- --type <kind> --audience …` shown as text. They count in the Command Center’s “Exports ready” through the existing gallery cells (no coverage code changed).
+- Tests: `token-semantic`, `personal-drafts`, `studio-personal-drafts`.
+
+### Changed
+
+- Every approved colour role now becomes `color.brand-role.<role>` (lower case), whatever its name. Template ids (`color.brand.primary`, `color.light.canvas`, `color.semantic.danger` …) are generated only from an approved `brand.color.semantic_map`; a role named `primary` no longer becomes `color.brand.primary` by itself. An already approved token is kept and reported, as before; an unapproved generated `color.brand.<role>` from an earlier run is reported as removed.
+- Professional Bio and the other personal sections count words in the composed draft of the first edition (`length.basis: composed_draft`), not in the concatenated facts.
+- Tests updated: `brand-tokens`, `journeys`, `task-context` (role tokens and the semantic map), `personal-documents` (composed word count).
+
 ## Unreleased — CI: private brands skip the public docs prepare
 
 ### Fixed

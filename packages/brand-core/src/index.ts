@@ -195,8 +195,18 @@ export {
   lengthReport,
   PERSONAL_DOCUMENT_KINDS,
   PERSONAL_SPECS,
+  composeDrafts,
+  countWords,
+  DRAFT_CONNECTORS,
+  DRAFT_LABEL,
+  DRAFT_LOCALES,
+  draftLocales,
+  factLanguage,
+  localizedSegments,
+  TRANSLATION_COMPANIONS,
 } from './documents/index.js'
 export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, DocumentSection, DocumentSpec, ItemTag, LengthReport, PersonalDocumentKind, SectionSpec } from './documents/index.js'
+export type { ComposedDraft, ComposeSource, DraftLocale, FactLanguage, UntranslatedFact } from './documents/index.js'
 export { evaluateCondition } from './conditions.js'
 export { validateRepo } from './validate-repo.js'
 export { PERSONAL_FACETS, PROPOSAL_STATES, PUBLICATION_REQUIREMENTS } from './types.js'
