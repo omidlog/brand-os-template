@@ -681,3 +681,9 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 ### Fixed
 
 - Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
+
+## Unreleased — Audit: fixes pack area (GAP-09 evidence links)
+
+### Fixed
+
+- `brand:assurance`: a research note linked to a verified evidence-register entry counts as `independent` only for a control that names the entry's claim question. A note tagged with two questions no longer makes the other question's control look independently evidenced; there it stays `owner_stated`. Test: `assurance-links`.
