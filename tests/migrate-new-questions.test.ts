@@ -25,6 +25,11 @@ function olderBrand(): string {
   const doc = parse(fs.readFileSync(bank, 'utf8')) as { questions: Array<{ id: string }> }
   doc.questions = doc.questions.filter((question) => question.id !== NEW_ID)
   fs.writeFileSync(bank, stringify(doc))
+  // …and its knowledge-graph edges.
+  const graphFile = path.join(root, 'brand', 'interview', 'knowledge-graph.yaml')
+  const graph = parse(fs.readFileSync(graphFile, 'utf8')) as { edges: Array<{ from: string; to: string }> }
+  graph.edges = graph.edges.filter((edge) => edge.from !== NEW_ID && edge.to !== NEW_ID)
+  fs.writeFileSync(graphFile, stringify(graph))
   for (const profile of ['personal-brand', 'founder-core']) {
     const file = path.join(root, 'brand', 'interview', 'profiles', `${profile}.yaml`)
     fs.writeFileSync(file, `# owner note\n${fs.readFileSync(file, 'utf8').split('\n').filter((line) => line.trim() !== `- ${NEW_ID}`).join('\n')}`)
@@ -45,12 +50,14 @@ test('brand:migrate adds a question a newer template introduced to the bank and 
       assert.ok((parse(text) as { question_ids: string[] }).question_ids.includes(NEW_ID), `${profile} asks the new question`)
       assert.ok(text.indexOf(NEW_ID) > text.indexOf('brand.color.roles'), `${profile}: placed after the colour roles`)
     }
+    const edges = (parse(fs.readFileSync(path.join(root, 'brand', 'interview', 'knowledge-graph.yaml'), 'utf8')) as { edges: Array<{ from: string; to: string; relation: string }> }).edges
+    assert.ok(edges.some((edge) => edge.from === 'brand.color.roles' && edge.to === NEW_ID && edge.relation === 'prerequisite'), 'the graph edge is added')
     assert.equal(fs.readFileSync(path.join(root, 'brand', 'interview', 'answer-ledger.yaml'), 'utf8'), ledger, 'no answer changed')
 
     // A second run changes nothing.
-    const snapshot = ['question-bank/brand.yaml', 'profiles/personal-brand.yaml', 'profiles/founder-core.yaml'].map((file) => fs.readFileSync(path.join(root, 'brand', 'interview', file), 'utf8'))
+    const snapshot = ['question-bank/brand.yaml', 'profiles/personal-brand.yaml', 'profiles/founder-core.yaml', 'knowledge-graph.yaml', 'field-registry.yaml'].map((file) => fs.readFileSync(path.join(root, 'brand', 'interview', file), 'utf8'))
     migrateBrand(root)
-    assert.deepEqual(['question-bank/brand.yaml', 'profiles/personal-brand.yaml', 'profiles/founder-core.yaml'].map((file) => fs.readFileSync(path.join(root, 'brand', 'interview', file), 'utf8')), snapshot)
+    assert.deepEqual(['question-bank/brand.yaml', 'profiles/personal-brand.yaml', 'profiles/founder-core.yaml', 'knowledge-graph.yaml', 'field-registry.yaml'].map((file) => fs.readFileSync(path.join(root, 'brand', 'interview', file), 'utf8')), snapshot)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }

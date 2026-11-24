@@ -237,7 +237,7 @@ export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, Docum
 export type { ComposedDraft, ComposeSource, DraftLocale, FactLanguage, UntranslatedFact } from './documents/index.js'
 export { evaluateCondition } from './conditions.js'
 export { questionTextDrift, tokenCssBuildNote, validateRepo } from './validate-repo.js'
-export { addMissingQuestions, bankName, refreshQuestionText } from './question-text.js'
+export { addMissingQuestions, bankName, fieldRegistryEntry, knowledgeGraphEdges, refreshQuestionText } from './question-text.js'
 export { PERSONAL_FACETS, PROPOSAL_STATES, PUBLICATION_REQUIREMENTS } from './types.js'
 export type { BrandConfig, FieldQuestion, ModuleDef, AnswerRecord, PersonalFacet, PersonalModuleConfig, ProposalState, PublicationRequirement } from './types.js'
 export {
