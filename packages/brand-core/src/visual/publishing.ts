@@ -26,8 +26,10 @@ import {
  * - A source under `.private` is never cited outside the internal profile, and an entry that cites one loses its value.
  * - Public and investor show approved values only (stale = approved but review overdue still counts). Drafts,
  *   estimates and suggestions lose their value.
- * - Draft marks never leave the owner: an asset still tagged `draft` is not drawn in public or investor, and no badge
- *   survives outside the internal profile (owner decision 2026-11-23).
+ * - Draft marks never leave the owner (owner decision 2026-11-23): no badge survives outside the internal profile. The
+ *   investor profile (built from the internal edition) does not draw an asset still tagged `draft`; the public edition
+ *   comes from the public builders, which draw only published assets and never attach a draft mark, so a published
+ *   asset that still carries a `draft` tag is drawn there without the mark.
  * - An entry whose question is unknown to the bank fails closed outside the internal profile.
  * - A document type a profile does not permit (competitor analysis outside internal; business and marketing plans in
  *   public) is refused: the redactor returns null.
