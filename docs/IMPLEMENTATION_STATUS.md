@@ -492,6 +492,10 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 - **Not done (owner decisions pending, behaviour unchanged):** the five Coach UX questions in `docs-internal/COACH_UX_DECISION.md`; the bare Persian marker `همه` (may flag ordinary short answers); a `brand:propose` draft counting as the "first revision" for the after-answer moment.
 - **Main merge (2026-11-24):** merged with GAP-08 (`coach/rules.ts`, facet rubrics). Both sides had bumped `coach-rules/1` to `/2` independently, so the combined rules are `COACH_RULE_VERSION` `coach-rules/3`. The scoped cap fix applies to `findContradictions` conflicts; registry findings fill the remaining slots.
 
+## Audit: fixes pack area, evidence link scope (2026-11-24)
+
+- **Done:** a linked research note is `independent` only for the control that names the verified register entry's claim question; for its other questions it stays `owner_stated` (`assurance/workspace.ts`, test in `assurance-links`).
+
 ## Audit: Visual V1 area (2026-11-24)
 
 - **Done:** review of the print engine (V1.2: `visual/print-profiles.ts`, `views/visual-print-book.ts`, `static/visual-book.css`, `brand:export-visual`) and visual QA (V1.3: baselines, digital PDF, RTL). Fixed: the export output check now resolves links (a linked folder or parent into `brand/` or `.private` is refused, and links are never written through); the imprint marks uncommitted `brand/` changes; the export reports a failed measuring pass; the V1.2 browser checks lost in the merge of #40 are restored; the PDF contents check is per entry; `VISUAL.md` is corrected.

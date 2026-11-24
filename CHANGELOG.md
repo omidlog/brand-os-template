@@ -704,6 +704,12 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - Coach registry rules no longer read a question the owner's config turned off (module disabled, skip condition). `consistency_review` said `needs_verification` for such a field while `quality_review` said `not_applicable`.
 - `COACH_RULE_VERSION` is `coach-rules/4` (verdicts changed for the same input). Tests: `coach-rules`.
 
+## Unreleased — Audit: fixes pack area (GAP-09 evidence links)
+
+### Fixed
+
+- `brand:assurance`: a research note linked to a verified evidence-register entry counts as `independent` only for a control that names the entry's claim question. A note tagged with two questions no longer makes the other question's control look independently evidenced; there it stays `owner_stated`. Test: `assurance-links`.
+
 ## Unreleased — Audit: Visual V1 area fixes
 
 ### Fixed
