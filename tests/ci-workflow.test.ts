@@ -91,7 +91,6 @@ const scripts = (JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'ut
 function brand(publish: 'public' | 'private'): string {
   const root = tempDir(`brand-os-ci-${publish}-`)
   writeStarterWorkspace(root)
-  fs.cpSync(path.join(REPO, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   const file = path.join(root, 'brand/brand.config.yaml')
   const config = fs.readFileSync(file, 'utf8').replace(/publish_docs:\s*\w+/, `publish_docs: ${publish}`)
   assert.match(config, new RegExp(`publish_docs: ${publish}`))

@@ -186,7 +186,6 @@ test('visibility detection fails closed and owner confirmation must name the ori
 
 test('public and internal docs builds and the public scan never contain knowledge notes', () => {
   const { root, ws } = workspace()
-  fs.cpSync(path.join(path.resolve(import.meta.dirname, '..'), 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   captureNote(ws, { title: 'LOCAL-NOTE-CANARY', body: 'LOCAL-NOTE-CANARY body' })
   const shared = captureNote(ws, { title: 'SHARED-NOTE-CANARY', body: 'SHARED-NOTE-CANARY body' })
   shareNote(ws, shared.id, { visibility: PRIVATE, dryRun: false, expectedRevision: shared.revision })

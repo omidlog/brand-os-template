@@ -1,8 +1,8 @@
+import { engineQuestions, fieldRegistryEntry } from '@brand-os/brand-core'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
-import YAML from 'yaml'
 import {
   brandRetrieve,
   ENTITY_QUESTION_IDS,
@@ -38,7 +38,7 @@ function brand() {
 }
 
 test('the list ids are canonical: question bank, field registry, and none collides with a Task Context id', () => {
-  const registry = YAML.parse(fs.readFileSync(path.resolve('brand/interview/field-registry.yaml'), 'utf8')) as { fields: Array<{ id: string; module: string }> }
+  const registry = { fields: engineQuestions().map(fieldRegistryEntry) }
   // Visual V3.3: the journey stages live in the marketing module and the OKR lists in the goals module.
   const moduleOf = (id: string) => (id.startsWith('business.marketing.') ? 'business-marketing' : id.startsWith('business.goals.') ? 'business-goals' : 'business-company')
   for (const id of ENTITY_QUESTION_IDS) assert.equal(registry.fields.find((field) => field.id === id)?.module, moduleOf(id), id)

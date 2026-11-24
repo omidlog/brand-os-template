@@ -10,6 +10,7 @@ import {
   frameworkRef,
   frameworkRegistry,
   frameworkRegistryErrors,
+  readRegistry,
   validateFrameworkRegistry,
   type FrameworkRegistry,
 } from '@brand-os/brand-core/visual'
@@ -56,15 +57,13 @@ test('schema: unknown fields, non-https sources and fact-like payloads are refus
   assert.match(validateFrameworkRegistry({ schema_version: 1, frameworks: [], facts: {} }, schema).join(), /additional|fewer/)
 })
 
-test('validate: a repository without the registry warns; a broken one fails', () => {
+test('validate: the engine registry is clean for any brand; a broken registry fails its schema', () => {
+  // The registry is an engine definition: a brand repository without any copy validates the engine's.
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-frameworks-'))
   try {
-    assert.equal(frameworkRegistryErrors(root).warnings.length, 1)
-    fs.mkdirSync(path.dirname(path.join(root, FRAMEWORK_REGISTRY_PATH)), { recursive: true })
-    fs.mkdirSync(path.join(root, 'schemas'))
-    fs.copyFileSync(path.join(ROOT, FRAMEWORK_REGISTRY_SCHEMA_PATH), path.join(root, FRAMEWORK_REGISTRY_SCHEMA_PATH))
-    fs.writeFileSync(path.join(root, FRAMEWORK_REGISTRY_PATH), JSON.stringify({ schema_version: 1, frameworks: [{ framework_id: 'X' }] }))
-    assert.ok(frameworkRegistryErrors(root).errors.length > 0)
+    assert.deepEqual(frameworkRegistryErrors(root), { errors: [], warnings: [] })
+    const { schema } = readRegistry()
+    assert.ok(validateFrameworkRegistry({ schema_version: 1, frameworks: [{ framework_id: 'X' }] }, schema).length > 0)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }

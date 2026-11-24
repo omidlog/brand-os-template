@@ -21,7 +21,7 @@ Run from the repository root. Every command takes `--json`.
 ## Process
 1. **Look first.** Before capturing, `search` for the idea and run `similar` on close hits. If it already exists, offer to `append` or link instead of creating a duplicate. Use `--with-facts` to see whether an approved fact already covers it.
 2. **Capture faithfully.** Keep the owner's original wording and language in the body. Put your summary, if any, in the title only. Record uncertainty as the owner said it ("maybe", "not decided"). Set `--source-kind agent_capture` for something said in this conversation, `research` or `imported_text` for third-party material.
-3. **Organize as suggestions.** Propose tags, a status, links (`--link`) and real question ids (from `brand/interview/question-bank` or `propose` candidates). Apply them only after the owner agrees. Never rewrite the owner's voice without saying so.
+3. **Organize as suggestions.** Propose tags, a status, links (`--link`) and real question ids (from `npm run brand:next -- --json` or `propose` candidates). Apply them only after the owner agrees. Never rewrite the owner's voice without saying so.
 4. **Edit safely.** Read with `show --json`, then edit with that `revision` as `--expected-revision`. On `stale_revision`, re-read and redo the change; never retry blindly. Use a unique anchor; on `anchor_ambiguous`, choose a longer one.
 5. **Propose drafts.** Run `propose --id … --json` (preview). Check `candidates`, `refused_links` and `unmapped_idea`. Write `items.json`:
    ```json

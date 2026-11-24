@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parse } from 'yaml'
 import { allQuestions } from './content/index.js'
-import { STARTER_PROFILES } from './content/profiles.js'
 import { readYaml, writeAtomic, writeYaml } from './fsutil.js'
 import type { FieldQuestion } from './types.js'
 
@@ -90,15 +89,9 @@ export function canonicalReferenceErrors(questions: FieldQuestion[]): string[] {
 }
 
 /** Write any starter interview profile file that is missing. Existing (possibly edited) files are kept. */
-export function ensureStarterProfiles(root: string): string[] {
-  const written: string[] = []
-  for (const profile of STARTER_PROFILES) {
-    const file = path.join(root, 'brand', 'interview', 'profiles', `${profile.id}.yaml`)
-    if (fs.existsSync(file)) continue
-    writeYaml(file, profile)
-    written.push(path.relative(root, file).split(path.sep).join('/'))
-  }
-  return written
+export function ensureStarterProfiles(_root: string): string[] {
+  // The engine supplies the starter profiles (STARTER_PROFILES); a brand stores only brand/overrides/profiles/.
+  return []
 }
 
 /**

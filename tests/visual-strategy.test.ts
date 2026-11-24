@@ -1,6 +1,5 @@
+import { engineQuestions, fieldRegistryEntry } from '@brand-os/brand-core'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import path from 'node:path'
 import { test } from 'node:test'
 import YAML from 'yaml'
 import { allQuestions, applyEntityOperation, ensureApprovalSecret, entitySpec, InterviewEngine, normalizeEntityAnswer, readEntityList, sourceRefKind, type EntityList } from '@brand-os/brand-core'
@@ -43,8 +42,8 @@ function block<T extends VisualDocument['blocks'][number]['type']>(doc: VisualDo
 test('the eleven V3.2 list questions are optional, internal, sourced and in the committed bank', () => {
   assert.equal(NEW_QUESTIONS.length, 11)
   const bank = new Map(allQuestions().map((question) => [question.id, question]))
-  const committed = YAML.parse(fs.readFileSync(path.resolve('brand/interview/question-bank/business.yaml'), 'utf8')) as { questions: Array<{ id: string; question_type: string; entity?: unknown }> }
-  const registry = YAML.parse(fs.readFileSync(path.resolve('brand/interview/field-registry.yaml'), 'utf8')) as { fields: Array<{ id: string }> }
+  const committed = { questions: engineQuestions() }
+  const registry = { fields: engineQuestions().map(fieldRegistryEntry) }
   for (const id of NEW_QUESTIONS) {
     const question = bank.get(id)
     assert.ok(question, id)
@@ -55,19 +54,16 @@ test('the eleven V3.2 list questions are optional, internal, sourced and in the 
     const spec = entitySpec(id)!
     assert.equal(spec.sources, true, `${id} items take sources`)
     for (const field of spec.fields) for (const lang of ['en', 'fa', 'tr'] as const) assert.ok(field.label[lang], `${id}.${field.key} ${lang}`)
-    assert.ok(committed.questions.some((entry) => entry.id === id && entry.question_type === 'repeating_entity' && entry.entity), `${id} in business.yaml`)
-    assert.ok(registry.fields.some((entry) => entry.id === id), `${id} in field-registry.yaml`)
+    assert.ok(committed.questions.some((entry) => entry.id === id && entry.question_type === 'repeating_entity' && entry.entity), `${id} in the engine bank`)
+    assert.ok(registry.fields.some((entry) => entry.id === id), `${id} in the field registry`)
     for (const related of question.related_ids) assert.ok(bank.has(related), `${id} related ${related} exists`)
   }
 })
 
-test('every committed question bank parses with the YAML default alias limit', () => {
-  const dir = path.resolve('brand/interview/question-bank')
-  for (const file of fs.readdirSync(dir).filter((name) => name.endsWith('.yaml'))) {
-    assert.doesNotThrow(() => YAML.parse(fs.readFileSync(path.join(dir, file), 'utf8')), file)
-  }
-  const business = fs.readFileSync(path.join(dir, 'business.yaml'), 'utf8')
-  assert.equal(/\*a\d+/.test(business), false, 'the business bank carries no YAML aliases')
+test('the engine question bank round-trips through YAML with the default alias limit', () => {
+  // Older brands still keep a YAML copy; anything written from the engine's questions must stay parseable.
+  const text = YAML.stringify({ questions: engineQuestions() })
+  assert.doesNotThrow(() => YAML.parse(text))
 })
 
 test('source references: four forms, checked for form only, never a password or a non-https link', () => {

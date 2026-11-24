@@ -6,6 +6,7 @@ import { completeness, isOpenAnswer, latestAnswers } from './completeness.js'
 import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
 import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
+import { engineQuestions } from './engine-assets.js'
 import { t, normalizeCommand, questionHelp, type Locale } from './i18n.js'
 import { ApprovalService, isPersonalQuestion, normalizeAnswer, type AnswerMeta, type ApprovalStep } from './approval.js'
 import { exportPublic as projectPublic } from './projection.js'
@@ -79,16 +80,13 @@ export class InterviewEngine {
     return this.root
   }
 
+  /**
+   * Every question the engine defines. Read from the engine's code, not from a copy under brand/ (an older brand's
+   * `brand/interview/question-bank` is ignored), so a new or reworded question reaches every brand with the engine.
+   * Each engine instance gets its own copy, so a caller that changes a question object cannot affect another.
+   */
   questions(): FieldQuestion[] {
-    if (this.cachedQuestions) return this.cachedQuestions
-    const dir = this.file('brand', 'interview', 'question-bank')
-    if (!exists(dir)) return []
-    const questions: FieldQuestion[] = []
-    for (const name of fs.readdirSync(dir).filter((entry) => entry.endsWith('.yaml'))) {
-      const doc = readYaml<{ questions: FieldQuestion[] }>(path.join(dir, name))
-      questions.push(...doc.questions)
-    }
-    this.cachedQuestions = questions.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+    this.cachedQuestions ??= structuredClone(engineQuestions())
     return this.cachedQuestions
   }
 

@@ -12,6 +12,8 @@ import {
   readPublicationPolicy,
   readTemplateRecord,
   rightsBlocker,
+  readMascotStages,
+  readMascotStates,
 } from '@brand-os/brand-core'
 import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
 import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStatus } from '@brand-os/brand-core/coach'
@@ -574,8 +576,8 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
 
   let mascot: StudioProjection['mascot'] = null
   if (config.modules.mascot.enabled) {
-    const catalog = readYaml<{ states?: Array<Record<string, unknown>> }>(root, 'brand/mascot/catalog.yaml', {})
-    const stages = readYaml<{ stages?: Array<Record<string, unknown>> }>(root, 'brand/mascot/stages.yaml', {})
+    const catalog = { states: readMascotStates(root) }
+    const stages = { stages: readMascotStages(root) }
     const byStatus: Record<string, number> = {}
     const byCategory: Record<string, number> = {}
     let ready = 0

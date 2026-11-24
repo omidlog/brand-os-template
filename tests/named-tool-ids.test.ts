@@ -1,10 +1,10 @@
+import { engineQuestions, fieldRegistryEntry } from '@brand-os/brand-core'
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import YAML from 'yaml'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import {
@@ -36,7 +36,6 @@ import { NODE, tsxArgs } from './helpers/tsx-node.js'
  */
 process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 
-const repo = path.resolve(import.meta.dirname, '..')
 const LEGACY_IDS = ['brand.logo.primary', 'brand.logo.clearspace', 'brand.motion.easing']
 
 const MASTERS = 'SYNTH-MASTERS brand/assets/logo, SVG masters, versioned.'
@@ -86,14 +85,14 @@ function agent(root: string, profile: 'design' | 'finance', slug = 'logo-brand')
 
 test('every id a named fact tool reads is an existing question and registry id', () => {
   const bank = new Set(allQuestions().map((question) => question.id))
-  const registry = YAML.parse(fs.readFileSync(path.join(repo, 'brand/interview/field-registry.yaml'), 'utf8')) as { fields: Array<{ id: string }> }
+  const registry = { fields: engineQuestions().map(fieldRegistryEntry) }
   const fields = new Set(registry.fields.map((field) => field.id))
   for (const [tool, ids] of Object.entries(NAMED_FACT_TOOL_IDS)) {
     assert.ok(ids.length > 0, `${tool}: reads no ids`)
     assert.equal(new Set(ids).size, ids.length, `${tool}: duplicate id`)
     for (const id of ids) {
       assert.ok(bank.has(id), `${tool}: ${id} is not a question id`)
-      assert.ok(fields.has(id), `${tool}: ${id} is not in brand/interview/field-registry.yaml`)
+      assert.ok(fields.has(id), `${tool}: ${id} is not in the field registry`)
     }
   }
   // The ids that caused BUG-01 do not exist, and no named tool asks for them again.

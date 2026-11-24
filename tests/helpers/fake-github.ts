@@ -134,10 +134,8 @@ function readTree(root: string, base = root, out: Tree = new Map()): Tree {
 
 /** The Brand OS starter workspace plus decoys that Studio must never read or copy. */
 export function templateTree(): Tree {
-  const repo = path.resolve(import.meta.dirname, '..', '..')
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-template-'))
   writeStarterWorkspace(root)
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   const tree = readTree(root)
   fs.rmSync(root, { recursive: true, force: true })
   tree.set('README.md', Buffer.from('# Brand OS template\n'))

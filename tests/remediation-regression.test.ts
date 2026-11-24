@@ -14,7 +14,6 @@ process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
 function fixture(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-remediation-'))
   writeStarterWorkspace(root)
-  fs.cpSync(path.join(path.resolve(import.meta.dirname, '..'), 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   return root
 }
 

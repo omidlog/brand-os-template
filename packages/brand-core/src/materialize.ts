@@ -3,13 +3,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { templateConfig } from './config.js'
 import { allModules, allQuestions } from './content/index.js'
-import { STARTER_PROFILES } from './content/profiles.js'
 import { buildMascotCatalog, CANONICAL_ANGLES, catalogCounts, CORE_MOTIONS, EXAMPLE_STAGES } from './content/mascot-catalog.js'
 import { renderIntroduction, renderModulePage, renderRecord } from './content/render.js'
 import { emptySession, InterviewEngine } from './engine.js'
+import { stringify } from 'yaml'
 import { exists, readYaml, writeText, writeYaml } from './fsutil.js'
-import { bankName, fieldRegistryEntry, knowledgeGraphEdges } from './question-text.js'
-import type { BrandConfig, FieldQuestion } from './types.js'
+import type { BrandConfig } from './types.js'
 
 const WORDMARK = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" role="img" aria-label="EXAMPLE wordmark placeholder">
@@ -39,12 +38,72 @@ const MASCOT_FRAME = `<?xml version="1.0" encoding="UTF-8"?>
 </svg>
 `
 
+/** While `templatePages` runs, writes are captured here instead of going to disk. */
+let capture: Map<string, string> | null = null
+const CAPTURE_ROOT = path.join(path.sep, '__brand_os_engine__')
+
 function putText(file: string, text: string): void {
+  if (capture) {
+    capture.set(path.relative(CAPTURE_ROOT, file).split(path.sep).join('/'), text.endsWith('\n') ? text : `${text}\n`)
+    return
+  }
   if (!exists(file)) writeText(file, text)
 }
 
 function putYaml(file: string, data: unknown): void {
+  if (capture) return putText(file, stringify(data, { lineWidth: 100 }))
   if (!exists(file)) writeYaml(file, data)
+}
+
+/**
+ * The guidance pages the engine supplies to every brand: each module's `overview.md` and `record.yaml`, the
+ * introduction, use cases, templates and the UI components list, keyed by their path under the brand root
+ * (`brand/content/...`). A brand repository no longer stores them; a file the brand keeps at the same path wins.
+ */
+let cachedPages: Map<string, string> | null = null
+export function templatePages(): Map<string, string> {
+  if (cachedPages) return cachedPages
+  const pages = new Map<string, string>()
+  capture = pages
+  try {
+    const questions = allQuestions()
+    for (const module of allModules()) {
+      putText(path.join(CAPTURE_ROOT, module.dir, 'overview.md'), renderModulePage(module, questions))
+      putText(path.join(CAPTURE_ROOT, module.dir, 'record.yaml'), renderRecord(module))
+    }
+    putText(path.join(CAPTURE_ROOT, 'brand/content/00-start/introduction.md'), renderIntroduction())
+    writeUseCases(CAPTURE_ROOT)
+    writeTemplates(CAPTURE_ROOT)
+    writeComponents(CAPTURE_ROOT)
+  } finally {
+    capture = null
+  }
+  // Pages the engine keeps as edited files (for example with their fa and tr sections) replace the rendered ones.
+  const guidance = guidanceDir()
+  const walk = (dir: string): void => {
+    if (!fs.existsSync(dir)) return
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else pages.set(`brand/${path.relative(guidance, full).split(path.sep).join('/')}`, fs.readFileSync(full, 'utf8'))
+    }
+  }
+  walk(guidance)
+  cachedPages = pages
+  return pages
+}
+
+/** The engine's edited guidance pages, mirroring their path under brand/ (bundled into the engine's assets). */
+export function guidanceDir(): string {
+  const assets = process.env.BRAND_OS_ENGINE_ASSETS
+  return assets ? path.join(assets, 'guidance') : path.resolve(import.meta.dirname, '..', 'guidance')
+}
+
+/** A guidance page: the brand's own copy when it has one, otherwise the engine's. Null when neither exists. */
+export function readTemplatePage(root: string, relative: string): string | null {
+  const own = path.join(root, relative)
+  if (exists(own)) return fs.readFileSync(own, 'utf8')
+  return templatePages().get(relative) ?? null
 }
 
 function sha256(text: string): string {
@@ -60,30 +119,10 @@ export function writeStarterWorkspace(root: string): void {
   if (!exists(path.join(root, 'brand', 'brand.config.yaml'))) {
     putYaml(path.join(root, 'brand', 'brand.config.yaml'), templateConfig())
   }
-  const questions = allQuestions()
-  const banks = new Map<string, FieldQuestion[]>()
-  for (const question of questions) {
-    const name = bankName(question)
-    banks.set(name, [...(banks.get(name) ?? []), question])
-  }
-  for (const [name, group] of banks) {
-    putYaml(path.join(root, 'brand', 'interview', 'question-bank', name), { schema_version: 1, questions: group })
-  }
-  putYaml(path.join(root, 'brand', 'interview', 'field-registry.yaml'), { schema_version: 1, fields: questions.map(fieldRegistryEntry) })
-  const edges = questions.flatMap(knowledgeGraphEdges)
-  putYaml(path.join(root, 'brand', 'interview', 'knowledge-graph.yaml'), { schema_version: 1, edges })
-  for (const profile of STARTER_PROFILES) putYaml(path.join(root, 'brand', 'interview', 'profiles', `${profile.id}.yaml`), profile)
-
-  for (const module of allModules()) {
-    putText(path.join(root, module.dir, 'overview.md'), renderModulePage(module, questions))
-    putText(path.join(root, module.dir, 'record.yaml'), renderRecord(module))
-  }
-  putText(path.join(root, 'brand/content/00-start/introduction.md'), renderIntroduction())
-  writeUseCases(root)
-  writeTemplates(root)
+  // The question bank, field registry, knowledge graph, starter profiles and guidance pages are engine definitions:
+  // they are read from the engine (engineQuestions, STARTER_PROFILES, templatePages) and never copied into a brand.
   writeMascot(root)
   writeAssets(root)
-  writeComponents(root)
   ensureInstance(root)
   writeManifest(root)
   putText(

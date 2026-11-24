@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { parse } from 'yaml'
-import { allModules, factIsPublic, moduleEnabled, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readPublicationPolicy } from '@brand-os/brand-core'
+import { allModules, factIsPublic, moduleEnabled, buildBrandBook, buildDashboard, compileModulePages, InterviewEngine, readFacts, assetIsPublic, pageIsPublic, readMascotStates, readPublicationPolicy, templatePages } from '@brand-os/brand-core'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
 import type { BrandConfig, PersonalFacet } from '@brand-os/brand-core'
 import { assetPathIsSafe, inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -82,6 +82,12 @@ export function prepareDocs(root: string, options: PrepareOptions = {}): { copie
   collect(ctx, path.join(root, 'brand', 'business-os'), docs)
   collect(ctx, path.join(root, 'brand', 'personal'), docs)
   collect(ctx, path.join(root, 'brand', 'templates'), docs)
+  // Guidance pages the engine supplies and the brand does not keep its own copy of.
+  const own = new Set(docs.map((doc) => doc.source))
+  for (const [relative, text] of templatePages()) {
+    if (!relative.endsWith('.md') || own.has(relative)) continue
+    addDoc(ctx, relative, text, docs)
+  }
   const excluded = new Set<string>()
   for (const doc of docs) {
     if (doc.optional === 'mascot' && !ctx.mascot) excluded.add(doc.url)
@@ -124,23 +130,26 @@ function collect(ctx: PrepareContext, dir: string, into: DocFile[]): void {
     if (entry.isDirectory()) collect(ctx, full, into)
     else if (entry.name.endsWith('.md')) {
       const relative = path.relative(ctx.root, full).split(path.sep).join('/')
-      const dest = destination(relative)
-      if (!dest) continue
-      // Public introduction is generated from safe canonical text above, never copied from a draft source.
-      if (ctx.audience === 'public' && relative === 'brand/content/00-start/introduction.md') continue
-      const text = fs.readFileSync(full, 'utf8')
-      const meta = frontmatter(text)
-      into.push({
-        source: relative,
-        dest,
-        url: `/docs/${dest.replace(/\.md$/, '')}`,
-        text,
-        optional: meta.optional_module,
-        facet: meta.personal_facet,
-        visibility: meta.visibility ?? 'internal',
-      })
+      addDoc(ctx, relative, fs.readFileSync(full, 'utf8'), into)
     }
   }
+}
+
+function addDoc(ctx: PrepareContext, relative: string, text: string, into: DocFile[]): void {
+  const dest = destination(relative)
+  if (!dest) return
+  // Public introduction is generated from safe canonical text above, never copied from a draft source.
+  if (ctx.audience === 'public' && relative === 'brand/content/00-start/introduction.md') return
+  const meta = frontmatter(text)
+  into.push({
+    source: relative,
+    dest,
+    url: `/docs/${dest.replace(/\.md$/, '')}`,
+    text,
+    optional: meta.optional_module,
+    facet: meta.personal_facet,
+    visibility: meta.visibility ?? 'internal',
+  })
 }
 
 function destination(relative: string): string | null {
@@ -268,9 +277,7 @@ function writeData(ctx: PrepareContext): void {
     next: projection ? [] : report.next.map((item) => ({ id: item.id, priority: item.priority, prompt: item.prompt })),
     release: projection?.release ?? null,
   }
-  const catalogDoc = parse(fs.readFileSync(path.join(ctx.root, 'brand', 'mascot', 'catalog.yaml'), 'utf8')) as {
-    states: Array<Record<string, unknown>>
-  }
+  const catalogDoc = { states: readMascotStates(ctx.root) }
   const catalog = (ctx.mascot ? catalogDoc.states : [])
     .filter((state) => ctx.audience !== 'public' || ((state.status === 'approved' || state.status === 'published') && pageIsPublic(ctx.root, String(state.id))))
     .map((state) => {

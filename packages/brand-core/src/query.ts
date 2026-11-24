@@ -1,8 +1,10 @@
+import { readMascotStages, readMascotStates } from './mascot-files.js'
 import { entitySpec, readEntityList } from './entities.js'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { parse } from 'yaml'
+import { readTemplatePage } from './materialize.js'
 import type { FieldQuestion } from './types.js'
 import type { InterviewEngine } from './engine.js'
 import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
@@ -325,7 +327,7 @@ function retrieveMascotAssets(engine: InterviewEngine, ctx: AuthContext, req: Re
   if (!engine.config().modules.mascot.enabled) return { allow: true, reason: 'not applicable', notApplicable: true, items: [], missing: [], source: CATALOG_PATH }
   const root = engine.workspaceRoot()
   const brandId = engine.config().brand.slug
-  const catalog = readYamlFile<{ states?: Row[] }>(root, CATALOG_PATH, {})
+  const catalog = { states: readMascotStates(root) as Row[] }
   const assets = readableAssets(engine, ctx)
   const assetPaths = new Set(assets.map((asset) => String(asset.path)))
   const items: RetrievedItem[] = []
@@ -424,7 +426,7 @@ function retrieveMascot(engine: InterviewEngine, ctx: AuthContext, req: Retrieve
     explanation: items.length ? explanation : detailed ? explanation : ['No published mascot artwork matches these filters.'],
   })
 
-  const stages = readYamlFile<{ stages?: Row[] }>(root, STAGES_PATH, {}).stages ?? []
+  const stages = readMascotStages(root) as Row[]
   let stage: Row | null = null
   if (wanted.stage) {
     stage = stages.find((item) => norm(item.id) === wanted.stage || String(item.order) === wanted.stage || norm(item.name) === wanted.stage || slugOf(norm(item.id)) === wanted.stage) ?? null
@@ -436,7 +438,7 @@ function retrieveMascot(engine: InterviewEngine, ctx: AuthContext, req: Retrieve
   const stageId = stage ? String(stage.id) : null
   const angleId = wanted.angle ? (wanted.angle.startsWith('mascot.angle.') ? wanted.angle : `mascot.angle.${wanted.angle}`) : null
 
-  const catalog = readYamlFile<{ states?: Row[] }>(root, CATALOG_PATH, {}).states ?? []
+  const catalog = { states: readMascotStates(root) as Row[] }.states ?? []
   let candidates = catalog.filter((state) => state.status !== 'deprecated')
   if (wanted.emotion) {
     candidates = candidates.filter((state) => matchesEmotion(state, wanted.emotion))
@@ -537,7 +539,7 @@ function retrieveMascot(engine: InterviewEngine, ctx: AuthContext, req: Retrieve
 function retrieveMascotStages(engine: InterviewEngine, ctx: AuthContext): Retrieval {
   if (!engine.config().modules.mascot.enabled) return { allow: true, reason: 'not applicable', notApplicable: true, items: [], missing: [], source: STAGES_PATH }
   const brandId = engine.config().brand.slug
-  const doc = readYamlFile<{ stages?: Row[] }>(engine.workspaceRoot(), STAGES_PATH, {})
+  const doc = { stages: readMascotStages(engine.workspaceRoot()) as Row[] }
   const items = (doc.stages ?? [])
     .filter((stage) => {
       const published = pagePublished(engine, String(stage.id))
@@ -550,7 +552,8 @@ function retrieveMascotStages(engine: InterviewEngine, ctx: AuthContext): Retrie
 function retrieveComponent(engine: InterviewEngine, ctx: AuthContext, req: RetrieveRequest): Retrieval {
   const id = req.ids?.[0] ?? req.query ?? ''
   const brandId = engine.config().brand.slug
-  const doc = readYamlFile<{ components?: Row[] }>(engine.workspaceRoot(), COMPONENTS_PATH, {})
+  const componentsText = readTemplatePage(engine.workspaceRoot(), COMPONENTS_PATH)
+  const doc = (componentsText ? (parse(componentsText) as { components?: Row[] } | null) : null) ?? {}
   const found = (doc.components ?? []).find((component) => component.id === `component.${id}` || component.id === id || component.name === id)
   if (found) {
     const published = pagePublished(engine, String(found.id)) || pagePublished(engine, COMPONENTS_PATH)
@@ -576,8 +579,7 @@ function retrieveAsset(engine: InterviewEngine, ctx: AuthContext, req: RetrieveR
 function retrieveSocialTemplate(engine: InterviewEngine, ctx: AuthContext, req: RetrieveRequest): Retrieval {
   const root = engine.workspaceRoot()
   const brandId = engine.config().brand.slug
-  const file = path.join(root, SOCIAL_PATH)
-  const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
+  const text = readTemplatePage(root, SOCIAL_PATH) ?? ''
   const frontmatter = text.match(/^---\s*\n([\s\S]*?)\n---/)
   const metadata = frontmatter ? (parse(frontmatter[1] ?? '') as { status?: string } | null) : null
   const published = pagePublished(engine, SOCIAL_PATH)

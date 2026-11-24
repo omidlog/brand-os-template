@@ -163,7 +163,6 @@ test('one visual_design call returns identity, voice, tokens, source revisions a
 
   // The real owner path, in a temporary fixture with SYNTHETIC DEMO values: approve a colour answer, generate the
   // draft tokens from it, then hash-approve two of them. An EXAMPLE base value can never be approved.
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(s.root, 'brand/tokens'), { recursive: true })
   approveFacts(s, [['brand.color.roles', 'primary #0B2A55; onPrimary #FFFFFF']])
   const generated = generateTokens(s.root, 'pilito-visual')
   assert.equal(generated.ok, true, generated.note)

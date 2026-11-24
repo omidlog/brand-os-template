@@ -9,7 +9,6 @@ import { prepareDocs } from '../scripts/prepare-docs.js'
 test('public prepare hides the mascot module and the restricted canary', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-docs-'))
   writeStarterWorkspace(root)
-  fs.cpSync(path.join(path.resolve(import.meta.dirname, '..'), 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   const result = prepareDocs(root, { audience: 'public', mascot: false, gamification: false, rootIndex: false })
   assert.ok(result.excluded.some((url) => url.includes('mascot-identity')))
   const docs = path.join(root, 'apps', 'docs', 'docs')

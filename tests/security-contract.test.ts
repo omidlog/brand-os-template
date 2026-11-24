@@ -91,6 +91,7 @@ test('checksum mismatch is rejected and a safe svg is copied', () => {
 test('backup refuses overwrite and restore returns the previous bytes', () => {
   const root = fresh()
   const overview = path.join(root, 'brand/content/04-color-system/overview.md')
+  fs.mkdirSync(path.dirname(overview), { recursive: true }) // a brand keeps its own copy of a guidance page only when it edits one
   fs.appendFileSync(overview, '\nKEEP-THIS-SENTENCE\n')
   const saved = backupBrand(root)
   assert.throws(() => backupBrand(root, saved.directory), /overwrite/)
@@ -149,6 +150,7 @@ test('guest internal export is denied and backups are ciphertext', () => {
   assert.equal(snapshot.export_denied, true)
   assert.equal('answers' in snapshot, false)
   const overview = path.join(root, 'brand/content/04-color-system/overview.md')
+  fs.mkdirSync(path.dirname(overview), { recursive: true }) // a brand keeps its own copy of a guidance page only when it edits one
   fs.appendFileSync(overview, '\nKEEP-CIPHER-SENTENCE\n')
   const saved = backupBrand(root)
   const enc = fs.readFileSync(path.join(saved.directory, 'backup.enc'))

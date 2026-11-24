@@ -1,3 +1,4 @@
+import { engineQuestions, fieldRegistryEntry } from '@brand-os/brand-core'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -78,10 +79,10 @@ test('the four BMC list questions exist in the bank with canonical ids and a mat
     for (const lang of ['en', 'fa', 'tr'] as const) assert.ok(question.prompt[lang].length > 5, `${id} ${lang} prompt`)
     for (const target of ENTITY_SPECS[id]!.links) assert.ok(ENTITY_SPECS[target], `${id} links only to list questions`)
   }
-  // The committed bank and field registry are the materialized ones.
-  const committed = YAML.parse(fs.readFileSync(path.resolve('brand/interview/question-bank/business.yaml'), 'utf8')) as { questions: Array<{ id: string; question_type: string }> }
+  // The engine's bank and field registry carry them.
+  const committed = { questions: engineQuestions() }
   for (const id of ENTITY_QUESTION_IDS) assert.equal(committed.questions.find((question) => question.id === id)?.question_type, 'repeating_entity', `${id} committed`)
-  const registry = YAML.parse(fs.readFileSync(path.resolve('brand/interview/field-registry.yaml'), 'utf8')) as { fields: Array<{ id: string; validator: string }> }
+  const registry = { fields: engineQuestions().map(fieldRegistryEntry) }
   for (const id of ENTITY_QUESTION_IDS) assert.equal(registry.fields.find((field) => field.id === id)?.validator, 'structured', `${id} in the field registry`)
   // Every field and choice option is labelled in en, fa and tr.
   for (const spec of Object.values(ENTITY_SPECS)) {

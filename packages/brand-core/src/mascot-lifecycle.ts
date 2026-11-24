@@ -1,3 +1,4 @@
+import { readMascotAngles, readMascotStages } from './mascot-files.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { isMap, isSeq, parse, parseDocument } from 'yaml'
@@ -123,9 +124,9 @@ function readYaml<T>(file: string): T | null {
  */
 export function validateMascotLifecycle(root: string, states: Row[]): string[] {
   const errors: string[] = []
-  const stages = readYaml<{ stages?: Row[] }>(path.join(root, 'brand', 'mascot', 'stages.yaml'))?.stages ?? []
+  const stages = readMascotStages(root)
   const stageIds = new Set(stages.map((stage) => String(stage.id)))
-  const angles = readYaml<{ angles?: Row[] }>(path.join(root, 'brand', 'mascot', 'angles.yaml'))?.angles ?? []
+  const angles = readMascotAngles(root)
   const angleIds = new Set(angles.map((angle) => String(angle.id)))
   const manifest = readYaml<{ assets?: Row[] }>(path.join(root, 'brand', 'assets', 'asset-manifest.yaml'))?.assets ?? []
   const assets = new Map(manifest.map((asset) => [String(asset.id), asset]))

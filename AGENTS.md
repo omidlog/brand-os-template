@@ -15,7 +15,7 @@ If a file disagrees with an approved fact, the approved fact wins until a person
 
 ## How to look something up
 
-- Stable ids live in `brand/interview/field-registry.yaml`, `brand/mascot/catalog.yaml`, and `brand/assets/asset-manifest.yaml`.
+- Stable ids: question ids come from the engine (`npm run brand:next -- --json` lists them with reasons); mascot state ids from the engine catalog (or `brand/mascot/catalog.yaml` once a brand tracks mascot state); asset ids from `brand/assets/asset-manifest.yaml`. The question bank, field registry, knowledge graph, starter profiles and guidance pages are engine definitions: a brand changes a profile only through `brand/overrides/profiles/<id>.yaml` (`add` / `remove`).
 - `npm run brand:query -- --tool get_brand_status` returns coverage and approval without answer values.
 - `npm run brand:query -- --tool get_brand_tokens` returns only tokens that are hash-approved and published. EXAMPLE values are never returned. `--include-unapproved` is ignored and grants nothing.
 - `npm run brand:query -- --tool list_mascot_assets` returns no rows until artwork is approved.

@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
+import YAML from 'yaml'
 import {
   addPersonalStrategyQuestions,
   applyInit,
@@ -14,6 +15,7 @@ import {
   latestAnswers,
   nextReport,
   PERSONAL_FRAMEWORK_SOURCES,
+  STARTER_PROFILES,
   writeStarterWorkspace,
 } from '@brand-os/brand-core'
 import type { DocumentModel, InitInput } from '@brand-os/brand-core'
@@ -279,6 +281,9 @@ test('brand:migrate adds the strategy questions to an older personal-brand profi
   const { root, engine } = brand({ profile: 'personal-brand', facets: ['consultant-expert'] })
   const file = path.join(root, 'brand', 'interview', 'profiles', 'personal-brand.yaml')
   const strategy = ['brand.strategy.purpose', 'brand.strategy.vision', 'brand.strategy.values', 'brand.strategy.promise']
+  // An older brand still carries a full copy of the profile (new brands read it from the engine).
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, YAML.stringify(STARTER_PROFILES.find((profile) => profile.id === 'personal-brand')))
   const older = fs.readFileSync(file, 'utf8').split('\n').filter((line) => !strategy.some((id) => line.trim() === `- ${id}`)).join('\n').replace('exclusive: true', '# owner note\nexclusive: true')
   fs.writeFileSync(file, older)
   assert.ok(strategy.every((id) => !brandApplicability(engine).applies(id)), 'an older profile does not ask them')

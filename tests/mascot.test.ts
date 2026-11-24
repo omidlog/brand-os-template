@@ -1,3 +1,4 @@
+import { readMascotStates } from '@brand-os/brand-core'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import crypto from 'node:crypto'
@@ -36,7 +37,6 @@ function brand(mascot = true): { root: string; engine: InterviewEngine } {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-mascot-'))
   writeStarterWorkspace(root)
   fs.cpSync(path.join(repo, 'schemas'), path.join(root, 'schemas'), { recursive: true })
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   applyInit(root, { name: 'Mascot Brand', slug: SLUG, industry: 'education', language: 'en', languages: ['en', 'fa', 'tr'], mascot, gamification: false, publish: 'public' })
   return { root, engine: new InterviewEngine(root) }
 }
@@ -114,7 +114,8 @@ function find(engine: InterviewEngine, ctx: AuthContext, filters: MascotFilters)
 const STAGE_THREE_CELEBRATING: MascotFilters = { emotion: 'celebrating', stage: '3', use_case: 'correct answer' }
 
 test('the template catalog ships every state as defined and validates', () => {
-  const catalog = readYaml<{ states: Row[] }>(repo, 'brand/mascot/catalog.yaml')
+  // The engine's catalog, as a brand without its own catalog file reads it.
+  const catalog = { states: readMascotStates(fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-catalog-'))) as Row[] }
   assert.equal(catalog.states.length, 90)
   assert.ok(catalog.states.every((state) => state.status === 'defined'))
   const { root } = brand()

@@ -37,7 +37,7 @@ call instead of re-interviewing the owner or inventing the gaps.
 | Audit line without values | `appendAccessLog` | `access-log.ts` | **Reuse**; one extra line per `task_context` call, ids only |
 | Deterministic digest over canonical JSON | `canonicalJson`, `sha256Hex` | `strategy/model.ts` | **Reuse** for `digests.context_sha256` |
 | Locale detection, Persian/Arabic digits, channel words | `detectLocale`, `asciiDigits`, `detectChannels` | `llm/rules.ts`, `structured.ts`, `content-bridge/sources.ts` | **Reuse** in the classifier |
-| Interview question ids for gaps | `allQuestions()` / `brand/interview/field-registry.yaml` | `content/index.ts` | **Reuse**; a test fails if the task map names an id the bank does not have |
+| Interview question ids for gaps | `allQuestions()` / `fieldRegistryEntry` (engine) | `content/index.ts` | **Reuse**; a test fails if the task map names an id the bank does not have |
 
 Nothing in the list is rebuilt. The new code is a selector, a readiness/gap rule and a renderer.
 

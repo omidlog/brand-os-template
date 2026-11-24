@@ -1,3 +1,4 @@
+import { engineQuestions, fieldRegistryEntry } from '@brand-os/brand-core'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -31,7 +32,6 @@ import { useTestKey } from './helpers/knowledge.js'
 useTestKey()
 
 const AS_OF = new Date('2026-11-23T00:00:00.000Z')
-const REPO = path.resolve(import.meta.dirname, '..')
 
 function withoutAgentToken<T>(run: () => T): T {
   const saved = process.env[AGENT_TOKEN_ENV]
@@ -70,13 +70,11 @@ test('paid media is a fixed interview question in en, fa and tr, in the business
   for (const lang of ['en', 'fa', 'tr'] as const) assert.ok(question.prompt[lang] && question.prompt[lang]!.trim().length > 10, `${lang} prompt`)
   assert.match(question.prompt.fa!, /[؀-ۿ]/, 'the Persian prompt is in Persian script')
 
-  // The committed bank and field registry carry it too (no drift between source and YAML).
-  const bank = YAML.parse(fs.readFileSync(path.join(REPO, 'brand/interview/question-bank/business.yaml'), 'utf8')) as { questions: Array<{ id: string; prompt: Record<string, string> }> }
-  const committed = bank.questions.find((entry) => entry.id === PAID_MEDIA_QUESTION)
+  // The engine's bank and field registry carry it (a brand reads both from the engine).
+  const committed = engineQuestions().find((entry) => entry.id === PAID_MEDIA_QUESTION)
   assert.ok(committed)
   assert.deepEqual(committed.prompt, question.prompt)
-  const registry = fs.readFileSync(path.join(REPO, 'brand/interview/field-registry.yaml'), 'utf8')
-  assert.ok(registry.includes(`id: ${PAID_MEDIA_QUESTION}`))
+  assert.ok(engineQuestions().map(fieldRegistryEntry).some((field) => field.id === PAID_MEDIA_QUESTION))
 })
 
 test('the approved interview answer sets runs_paid_media, with its question as provenance', () => {

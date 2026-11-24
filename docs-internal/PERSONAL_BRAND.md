@@ -32,7 +32,7 @@ You can edit the facet list later. The interview, documents and docs build follo
 | `brand.profile: personal-brand` | The personal core, the selected facets and the shared voice and visual questions. | Exclusive. Company legal entity, SaaS, mascot and other Business OS questions are not applicable, not missing. They can still be answered by id. |
 | `brand.profile: universal`, personal on | The whole bank, including personal and the selected facets. | Everything counts. |
 
-Purpose, vision, values and promise apply to a person too: the `personal-brand` profile asks `brand.strategy.purpose`, `brand.strategy.vision`, `brand.strategy.values` and `brand.strategy.promise` (BOS-15). The profile file is brand-owned, so a template update does not rewrite it: `npm run brand:migrate` adds the four ids to an older `brand/interview/profiles/personal-brand.yaml` (additive, idempotent, the owner's edits kept), and `brand:next` then reports them as open.
+Purpose, vision, values and promise apply to a person too: the `personal-brand` profile asks `brand.strategy.purpose`, `brand.strategy.vision`, `brand.strategy.values` and `brand.strategy.promise` (BOS-15). The engine ships the profile, so every brand gets the four ids with the engine; a brand that changed the profile keeps its change in `brand/overrides/profiles/personal-brand.yaml` (`add` / `remove`). An older brand with a full copy in `brand/interview/profiles/` keeps it until `brand:convert`, and `npm run brand:migrate` still adds the four ids to that copy.
 
 ## Frameworks for a personal brand (decision, BOS-15)
 
@@ -72,7 +72,7 @@ The table is `PERSONAL_FRAMEWORK_SOURCES`. Everything else in the frameworks (co
 
 ## Question bank
 
-The bank is `brand/interview/question-bank/personal.yaml`. It is generated from `packages/brand-core/src/content/personal-core.ts` and `personal-facets.ts` like every other bank, so `brand:validate` checks it for prompt drift. Prompts exist in English (base), Persian and Turkish as locale data.
+The personal questions are defined in `packages/brand-core/src/content/personal-core.ts` and `personal-facets.ts` and read from the engine at run time, like every other question; a brand repository stores no copy, so a reworded prompt reaches every brand with the next engine update. Prompts exist in English (base), Persian and Turkish as locale data.
 
 Core modules (always asked when the module is on): identity, positioning, story, experience and credentials, evidence and portfolio, thought leadership and channels, visual presence, privacy and contact. 31 of the 44 core questions are required; the 13 optional ones are asked last. The facets add 27 questions in total (5 or 6 each).
 
