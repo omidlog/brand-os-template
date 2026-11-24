@@ -1,5 +1,12 @@
 # Changelog
 
+
+## Unreleased — brand:migrate adds questions a newer template introduced
+
+### Fixed
+
+- `brand:migrate` now adds every question the template defines but a brand's question bank lacks (for example `brand.color.semantic_map`), and adds it to the starter profiles that ask it (`personal-brand`, `founder-core`). Before, an existing brand failed `validate` with "Question bank is missing starter question" after a template update. Append-only and idempotent; no answer, fact or approval changes.
+
 ## Unreleased — Studio: open pull requests, automatic refresh, approved names, mixed fa/en text (BOS-02, BOS-11, BOS-20, BOS-21)
 
 ### Added

@@ -16,7 +16,7 @@ export { buildMascotCatalog, CANONICAL_ANGLES, CORE_MOTIONS, EXAMPLE_STAGES, cat
 export { InterviewEngine, applyInit, dispositionFor, emptySession, assertSlug, upgradeCore, syncManifest, personalInit } from './engine.js'
 export { completenessScope, listProfiles, loadProfile, profileErrors, UNIVERSAL_PROFILE } from './profiles.js'
 export { PERSONAL_BRAND, PERSONAL_SHARED_QUESTIONS, STARTER_PROFILES } from './content/profiles.js'
-export { addPersonalStrategyQuestions, canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSONAL_CANONICAL_REFERENCES, PERSONAL_STRATEGY_QUESTIONS } from './personal.js'
+export { addPersonalStrategyQuestions, addProfileAdditions, addProfileQuestions, PROFILE_ADDITIONS, canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSONAL_CANONICAL_REFERENCES, PERSONAL_STRATEGY_QUESTIONS } from './personal.js'
 export type { CanonicalReference } from './personal.js'
 export {
   addEvidence,
@@ -237,7 +237,7 @@ export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, Docum
 export type { ComposedDraft, ComposeSource, DraftLocale, FactLanguage, UntranslatedFact } from './documents/index.js'
 export { evaluateCondition } from './conditions.js'
 export { questionTextDrift, tokenCssBuildNote, validateRepo } from './validate-repo.js'
-export { refreshQuestionText } from './question-text.js'
+export { addMissingQuestions, bankName, refreshQuestionText } from './question-text.js'
 export { PERSONAL_FACETS, PROPOSAL_STATES, PUBLICATION_REQUIREMENTS } from './types.js'
 export type { BrandConfig, FieldQuestion, ModuleDef, AnswerRecord, PersonalFacet, PersonalModuleConfig, ProposalState, PublicationRequirement } from './types.js'
 export {
