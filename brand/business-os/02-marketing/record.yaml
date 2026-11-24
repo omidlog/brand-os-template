@@ -69,3 +69,9 @@ fields:
     status: unanswered
     sensitivity: internal
     notes: "TBD — no approved brand facts in the template"
+  business.marketing.journey_stages:
+    label: "Customer journey stages"
+    value: null
+    status: unanswered
+    sensitivity: internal
+    notes: "TBD — no approved brand facts in the template"

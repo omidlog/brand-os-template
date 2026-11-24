@@ -51,3 +51,15 @@ fields:
     status: unanswered
     sensitivity: internal
     notes: "TBD — no approved brand facts in the template"
+  business.goals.objectives:
+    label: "Objectives (OKR)"
+    value: null
+    status: unanswered
+    sensitivity: internal
+    notes: "TBD — no approved brand facts in the template"
+  business.goals.key_results:
+    label: "Key results (OKR)"
+    value: null
+    status: unanswered
+    sensitivity: internal
+    notes: "TBD — no approved brand facts in the template"

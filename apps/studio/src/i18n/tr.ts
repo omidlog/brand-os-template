@@ -708,6 +708,10 @@ export const tr: Messages = {
   "reader.ch.logo.lead": "Varyantlar, en küçük boyut, boşluk alanı ve hatalı kullanım.",
   "reader.ch.governance.title": "Yönetişim",
   "reader.ch.governance.lead": "Marka değişikliklerini kimin onayladığı, sürümlerin ve kullanımdan kaldırmanın nasıl işlediği ve yapay zekâ kuralları.",
+  // Visual V3.3: customer journey map, SOSTAC overview, OKR tree.
+  "nav.journey": "Müşteri yolculuğu haritası",
+  "nav.sostac": "SOSTAC® genel bakışı",
+  "nav.okr": "OKR ağacı",
   "nav.publishing": "Yayın galerisi",
   "publishing.title": "Yayın galerisi",
   "publishing.subtitle": "Her belge türü, her kitle için ve ne kadar hazır olduğu. Salt okunur.",

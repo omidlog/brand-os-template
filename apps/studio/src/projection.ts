@@ -19,6 +19,7 @@ import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
 import { buildPublishingGallery, questionClassifier, redactBook, redactVisualDocument, type PublishingGallery, type QuestionClassifier } from '@brand-os/brand-core/visual'
 import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
+import { buildPlanDocuments, type PlanDocuments } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -188,6 +189,12 @@ export interface StudioVisualProjection {
    */
   /** The Business Report is the business plan as a book: never public (Visual V4.1 profiles), so its public slot is null. */
   books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: null } }
+  /**
+   * Customer journey swimlane, SOSTAC overview and OKR tree (V3.3), in both editions. Internal: approved, labelled
+   * drafts, gaps; public: approved and published only. `applies` follows the canvas (business brands, and personal
+   * brands with a business facet). Absent in caches written before it existed; sync rebuilds those.
+   */
+  plans?: { applies: boolean; internal: PlanDocuments; public: PlanDocuments }
 }
 
 /**
@@ -337,6 +344,7 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
       brand_book: { internal: book('brand_book', 'internal'), public: publicBook(book('brand_book', 'public'), classify) },
       business_report: { internal: book('business_report', 'internal'), public: null },
     }
+    visual.plans = { applies: canvasApplies(engine), internal: buildPlanDocuments(engine, 'internal'), public: buildPlanDocuments(engine, 'public') }
     assertNoSecrets(visual)
     return visual
   } catch {
