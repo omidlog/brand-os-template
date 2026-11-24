@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { parse } from 'yaml'
+import { engineQuestions } from './engine-assets.js'
 import type { CanonicalFact } from './facts.js'
 import { readFacts, writeFacts } from './facts.js'
 import { ownedLocations, ownedMatch, type OwnedLocation } from './evidence-ownership.js'
@@ -331,27 +331,17 @@ export function publicationBlockers(question: Pick<FieldQuestion, 'id' | 'public
 type Requirement = Pick<FieldQuestion, 'id' | 'publication_requires' | 'contact_field'>
 const requirementCache = new Map<string, { key: string; value: Map<string, Requirement> }>()
 
-export function requirementsFrom(root: string): Map<string, Requirement> {
-  const dir = path.join(root, 'brand', 'interview', 'question-bank')
+export function requirementsFrom(_root: string): Map<string, Requirement> {
+  // Publication requirements are engine definitions: read from the engine's questions, the same for every brand.
+  const cached = requirementCache.get('engine')
+  if (cached) return cached.value
   const out = new Map<string, Requirement>()
-  if (!fs.existsSync(dir)) return out
-  const names = fs.readdirSync(dir).filter((entry) => entry.endsWith('.yaml')).sort()
-  // Re-read only when a bank file changed, so the public build can call this per fact.
-  const key = names.map((name) => {
-    const stat = fs.statSync(path.join(dir, name))
-    return `${name}:${stat.size}:${stat.mtimeMs}`
-  }).join('|')
-  const cached = requirementCache.get(dir)
-  if (cached?.key === key) return cached.value
-  requirementCache.set(dir, { key, value: out })
-  for (const name of names) {
-    const doc = parse(fs.readFileSync(path.join(dir, name), 'utf8')) as { questions?: FieldQuestion[] } | null
-    for (const question of doc?.questions ?? []) {
-      if (question.id.startsWith('personal.') || question.publication_requires?.length) {
-        out.set(question.id, { id: question.id, publication_requires: question.publication_requires, contact_field: question.contact_field })
-      }
+  for (const question of engineQuestions()) {
+    if (question.id.startsWith('personal.') || question.publication_requires?.length) {
+      out.set(question.id, { id: question.id, publication_requires: question.publication_requires, contact_field: question.contact_field })
     }
   }
+  requirementCache.set('engine', { key: 'engine', value: out })
   return out
 }
 

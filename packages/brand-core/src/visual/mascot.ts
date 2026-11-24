@@ -1,6 +1,4 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { parse } from 'yaml'
+import { readMascotStages, readMascotStates } from '../mascot-files.js'
 import type { InterviewEngine } from '../engine.js'
 import { frameworkRef } from './frameworks.js'
 import type { LogoMasterCandidate } from './identity.js'
@@ -250,13 +248,6 @@ export function mascotAtlasDocument(input: MascotAtlasInput): VisualDocument {
   }
 }
 
-function readRows(root: string, relative: string, key: string): unknown {
-  const file = path.join(root, relative)
-  if (!fs.existsSync(file)) return []
-  const doc = parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown> | null
-  return doc && typeof doc === 'object' ? doc[key] : []
-}
-
 /** The atlas for one brand repository and audience. Reads only; writes nothing. */
 export function buildMascotAtlas(engine: InterviewEngine, audience: VisualAudience, options: { assets?: MascotAssetCandidate[] } = {}): VisualDocument {
   const root = engine.workspaceRoot()
@@ -268,8 +259,8 @@ export function buildMascotAtlas(engine: InterviewEngine, audience: VisualAudien
     audience,
     illustrative: false,
     enabled,
-    states: enabled ? readRows(root, 'brand/mascot/catalog.yaml', 'states') : [],
-    stages: enabled ? readRows(root, 'brand/mascot/stages.yaml', 'stages') : [],
+    states: enabled ? readMascotStates(root) : [],
+    stages: enabled ? readMascotStages(root) : [],
     assets: options.assets ?? [],
   })
 }

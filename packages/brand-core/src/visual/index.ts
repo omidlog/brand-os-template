@@ -1,5 +1,5 @@
 export * from './model.js'
-export { FRAMEWORK_REGISTRY_PATH, FRAMEWORK_REGISTRY_SCHEMA_PATH, frameworkClaimErrors, frameworkRegistryErrors, REVIEWER_PENDING, standardVerification, validateFrameworkRegistry } from './framework-registry.js'
+export { FRAMEWORK_REGISTRY_PATH, FRAMEWORK_REGISTRY_SCHEMA_PATH, frameworkClaimErrors, frameworkRegistryErrors, readRegistry, REVIEWER_PENDING, standardVerification, validateFrameworkRegistry } from './framework-registry.js'
 export type { FrameworkRegistry } from './framework-registry.js'
 export { BMC_FRAMEWORK, frameworkRef, frameworkRegistry } from './frameworks.js'
 export { BMC_ZONES, buildBusinessModelCanvas, canvasApplies, canvasDocument, canvasRelationships, entityItems, entryFromItem, zoneState } from './bmc.js'

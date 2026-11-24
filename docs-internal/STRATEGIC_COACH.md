@@ -11,10 +11,10 @@ The coach is a thin advisory layer **on top of** the existing Brand OS interview
 there and says what it notices. It is not a chatbot, not a second interview, and not a source of truth.
 
 ```
-brand/interview/question-bank/*.yaml ─┐
+engine questions (allQuestions) ─────┐
 brand/interview/answer-ledger.yaml ───┤
 brand/interview/session-state.yaml ───┤      read only
-brand/interview/profiles/*.yaml ──────┼───►  packages/brand-core/src/coach/  ───►  CoachResult
+profiles + brand/overrides/profiles ─┼───►  packages/brand-core/src/coach/  ───►  CoachResult
 brand/interview/evidence-register.yaml┤      (pure functions, no I/O writes)       authority: derived_advice
 contradictions.ts findContradictions ─┘                                            authorizes: []
                                                                                         │

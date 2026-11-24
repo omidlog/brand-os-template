@@ -66,7 +66,23 @@ export interface TokenNode {
 /** Directory for draft tokens generated from approved structured answers. Loaded after the base files. */
 export const GENERATED_TOKEN_DIR = path.join('brand', 'tokens', 'generated')
 
-const TOKEN_FILES = [
+/**
+ * The engine's EXAMPLE base tokens and contrast pairs. A brand repository does not carry them: the engine supplies
+ * them, and a brand that needs its own base file puts it in `brand/tokens/<file>`, which then replaces the engine's.
+ * The bundled engine sets BRAND_OS_ENGINE_ASSETS to its assets folder; in this monorepo the files sit next to the code.
+ */
+export function tokenBaseDir(): string {
+  const assets = process.env.BRAND_OS_ENGINE_ASSETS
+  return assets ? path.join(assets, 'tokens') : path.resolve(import.meta.dirname, '..', 'base')
+}
+
+/** The brand's own copy of a base token file when it has one, otherwise the engine's. */
+export function tokenBaseFile(repoRoot: string, file: string): string {
+  const own = path.join(repoRoot, 'brand', 'tokens', file)
+  return fs.existsSync(own) ? own : path.join(tokenBaseDir(), file)
+}
+
+export const TOKEN_FILES = [
   'color.tokens.json',
   'typography.tokens.json',
   'space.tokens.json',
@@ -79,7 +95,7 @@ export function compileTokens(repoRoot: string): CompiledTokens {
   const errors: string[] = []
   const flat: CompiledTokens['flat'] = {}
   for (const file of TOKEN_FILES) {
-    const full = path.join(repoRoot, 'brand', 'tokens', file)
+    const full = tokenBaseFile(repoRoot, file)
     if (!fs.existsSync(full)) {
       errors.push(`Missing token file ${file}`)
       continue
@@ -188,7 +204,7 @@ function resolveAliases(flat: CompiledTokens['flat'], errors: string[]): void {
 }
 
 function loadContrast(repoRoot: string, flat: CompiledTokens['flat'], errors: string[]): ContrastResult[] {
-  const file = path.join(repoRoot, 'brand', 'tokens', 'contrast-pairs.json')
+  const file = tokenBaseFile(repoRoot, 'contrast-pairs.json')
   if (!fs.existsSync(file)) return []
   const doc = JSON.parse(fs.readFileSync(file, 'utf8')) as { pairs: ContrastPair[] }
   return doc.pairs.map((pair) => {

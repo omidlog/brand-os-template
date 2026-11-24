@@ -5,7 +5,6 @@ import { migrateFactFiles } from './facts.js'
 import { migrateMascotCatalog, type MascotMigration } from './mascot-lifecycle.js'
 import { writeAtomic } from './fsutil.js'
 import { migratePersonal } from './personal.js'
-import { addMissingQuestions, refreshQuestionText } from './question-text.js'
 import { parse, stringify } from 'yaml'
 import { dataKey } from './private-store.js'
 
@@ -125,12 +124,8 @@ export function migrateBrand(root: string): { from: string; to: string; content_
   if (mascot.files.length > 0) log.applied.push({ id: `mascot-lifecycle@${ENGINE_VERSION}`, touched: mascot.files })
   const personal = migratePersonal(root)
   if (personal.length > 0) log.applied.push({ id: `personal-brand@${ENGINE_VERSION}`, touched: personal })
-  // Question wording is template-owned even though the bank lives under brand/: refresh it so validate shows no drift.
-  // Questions a newer template added go into the bank first, then every stored question gets the template wording.
-  const addedQuestions = addMissingQuestions(root)
-  if (addedQuestions.length > 0) log.applied.push({ id: `question-bank-additions@${ENGINE_VERSION}`, touched: addedQuestions })
-  const questionText = refreshQuestionText(root)
-  if (questionText.length > 0) log.applied.push({ id: `question-text@${ENGINE_VERSION}`, touched: questionText })
+  // The question bank, registry and graph are read from the engine, so nothing under brand/ needs refreshing for them.
+  const questionText: string[] = []
   writeAtomic(logFile, stringify(log, { lineWidth: 100 }))
   writeAtomic(
     lockFile,

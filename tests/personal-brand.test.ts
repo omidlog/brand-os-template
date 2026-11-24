@@ -198,17 +198,11 @@ test('the personal brand name comes from the approved public name, and a company
 test('brand:migrate upgrades a pre-Phase-8 repository additively without resetting interview state', () => {
   const { root, engine } = brand()
   answer(engine, 'business.identity.trade_name', 'Northwind')
-  // Simulate a v0.2 checkout: no personal bank, profile, config block or registry entries.
-  fs.rmSync(path.join(root, 'brand/interview/question-bank/personal.yaml'))
-  fs.rmSync(path.join(root, 'brand/interview/profiles/personal-brand.yaml'))
+  // Simulate a v0.2 checkout: no personal config block. (Questions, profiles and the registry come from the engine.)
   const configFile = path.join(root, 'brand/brand.config.yaml')
   const legacy = fs.readFileSync(configFile, 'utf8').replace(/^ {2}personal:\n(?: {4}.*\n)+/m, '')
   assert.equal((parse(legacy) as BrandConfig).modules.personal, undefined)
   fs.writeFileSync(configFile, `# owner comment kept\n${legacy}`)
-  const registryFile = path.join(root, 'brand/interview/field-registry.yaml')
-  const registry = parse(fs.readFileSync(registryFile, 'utf8')) as { fields: Array<{ module: string }> }
-  registry.fields = registry.fields.filter((field) => !field.module.startsWith('personal'))
-  fs.writeFileSync(registryFile, JSON.stringify(registry))
   const ledgerBefore = fs.readFileSync(path.join(root, 'brand/interview/answer-ledger.yaml'), 'utf8')
   const fresh = new InterviewEngine(root)
   assert.equal(fresh.config().modules.personal, undefined)
@@ -218,8 +212,8 @@ test('brand:migrate upgrades a pre-Phase-8 repository additively without resetti
   const after = new InterviewEngine(root)
   assert.equal(after.config().modules.personal?.enabled, false)
   assert.ok(fs.readFileSync(configFile, 'utf8').startsWith('# owner comment kept'))
-  assert.ok(fs.existsSync(path.join(root, 'brand/interview/question-bank/personal.yaml')))
-  assert.ok(fs.existsSync(path.join(root, 'brand/interview/profiles/personal-brand.yaml')))
+  assert.ok(after.question('personal.identity.public_name'), 'personal questions come from the engine')
+  assert.ok(after.profile() === null || after.profile()?.id, 'profiles resolve without a copy')
   assert.equal(fs.readFileSync(path.join(root, 'brand/interview/answer-ledger.yaml'), 'utf8'), ledgerBefore)
   assert.equal(latestAnswers(after.ledger().records).get('business.identity.trade_name')?.value, 'Northwind')
   const log = parse(fs.readFileSync(path.join(root, 'brand/migrations.yaml'), 'utf8')) as { applied: Array<{ id: string }> }

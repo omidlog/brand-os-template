@@ -133,7 +133,6 @@ test('business and marketing plans share the model and withhold restricted value
 
 test('the public brand book build contains no internal brand-book items', () => {
   const { root, engine, proof } = brand()
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   answer(engine, 'business.identity.trade_name', 'Book Brand')
   answer(engine, 'brand.strategy.purpose', 'CANARY-INTERNAL approved internal purpose')
   answer(engine, 'brand.color.roles', 'primary #0B2A55')

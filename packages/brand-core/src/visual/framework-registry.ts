@@ -1,6 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import Ajv from 'ajv'
+import registryJson from './frameworks.json' with { type: 'json' }
+import { engineSchemaPath } from '../engine-assets.js'
 import type { FrameworkRef } from './model.js'
 
 /**
@@ -74,17 +76,16 @@ export function frameworkClaimErrors(doc: FrameworkRegistry): string[] {
   return errors
 }
 
-export function readRegistry(root: string): { doc: unknown; schema: object } {
-  const doc = JSON.parse(fs.readFileSync(path.join(root, FRAMEWORK_REGISTRY_PATH), 'utf8')) as unknown
-  const schema = JSON.parse(fs.readFileSync(path.join(root, FRAMEWORK_REGISTRY_SCHEMA_PATH), 'utf8')) as object
-  return { doc, schema }
+/** The engine's registry (bundled JSON) and its schema. `_root` is ignored: the registry is an engine definition. */
+export function readRegistry(_root?: string): { doc: unknown; schema: object } {
+  const schema = JSON.parse(fs.readFileSync(engineSchemaPath(path.basename(FRAMEWORK_REGISTRY_SCHEMA_PATH)), 'utf8')) as object
+  return { doc: registryJson as unknown, schema }
 }
 
-/** Errors for a repository's registry; a repository without one (an older brand) gets a warning instead. */
-export function frameworkRegistryErrors(root: string): { errors: string[]; warnings: string[] } {
-  if (!fs.existsSync(path.join(root, FRAMEWORK_REGISTRY_PATH))) return { errors: [], warnings: [`${FRAMEWORK_REGISTRY_PATH} is missing; a template update restores it`] }
+/** Errors in the engine's framework registry. */
+export function frameworkRegistryErrors(_root?: string): { errors: string[]; warnings: string[] } {
   try {
-    const { doc, schema } = readRegistry(root)
+    const { doc, schema } = readRegistry()
     return { errors: validateFrameworkRegistry(doc, schema), warnings: [] }
   } catch (error) {
     return { errors: [`${FRAMEWORK_REGISTRY_PATH}: ${error instanceof Error ? error.message : String(error)}`], warnings: [] }

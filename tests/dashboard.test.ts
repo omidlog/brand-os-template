@@ -15,7 +15,6 @@ const repo = path.resolve(import.meta.dirname, '..')
 function brand(publish: 'public' | 'private'): { root: string; engine: InterviewEngine } {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-dashboard-'))
   writeStarterWorkspace(root)
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   applyInit(root, { name: 'Dash Brand', slug: 'dash-brand', industry: 'education', language: 'en', languages: ['en'], mascot: false, gamification: false, publish })
   const engine = new InterviewEngine(root)
   // A draft, an approved fact with a pending change, a restricted draft, and a name contradiction.

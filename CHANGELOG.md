@@ -1,6 +1,18 @@
 # Changelog
 
 
+
+## Unreleased — engine definitions are read from the engine, not copied into brands (engine + data, part A)
+
+### Changed
+
+- The question bank, field registry, knowledge graph, starter interview profiles, module guidance pages, schemas, the framework registry and the EXAMPLE base tokens are engine definitions. They are read from the engine at run time; a brand repository no longer stores copies, so a new or reworded question reaches every brand with the engine and needs no migration.
+- A brand changes a profile with `brand/overrides/profiles/<id>.yaml` (`add`, `remove`, or a full `question_ids`). A guidance page or a base token file the brand keeps at its usual path replaces the engine's.
+- Mascot catalog, stages and angles come from the engine until a brand tracks mascot state in `brand/mascot/*.yaml`.
+- Base tokens moved to `packages/design-tokens/base/`; edited guidance pages to `packages/brand-core/guidance/`.
+- Older brands keep working: their copies are ignored (validate names them), and full profile copies are still read until `brand:convert`.
+- Tests no longer read the repository's own `brand/` data for engine definitions.
+
 ## Unreleased — brand:migrate adds questions a newer template introduced
 
 ### Fixed

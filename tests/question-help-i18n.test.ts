@@ -4,12 +4,11 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
-import { parse, stringify } from 'yaml'
+import { stringify } from 'yaml'
 import {
   allQuestions,
   applyInit,
   InterviewEngine,
-  migrateBrand,
   nextReport,
   questionHelp,
   questionTextDrift,
@@ -93,25 +92,16 @@ test('BOS-09: drift checks cover the prompt, why_it_matters and examples in all 
   const old: FieldQuestion = { ...source, why_it_matters_i18n: undefined, examples_i18n: undefined }
   assert.deepEqual(questionTextDrift(old, source), { fields: [], missingHelpLocales: true })
 
-  // A copy of this repository with an old bank (no *_i18n fields, old prompt): validate reports drift and a warning,
-  // and brand:migrate refreshes only the question text.
+  // A brand's old bank copy is no longer read: validate names it, and the engine's text is what the interview shows.
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-drift-'))
-  for (const dir of ['brand', 'schemas', 'packages/design-tokens/src']) fs.cpSync(path.join(repo, dir), path.join(root, dir), { recursive: true })
+  fs.cpSync(path.join(repo, 'brand'), path.join(root, 'brand'), { recursive: true })
   const bankFile = path.join(root, 'brand', 'interview', 'question-bank', 'personal.yaml')
-  const bank = parse(fs.readFileSync(bankFile, 'utf8')) as { questions: FieldQuestion[] }
-  for (const question of bank.questions) {
-    delete question.why_it_matters_i18n
-    delete question.examples_i18n
-    if (question.id === 'personal.goals.kpis') question.prompt = { ...question.prompt, fa: 'متن قدیمی' }
-  }
-  fs.writeFileSync(bankFile, stringify(bank))
-  const before = validateRepo(root)
-  assert.ok(before.errors.some((error) => error.startsWith('Prompt drift for personal.goals.kpis (prompt.fa)')), before.errors.join('\n'))
-  assert.ok(before.warnings.some((warning) => /no Persian or Turkish help text/.test(warning)))
-  migrateBrand(root)
-  const after = validateRepo(root)
-  assert.ok(!after.errors.some((error) => error.startsWith('Prompt drift')), after.errors.join('\n'))
-  assert.ok(!after.warnings.some((warning) => /help text/.test(warning)))
+  fs.mkdirSync(path.dirname(bankFile), { recursive: true })
+  fs.writeFileSync(bankFile, stringify({ questions: [{ ...source, prompt: { ...source.prompt, fa: 'متن قدیمی' } }] }))
+  const report = validateRepo(root)
+  assert.ok(!report.errors.some((error) => error.startsWith('Prompt drift')), report.errors.join('\n'))
+  assert.ok(report.warnings.some((warning) => /no longer read/.test(warning)), report.warnings.join('\n'))
+  assert.equal(new InterviewEngine(root).question('personal.goals.kpis')?.prompt.fa, source.prompt.fa)
 })
 
 test('BOS-13: a normal validate prints no token CSS warning; the docs build path carries the note', () => {

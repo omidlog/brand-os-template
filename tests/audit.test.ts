@@ -38,6 +38,7 @@ test('materialize does not overwrite customized brand files', () => {
   const root = fresh()
   const catalog = path.join(root, 'brand/mascot/catalog.yaml')
   const overview = path.join(root, 'brand/content/01-brand-strategy/overview.md')
+  fs.mkdirSync(path.dirname(overview), { recursive: true }) // a brand keeps its own copy of a guidance page only when it edits one
   const manifest = path.join(root, 'brand/assets/asset-manifest.yaml')
   fs.appendFileSync(catalog, '\n# owner-custom-stage-note\n')
   fs.appendFileSync(overview, '\nOwner guidance sentence.\n')
@@ -118,6 +119,7 @@ test('free-form note proposes drafts and does not approve them', () => {
 test('upgrade and one-stage mascot configuration keep custom data', () => {
   const root = fresh()
   const overview = path.join(root, 'brand/content/04-color-system/overview.md')
+  fs.mkdirSync(path.dirname(overview), { recursive: true }) // a brand keeps its own copy of a guidance page only when it edits one
   fs.appendFileSync(overview, '\nCustom color sentence.\n')
   const before = fs.readFileSync(overview)
   upgradeCore(root)

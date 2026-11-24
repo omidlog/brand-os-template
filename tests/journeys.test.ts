@@ -66,7 +66,6 @@ function workspace(prefix: string): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `brand-os-journey-${prefix}-`))
   writeStarterWorkspace(root)
   fs.cpSync(path.join(repo, 'schemas'), path.join(root, 'schemas'), { recursive: true })
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   return root
 }
 
@@ -445,6 +444,7 @@ test('journey B: B2B SaaS without mascot, branching, documents, finance, retriev
   fs.mkdirSync(path.join(root, 'brand/restricted/finance'), { recursive: true })
   fs.writeFileSync(path.join(root, 'brand/restricted/finance/q3.yaml'), 'schema_version: 1\ncurrency: EUR\nperiod: month\nbasis: actual\ninputs:\n  revenue: 1000\n  cogs: 250\n')
   assert.equal((runFinanceFile(root, 'restricted:q3').metrics.find((item) => item.metric === 'gross_margin_pct') as { value: number }).value, 75)
+  fs.mkdirSync(path.join(root, 'brand/content'), { recursive: true })
   fs.writeFileSync(path.join(root, 'brand/content/finance.yaml'), 'currency: EUR\ninputs: {}\n')
   assert.throws(() => runFinanceFile(root, 'brand/content/finance.yaml'), FinanceInputPathError, 'tracked brand files are refused as finance input')
 
@@ -462,6 +462,7 @@ test('journey B: B2B SaaS without mascot, branching, documents, finance, retriev
 
   // 9. Template upgrade without overwriting brand content.
   const overview = path.join(root, 'brand/business-os/04-sales-revenue/overview.md')
+  fs.mkdirSync(path.dirname(overview), { recursive: true }) // a brand keeps its own copy of a guidance page only when it edits one
   fs.appendFileSync(overview, '\nJOURNEY-B-OWNER-EDIT: our own sales notes.\n')
   const preserved = ['brand/instance/approved-facts.yaml', 'brand/interview/answer-ledger.yaml', 'brand/brand.config.yaml', 'brand/business-os/04-sales-revenue/overview.md']
   const contents = new Map(preserved.map((relative) => [relative, fs.readFileSync(path.join(root, relative), 'utf8')]))
@@ -599,7 +600,7 @@ test('journey C: interrupted migration and backup corruption leave the brand rec
     const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-backup-'))
     fs.cpSync(saved.directory, copy, { recursive: true })
     mutate(copy)
-    fs.appendFileSync(path.join(root, 'brand/content/01-brand-strategy/overview.md'), '\nEDIT-AFTER-BACKUP\n')
+    fs.appendFileSync(path.join(root, 'brand/assets/asset-manifest.yaml'), '\n# EDIT-AFTER-BACKUP\n')
     const state = snapshot(root)
     assert.throws(() => restoreBrand(root, copy), pattern)
     assert.equal(snapshot(root), state, 'a refused restore writes nothing')

@@ -3,8 +3,9 @@ import path from 'node:path'
 import Ajv from 'ajv'
 import { validateAssets } from '@brand-os/asset-catalog'
 import { compileTokens } from '@brand-os/design-tokens'
-import { allQuestions } from './content/index.js'
-import { buildMascotCatalog, catalogCounts } from './content/mascot-catalog.js'
+import { buildMascotCatalog, CANONICAL_ANGLES, catalogCounts, CORE_MOTIONS, EXAMPLE_STAGES } from './content/mascot-catalog.js'
+import { engineQuestions, engineSchemaPath, legacyDefinitionCopies, readYamlIfExists } from './engine-assets.js'
+import { fieldRegistryEntry } from './question-text.js'
 import { validateMascotLifecycle } from './mascot-lifecycle.js'
 import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
@@ -30,32 +31,18 @@ const SECRET_PATTERNS = [/BEGIN (?:RSA |OPENSSH )?PRIVATE KEY/, /ghp_[A-Za-z0-9]
 export function validateRepo(root: string): ValidationReport {
   const errors: string[] = []
   const warnings: string[] = []
-  const questions = loadQuestions(root, errors)
-  const starter = safeStarter(errors)
-  if (starter) {
-    const byId = new Map(questions.map((question) => [question.id, question]))
-    const withoutHelpLocales: string[] = []
-    for (const question of starter) {
-      const stored = byId.get(question.id)
-      if (!stored) {
-        errors.push(`Question bank is missing starter question ${question.id}`)
-        continue
-      }
-      const drift = questionTextDrift(stored, question)
-      if (drift.fields.length > 0) errors.push(`Prompt drift for ${question.id} (${drift.fields.join(', ')}). Run npm run brand:migrate to refresh the question text from the template.`)
-      if (drift.missingHelpLocales) withoutHelpLocales.push(question.id)
-    }
-    if (withoutHelpLocales.length > 0) {
-      warnings.push(`${withoutHelpLocales.length} question(s) in the question bank have no Persian or Turkish help text yet (why_it_matters_i18n, examples_i18n), so the interview shows English there. Run npm run brand:migrate to add it.`)
-    }
-    const modules = new Set(starter.map((question) => question.module))
-    for (const moduleId of modules) {
-      const count = starter.filter((question) => question.module === moduleId).length
-      if (count < 5) errors.push(`Module ${moduleId} has only ${count} starter questions`)
-    }
+  const questions = loadQuestions(errors)
+  const modules = new Set(questions.map((question) => question.module))
+  for (const moduleId of modules) {
+    const count = questions.filter((question) => question.module === moduleId).length
+    if (count < 5) errors.push(`Module ${moduleId} has only ${count} starter questions`)
+  }
+  const legacy = legacyDefinitionCopies(root)
+  if (legacy.length > 0) {
+    warnings.push(`Older template copies are no longer read (${legacy.join(', ')}): the engine supplies the question bank, registry and graph. They can be deleted; brand:convert removes them.`)
   }
   validateQuestionFiles(questions, errors)
-  validateRegistry(root, questions, errors)
+  validateRegistry(questions, errors)
   validateConditions(questions, errors)
   errors.push(...profileErrors(root, questions))
   errors.push(...canonicalReferenceErrors(questions))
@@ -141,31 +128,13 @@ function logoMastersWarnings(root: string, config: BrandConfig): string[] {
   }
 }
 
-function safeStarter(errors: string[]): FieldQuestion[] | null {
-  try {
-    return allQuestions()
-  } catch (error) {
-    errors.push(error instanceof Error ? error.message : String(error))
-    return null
-  }
-}
-
-function loadQuestions(root: string, errors: string[]): FieldQuestion[] {
-  const dir = path.join(root, 'brand', 'interview', 'question-bank')
-  if (!fs.existsSync(dir)) {
-    errors.push('Question bank directory is missing')
-    return []
-  }
+function loadQuestions(errors: string[]): FieldQuestion[] {
   const ajv = new Ajv({ allErrors: true, strict: false })
-  const schema = JSON.parse(fs.readFileSync(path.join(root, 'schemas', 'question.schema.json'), 'utf8')) as object
+  const schema = JSON.parse(fs.readFileSync(engineSchemaPath('question.schema.json'), 'utf8')) as object
   const validate = ajv.compile(schema)
-  const questions: FieldQuestion[] = []
-  for (const name of fs.readdirSync(dir).filter((entry) => entry.endsWith('.yaml'))) {
-    const doc = readYaml<{ questions: FieldQuestion[] }>(path.join(dir, name))
-    for (const question of doc.questions) {
-      if (!(validate(question) as boolean)) errors.push(`${question.id || name}: ${ajv.errorsText(validate.errors)}`)
-      questions.push(question)
-    }
+  const questions = engineQuestions()
+  for (const question of questions) {
+    if (!(validate(question) as boolean)) errors.push(`${question.id}: ${ajv.errorsText(validate.errors)}`)
   }
   const ids = new Set<string>()
   for (const question of questions) {
@@ -190,17 +159,12 @@ function validateQuestionFiles(questions: FieldQuestion[], errors: string[]): vo
   }
 }
 
-function validateRegistry(root: string, questions: FieldQuestion[], errors: string[]): void {
-  const file = path.join(root, 'brand', 'interview', 'field-registry.yaml')
-  if (!fs.existsSync(file)) {
-    errors.push('Field registry is missing')
-    return
-  }
-  const registry = readYaml<{ fields: Array<{ id: string; required: boolean; question_ids: string[]; documents: string[] }> }>(file)
+function validateRegistry(questions: FieldQuestion[], errors: string[]): void {
+  // The field registry is built from the engine's questions; check the rules it must keep.
   const questionIds = new Set(questions.map((question) => question.id))
-  for (const field of registry.fields) {
-    if (!field.question_ids?.length) errors.push(`Field ${field.id} has no question`)
-    for (const id of field.question_ids ?? []) {
+  for (const field of questions.map(fieldRegistryEntry)) {
+    if (!field.question_ids.length) errors.push(`Field ${field.id} has no question`)
+    for (const id of field.question_ids) {
       if (!questionIds.has(id)) errors.push(`Field ${field.id} points at missing question ${id}`)
     }
     if (field.required && (!field.documents || field.documents.length === 0)) errors.push(`Required field ${field.id} has no document`)
@@ -230,13 +194,11 @@ function validateMascot(root: string, errors: string[]): void {
   }
   if (expected.length !== 90) errors.push(`Catalog builder has ${expected.length} states, expected 90`)
   const file = path.join(root, 'brand', 'mascot', 'catalog.yaml')
-  if (!fs.existsSync(file)) {
-    errors.push('Mascot catalog file is missing')
-    return
-  }
+  // A brand keeps the catalog only when it tracks mascot state; otherwise the engine's catalog applies.
+  if (!fs.existsSync(file)) return
   const stored = readYaml<{ states: Array<{ id: string; category: string }> }>(file)
   const ajv = new Ajv({ allErrors: true, strict: false })
-  const stateSchema = JSON.parse(fs.readFileSync(path.join(root, 'schemas', 'mascot-state.schema.json'), 'utf8')) as object
+  const stateSchema = JSON.parse(fs.readFileSync(engineSchemaPath('mascot-state.schema.json'), 'utf8')) as object
   const validateState = ajv.compile(stateSchema)
   const storedIds = new Set(stored.states.map((state) => state.id))
   for (const state of stored.states) {
@@ -247,7 +209,7 @@ function validateMascot(root: string, errors: string[]): void {
   }
   if (stored.states.length !== 90) errors.push(`Catalog file has ${stored.states.length} states, expected 90`)
   errors.push(...validateMascotLifecycle(root, stored.states as unknown as Array<Record<string, unknown>>))
-  const stages = readYaml<{ stages: Array<{ id?: string; order?: number }> }>(path.join(root, 'brand', 'mascot', 'stages.yaml'))
+  const stages = readYamlIfExists<{ stages: Array<{ id?: string; order?: number }> }>(path.join(root, 'brand', 'mascot', 'stages.yaml')) ?? { stages: EXAMPLE_STAGES }
   const stageIds = stages.stages.map((stage) => stage.id).filter((id): id is string => Boolean(id))
   if (stageIds.length !== stages.stages.length) errors.push('Every mascot stage needs an id')
   if (new Set(stageIds).size !== stageIds.length) errors.push('Mascot stage ids must be unique')
@@ -257,9 +219,9 @@ function validateMascot(root: string, errors: string[]): void {
     errors.push('Mascot stages need a contiguous order starting at their first number')
   }
   if (stages.stages.length < 1) errors.push('At least one mascot stage is required when the file exists')
-  const angles = readYaml<{ angles: unknown[] }>(path.join(root, 'brand', 'mascot', 'angles.yaml'))
+  const angles = readYamlIfExists<{ angles: unknown[] }>(path.join(root, 'brand', 'mascot', 'angles.yaml')) ?? { angles: CANONICAL_ANGLES }
   if (angles.angles.length !== 8) errors.push('Expected 8 angles')
-  const motions = readYaml<{ motions: unknown[] }>(path.join(root, 'brand', 'mascot', 'motions.yaml'))
+  const motions = readYamlIfExists<{ motions: unknown[] }>(path.join(root, 'brand', 'mascot', 'motions.yaml')) ?? { motions: CORE_MOTIONS }
   if (motions.motions.length !== 15) errors.push(`Expected 15 motions, found ${motions.motions.length}`)
 }
 

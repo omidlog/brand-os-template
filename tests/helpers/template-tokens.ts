@@ -1,16 +1,18 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { tokenBaseDir } from '@brand-os/design-tokens'
 
 /**
- * Copies the template's base token files (`brand/tokens/*.json`) into a fixture. Token tests pin the template's
- * EXAMPLE values, so they must not pick up a brand repository's own generated tokens, approvals or publication
- * (`brand/tokens/generated/`, `approvals.yaml`): those are real brand data once a brand runs brand:tokens:generate.
+ * Copies the engine's EXAMPLE base token files into a fixture's `brand/tokens/`. Most tests do not need this:
+ * `compileTokens` falls back to the engine's base files when a brand has none. Tests that edit a base file in
+ * place (to test drift or overrides) use it to get their own copy. It never reads a brand repository's own
+ * `brand/tokens/generated/` or `approvals.yaml`, which are real brand data. `_repo` is kept for older callers.
  */
-export function copyTemplateTokens(repo: string, root: string): void {
-  const from = path.join(repo, 'brand', 'tokens')
+export function copyTemplateTokens(_repo: string, root: string): void {
+  const from = tokenBaseDir()
   const to = path.join(root, 'brand', 'tokens')
   fs.mkdirSync(to, { recursive: true })
-  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
-    if (entry.isFile() && entry.name.endsWith('.json')) fs.copyFileSync(path.join(from, entry.name), path.join(to, entry.name))
+  for (const name of fs.readdirSync(from)) {
+    if (name.endsWith('.json')) fs.copyFileSync(path.join(from, name), path.join(to, name))
   }
 }

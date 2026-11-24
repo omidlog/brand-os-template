@@ -13,6 +13,7 @@ import {
   canApprove,
   ensureApprovalSecret,
   InterviewEngine,
+  approvalGrantErrors,
   permissionFor,
   readFacts,
   readProposals,
@@ -24,7 +25,6 @@ import { writeYaml } from '../packages/brand-core/src/fsutil.js'
 import { NODE, tsxArgs } from './helpers/tsx-node.js'
 
 process.env.BRAND_OS_DATA_KEY ??= crypto.randomBytes(32).toString('base64')
-const repo = path.resolve(import.meta.dirname, '..')
 const SLUG = 'batch-brand'
 
 const PURPOSE = 'brand.strategy.purpose'
@@ -310,17 +310,10 @@ test('an explicit approval_grant wins over the id guess and restricted questions
   const costs = engine.question(COSTS) as FieldQuestion
   assert.equal(permissionFor({ ...costs, approval_grant: 'visual' }), 'financial')
 
-  fs.cpSync(path.join(repo, 'schemas'), path.join(root, 'schemas'), { recursive: true })
-  const bank = path.join(root, 'brand/interview/question-bank/business.yaml')
-  const doc = parse(fs.readFileSync(bank, 'utf8')) as { questions: Array<Record<string, unknown>> }
-  const target = doc.questions.find((question) => question.id === COSTS)
-  assert.ok(target)
-  target.approval_grant = 'visual'
-  writeYaml(bank, doc)
-  const report = validateRepo(root)
-  assert.ok(report.errors.some((error) => error.includes(COSTS) && error.includes('approval_grant financial')), report.errors.join('\n'))
-  target.approval_grant = 'financial'
-  writeYaml(bank, doc)
+  // Validate rejects a restricted question whose grant is not financial (the engine's definitions are checked).
+  const errors = approvalGrantErrors({ ...costs, approval_grant: 'visual' })
+  assert.ok(errors.some((error) => error.includes(COSTS) && error.includes('approval_grant financial')), errors.join('\n'))
+  assert.deepEqual(approvalGrantErrors({ ...costs, approval_grant: 'financial' }), [])
   assert.equal(validateRepo(root).errors.some((error) => error.includes('approval_grant')), false)
 })
 

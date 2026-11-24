@@ -92,7 +92,6 @@ export function fixture(opts: { mascot?: boolean } = {}): Fixture {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-visual-dna-'))
   writeStarterWorkspace(root)
   fs.cpSync(path.join(repo, 'schemas'), path.join(root, 'schemas'), { recursive: true })
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   fs.copyFileSync(path.join(repo, '.gitignore'), path.join(root, '.gitignore'))
   applyInit(root, { name: 'Synthetic DNA Brand', slug: SLUG, industry: 'education', language: 'en', languages: ['en', 'fa', 'tr'], mascot: opts.mascot ?? true, gamification: false, publish: 'public' })
 

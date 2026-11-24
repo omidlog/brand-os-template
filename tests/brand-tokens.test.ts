@@ -30,7 +30,6 @@ function brand(): { root: string; engine: InterviewEngine; proof: string } {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-tokens-'))
   writeStarterWorkspace(root)
   // The starter workspace has no token files; use the template's EXAMPLE set as the base.
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   fs.rmSync(path.join(root, 'brand/tokens/generated'), { recursive: true, force: true })
   fs.rmSync(path.join(root, 'brand/tokens/approvals.yaml'), { force: true })
   applyInit(root, { name: 'Token Brand', slug: SLUG, industry: 'education', language: 'en', languages: ['en', 'fa', 'tr'], mascot: false, gamification: false, publish: 'public' })
@@ -151,6 +150,7 @@ test('an existing approved token is not overwritten by a new answer', () => {
   // An approval on a base id (written by hand) is also respected: the generated value is not emitted.
   const fresh = brand()
   const digest = tokenDigest({ hex: '#123A73', value: null })
+  fs.mkdirSync(path.join(fresh.root, 'brand/tokens'), { recursive: true })
   fs.writeFileSync(path.join(fresh.root, 'brand/tokens/approvals.yaml'), `approved:\n  color.brand.primary:\n    approved_by: human\n    value_sha256: ${digest}\n`)
   approveRoles(fresh.engine, fresh.proof, 'primary #0B2A55')
   const refused = generateTokens(fresh.root, SLUG)

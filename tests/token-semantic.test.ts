@@ -56,7 +56,6 @@ const TWENTY_ROLES = [
 function brand(): { root: string; engine: InterviewEngine; proof: string } {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-os-semantic-'))
   writeStarterWorkspace(root)
-  fs.cpSync(path.join(repo, 'brand/tokens'), path.join(root, 'brand/tokens'), { recursive: true })
   fs.rmSync(path.join(root, 'brand/tokens/generated'), { recursive: true, force: true })
   fs.rmSync(path.join(root, 'brand/tokens/approvals.yaml'), { force: true })
   applyInit(root, { name: 'Sample Person', slug: SLUG, industry: 'consulting', language: 'en', languages: ['en', 'fa', 'tr'], mascot: false, gamification: false, publish: 'private' })

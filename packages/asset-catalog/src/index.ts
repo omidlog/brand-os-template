@@ -138,7 +138,8 @@ export function validateAssets(repoRoot: string): string[] {
   const errors: string[] = []
   const file = path.join(repoRoot, 'brand', 'assets', 'asset-manifest.yaml')
   const manifest = parse(fs.readFileSync(file, 'utf8')) as AssetManifest
-  const schemaPath = path.join(repoRoot, 'schemas', 'asset.schema.json')
+  // The asset schema is an engine file (the bundled engine sets BRAND_OS_ENGINE_ASSETS); in this monorepo it is in schemas/.
+  const schemaPath = process.env.BRAND_OS_ENGINE_ASSETS ? path.join(process.env.BRAND_OS_ENGINE_ASSETS, 'schemas', 'asset.schema.json') : path.resolve(import.meta.dirname, '..', '..', '..', 'schemas', 'asset.schema.json')
   const validate = fs.existsSync(schemaPath) ? new Ajv({ allErrors: true, strict: false }).compile(JSON.parse(fs.readFileSync(schemaPath, 'utf8')) as object) : null
   const ids = new Set<string>()
   for (const asset of manifest.assets) {

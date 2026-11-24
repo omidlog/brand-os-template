@@ -1,3 +1,4 @@
+import { engineQuestions, knowledgeGraphEdges } from '@brand-os/brand-core'
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
@@ -96,9 +97,9 @@ test('key results are structured: target, unit and source required; numbers cano
   assert.equal(normalizeEntityAnswer(spec, 'Grow | 40 | | % | analytics | links: seg-1').ok, false, 'key results link only to objectives')
 })
 
-test('knowledge graph: the committed file has every edge the question bank defines (V3.3 journey and OKR links included)', () => {
-  // `materialize` only writes missing files, so a new question's edges reach the committed graph only by regenerating it.
-  const committed = YAML.parse(fs.readFileSync(path.resolve('brand/interview/knowledge-graph.yaml'), 'utf8')) as { edges: Array<{ from: string; to: string; relation: string }> }
+test('knowledge graph: the engine graph has every edge the question bank defines (V3.3 journey and OKR links included)', () => {
+  // The graph is built from the engine's questions (knowledgeGraphEdges); a brand no longer stores a copy.
+  const committed = { edges: engineQuestions().flatMap(knowledgeGraphEdges) }
   const key = (edge: { from: string; to: string; relation: string }) => `${edge.from} ${edge.relation} ${edge.to}`
   const have = new Set(committed.edges.map(key))
   const expected = allQuestions().flatMap((question) => [
@@ -106,7 +107,7 @@ test('knowledge graph: the committed file has every edge the question bank defin
     ...question.related_ids.map((to) => ({ from: question.id, to, relation: 'related' })),
   ])
   const missing = expected.filter((edge) => !have.has(key(edge))).map(key)
-  assert.deepEqual(missing, [], 'regenerate brand/interview/knowledge-graph.yaml from the question bank')
+  assert.deepEqual(missing, [], 'every dependency and related id is an edge')
   assert.equal(committed.edges.length, expected.length, 'no stale edges either')
 })
 
