@@ -228,6 +228,15 @@ edges:
   - from: business.marketing.availability_claim
     to: business.product.public_status
     relation: related
+  - from: business.marketing.journey
+    to: business.marketing.journey_stages
+    relation: prerequisite
+  - from: business.marketing.journey_stages
+    to: business.marketing.journey
+    relation: related
+  - from: business.marketing.journey_stages
+    to: business.model.segments
+    relation: related
   - from: business.offer.summary
     to: business.product.portfolio
     relation: prerequisite
@@ -264,6 +273,21 @@ edges:
   - from: business.identity.trade_name
     to: business.legal.trademark
     relation: prerequisite
+  - from: business.goals.objectives
+    to: business.goals.annual
+    relation: related
+  - from: business.goals.objectives
+    to: business.goals.quarter
+    relation: related
+  - from: business.goals.objectives
+    to: business.goals.key_results
+    relation: prerequisite
+  - from: business.goals.key_results
+    to: business.goals.sources
+    relation: related
+  - from: business.goals.key_results
+    to: business.goals.plan_vs_actual
+    relation: related
   - from: business.offer.value_proposition
     to: business.partners.narrative
     relation: prerequisite

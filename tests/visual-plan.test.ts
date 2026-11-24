@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import YAML from 'yaml'
-import { applyInit, ensureApprovalSecret, entitySpec, InterviewEngine, normalizeEntityAnswer, writeStarterWorkspace } from '@brand-os/brand-core'
+import { allQuestions, applyInit, ensureApprovalSecret, entitySpec, InterviewEngine, normalizeEntityAnswer, writeStarterWorkspace } from '@brand-os/brand-core'
 import {
   buildPlanDocuments,
   frameworkRegistry,
@@ -84,13 +84,29 @@ test('key results are structured: target, unit and source required; numbers cano
   // No free-text-only key result: target, unit and source are required.
   for (const line of ['Grow a lot', 'Grow | 40', 'Grow | 40 | | %', 'Grow | 40 | | | analytics']) assert.equal(normalizeEntityAnswer(spec, line).ok, false, line)
   for (const line of ['Grow | forty | | % | analytics', 'Grow | 1,000 | | % | analytics', 'Grow | 40 | | % | analytics | | 2026-02-30']) assert.equal(normalizeEntityAnswer(spec, line).ok, false, line)
-  for (const unit of ['USD', '€', 'تومان', 'lira']) {
+  // Audit (Visual V3): spoken Persian and Turkish spellings and suffixes are currencies too.
+  for (const unit of ['USD', '€', 'تومان', 'lira', 'تومن', 'هزار تومن', 'dolar', 'avro', 'Türk lirası', '₽']) {
     const refused = normalizeEntityAnswer(spec, `Revenue | 5000 | | ${unit} | billing`)
     assert.equal(refused.ok, false, unit)
     assert.match(refused.ok ? '' : refused.message, /restricted finance/)
   }
+  for (const unit of ['learners', 'trials', 'نفر', 'öğrenci', 'Avrupa sales']) assert.ok(normalizeEntityAnswer(spec, `Grow | 40 | | ${unit} | analytics`).ok, `${unit} is not a currency`)
   assert.equal(normalizeEntityAnswer(spec, 'Grow | 40 | | % | analytics | links: obj-1, obj-2').ok, false, 'a key result belongs to one objective')
   assert.equal(normalizeEntityAnswer(spec, 'Grow | 40 | | % | analytics | links: seg-1').ok, false, 'key results link only to objectives')
+})
+
+test('knowledge graph: the committed file has every edge the question bank defines (V3.3 journey and OKR links included)', () => {
+  // `materialize` only writes missing files, so a new question's edges reach the committed graph only by regenerating it.
+  const committed = YAML.parse(fs.readFileSync(path.resolve('brand/interview/knowledge-graph.yaml'), 'utf8')) as { edges: Array<{ from: string; to: string; relation: string }> }
+  const key = (edge: { from: string; to: string; relation: string }) => `${edge.from} ${edge.relation} ${edge.to}`
+  const have = new Set(committed.edges.map(key))
+  const expected = allQuestions().flatMap((question) => [
+    ...question.depends_on.map((from) => ({ from, to: question.id, relation: 'prerequisite' })),
+    ...question.related_ids.map((to) => ({ from: question.id, to, relation: 'related' })),
+  ])
+  const missing = expected.filter((edge) => !have.has(key(edge))).map(key)
+  assert.deepEqual(missing, [], 'regenerate brand/interview/knowledge-graph.yaml from the question bank')
+  assert.equal(committed.edges.length, expected.length, 'no stale edges either')
 })
 
 test('journey stages: lanes and a standard emotion scale; links only to customer segments', () => {
