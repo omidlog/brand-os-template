@@ -83,6 +83,11 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     assert.ok(row('visual_identity').includes(`href="/brands/${SLUG}/brand/book/visual-identity/print?edition=public"`))
     assert.match(row('business_plan'), /hidden for this audience/, 'the investor plan counts the finance values it hides')
     assert.match(row('brand_book'), /Print layout not built yet/)
+    // No investor edition is printed yet: an investor cell never links to a print view (the internal one shows drafts).
+    for (const type of ['brand_book', 'visual_identity', 'business_model_canvas', 'mascot_atlas', 'business_plan', 'marketing_plan']) {
+      const investor = row(type).split('<td ')[2]!
+      assert.equal(investor.includes('/print'), false, `${type}: investor cell links to no print view`)
+    }
     for (const secret of [RESTRICTED, FINANCE, DRAFT, 'Calm lessons']) assert.equal(page.text.includes(secret), false, `gallery carries no value: ${secret}`)
     assert.equal(g.includes('<form'), false)
 
@@ -111,6 +116,7 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     assert.match(fa.text, /بوم مدل کسب‌وکار/)
     assert.match(fa.text, /سرمایه‌گذار/)
     assert.match(fa.text, /[۰-۹]+ نمایش/)
+    for (const english of ['Print view', 'Not for this audience', 'Nothing to show yet', 'Investor', 'Document types × audiences']) assert.equal(main(fa.text).includes(english), false, `fa: no English left: ${english}`)
     const faHome = await owner.page(`/brands/${SLUG}`)
     assert.match(faHome.text, /مرکز فرمان/)
     assert.match(faHome.text, /از [۰-۹]+ کامل/)
