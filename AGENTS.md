@@ -58,7 +58,7 @@ All of these produce drafts only. Restricted questions are refused: the owner an
 
 Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`, or `-- --all-pending` for every pending fact, change, evidence item and draft asset). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, the owner's macOS Keychain entry, or a hidden prompt; the Keychain is never read while `BRAND_OS_AGENT_TOKEN` is set; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.
 
-Assets follow the same rule. An agent may run `npm run brand:assets -- check` and `npm run brand:assets -- normalize <id>`; it never runs `npm run brand:assets -- approve`. If normalizing resets an approval, hand the asset id to the owner.
+Assets follow the same rule. An agent may run `npm run brand:assets -- check`, `npm run brand:assets -- normalize <id>`, `npm run brand:assets -- add <file> --id <asset.id> --name "…"` (never edit `asset-manifest.yaml` by hand; `add` writes a `draft` record with checksum and media type and prints the publication verdict) and `npm run brand:assets -- prune-examples [--dry-run]`; it never runs `npm run brand:assets -- approve`. If normalizing resets an approval, hand the asset id to the owner.
 
 ## Personal brands
 

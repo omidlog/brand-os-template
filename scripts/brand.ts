@@ -5,7 +5,8 @@ import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
 import { applyInit, backupBrand, CHANGE_DEPTHS, IDENTITY_INTENTS, InterviewEngine, LOGO_PRESENCE, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand, validateIdentityChoice } from '@brand-os/brand-core'
-import type { BatchResult, IntakeReport, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
+import { checkLogoMastersInRepo } from '@brand-os/brand-core'
+import type { BatchResult, IntakeReport, LogoMastersCheck, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
 import { coachAfterAnswer, coachBeforeApproval, renderAfterAnswer, renderBeforeApproval, type CoachMomentResult } from '@brand-os/brand-core/coach'
 import { readOwnerProof } from './proof.js'
 
@@ -188,6 +189,8 @@ if (command === 'init') {
     const ok = result.kind === 'recorded'
     // Coach moment 1 (docs-internal/COACH_UX_DECISION.md): advisory, never blocks, silent unless it has one note.
     const coach = ok ? afterAnswerCoach(result.questionId ?? values.question) : null
+    // BOS-16: brand.logo.masters is machine-read; say at once when it names no asset exactly. A warning, never a block.
+    const logoMasters = ok && (result.questionId ?? values.question) === 'brand.logo.masters' ? logoMastersCheck(values.answer) : null
     if (values.json) {
       const upcoming = nextReport(engine, { limit: 3 })
       console.log(
@@ -203,6 +206,7 @@ if (command === 'init') {
             next: upcoming.next.map((item) => ({ id: item.id, prompt: item.prompt, reasons: item.reasons })),
             conflicts: upcoming.conflicts.length,
             coach,
+            ...(logoMasters ? { logo_masters: logoMasters } : {}),
           },
           null,
           2,
@@ -210,6 +214,7 @@ if (command === 'init') {
       )
     } else {
       console.log(result.message)
+      if (logoMasters?.message) console.error(`warning: ${logoMasters.message}`)
       if (coach?.shown) console.log(renderAfterAnswer(coach))
     }
     if (!ok) process.exit(1)
@@ -493,6 +498,11 @@ if (command === 'init') {
       process.exit(0)
     }
     if (coachNotes) console.error(`${coachNotes}\n`)
+    // BOS-16: approving a brand.logo.masters answer that names no asset exactly leaves the brand book without a master.
+    const mastersDraft = queue.items.find((item) => item.question_id === 'brand.logo.masters' && item.action !== 'none')
+    const mastersText = mastersDraft ? (mastersDraft.changes.find((change) => !change.stale)?.proposed_value ?? mastersDraft.draft?.value) : null
+    const mastersCheck = typeof mastersText === 'string' ? logoMastersCheck(mastersText) : null
+    if (mastersCheck?.message) console.error(`warning: ${mastersCheck.message}\n`)
     if (!values.json) console.error(`About to approve ${queue.pending} item(s) as ${values.actor ?? 'owner'}. Approval does not publish.`)
     const proof = await readApprovalProof()
     const result = withSelectionErrors(() => approvals.approveBatch(selection, proof, values.actor ?? 'owner'))
@@ -830,6 +840,81 @@ if (command === 'init') {
       if (reports.some((report) => report.approval === 'reset')) console.log('An approval was reset. The owner approves the new file with: npm run brand:assets -- approve --ids <id>')
     }
     if (reports.some((report) => !report.ok)) process.exit(1)
+  } else if (sub === 'add') {
+    // BOS-03: agents may add; the record is always a draft and only the owner approves it (brand:assets approve).
+    const { values, positionals } = parseArgs({
+      args,
+      allowPositionals: true,
+      options: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        kind: { type: 'string' },
+        tags: { type: 'string' },
+        visibility: { type: 'string' },
+        license: { type: 'string' },
+        render: { type: 'string' },
+        size: { type: 'string' },
+        normalize: { type: 'boolean', default: false },
+        'dry-run': { type: 'boolean', default: false },
+        json: { type: 'boolean', default: false },
+      },
+    })
+    const file = positionals[0]
+    if (!file || !values.id || !values.name || positionals.length > 1) {
+      console.error('Usage: brand:assets add <file> --id <asset.id> --name "…" [--kind logo|icon|mascot|illustration|photo|motion|audio] [--tags a,b] [--visibility public|internal] [--license "…"] [--normalize | --render png [--size 1024]] [--dry-run] [--json]')
+      process.exit(2)
+    }
+    if (values.visibility !== undefined && values.visibility !== 'public' && values.visibility !== 'internal') {
+      console.error('--visibility must be public or internal.')
+      process.exit(2)
+    }
+    if (values.render !== undefined && values.render !== 'png') {
+      console.error('--render supports png only.')
+      process.exit(2)
+    }
+    const size = values.size === undefined ? undefined : Number(values.size)
+    const { addAsset } = await import('@brand-os/asset-catalog/manage')
+    const report = await addAsset(root, file, {
+      id: values.id,
+      name: values.name,
+      kind: values.kind,
+      tags: values.tags ? values.tags.split(',').map((tag) => tag.trim()).filter(Boolean) : [],
+      visibility: values.visibility as 'public' | 'internal' | undefined,
+      license: values.license,
+      render: values.render as 'png' | undefined,
+      size,
+      normalize: values.normalize,
+      dryRun: values['dry-run'],
+    })
+    if (values.json) console.log(JSON.stringify(report, null, 2))
+    else {
+      console.log(`${report.outcome.padEnd(9)} ${report.id}${report.path ? `  ${report.path}` : ''}`)
+      console.log(`          ${report.reason}`)
+      if (report.original) console.log(`          original kept at ${report.original}`)
+      if (report.checksum_sha256) console.log(`          sha256 ${report.checksum_sha256}  ${report.mime ?? ''}`)
+      if (report.verdict) {
+        console.log(`          publication check: ${report.verdict.publishable ? 'publishable' : 'refused'}`)
+        for (const issue of report.verdict.issues) console.log(`          ${issue.fixable ? 'fixable' : 'blocks '} ${issue.code}${issue.line ? ` line ${issue.line}` : ''}: ${issue.message}`)
+        for (const warning of report.verdict.warnings) console.log(`          warning ${warning.code}${warning.line ? ` line ${warning.line}` : ''}: ${warning.message}`)
+      }
+      for (const fix of report.fixes ?? []) console.log(`          fix: ${fix}`)
+      for (const error of report.validation ?? []) console.log(`          validate: ${error}`)
+    }
+    if (!report.ok) process.exit(1)
+  } else if (sub === 'prune-examples') {
+    const { values } = parseArgs({ args, options: { 'dry-run': { type: 'boolean', default: false }, json: { type: 'boolean', default: false } } })
+    const { pruneExampleAssets } = await import('@brand-os/asset-catalog/manage')
+    const report = pruneExampleAssets(root, { dryRun: values['dry-run'], modules: { mascot: engine.config().modules.mascot.enabled === true } })
+    if (values.json) console.log(JSON.stringify(report, null, 2))
+    else {
+      if (report.items.length === 0) console.log('No template example assets in the manifest.')
+      for (const item of report.items) {
+        console.log(`${item.outcome.padEnd(13)} ${item.id}  ${item.reason}`)
+        for (const file of item.files) console.log(`              ${item.outcome === 'removed' ? 'deleted' : 'would delete'} ${file}`)
+      }
+      if (values['dry-run']) console.log('Dry run: nothing was changed.')
+      else if (report.items.some((item) => item.outcome === 'removed')) console.log('Run npm run validate, then commit the manifest and the removed files.')
+    }
   } else if (sub === 'approve') {
     const { values } = parseArgs({
       args,
@@ -867,6 +952,8 @@ if (command === 'init') {
     console.error('Usage: brand:assets check [--ids <asset.id,…>] [--json]')
     console.error('       brand:assets approve --ids <asset.id,…> [--actor owner] [--json]   (owner only; proof never on argv)')
     console.error('       brand:assets normalize <asset.id> [--dry-run] [--json]')
+    console.error('       brand:assets add <file> --id <asset.id> --name "…" [--kind …] [--tags a,b] [--visibility public|internal] [--normalize | --render png [--size 1024]] [--dry-run] [--json]')
+    console.error('       brand:assets prune-examples [--dry-run] [--json]')
     process.exit(sub ? 1 : 0)
   }
 } else if (command === 'finance') {
@@ -1050,6 +1137,10 @@ async function entityCommand(values: { question?: string; entity?: string; item?
 /** Coach moment 1: at most one advisory note right after an answer. Silent on anything unimportant; never throws. */
 function afterAnswerCoach(questionId: string): CoachMomentResult {
   return coachAfterAnswer(engine, questionId, { locale: engine.session().locale })
+}
+
+function logoMastersCheck(text: string): LogoMastersCheck {
+  return checkLogoMastersInRepo(root, text)
 }
 
 /** Coach moment 2: notes on the plain drafts in an approval batch (change proposals are counted, not advised on). */

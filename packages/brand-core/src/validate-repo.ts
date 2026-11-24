@@ -9,7 +9,9 @@ import { validateMascotLifecycle } from './mascot-lifecycle.js'
 import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
+import { readFacts } from './facts.js'
 import { readIdentityIntake } from './identity-intake.js'
+import { checkLogoMastersInRepo } from './logo-masters.js'
 import { approvalGrantErrors } from './permissions.js'
 import { canonicalReferenceErrors } from './personal.js'
 import { profileErrors, profileExists } from './profiles.js'
@@ -66,6 +68,7 @@ export function validateRepo(root: string): ValidationReport {
     errors.push(...llmConfigErrors(config))
     const identity = readIdentityIntake(config)
     if (identity.state === 'invalid') warnings.push(`brand.config.yaml onboarding.identity is ignored (${identity.reason}); it reads as unknown / undecided`)
+    warnings.push(...logoMastersWarnings(root, config))
   }
   validateMascot(root, errors)
   errors.push(...validateAssets(root))
@@ -122,6 +125,20 @@ function tokenCssPath(root: string): string {
 export function tokenCssBuildNote(root: string): string | null {
   if (fs.existsSync(tokenCssPath(root))) return null
   return 'Token CSS (packages/design-tokens/dist/tokens.css) has not been written yet. It matters only for a docs build: run npm run tokens:build first, or npm run build, which does both.'
+}
+
+/** BOS-16: the approved `brand.logo.masters` answer must name an asset exactly, or the brand book cannot find the master. */
+function logoMastersWarnings(root: string, config: BrandConfig): string[] {
+  try {
+    const slug = config.brand?.slug
+    if (typeof slug !== 'string' || !slug) return []
+    const fact = readFacts(root, 'approved', slug)['brand.logo.masters']
+    if (!fact || fact.status !== 'approved' || typeof fact.value !== 'string') return []
+    const check = checkLogoMastersInRepo(root, fact.value)
+    return check.message ? [check.message] : []
+  } catch {
+    return []
+  }
 }
 
 function safeStarter(errors: string[]): FieldQuestion[] | null {

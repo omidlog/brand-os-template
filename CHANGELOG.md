@@ -73,6 +73,23 @@
 - `brand:next --json` has a `frameworks` object (`applies`, `practice`, `note`); for a personal profile it and `brand:status` point to `brand.profile: universal` with personal on, or a separate repository, for a full venture plan.
 - Document sections can be `not_applicable` and list the questions the profile does not ask (`not_applicable`); visual entries carry `stands_for` and `na_reason: 'profile'`; book chapters have the unavailable reason `not_applicable`. New strings in en/fa/tr (Studio and visual catalogs). Studio rebuilds a cached projection without the module `applicable` counts once at the same commit.
 - Tests: `studio-applicability` (personal without business facets, personal with business facets, universal with personal on; synthetic data).
+## Unreleased — Logo system, asset add and example prune (BOS-03, BOS-12, BOS-16)
+
+### Added
+
+- `npm run brand:assets -- add <file> --id <asset.id> --name "…" [--kind …] [--tags a,b] [--visibility public|internal] [--license "…"] [--normalize | --render png [--size 1024]] [--dry-run] [--json]` (BOS-03). Copies the file into `brand/assets/<kind>/`, appends a `status: draft` record with `checksum_sha256`, `mime`, `preview` and tags, and runs `check` at once. An SVG that would fail the publication check is not written; the output names each problem (for example `<use>` around a raster, `url(#id)` to a missing id, `mix-blend-mode` in a style attribute) and the fix. `--normalize` fixes what the normalizer can at ingest; `--render png` rasterizes with resvg-js (already a dependency), keeps the SVG in `brand/assets-src/` and records `derived_from`. Agents may run it; `approve` stays owner-only.
+- `npm run brand:assets -- prune-examples [--dry-run] [--json]` (BOS-12): removes template placeholders (row and file) only when an approved real asset of the same kind exists, or when their module (mascot) is off. A referenced, shared or modified file is kept with the reason.
+- Logo system in the identity chapter and the Brand Book (BOS-16): `logo_construction.system` draws the file for light backgrounds on a light plate, the one for dark backgrounds on a dark plate, and the icon at favicon and avatar sizes. Roles come from tags (`on-light`, `on-dark`, `icon`/`mark`/`logomark`/`favicon`), else the documented file-name convention (`dark`/`black`, `light`/`white`/`reversed`…), which the internal edition labels.
+- `brand.logo.masters` check (BOS-16): when the answer is recorded, before it is approved and in `validate`, a warning lists the matching asset ids when it names no exact id or manifest path (bare file names are matched).
+- Tests: `logo-system`, `asset-manage`.
+
+### Changed
+
+- Master resolution (`pickMaster`): a bare file name that belongs to exactly one asset counts as a reference, and exactly two approved logos that form a light/dark pair resolve as one system (on-light file is the master) instead of `ambiguous`. `IDENTITY_MASTER_RULE` is 3, so Studio caches rebuild.
+- `ambiguous` and `not_previewable` show the reason, the approved candidate ids (owner only) and a one-line fix in en/fa/tr.
+- The Brand Book's logo chapter is never *Complete* while no master logo is drawn (capped at *Partial*, also in the Command Center mini-map).
+- The `brand.logo.masters` prompt (en/fa/tr) asks for the asset id or full manifest path. A brand repository whose question bank still has the earlier prompt gets a validate warning instead of a drift error.
+- Studio assets page: real assets first (published, approved, drafts), examples last; EXAMPLE rows hidden once an approved real asset of their kind exists; mascot placeholders, empty slots and the mascot filter hidden while the module is off (real mascot files stay), with a count of what was hidden; approved but unpublished assets carry *Not published · internal preview*.
 
 ## Unreleased — CI: private brands skip the public docs prepare
 

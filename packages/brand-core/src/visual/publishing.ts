@@ -6,6 +6,7 @@ import type { BookChapter, BookDocument } from './full-book.js'
 import {
   DATA_STATES,
   type DataState,
+  type LogoVariant,
   type MascotAtlasBlock,
   type MascotEvolutionBlock,
   type PrintProfile,
@@ -175,6 +176,16 @@ function clearDerived(block: Mutable<VisualDocument['blocks'][number]>, spec: Ex
         block.master = null
         block.master_state = 'missing'
       } else block.master = { ...block.master, badges: [] }
+    }
+    if (!spec.draft_marks) {
+      // The logo system (BOS-16) follows the same rule per file; without a master there is no system. Candidate ids
+      // are an owner hint and never leave the internal profile.
+      const keep = (variant: LogoVariant | null): LogoVariant | null => (!variant || (variant.badges.includes('draft_tag') && variant.badges.includes('internal_only')) ? null : { ...variant, badges: [] })
+      if (block.system !== undefined) {
+        const system = block.master && block.system ? { on_light: keep(block.system.on_light), on_dark: keep(block.system.on_dark), icon: keep(block.system.icon) } : null
+        block.system = system && (system.on_light || system.on_dark || system.icon) ? system : null
+      }
+      if (block.candidates !== undefined) block.candidates = []
     }
   }
   if (block.type === 'mascot_atlas' && !spec.draft_marks) redactAtlas(block)

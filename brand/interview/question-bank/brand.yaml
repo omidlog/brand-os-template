@@ -35,7 +35,7 @@ questions:
       - en
       - fa
       - tr
-    source_types: &a1
+    source_types:
       - owner
       - approved_import
       - external_cited
@@ -80,7 +80,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/brand-strategy.md
     related_ids: []
@@ -120,7 +124,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/brand-strategy.md
     related_ids: []
@@ -159,7 +167,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/brand-strategy.md
     related_ids: []
@@ -202,7 +214,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/brand-strategy.md
     related_ids: []
@@ -242,7 +258,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/brand-strategy.md
     related_ids: []
@@ -283,7 +303,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/brand-strategy.md
       - brand/generated/drafts/governance.md
@@ -325,7 +349,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/brand-strategy.md
       - brand/generated/drafts/product-ui.md
@@ -367,7 +395,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
     related_ids: []
@@ -408,7 +440,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
     related_ids:
@@ -448,7 +484,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
     related_ids: []
@@ -492,7 +532,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
       - brand/generated/drafts/product-ui.md
@@ -533,7 +577,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
     related_ids: []
@@ -572,7 +620,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
     related_ids: []
@@ -611,7 +663,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
       - brand/generated/drafts/product-ui.md
@@ -661,7 +717,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/verbal-identity.md
       - brand/generated/drafts/product-ui.md
@@ -701,7 +761,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/logo-system.md
     related_ids: []
@@ -740,7 +804,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/logo-system.md
     related_ids: []
@@ -787,7 +855,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/logo-system.md
     related_ids: []
@@ -826,7 +898,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/logo-system.md
     related_ids: []
@@ -841,13 +917,19 @@ questions:
     field_path: brand.logo.masters
     label: Master location
     prompt:
-      en: Where will approved masters live (path, Figma, or not yet)?
-      fa: فایل‌های اصلی تأییدشده کجا می‌مانند (مسیر، فیگما، یا هنوز نه)؟
-      tr: Onaylı ana dosyalar nerede duracak (yol, Figma veya henüz değil)?
-    why_it_matters: Exports without a source of truth cannot be validated.
+      en: Which approved logo file is the master? Name its asset id (for example asset.logo.wordmark-dark)
+        or its full manifest path; list a light/dark pair and the icon too. Or say not yet.
+      fa: کدام فایل لوگوی تأییدشده فایل اصلی است؟ شناسهٔ دارایی آن (مثلاً asset.logo.wordmark-dark) یا
+        مسیر کامل آن در مانیفست را بنویسید؛ جفت روشن/تیره و آیکون را هم نام ببرید. یا بگویید هنوز
+        نه.
+      tr: Hangi onaylı logo dosyası ana dosya? Varlık kimliğini (örneğin asset.logo.wordmark-dark) veya
+        manifestteki tam yolunu yazın; açık/koyu çifti ve simgeyi de belirtin. Ya da henüz değil
+        deyin.
+    why_it_matters: The brand book and exports find the master logo only by its exact asset id or manifest path.
     why_it_matters_i18n:
-      fa: خروجی‌هایی که منبع مرجع ندارند، قابل اعتبارسنجی نیستند.
-      tr: Doğruluk kaynağı olmayan dışa aktarımlar doğrulanamaz.
+      fa: کتاب برند و خروجی‌ها لوگوی اصلی را فقط با شناسهٔ دقیق دارایی یا مسیر آن در مانیفست پیدا می‌کنند.
+      tr: Marka kitabı ve dışa aktarımlar ana logoyu yalnızca tam varlık kimliği ya da manifestteki yolu
+        ile bulur.
     question_type: long_text
     examples:
       - "EXAMPLE ONLY: Not yet. Only the EXAMPLE placeholder is in the repo."
@@ -865,7 +947,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/logo-system.md
     related_ids: []
@@ -912,7 +998,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/color-system.md
       - brand/generated/drafts/product-ui.md
@@ -957,7 +1047,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/color-system.md
     related_ids: []
@@ -998,7 +1092,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/color-system.md
     related_ids: []
@@ -1044,7 +1142,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/color-system.md
     related_ids: []
@@ -1084,7 +1186,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/color-system.md
     related_ids: []
@@ -1125,7 +1231,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/typography.md
     related_ids: []
@@ -1164,7 +1274,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/typography.md
       - brand/generated/drafts/business-legal.md
@@ -1213,7 +1327,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/typography.md
     related_ids: []
@@ -1253,7 +1371,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/typography.md
     related_ids: []
@@ -1293,7 +1415,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/typography.md
     related_ids: []
@@ -1332,7 +1458,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/illustration.md
     related_ids: []
@@ -1371,7 +1501,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/illustration.md
     related_ids: []
@@ -1410,7 +1544,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/illustration.md
     related_ids: []
@@ -1449,7 +1587,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/illustration.md
     related_ids: []
@@ -1490,7 +1632,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/illustration.md
     related_ids: []
@@ -1530,7 +1676,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/iconography.md
     related_ids: []
@@ -1569,7 +1719,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/iconography.md
     related_ids: []
@@ -1608,7 +1762,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/iconography.md
     related_ids: []
@@ -1648,7 +1806,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/iconography.md
       - brand/generated/drafts/gamification.md
@@ -1688,7 +1850,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/iconography.md
     related_ids: []
@@ -1727,7 +1893,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/layout.md
     related_ids: []
@@ -1771,7 +1941,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/layout.md
     related_ids: []
@@ -1810,7 +1984,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/layout.md
     related_ids: []
@@ -1849,7 +2027,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/layout.md
     related_ids: []
@@ -1889,7 +2071,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/layout.md
     related_ids: []
@@ -1928,7 +2114,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/product-ui.md
     related_ids: []
@@ -1967,7 +2157,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/product-ui.md
     related_ids: []
@@ -2007,7 +2201,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/product-ui.md
     related_ids: []
@@ -2046,7 +2244,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/product-ui.md
       - brand/generated/drafts/business-customer.md
@@ -2090,7 +2292,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/product-ui.md
     related_ids: []
@@ -2132,7 +2338,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/product-ui.md
     related_ids: []
@@ -2172,7 +2382,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/motion.md
     related_ids: []
@@ -2216,7 +2430,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/motion.md
     related_ids: []
@@ -2255,7 +2473,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/motion.md
     related_ids: []
@@ -2294,7 +2516,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/motion.md
     related_ids: []
@@ -2333,7 +2559,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/motion.md
     related_ids: []
@@ -2372,7 +2602,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/sonic.md
     related_ids: []
@@ -2413,7 +2647,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/sonic.md
     related_ids: []
@@ -2454,7 +2692,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/sonic.md
     related_ids: []
@@ -2496,7 +2738,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/sonic.md
       - brand/generated/drafts/business-legal.md
@@ -2537,7 +2783,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/sonic.md
     related_ids: []
@@ -2576,7 +2826,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/photo-video.md
     related_ids: []
@@ -2615,7 +2869,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/photo-video.md
     related_ids: []
@@ -2656,7 +2914,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/photo-video.md
     related_ids: []
@@ -2695,7 +2957,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/photo-video.md
     related_ids: []
@@ -2734,7 +3000,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/photo-video.md
       - brand/generated/drafts/social.md
@@ -2775,7 +3045,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/social.md
     related_ids:
@@ -2815,7 +3089,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/social.md
     related_ids: []
@@ -2856,7 +3134,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/social.md
     related_ids: []
@@ -2895,7 +3177,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/social.md
     related_ids: []
@@ -2935,7 +3221,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/social.md
     related_ids: []
@@ -2974,7 +3264,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/social.md
     related_ids: []
@@ -3013,7 +3307,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/campaigns.md
     related_ids: []
@@ -3052,7 +3350,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/campaigns.md
     related_ids: []
@@ -3092,7 +3394,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/campaigns.md
     related_ids:
@@ -3133,7 +3439,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/campaigns.md
       - brand/generated/drafts/business-partnerships.md
@@ -3173,7 +3483,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/campaigns.md
     related_ids: []
@@ -3212,7 +3526,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/print.md
     related_ids: []
@@ -3252,7 +3570,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/print.md
     related_ids: []
@@ -3291,7 +3613,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/print.md
     related_ids: []
@@ -3330,7 +3656,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/print.md
     related_ids: []
@@ -3369,7 +3699,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/print.md
     related_ids: []
@@ -3408,7 +3742,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/applications.md
     related_ids: []
@@ -3447,7 +3785,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/applications.md
     related_ids: []
@@ -3487,7 +3829,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/applications.md
     related_ids: []
@@ -3527,7 +3873,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/applications.md
     related_ids: []
@@ -3567,7 +3917,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/applications.md
     related_ids: []
@@ -3607,7 +3961,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/governance.md
       - brand/generated/drafts/business-operations.md
@@ -3650,7 +4008,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/governance.md
     related_ids: []
@@ -3690,7 +4052,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/governance.md
     related_ids: []
@@ -3732,7 +4098,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/governance.md
       - brand/generated/drafts/business-legal.md
@@ -3774,7 +4144,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/governance.md
     related_ids: []
@@ -3813,7 +4187,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/governance.md
     related_ids: []

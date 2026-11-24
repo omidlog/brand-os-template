@@ -93,8 +93,8 @@ export const QUESTION_HELP_I18N: Record<string, { fa: QuestionHelpLocale; tr: Qu
     tr: { why: "Bazı yasaklar (gerilmiş yazı, onaysız renk, sahte tescil işareti) nihai çizim gerektirmez.", example: "Logoyu germeyin, rengini değiştirmeyin ve tescil işareti eklemeyin." },
   },
   "brand.logo.masters": {
-    fa: { why: "خروجی‌هایی که منبع مرجع ندارند، قابل اعتبارسنجی نیستند.", example: "هنوز نه. فقط جای‌نگهدار EXAMPLE در مخزن هست." },
-    tr: { why: "Doğruluk kaynağı olmayan dışa aktarımlar doğrulanamaz.", example: "Henüz değil. Depoda yalnızca EXAMPLE yer tutucusu var." },
+    fa: { why: "کتاب برند و خروجی‌ها لوگوی اصلی را فقط با شناسهٔ دقیق دارایی یا مسیر آن در مانیفست پیدا می‌کنند.", example: "هنوز نه. فقط جای‌نگهدار EXAMPLE در مخزن هست." },
+    tr: { why: "Marka kitabı ve dışa aktarımlar ana logoyu yalnızca tam varlık kimliği ya da manifestteki yolu ile bulur.", example: "Henüz değil. Depoda yalnızca EXAMPLE yer tutucusu var." },
   },
   "brand.color.roles": {
     fa: { why: "نقش‌ها با تغییر فام رنگ باقی می‌مانند. نقش و کد hex تأییدشده به یک توکن پیش‌نویس تبدیل می‌شود؛ پیش از انتشار هنوز به تأیید توکن و بررسی کنتراست نیاز دارد.", example: "primary #123A73; onPrimary #FFFFFF; surface #F7F5F2" },
