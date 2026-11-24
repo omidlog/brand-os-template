@@ -1,5 +1,5 @@
 export * from './model.js'
-export { FRAMEWORK_REGISTRY_PATH, FRAMEWORK_REGISTRY_SCHEMA_PATH, frameworkClaimErrors, frameworkRegistryErrors, validateFrameworkRegistry } from './framework-registry.js'
+export { FRAMEWORK_REGISTRY_PATH, FRAMEWORK_REGISTRY_SCHEMA_PATH, frameworkClaimErrors, frameworkRegistryErrors, REVIEWER_PENDING, standardVerification, validateFrameworkRegistry } from './framework-registry.js'
 export type { FrameworkRegistry } from './framework-registry.js'
 export { BMC_FRAMEWORK, frameworkRef, frameworkRegistry } from './frameworks.js'
 export { BMC_ZONES, buildBusinessModelCanvas, canvasApplies, canvasDocument, canvasRelationships, entityItems, entryFromItem, zoneState } from './bmc.js'
@@ -40,6 +40,7 @@ export {
   EXPORT_PROFILES,
   PROFILE_DOCUMENTS,
   profilePermits,
+  publishingExportCommand,
   PUBLISHING_DOCUMENT_TYPES,
   PUBLISHING_READINESS,
   questionClassifier,
@@ -68,6 +69,23 @@ export type { BookChapter, BookChapterId, BookDocument, BookInput as BookCompose
 export { entryLabel, FULL_BOOK_TEXT, fullBookText } from './i18n-full-book.js'
 export type { FullBookText } from './i18n-full-book.js'
 export { FIXTURE_DRAFT_SENTINEL, FIXTURE_RESTRICTED_SENTINEL, illustrativeBook } from './fixtures-full-book.js'
+export {
+  AUDIT_CHECKS,
+  AUDIT_SCHEMA,
+  auditVisualModules,
+  catalogCheck,
+  coreCatalogs,
+  evaluateGate,
+  gatePolicyErrors,
+  PENDING_VISUAL_MODULES,
+  RELEASE_GATE_POLICY_PATH,
+  RUBRIC_VERSION,
+  VISUAL_MODULES,
+  VISUAL_RUBRIC,
+} from './audit.js'
+export type { AuditCheck, AuditCheckId, CatalogSet, CheckStatus, CitedStandard, GateOverride, GateResult, ModuleAudit, PendingModuleSpec, ReleaseGatePolicy, StandardRecord, TestEvidence, VisualAuditReport, VisualModuleSpec } from './audit.js'
+export { AUDIT_TEXT } from './i18n-audit.js'
+export type { AuditText } from './i18n-audit.js'
 export { buildSwotTows, buildValueProposition, SEGMENTS_QUESTION, strategyListsApply, SWOT_AREAS, SWOT_TOWS_QUESTIONS, swotTowsDocument, TOWS_AREA, VALUE_FIT_AREAS, VALUE_FIT_QUESTIONS, valuePropositionDocument } from './strategy-lists.js'
 export type { ListAreaSpec, ResolvedSource, StrategyEntry, StrategyListInput, StrategyListOptions } from './strategy-lists.js'
 export { STRATEGY_TEXT, strategyText } from './i18n-strategy.js'

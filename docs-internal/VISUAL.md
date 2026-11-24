@@ -24,7 +24,7 @@ Core: `packages/brand-core/src/visual/` (`@brand-os/brand-core/visual`). Studio:
 `visual/identity.ts` builds a `visual_identity` document from three facts and the asset manifest: `brand.color.roles`, `brand.type.scale`, `brand.logo.min_size`, plus the master asset. Rules:
 
 - **Approved only.** A plate is drawn from an approved fact (or approved and past review, labelled stale). A draft or withheld value is not even carried in the document (`value: null`); the plate shows the designed "awaiting approved asset" page with the reason and, for the owner, the next step.
-- **Master asset.** The logo plate needs an approved (status `approved`/`published`), checksummed, previewable, non-example manifest asset tagged `logo` (published, for the public edition). Template example placeholders and draft-status files never count. Which one is the master is resolved in this order, never guessed: (1) an asset named in the approved `brand.logo.masters` answer by its exact asset id or exact manifest `path`/`preview` (whole-token match; first named wins); (2) an asset tagged `master`; (3) the only approved logo. Several approved logos with none named or tagged give the designed `ambiguous` state, which asks the owner to name the master in `brand.logo.masters`. Status is authoritative: a `draft` tag on an approved file does not block it, but the internal edition shows "Tagged draft" (and "Internal · not published" when it is not published) next to the master; the public edition never does. The file is shown through the existing asset route; its proportions come from the SVG viewBox or PNG header, otherwise a square frame is drawn and the note says so.
+- **Master asset.** The logo plate needs an approved (status `approved`/`published`), checksummed, previewable, non-example manifest asset tagged `logo` (published, for the public edition). Template example placeholders and draft-status files never count. Which one is the master is resolved in this order, never guessed: (1) an asset named in the approved `brand.logo.masters` answer by its exact asset id or exact manifest `path`/`preview` (whole-token match; first named wins); (2) an asset tagged `master`; (3) the only approved logo. Several approved logos with none named or tagged give the designed `ambiguous` state, which asks the owner to name the master in `brand.logo.masters`. Status is authoritative: a `draft` tag on an approved file does not block it, but the internal edition shows "Tagged draft" (and "Internal · not published" when it is not published) next to the master; the public edition never does. The investor profile follows public (owner decision 2026-11-24): a published master still tagged `draft` is drawn without any mark; an unpublished one tagged `draft` is not drawn. The file is shown through the existing asset route; its proportions come from the SVG viewBox or PNG header, otherwise a square frame is drawn and the note says so.
 - **Measured contrast.** Ratios are computed with the WCAG 2 formula (`@brand-os/design-tokens` `contrastRatio`), compared exactly, displayed rounded down. Combinations are only those the role names declare (`onPrimary` on `primary`); the grid measures every pair up to ten colours. A ratio is not an accessibility audit.
 - **Type.** Specimens are SVG text at true CSS-pixel size. A family Studio bundles (Inter, Rajdhani, Vazirmatn, all OFL) is drawn with the bundled file; other families render if installed on the device, otherwise the fallback. Persian lines fall back to Vazirmatn.
 - **Layout.** Editorial book: chapter opener with contents, numbered plates, hairline rules on screen. The print view is the V1.2 book (below).
@@ -57,7 +57,7 @@ Profiles are typed in `packages/brand-core/src/visual/print-profiles.ts` (`PRINT
 
 - **Approved artwork only.** A state or stage is drawn only when the catalog row and the artwork variant are `approved`/`published` and the asset is approved, checksummed, previewable and not a template example. The file is shown through the existing asset route. Usage, do and don't notes travel only with a drawn state.
 - **Drafts.** Artwork that is `created`/`reviewed` (or approved artwork on an unapproved row or asset) is never drawn. The internal edition names the state under "Not yet drawn" with "Artwork in review, not approved"; the public edition does not mention it.
-- **Public edition.** Needs the artwork and the row `published`, the asset published (publication policy), and no `draft` tag on the file. A draft-tagged file stays hidden from public view until it is published without the tag; the internal edition shows it with "File still tagged draft" and "Internal only, not published".
+- **Public edition.** Needs the artwork and the row `published`, the asset published (publication policy), and no `draft` tag on the file. A draft-tagged file stays hidden from public view until it is published without the tag; the internal edition shows it with "File still tagged draft" and "Internal only, not published". The investor profile follows public: draft-tagged artwork is not drawn there either.
 - **Evolution sheet.** Stages in `order`, at least six frames; frames past the recorded stages are "Not defined" placeholders. A stage's picture is approved artwork recorded for that stage id (front angle first, then catalog order, then artwork id). The template's `configuration: example` stages are labelled "Example configuration" internally; in public, only approved stage names are shown.
 - **Module off.** `modules.mascot.enabled: false` gives a designed "module is off" plate; nothing is read.
 - **Studio.** `GET /brands/<slug>/brand/mascot[/print[?edition=public]]` (V2.4 stable path; the old `/visual/mascot` path answers 301), linked once from the Assets page's mascot card. Ids (state, artwork, asset, stage) are only in the details disclosure and the print appendix. Print uses the earlier A4 portrait page (`.vz-page--book` in `visual.css`) on the browser print path, not the V1.2 print engine: no imprint, contents page numbers, running heads or folios.
@@ -87,7 +87,7 @@ Four Business Model Canvas zones now have list questions (`question_type: repeat
 
 ## Full Brand Book and Business Report (V4.2)
 
-Two whole books on the V1.2 `book_a4_portrait` engine, exported with `npm run brand:export-visual -- --doc brand-book|business-report [--lang en|fa|tr|all] [--edition internal|public] [--fixture] [--no-pdf]`. The Business Report is the business plan as a book, so it has no public edition (V4.1 profiles: the business plan is never public); `--doc business-report --edition public` is refused. Core: `visual/full-book.ts` (`BookDocument`, `composeBook`, `buildBook`), text in `visual/i18n-full-book.ts`, fixture `visual/fixtures-full-book.ts`. Renderer: `apps/studio/src/views/visual-print-full.ts`, which only turns chapters into book sections; cover, imprint, contents with folios, running heads, notes, pagination and the measured galley are the engine's (`renderBook`, `layoutBook`, `bookGalley` in `visual-print-book.ts`), and the colour, type and logo plates are the identity chapter's own flows. The identity book's output is byte-identical after the refactor.
+Two whole books on the V1.2 `book_a4_portrait` engine, exported with `npm run brand:export-visual -- --doc brand-book|business-report [--lang en|fa|tr|all] [--edition internal|public] [--fixture] [--no-pdf]`. The Business Report is the business plan as a book, so it has no public edition (V4.1 profiles: the business plan is never public); `--doc business-report --edition public` is refused. There is no investor edition of either book (`--edition` is `internal` or `public`); the Business Report stays internal only (owner decision 2026-11-24). The Publishing gallery shows the Brand Book's export command as text in its public and internal cells. Core: `visual/full-book.ts` (`BookDocument`, `composeBook`, `buildBook`), text in `visual/i18n-full-book.ts`, fixture `visual/fixtures-full-book.ts`. Renderer: `apps/studio/src/views/visual-print-full.ts`, which only turns chapters into book sections; cover, imprint, contents with folios, running heads, notes, pagination and the measured galley are the engine's (`renderBook`, `layoutBook`, `bookGalley` in `visual-print-book.ts`), and the colour, type and logo plates are the identity chapter's own flows. The identity book's output is byte-identical after the refactor.
 
 - **Chapters that exist today.** Brand Book: Brand overview, Strategy, Verbal identity (Brand Book document sections), Colour palette, Typography, Logo construction (the V2.1 plates, renumbered 04–06, followed by the section's other approved rules), Mascot, Governance, Motion, Applications, then Sources and framework. Business Report: Executive summary, Customer and problem, Business model, Business Model Canvas (the nine zones as a list in canonical order; the A3 canvas prints with `--doc bmc`), Competitive landscape (internal edition only), Product, Financial plan, Goals and KPIs, Risks and dependencies, then Sources and framework.
 - **Approved values only.** Entries come through `itemFor` (`buildBook`). A draft keeps its label and state but never its value ("Draft awaiting approval. Not printed."), an agent or template recommendation is dropped, and a restricted value is withheld in every edition ("Restricted. Never printed."), checked again per question sensitivity, so restricted finance never reaches a PDF. The public edition shows approved, published facts only: no draft, restricted or "awaiting" mark at all.
@@ -120,3 +120,61 @@ Core: `packages/brand-core/src/visual/plan.ts` (builders), `model-plan.ts` (bloc
 - **Direction.** The swimlane is a table and the tree uses logical CSS, so both follow the page direction: in Persian stage 1 and the tree root sit on the right, the emotion curve and progress bars are mirrored. SOSTAC reads in the page direction; its letters stay Latin (a standard name). Numbers, versions, list counters and folios use the page's digits.
 - **Print.** A3 landscape on its own named page (`@page vz-plan`, no margin counter): page 1 the visual, page 2 sources, framework and (internal edition) ids and next questions. Studio's print views are `/print` and `/print?edition=public`.
 
+## Module audit, standards verification, cross-brand pilot and release gate (V5.1)
+
+Core: `visual/audit.ts` (module catalog, rubric, checks, gate), `visual/i18n-audit.ts` (en/fa/tr report text), `visual/pilot.ts` with `visual/fixtures-pilot.ts` (two synthetic brands), policy `visual/release-gate.json`. Command: `scripts/visual-audit.ts`. Tests: `tests/visual-audit.test.ts`. V3.1 (structured BMC list zones) merged inside the Business Model Canvas, so it is scored there, its `i18n-entities.ts` catalog included. V3.2 (`swot_tows`, `value_proposition`) and V3.3 (`customer_journey`, `sostac_overview`, `okr_tree`) are scored as modules of their own.
+
+```
+npm run visual:audit [-- --lang en|fa|tr] [--json | --md] [--out file] [--pilot]
+npm run visual:gate  [-- --release] [--lang en|fa|tr] [--pilot]
+```
+
+Read-only on the checkout. `--out` refuses `brand/` and any `.private` path. `--pilot` builds the synthetic brands in a temporary folder with a throwaway data key and removes it.
+
+### The 0–5 rubric
+
+A module scores the highest level whose checks, and every lower level's checks, all pass. Every check runs on the checkout; a check that cannot run fails, and the report gives the evidence for each one (file, test count, catalog counts, gap count, citations).
+
+| Level | Name | Checks (all must pass) |
+| --- | --- | --- |
+| 0 | Not built | builder or core tests missing |
+| 1 | Model | `model`: the builder file exports the declared builder; `core_tests`: every declared core test file exists and has tests |
+| 2 | Languages | `i18n`: every English string key is in fa and tr, no empty string, ≥ 90 % of fa strings in Persian script |
+| 3 | States | `empty_state`: a fixture built and found to carry designed gaps (missing, awaiting, unavailable, not drawn), or a named test asserting one; `studio_tests`: Studio renderer test files exist and have tests |
+| 4 | Publication-safe | `print`: a test exercises the print view (n/a for a screen such as the Publishing gallery); `rtl`: a test asserts the Persian page is right-to-left; `redaction`: public modules: the public fixture in en/fa/tr carries no value in a draft, withheld or other non-approved state, no draft or internal badge, no fixture sentinel, and the V4.1 redaction test builds this module's public edition; internal modules: the public profile refuses the document type |
+| 5 | Release-grade | `visual_qa`: en and fa reference screenshots in `tests/visual-baselines` used by `tests/studio-visual-qa.test.ts`; `standards`: every framework the module's output cites is `verified` in the registry (n/a when it cites none) |
+
+Public modules are the document types the V4.1 `public` profile permits (Brand Book, Visual identity, Business Model Canvas, Mascot atlas). The V3.2 and V3.3 modules are **internal**: SWOT/TOWS and the Value Proposition Canvas have no publishing document type, the journey map and SOSTAC overview are views of the marketing plan, and the OKR tree of the business plan, which the public profile refuses. They are scored and reported, not gated. Studio still renders a public edition of each (`/print?edition=public`), so their `redaction` check inspects that edition's fixture in en/fa/tr (no value in a non-approved state, no draft or internal badge) and requires the test that builds it; "the public profile refuses it" alone is not enough. None has reference screenshots yet, and SWOT, TOWS, VPC, CUSTOMER-JOURNEY-MAP, SOSTAC and OKR are unverified, so all five sit at 4.
+
+Modules planned by later slices go in `PENDING_VISUAL_MODULES` (empty today). They are listed as **pending** and never fail anything; when a probe finds their code in `visual/` before they are declared, the report says "landed, not yet scored". A new module is added to `VISUAL_MODULES` with its builder, test files, catalogs, fixtures and evidence patterns.
+
+### Standards verification
+
+Every registry entry in `frameworks.json` has `verified_on` and `reviewer`. Both are recorded together, or both stay empty (`verified_on: null`, `reviewer: "pending"`). The claim rules refuse a date without a named reviewer, a reviewer without a date, and a date in the future. A date or reviewer is never invented. The V5.1 pass (2026-11-24) found that no source page had been checked by a person, so every entry is pending. To verify one, open `source_url`, confirm the title, publisher, edition and the part used, then set `verified_on` (that day) and `reviewer` (your name). The claim stays `informed_by` unless you choose a stronger one.
+
+### Release gate
+
+`npm run visual:gate` fails when:
+
+- the registry or `release-gate.json` is invalid;
+- a present **public** module scores below `public_min_score` (agreed threshold **4**: publication-safe);
+- a module cites a framework that is not in the registry;
+- with `--release`, or with `standards_block: "always"`: a cited external standard (`formal_standard` or `professional_framework`) has no `verified_on` and reviewer. Brand OS's own layouts (`editorial_template`) are reported but never block.
+
+Without `--release`, unverified standards are printed as "would stop a release". CI (`validate` workflow, template repository) runs `npm run visual:gate -- --pilot`. Before a release, run `npm run visual:gate -- --release`. Internal modules are scored and reported but not gated.
+
+**Owner override.** Only the owner edits `packages/brand-core/src/visual/release-gate.json`. Change `public_min_score` (0–5) or `standards_block`, or add an entry to `overrides`: `{ "target": "module:<id>" | "standard:<framework_id>", "reason": "…(≥ 10 characters)", "approved_by": "<owner name, never pending>", "approved_on": "YYYY-MM-DD", "expires_on": "YYYY-MM-DD" }`. An override turns that one failure into an "overridden by …" line. An override that has expired, is dated in the future, or has no named approver fails the gate. Agents never add an override.
+
+### Cross-brand pilot
+
+`runCrossBrandPilot` creates two **synthetic** brands (`fixtures-pilot.ts`: an English education brand without a mascot and a Turkish consulting brand with one; every value carries a `PILOT-A` / `PILOT-B` marker) through the normal init, answer, approve and publish path. It then builds the canvas, the identity chapter and the mascot atlas (internal and public), the Brand Book (internal and public), the Business Report and the Publishing gallery for both. It checks that:
+
+- each document names its own brand, and no value crosses to the other brand;
+- each internal Brand Book draws its own approved values;
+- no public edition carries a draft;
+- zones, block types and chapters are identical for both brands;
+- the mascot chapter follows each brand's own module flag;
+- the gallery grid is the same for both;
+- no visual source file (outside fixtures) names a brand.
+
+No real brand data is used or committed.

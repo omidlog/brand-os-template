@@ -78,6 +78,8 @@
     "brand:assurance-link": "tsx scripts/assurance-link.ts",
     "visual:golden": "tsx scripts/visual-golden.ts",
     "visual:baselines": "tsx scripts/visual-baselines.ts",
+    "visual:audit": "tsx scripts/visual-audit.ts",
+    "visual:gate": "tsx scripts/visual-audit.ts --gate",
     "brand:export-visual": "tsx scripts/export-visual.ts",
     "mcp:serve": "tsx scripts/mcp.ts",
     "studio:start": "tsx apps/studio/src/main.ts",

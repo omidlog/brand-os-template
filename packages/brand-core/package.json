@@ -17,6 +17,7 @@
     "./seo": "./src/seo/index.ts",
     "./strategy": "./src/strategy/index.ts",
     "./visual": "./src/visual/index.ts",
+    "./visual/pilot": "./src/visual/pilot.ts",
     "./visual-dna": "./src/visual-dna/index.ts"
   }
 }

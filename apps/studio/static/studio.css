@@ -828,6 +828,7 @@ a.cc-tile:hover { background: var(--studio-color-bg-hover); }
 .pub-redacted { display: inline-flex; align-items: center; gap: 2px; }
 .pub-redacted .icon { inline-size: 12px; block-size: 12px; }
 .pub-cell--blocked { background: var(--studio-color-bg-subtle); }
+.pub-command { display: block; white-space: normal; overflow-wrap: anywhere; text-align: start; unicode-bidi: isolate; }
 @media (max-width: 1100px) { .cc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) {
   .cc-tiles, .pub-profile-list { grid-template-columns: minmax(0, 1fr); }
