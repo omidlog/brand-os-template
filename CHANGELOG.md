@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Visual V5.1: standards verification, module audit, cross-brand pilot, release gate
+
+### Added
+
+- `npm run visual:audit` (`scripts/visual-audit.ts`, core `visual/audit.ts`): per-module visual audit on the 0–5 rubric (defined in `docs-internal/VISUAL.md`), computed from checks on the checkout. Output: table, `--md` or `--json`, en/fa/tr (`--lang`). V3.x modules not yet built show as pending.
+- `npm run visual:gate [-- --release]`: release gate. Fails when a public module scores below 4, the registry or policy is invalid, or (release mode) a cited external standard has no `verified_on` and reviewer. Owner-only, expiring overrides go in `visual/release-gate.json`. Runs in the template's `validate` CI job with `--pilot`.
+- Cross-brand pilot (`visual/pilot.ts`, `visual/fixtures-pilot.ts`): two synthetic brands built through the normal engine path prove the visual modules are brand-agnostic.
+- Tests: `visual-audit`.
+
+### Changed
+
+- Framework registry: required `reviewer` field (`"pending"` until a person checks the source). A `verified_on` without a named reviewer, a reviewer without a date, or a future date is refused. The V5.1 pass verified nothing that had not been checked: every entry stays pending.
+- After merging main (V3.2, V3.3): the audit scores `swot_tows`, `value_proposition`, `customer_journey`, `sostac_overview` and `okr_tree` (all internal, 4/5) instead of listing them as pending; the `strategy` and `plan` catalogs are checked; an internal module that Studio still renders in a public edition has that edition inspected for drafts and badges. The V3.2/V3.3 registry entries (`SWOT`, `TOWS`, `VPC`, `CUSTOMER-JOURNEY-MAP`, `SOSTAC`, `OKR`) gain `reviewer: "pending"` and are listed as release blockers until checked. Tests: `visual-audit` (V3.2/V3.3 scoring, a leaky public edition fails, pending mechanism).
+
 ## Unreleased — Visual V3.3: Customer journey swimlane, SOSTAC overview, OKR tree
 
 ### Added
@@ -782,6 +796,14 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 
 - Studio (fa): the mascot is spelled «ماسکات» everywhere in Studio (nav «دارایی‌ها و ماسکات», assets page, setup wizard, Publishing gallery «اطلس ماسکات»), matching the book and the atlas (owner decision 2026-11-24). Test: `studio-visual-mascot`.
 - Not changed in this PR: `docs/screenshots/coach-ux/coach-overview-fa.png` still shows the old spelling (it could not be regenerated here; regenerate with `STUDIO_E2E_SCREENSHOTS=<dir>` on `tests/studio-coach.test.ts`). Brand-core Persian text outside Studio (question bank, Visual DNA labels) still uses «مسکات».
+
+## Unreleased — Owner decisions: Visual V4 audit
+
+### Changed
+
+- Business Report: stays internal only (owner decision 2026-11-24). The code already matched: the projection builds no public edition, `--doc business-report --edition public` is refused, and `--edition` has no investor value. No behaviour change; the gallery offers no public or investor command for it (test).
+- Investor profile: a published logo master that still carries a `draft` tag is now drawn without any mark, the same as public. An unpublished draft-tagged master and draft-tagged mascot artwork stay hidden in both profiles. Test: `visual-publishing`.
+- Publishing gallery: the full Brand Book's public and internal cells show the real local export command (`npm run brand:export-visual -- --doc brand-book --edition public|internal`) as text, instead of "Print layout not built yet" (en/fa/tr; the command stays LTR in Persian). Studio never runs it. The investor cell is unchanged (no investor edition). New cell export kind `command`, core `publishingExportCommand`. Tests: `visual-publishing`, `studio-publishing`.
 
 ## Unreleased — Owner decision: undecided paid-media answer wins over --paid-media (2026-11-24)
 

@@ -546,6 +546,12 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Done:** Studio's Persian catalog spells the mascot «ماسکات» (6 strings), matching the book and the atlas. The print baselines in `tests/visual-baselines/` come from brand-core book text, which already said «ماسکات», so none of them changed. Test: `studio-visual-mascot`.
 - **Not done:** `docs/screenshots/coach-ux/coach-overview-fa.png` (a docs reference image, not a compared baseline) still shows «مسکات»; Chrome would not start in the environment where this change was made. Brand-core fa text outside Studio (`content/brand-modules.ts` questions, `visual-dna/i18n.ts`) still says «مسکات».
 
+## Owner decisions: Visual V4 audit (2026-11-24)
+
+- **Done:** Q1 the Business Report stays internal only; confirmed in code (no public or investor edition is built or exported), no change needed. Q2 investor draws a published logo still tagged `draft` without its mark, same as public (unpublished draft-tagged masters and draft-tagged mascot artwork stay hidden in both). Q3 the Publishing gallery shows `npm run brand:export-visual -- --doc brand-book --edition public|internal` for the Brand Book (en/fa/tr). Tests: `visual-publishing`, `studio-publishing`.
+- **Correction:** the first two items in the Visual V4 audit's "Not done" line above are resolved by this change. The Persian mascot label is a separate PR.
+- **Not done:** the gallery's internal Business plan cell still reads "Print layout not built yet", although `--doc business-report --edition internal` exists (not part of the owner's decision); there is no investor composer for any document.
+
 ## Assurance: undecided paid-media answer wins (owner decision, 2026-11-24)
 
 - **Done:** an approved `undecided` for `business.marketing.paid_media` is the interview answer: `runs_paid_media` stays `unknown` and `--paid-media yes|no` is ignored with an en/fa/tr notice on stderr. Confirmed unchanged: an approved `yes`/`no` wins; with no approved answer the flag still works. `brand-os.assurance-bridge/4`. Tests: `assurance-followups`, `assurance-cli`.
@@ -572,3 +578,13 @@ Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas).
 | Public edition | Done (empty by design) | The lists are internal, so the public edition shows designed "Not published" states. Making any of them public is an owner question. |
 | Per-segment canvases, Task Context, Coach | Not started | One canvas for all segments (segment names on items). Task Context packs and the Coach do not read the V3.2 lists yet. |
 | Full Business Report chapter | Not started | The V4.2 Business Report does not include SWOT / TOWS or the canvas yet. |
+
+## Visual V5.1: standards verification, module audit, cross-brand pilot, release gate (2026-11-24)
+
+- **Done:** the framework registry has a `reviewer` field (claim rules: date and named reviewer together, never in the future). `npm run visual:audit` scores every visual module 0–5 from real checks (rubric in `docs-internal/VISUAL.md`; JSON, table or Markdown; en/fa/tr). A cross-brand pilot runs on two synthetic brands (`--pilot`, `tests/visual-audit.test.ts`). `npm run visual:gate` checks public modules ≥ 4 and registry validity, and (`--release`) cited external standards verified. It has an owner-only override with an expiry and runs in the template's `validate` CI job. Scores today: every present module 4/5; V3.x modules pending.
+- **Not done:** no standard has been verified by a person. BMC, WCAG-CONTRAST, BRAND-IDENTITY-GUIDE and MASCOT-MODEL-SHEET are `verified_on: null`, `reviewer: pending`, so `visual:gate -- --release` fails on BMC and WCAG-CONTRAST until the owner checks them. No module is at 5: the mascot atlas, competitor matrix, positioning map and Publishing gallery have no reference screenshots, and the other modules wait on standards. The Studio framework panel does not show the reviewer yet.
+
+## Visual V5.1: main merge and V3.2/V3.3 scoring (2026-11-24)
+
+- **Done:** `origin/main` (V3.2, V3.3, owner decisions) merged into `feat/visual-v5-1`. The audit scores the five new modules from real checks: `swot_tows`, `value_proposition`, `customer_journey`, `sostac_overview`, `okr_tree`, all internal, all 4/5 (next: reference screenshots, then standards). Their Studio public editions are inspected for drafts and badges. `PENDING_VISUAL_MODULES` is empty; the mechanism stays for later slices. `tests/visual-audit.test.ts`.
+- **Not done:** no reference screenshots for the V3.2/V3.3 pages; `SWOT`, `TOWS`, `VPC`, `CUSTOMER-JOURNEY-MAP`, `SOSTAC` and `OKR` are `reviewer: pending`, so `visual:gate -- --release` now also lists them. The cross-brand pilot does not build the V3.2/V3.3 documents yet.

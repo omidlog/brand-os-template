@@ -41,7 +41,7 @@ test('the shipped registry is valid, and the canvas cites it', () => {
 test('claim rules: no certification, checked claims need a date, Brand OS templates only for Brand OS', () => {
   assert.match(validateFrameworkRegistry(withEntry({ permitted_claim: 'externally_certified' }), schema).join(), /certificate evidence/)
   assert.match(validateFrameworkRegistry(withEntry({ permitted_claim: 'aligned_with', verified_on: null }), schema).join(), /needs verified_on/)
-  assert.deepEqual(validateFrameworkRegistry(withEntry({ permitted_claim: 'verified_against', verified_on: '2026-11-01' }), schema), [])
+  assert.deepEqual(validateFrameworkRegistry(withEntry({ permitted_claim: 'verified_against', verified_on: '2026-11-01', reviewer: 'Example reviewer' }), schema), [])
   assert.match(validateFrameworkRegistry(withEntry({ permitted_claim: 'original_professional_template' }), schema).join(), /only for Brand OS/)
   assert.match(validateFrameworkRegistry(withEntry({ usage_note: 'The official, certified canvas.' }), schema).join(), /must not claim/)
   assert.deepEqual(validateFrameworkRegistry(withEntry({ usage_note: 'A measurement, not a conformance claim.' }), schema), [], 'a disclaimer is allowed')
