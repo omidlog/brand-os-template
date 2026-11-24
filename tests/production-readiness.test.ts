@@ -17,6 +17,7 @@ import {
   packAssetIds,
   planSocialBatch,
   productionReadiness,
+  productionText,
   readBatchDir,
   runProductionReadinessTool,
   runSocialBatch,
@@ -356,4 +357,38 @@ test('brand:runtime readiness: --root verifies the logo as the owner; without it
   assert.match(unverified.stdout, /تولید: آماده نیست \(not_ready\)/)
   assert.match(unverified.stdout, /لوگوی الزامی/)
   assert.equal(cli(['--pack', packFile, '--require', 'mascot']).status, 2)
+})
+
+test('brand:runtime social-batch: a not_ready batch still writes its drafts and exits 3 (PR-E owner decision 3)', () => {
+  const packFile = path.join(tempDir(), 'pack.json')
+  fs.writeFileSync(packFile, JSON.stringify({ tool: 'task_context', status: 'ok', brand_id: pack.brand_id, data: pack, authorizes: [] }))
+  const cliEnv = env()
+  const cli = (args: string[]) => spawnSync(NODE, tsxArgs('scripts/runtime.ts', ['social-batch', '--pack', packFile, '--as-of', DEMO_NOW.toISOString(), ...args]), { cwd: repo, encoding: 'utf8', env: cliEnv, input: '', timeout: 240_000 })
+
+  // Without --root a required logo cannot be verified, so production is not_ready; the drafts are written anyway.
+  const out = path.join(tempDir(), 'not-ready')
+  const notReady = cli(['--require', 'logo', '--out', out])
+  assert.equal(notReady.status, 3, notReady.stderr)
+  assert.match(notReady.stdout, /production: not_ready/)
+  assert.match(notReady.stderr, /پیش‌نویس‌ها نوشته شدند، اما تولید آماده نیست/, 'the fa pack gives the fa line')
+  assert.equal(fs.readdirSync(path.join(out, 'posts')).length, 20)
+  assert.ok(fs.existsSync(path.join(out, 'batch-summary.json')))
+  const written = JSON.parse(fs.readFileSync(path.join(out, 'production-readiness.json'), 'utf8')) as ProductionReadiness
+  assert.equal(written.production_ready, 'not_ready')
+
+  // --json keeps stdout one JSON document; the exit code and the stderr line are the same.
+  const json = cli(['--require', 'logo', '--json', '--out', path.join(tempDir(), 'json')])
+  assert.equal(json.status, 3, json.stderr)
+  assert.equal((JSON.parse(json.stdout) as SocialBatchResult['summary']).posts.length, 10)
+  assert.match(json.stderr, /exit 3/)
+
+  // The same batch without the requirement is ready: exit 0 and no line.
+  const ready = cli(['--out', path.join(tempDir(), 'ready')])
+  assert.equal(ready.status, 0, ready.stderr)
+  assert.match(ready.stdout, /production: ready/)
+  assert.doesNotMatch(ready.stderr, /exit 3/)
+
+  // en and tr carry the same line.
+  assert.match(productionText('en').labels.not_ready_exit, /drafts were written.*exit code 3/)
+  assert.match(productionText('tr').labels.not_ready_exit, /Taslaklar yazıldı.*çıkış kodu 3/)
 })

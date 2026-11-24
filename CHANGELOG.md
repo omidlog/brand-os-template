@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Runtime: batch not-ready exits non-zero (PR-E owner decisions)
+
+### Changed
+
+- `brand:runtime social-batch` exits **3** when production readiness is `not_ready` (was 0). The drafts, `batch-summary.json` and `production-readiness.json` are still written; one en/fa/tr line goes to stderr so `--json` stdout stays clean. Scripts that ran `social-batch` with `--require logo` and no `--root` now see exit 3.
+- `docs-internal/BRAND_RUNTIME.md` records the seven PR-E owner decisions (contrast and duplicates review only, only the logo requirable, partial data a warning, no signing, access-log line ids only in `brand/.private`, not-ready exit 3).
+
 ## Unreleased — Visual V4.1: Command Center, Publishing gallery, audience redaction
 
 ### Added
@@ -676,6 +683,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
 - `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
 
+## Unreleased — Audit: Visual V2 area fixes
+
+### Fixed
+
+- Brand Book reader (V2.4): an agent suggestion is labelled "Agent suggestion. Not approved and not an owner decision." instead of "Template guidance"; tentative and estimated drafts say so; a question the owner marked unknown, skipped, not applicable or deprecated says that instead of "Still to answer". en/fa/tr. Test: `studio-visual-book`.
+- Docs: `IMPLEMENTATION_STATUS.md` rows for V2.1, V2.2, V2.3 and the print engine use the stable V2.4 paths; `STUDIO.md` lists `/visual/mascot[/print]` among the 301 legacy paths.
+
 ## Unreleased — Audit: Visual V2 stale states at view time
 
 ### Fixed
@@ -687,3 +701,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 ### Fixed
 
 - `brand:assurance`: a research note linked to a verified evidence-register entry counts as `independent` only for a control that names the entry's claim question. A note tagged with two questions no longer makes the other question's control look independently evidenced; there it stays `owner_stated`. Test: `assurance-links`.
+
+## Unreleased — Audit: Visual V1 area fixes
+
+### Fixed
+
+- `brand:export-visual`: an output folder reached through a link (the folder itself or a parent) into `brand/` or a `.private` folder is refused. The check runs on the real path, before and after the folder is created. A link left in place of an output file (HTML, PDF or a temporary galley/check file) is refused, not followed.
+- `brand:export-visual` reads the working copy. When `brand/` has uncommitted changes, it says so, and the book imprint prints "plus changes in brand/ not yet committed" next to the source commit (en/fa/tr). It also says when the Chrome measuring pass fails and the estimates are used.
+- `tests/studio-visual-browser.test.ts`: restored the V1.2 print-book checks on real Studio data (one PDF page per sheet, no text block overflow, contents numbers = printed folios, folios on the outer edge in en/fa). The merge of #40 had dropped them, but `docs/IMPLEMENTATION_STATUS.md` still listed them.
+- `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
+- `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.

@@ -73,17 +73,40 @@ function doDont(ctx: ViewContext, item: DocumentItem): SafeHtml | null {
   </div>`
 }
 
+/**
+ * The document model's item notes (English, from brand-core) mapped to the reader's localized marks, so an agent
+ * suggestion, a tentative or estimated draft, and an owner's "unknown / skipped / not applicable" each say what they
+ * are in the reader's language. An unlisted note falls back to the generic mark.
+ */
+export const ITEM_NOTE_KEYS: Record<string, MessageKey> = {
+  'Agent suggestion. Not approved and not an owner decision.': 'reader.suggestionNote',
+  'Tentative. The owner described this as possible, not decided.': 'reader.tentativeNote',
+  'Estimate. Not approved.': 'reader.estimateNote',
+  'The owner said this is unknown. Nothing was invented.': 'reader.gapUnknown',
+  'Skipped by the owner.': 'reader.gapSkipped',
+  'Marked not applicable by the owner.': 'reader.gapNotApplicable',
+  'The last answer was deprecated.': 'reader.gapDeprecated',
+}
+
+function noteKey(item: DocumentItem): MessageKey | null {
+  return item.note ? (ITEM_NOTE_KEYS[item.note.replace(/ Restricted value withheld\.$/, '')] ?? null) : null
+}
+
 /** One item set as editorial prose. Drafts and guidance say so in words; a gap says what is missing. */
 function entry(ctx: ViewContext, item: DocumentItem): SafeHtml {
   const { i } = ctx
   const pairs = doDont(ctx, item)
+  const known = noteKey(item)
+  const template = item.id.startsWith('template:')
   const note =
     item.tag === 'assumption'
-      ? html`<p class="vz-bk-mark vz-bk-mark--draft">${icon('clock')}<span>${i.t('reader.draftNote')}</span></p>`
-      : item.tag === 'recommendation'
+      ? html`<p class="vz-bk-mark vz-bk-mark--draft">${icon('clock')}<span>${i.t(known ?? 'reader.draftNote')}</span></p>`
+      : item.tag === 'recommendation' && template
         ? html`<p class="vz-bk-mark vz-bk-mark--guidance">${icon('sparkle')}<span>${i.t('reader.guidanceNote')}</span></p>`
-        : ''
-  const value = item.tag === 'missing' && !item.withheld ? html`<p class="vz-bk-gap">${icon('circle')}<span>${i.t('reader.gap')}</span></p>` : (pairs ?? itemValue(i, item))
+        : item.tag === 'recommendation'
+          ? html`<p class="vz-bk-mark vz-bk-mark--draft">${icon('sparkle')}<span>${i.t(known ?? 'reader.suggestionNote')}</span></p>`
+          : ''
+  const value = item.tag === 'missing' && !item.withheld ? html`<p class="vz-bk-gap">${icon('circle')}<span>${i.t(known ?? 'reader.gap')}</span></p>` : (pairs ?? itemValue(i, item))
   return html`<article class="vz-bk-entry vz-bk-entry--${item.tag}">
     <header class="vz-bk-entry-head">
       <h3 class="vz-bk-entry-label" dir="auto">${item.label}</h3>
