@@ -153,10 +153,11 @@ export {
   parseEntityLines,
   readEntityList,
   serializeEntityList,
+  sourceRefKind,
   specForPrefix,
   validateEntityList,
 } from './entities.js'
-export type { EntityFieldSpec, EntityItem, EntityList, EntityOperation, EntityRead, EntitySpec } from './entities.js'
+export type { EntityFieldSpec, EntityItem, EntityList, EntityOperation, EntityRead, EntitySpec, SourceRefKind } from './entities.js'
 export { formatEntityMigration, migrateEntityAnswers } from './entity-migration.js'
 export type { EntityMigrationReport } from './entity-migration.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'

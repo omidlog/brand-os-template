@@ -518,6 +518,10 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Done:** the Business Report's canvas chapter prints an approved list answer as items (name, labelled choices, detail, links by item name; numbers in the page's digits; no item ids). Drafts, withheld and unpublished lists carry no items into a book; `book.canvas` keeps the framework reference without the zone block. fa/tr labels for `business.model.segments`, `key_activities`, `key_resources`, `cost_items`. Tests: `visual-full-book` (V3.1 case), `studio-visual-full-book` (items, no ids, no draft item). Book reference screenshots unchanged (the canvas chapter is not a reference page; contents folios unchanged).
 - **Not done:** the plan's "Business Model Canvas lists" section has no text chapter of its own in the report; the lists print in the canvas chapter only.
 
+## Visual V3.3: customer journey swimlane, SOSTAC overview, OKR tree
+
+- **Done:** list questions `business.marketing.journey_stages`, `business.goals.objectives`, `business.goals.key_results` (structured: target, unit, source required; currency units refused). Visual documents and Studio pages `/market/customer-journey`, `/strategy/sostac`, `/strategy/okrs` with A3 print views in both editions; internal edition shows labelled drafts, public edition approved and published only; ids only in details and the internal print appendix; fa mirrors the swimlane and the tree, Persian digits for folios. `assertNoSecrets` covers the new projection field (`visual.plans`); older caches rebuild once. Tests: `visual-plan`, `studio-visual-plan`. Screenshots (fixture) in the notes repository.
+- **Not done:** no reference screenshot baselines (V1.3 QA) for the three print views yet; the full Brand Book / Business Report do not have a chapter for them; Task Context and `brand_retrieve` do not read the journey or OKR lists specially (they return as any approved list); the SOSTAC stage-to-question mapping is a template default, not owner-configurable; key-result progress over time (history) is not drawn, only the latest recorded value.
 ## Audit: fixes pack area, evidence link scope (2026-11-24)
 
 - **Done:** a linked research note is `independent` only for the control that names the verified register entry's claim question; for its other questions it stays `owner_stated` (`assurance/workspace.ts`, test in `assurance-links`).
@@ -541,3 +545,24 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 
 - **Done:** Studio's Persian catalog spells the mascot «ماسکات» (6 strings), matching the book and the atlas. The print baselines in `tests/visual-baselines/` come from brand-core book text, which already said «ماسکات», so none of them changed. Test: `studio-visual-mascot`.
 - **Not done:** `docs/screenshots/coach-ux/coach-overview-fa.png` (a docs reference image, not a compared baseline) still shows «مسکات»; Chrome would not start in the environment where this change was made. Brand-core fa text outside Studio (`content/brand-modules.ts` questions, `visual-dna/i18n.ts`) still says «مسکات».
+
+## Audit: fixes pack minor findings, batched (2026-11-24)
+
+- **Done:** the creator / speaker rubrics no longer read an audience count ("2000 subscribers", «۲۰۰۰ نفر», "2000 abone") as a year; `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` are list fields for `sensitive-claim-wording`; one slot for a `potential_tension` under the finding cap; scoped `consistency_review` keeps brand-wide rule checks; `coach-rules/5`. `brand:assurance-link link --date` reports today's state. The acceptance leak check also searches JSON-escaped values.
+- **Correction:** of the coach audit's "Not done" line above, the `YEAR` count match, the finding-cap slot and the empty-id rule checks in scoped reviews are resolved by this change.
+- **Not done (owner decision or larger change):** negation of symbol terms ("#1"), a wider negation window and Turkish verb-suffix negation; evidence and deferrals in `contextDigest`; `verify` wording when a link changes but the digest is the same; recovery from a corrupted link file; wrapping each acceptance journey, mapping parse errors to codes and a signal handler in the harness; the paid-media `undecided` vs `--paid-media` question (Q-1).
+
+## Visual V3.2: SWOT / TOWS and Value Proposition Canvas
+
+Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas). Builds on the V3.1 list questions.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| SWOT, TOWS and canvas list questions | Done | Eleven optional, internal `repeating_entity` questions (`business.swot.*`, `business.fit.*`); bank, field registry and knowledge graph regenerated, additions only (the business bank now has no YAML aliases). `tests/visual-strategy.test.ts`. |
+| Item sources | Done | `sources` on items of these lists: answer id, `kn_…`, `ev-…`, https without credentials; `--sources` on `brand:interview --entity`. Resolved per edition, never guessed; web sources keep origin and path only. |
+| TOWS link rule | Done | The strategy type narrows the link targets (SO → strengths, opportunities …); untyped strategies are listed, never placed. |
+| Value fit | Done | Fit only from recorded links (reliever → pain, creator → gain), as counts; no score, nothing matched by wording. |
+| Studio pages and print | Done | `/strategy/swot-tows`, `/strategy/value-proposition` (+ `/print`, `?edition=public`), GET only; en/fa/tr, canonical topology in fa, Persian digits in marks, counts and folios. `tests/studio-visual-strategy.test.ts`. |
+| Public edition | Done (empty by design) | The lists are internal, so the public edition shows designed "Not published" states. Making any of them public is an owner question. |
+| Per-segment canvases, Task Context, Coach | Not started | One canvas for all segments (segment names on items). Task Context packs and the Coach do not read the V3.2 lists yet. |
+| Full Business Report chapter | Not started | The V4.2 Business Report does not include SWOT / TOWS or the canvas yet. |

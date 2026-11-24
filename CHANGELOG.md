@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased — Visual V3.3: Customer journey swimlane, SOSTAC overview, OKR tree
+
+### Added
+
+- Three optional list questions on the V3.1 `repeating_entity` model (`packages/brand-core/src/entities-plan.ts`): `business.marketing.journey_stages` (stage name, customer goal, touchpoints, actions, emotion on a five-point scale, pain points, opportunities, evidence; links to customer segments), `business.goals.objectives` (name, why, period) and `business.goals.key_results` (target, unit and source required; current, baseline and measured-on optional; one objective link). Question bank, field registry and module records regenerated (additions only).
+- `entities.ts`: `number` and `date` field kinds (Persian digits accepted, stored canonical), a per-field refusal rule and `max_links`. Key-result units refuse currencies in any script: money stays in the restricted finance answers.
+- Visual documents `customer_journey`, `sostac_overview`, `okr_tree` (`visual/plan.ts`, blocks in `visual/model-plan.ts`), built through `itemFor` like the canvas: labelled drafts, named gaps, public edition approved and published only. Progress is drawn only from a recorded baseline; key results whose objective is not visible are listed apart, never re-parented. Framework registry: `CUSTOMER-JOURNEY-MAP`, `SOSTAC` (registered trade mark of PR Smith), `OKR`, all `informed_by`.
+- Studio (GET only): `/market/customer-journey`, `/strategy/sostac`, `/strategy/okrs`, each with an A3 landscape print view (`/print[?edition=public]`). The swimlane (a real table with an emotion curve) and the OKR tree follow the page direction, so Persian mirrors them; SOSTAC keeps its canonical stage order in the reading direction. Ids only in the details disclosure and the internal print appendix; Persian folios, versions and counters in Persian digits. Designed empty states. en/fa/tr text (`visual/i18n-plan.ts`), nav entries, ILLUSTRATIVE fixtures in `npm run visual:golden`.
+- Tests: `visual-plan` (validator, documents, public edition, legacy text, fixtures, catalogs), `studio-visual-plan` (pages, print, public edition, no ids in the main view, fa/tr, empty states, cache rebuild).
+
+## Unreleased — Visual V3.2: SWOT / TOWS and Value Proposition Canvas
+
+### Added
+
+- Eleven optional, internal list questions (`repeating_entity`, module `business-company`): `business.swot.strengths`, `weaknesses`, `opportunities`, `threats`, `tows`, and `business.fit.jobs`, `pains`, `gains`, `products`, `relievers`, `creators`. Standard choices: SWOT confidence (evidenced, owner's view, hypothesis), TOWS type (SO, ST, WO, WT), job type (functional, social, emotional), pain severity, gain relevance (required, expected, desired, unexpected), product kind. en/fa/tr labels.
+- Item sources: SWOT, TOWS and canvas items may cite an approved answer id, a knowledge note (`kn_…`), an evidence record (`ev-0001`) or an https page without user name or password (`| sources: …` in a line, or `--sources` with `brand:interview --entity`). Checked for form; readers resolve them and never guess.
+- A TOWS strategy's type narrows its links (an SO strategy links only to strengths and opportunities); relievers link to pains, creators to gains, jobs/pains/gains/products to customer segments.
+- `swot_tows` and `value_proposition` visual documents (`visual/strategy-lists.ts`): SWOT 2×2, TOWS cells by recorded type (untyped strategies stay unplaced), the six canvas zones, fit read only from recorded links (counts, no score), numbered source notes. Public edition: approved, published lists only, and only approved-answer and web sources (others counted). Web sources keep origin and path only.
+- Studio (GET only): `/brands/<slug>/strategy/swot-tows` and `/strategy/value-proposition` under Strategy Lab, with A4 print views (`/print`, `?edition=public`). Standard topology kept in Persian (LTR grids, RTL text), Persian digits for source marks, counts and print folios, ids only in details and the appendix, designed empty states. Projection `visual.strategy` (under `assertNoSecrets`); older caches rebuild once.
+- Framework registry entries `SWOT`, `TOWS`, `VPC` (`informed_by`). Fixtures `illustrativeSwotTows`, `illustrativeValueProposition` (ILLUSTRATIVE / MOCK DATA) in `npm run visual:golden`.
+- Tests: `visual-strategy` (bank, sources, link rules, operations, builders, fixtures, i18n), `studio-visual-strategy` (pages, print, public edition, canaries, read-only routes, fa/tr).
+
+### Changed
+
+- Each generated question owns its `source_types` list, so `brand/interview/question-bank/business.yaml` has no YAML aliases. With V3.2 the file would have crossed the YAML parser's default limit of 100 aliases and stopped loading. Values are unchanged; `knowledge-graph.yaml` also gains the V3.1 and V3.2 edges it was missing.
+
 ## Unreleased — Audit: Visual V4 area (V4.1 Command Center and Publishing gallery, V4.2 full books)
 
 ### Fixed
@@ -756,3 +782,14 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 
 - Studio (fa): the mascot is spelled «ماسکات» everywhere in Studio (nav «دارایی‌ها و ماسکات», assets page, setup wizard, Publishing gallery «اطلس ماسکات»), matching the book and the atlas (owner decision 2026-11-24). Test: `studio-visual-mascot`.
 - Not changed in this PR: `docs/screenshots/coach-ux/coach-overview-fa.png` still shows the old spelling (it could not be regenerated here; regenerate with `STUDIO_E2E_SCREENSHOTS=<dir>` on `tests/studio-coach.test.ts`). Brand-core Persian text outside Studio (question bank, Visual DNA labels) still uses «مسکات».
+
+## Unreleased — Audit: fixes pack minor findings (batched)
+
+### Fixed
+
+- `brand:coach` creator / speaker rubrics: a year-shaped count next to an audience word ("2000 subscribers", "followers: 1450", «۲۰۰۰ نفر», "2000 abone") is a count, not a year, so `facet_claim_undated` now fires when the number has no date. Test: `coach-rules`.
+- `brand:coach` `sensitive-claim-wording`: `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` list things to leave out, so a marker there is not a claim (like `brand.verbal.forbidden`). Test: `coach-rules`.
+- `brand:coach consistency_review`: when registry findings are cut at the 20-finding cap, one slot is kept for a `potential_tension`, so a tension named in `rule_checks` is never missing from the findings. A review scoped to one question keeps the brand-wide rule checks (no question ids). Tests: `coach-rules`.
+- `COACH_RULE_VERSION` is `coach-rules/5` (verdicts changed for the same input).
+- `brand:assurance-link link --date <past day>` reports the link's state as of today, not as of the backdated day. Test: `assurance-links`.
+- `brand:acceptance`: the restricted-value and secret leak check also finds a value in its JSON-escaped form (a value with `"`, `\` or a newline). Test: `acceptance-harness`.

@@ -34,7 +34,12 @@ export type BrandSection =
   | 'visual'
   | 'competitors'
   | 'coach'
+  | 'journey'
+  | 'sostac'
+  | 'okr'
   | 'publishing'
+  | 'swot'
+  | 'value-proposition'
 
 export interface BrandView {
   record: BrandRecord
@@ -57,6 +62,8 @@ const SECTIONS: Array<{ id: BrandSection; group: NavGroup; key: MessageKey; icon
   { id: 'coach', group: 'command', key: 'nav.coach', icon: 'info', path: '#coach-title' },
   { id: 'visual', group: 'strategy', key: 'nav.visual', icon: 'layers', path: '/strategy/business-model' },
   { id: 'business', group: 'strategy', key: 'nav.businessPlan', icon: 'briefcase', path: '/strategy/business-plan' },
+  { id: 'swot', group: 'strategy', key: 'nav.swot', icon: 'layers', path: '/strategy/swot-tows' },
+  { id: 'value-proposition', group: 'strategy', key: 'nav.valueProposition', icon: 'layers', path: '/strategy/value-proposition' },
   { id: 'brand-book', group: 'studio', key: 'nav.brandBook', icon: 'book', path: '/brand/book' },
   { id: 'design', group: 'studio', key: 'nav.design', icon: 'palette', path: '/brand/design-system' },
   { id: 'assets', group: 'studio', key: 'nav.assets', icon: 'image', path: '/brand/assets' },
@@ -69,7 +76,14 @@ const SECTIONS: Array<{ id: BrandSection; group: NavGroup; key: MessageKey; icon
   { id: 'publishing', group: 'governance', key: 'nav.publishing', icon: 'book', path: '/governance/documents' },
   { id: 'history', group: 'governance', key: 'nav.history', icon: 'history', path: '/governance/history' },
   { id: 'handoff', group: 'governance', key: 'nav.handoff', icon: 'handoff', path: '/governance/github' },
+  // Visual V3.3: served by the plan route (routes/visual-plan.ts), listed at the end of their groups.
+  { id: 'sostac', group: 'strategy', key: 'nav.sostac', icon: 'layers', path: '/strategy/sostac' },
+  { id: 'okr', group: 'strategy', key: 'nav.okr', icon: 'checkCircle', path: '/strategy/okrs' },
+  { id: 'journey', group: 'market', key: 'nav.journey', icon: 'user', path: '/market/customer-journey' },
 ]
+
+/** Sections served by their own visual route instead of the brand page handler. */
+const VISUAL_ROUTE_SECTIONS: readonly BrandSection[] = ['visual', 'competitors', 'swot', 'value-proposition', 'journey', 'sostac', 'okr']
 
 /** Stable path of a brand page, for links between pages. */
 export function brandPath(slug: string, section: BrandSection, rest = ''): string {
@@ -79,7 +93,7 @@ export function brandPath(slug: string, section: BrandSection, rest = ''): strin
 
 /** Page sections served by the brand page handler: stable path segment (after the slug) -> section. */
 export const PAGE_SECTION_PATHS: ReadonlyArray<readonly [string, BrandSection]> = SECTIONS.filter(
-  (item) => item.path.startsWith('/') && !['visual', 'competitors'].includes(item.id),
+  (item) => item.path.startsWith('/') && !VISUAL_ROUTE_SECTIONS.includes(item.id),
 ).map((item) => [item.path.slice(1), item.id] as const)
 
 /**
@@ -119,8 +133,12 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'calendar') return Boolean(projection?.calendar && (projection.calendar.total > 0 || projection.calendar.withheld.length > 0))
     // Listed when the merged commit has a canvas that applies to this profile (a business, or a founder/consultant facet).
     if (section.id === 'visual') return projection?.visual?.bmc.applies !== false
+    // V3.2: listed with the canvas (same profile rule) once the merged commit has the documents.
+    if (section.id === 'swot' || section.id === 'value-proposition') return Boolean(projection?.visual?.strategy) && projection?.visual?.bmc.applies !== false
     // Listed when the merged commit has a competitor comparison document (a designed empty state until one is shared).
     if (section.id === 'competitors') return Boolean(projection?.visual?.competitors)
+    // Visual V3.3: listed when the plan documents apply to this profile (as the canvas).
+    if (section.id === 'journey' || section.id === 'sostac' || section.id === 'okr') return projection?.visual?.plans?.applies !== false && projection?.visual?.bmc.applies !== false
     // An anchor on the overview, listed only when the Strategic Coach card has notes.
     if (section.id === 'coach') return Boolean(projection?.coach && projection.coach.notes.length > 0)
     return true

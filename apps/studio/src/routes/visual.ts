@@ -4,6 +4,7 @@ import type { BrandView } from '../views/layout.js'
 import { identityPage, identityPrintPage, visualPage, visualPrintPage } from '../views/visual-page.js'
 import { competitorsPage, competitorsPrintPage } from '../views/visual-competitors-page.js'
 import { mascotPage, mascotPrintPage } from '../views/visual-mascot-page.js'
+import { strategyPage, strategyPrintPage } from '../views/visual-strategy-page.js'
 import type { Handler, StudioCore } from './context.js'
 
 /**
@@ -35,6 +36,14 @@ export function visualRoutes(core: StudioCore): { visual: Handler } {
     if (match[2] === 'brand/mascot') {
       if (match[3] !== 'print') return render(ctx, 200, mascotPage(view(ctx), brand, flashValue))
       const printed = mascotPrintPage(view(ctx), brand, ctx.url.searchParams.get('edition') === 'public' ? 'public' : 'internal')
+      if (!printed) return notFound(ctx)
+      return render(ctx, 200, printed)
+    }
+    // strategy/swot-tows and strategy/value-proposition (V3.2); print may show the public edition.
+    if (match[2] === 'strategy/swot-tows' || match[2] === 'strategy/value-proposition') {
+      const kind = match[2] === 'strategy/swot-tows' ? 'swot' : 'value-proposition'
+      if (match[3] !== 'print') return render(ctx, 200, strategyPage(view(ctx), brand, kind, flashValue))
+      const printed = strategyPrintPage(view(ctx), brand, kind, ctx.url.searchParams.get('edition') === 'public' ? 'public' : 'internal')
       if (!printed) return notFound(ctx)
       return render(ctx, 200, printed)
     }
