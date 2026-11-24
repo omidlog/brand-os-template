@@ -5,6 +5,7 @@ import { colorPaletteView, identitySources, logoConstructionView, typographySpec
 import { competitorMatrixView, priceStripView } from './visual-competitors.js'
 import { positioningMapView } from './visual-positioning.js'
 import { mascotAtlasView, mascotEvolutionView } from './visual-mascot.js'
+import { sourceNotesView, swotView, towsView, valuePropositionView } from './visual-strategy.js'
 import { journeyView, okrTreeView, sostacView } from './visual-plan.js'
 
 /**
@@ -51,6 +52,10 @@ const RENDERERS: RendererMap = {
   positioning_map: positioningMapView,
   mascot_atlas: mascotAtlasView,
   mascot_evolution: mascotEvolutionView,
+  swot: swotView,
+  tows_matrix: towsView,
+  value_proposition_canvas: valuePropositionView,
+  source_notes: sourceNotesView,
   journey_swimlane: journeyView,
   sostac_overview: sostacView,
   okr_tree: okrTreeView,

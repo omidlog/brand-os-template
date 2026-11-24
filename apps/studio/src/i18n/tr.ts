@@ -766,4 +766,7 @@ export const tr: Messages = {
   "command.state.missing": "Eksik",
   "command.state.withheld": "Gizli",
   "command.state.not_applicable": "Uygulanmaz",
+  // Visual V3.2: Strategy Lab pages.
+  "nav.swot": "SWOT / TOWS",
+  "nav.valueProposition": "Değer Önerisi Kanvası",
 }

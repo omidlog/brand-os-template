@@ -138,6 +138,87 @@ edges:
   - from: business.customer.primary_segment
     to: business.problem.pains
     relation: prerequisite
+  - from: business.customer.primary_segment
+    to: business.model.segments
+    relation: prerequisite
+  - from: business.model.segments
+    to: business.customer.primary_segment
+    relation: related
+  - from: business.model.segments
+    to: business.sales.buyer
+    relation: related
+  - from: business.model.key_activities
+    to: business.ops.sop
+    relation: related
+  - from: business.model.key_activities
+    to: business.product.mvp
+    relation: related
+  - from: business.model.key_resources
+    to: business.ops.roles
+    relation: related
+  - from: business.model.key_resources
+    to: business.engineering.stack
+    relation: related
+  - from: business.model.cost_items
+    to: business.finance.costs
+    relation: related
+  - from: business.model.cost_items
+    to: business.finance.economics_note
+    relation: related
+  - from: business.swot.strengths
+    to: brand.strategy.differentiation
+    relation: related
+  - from: business.swot.strengths
+    to: business.model.defensibility
+    relation: related
+  - from: business.swot.weaknesses
+    to: business.plan.risks
+    relation: related
+  - from: business.swot.weaknesses
+    to: business.ops.roles
+    relation: related
+  - from: business.swot.opportunities
+    to: business.market.geography
+    relation: related
+  - from: business.swot.opportunities
+    to: business.growth.hypothesis
+    relation: related
+  - from: business.swot.threats
+    to: business.plan.risks
+    relation: related
+  - from: business.swot.threats
+    to: business.partners.risk_process
+    relation: related
+  - from: business.swot.tows
+    to: business.goals.quarter
+    relation: related
+  - from: business.swot.tows
+    to: business.plan.risks
+    relation: related
+  - from: business.fit.jobs
+    to: business.product.jobs
+    relation: related
+  - from: business.fit.jobs
+    to: business.model.segments
+    relation: related
+  - from: business.fit.pains
+    to: business.problem.pains
+    relation: related
+  - from: business.fit.gains
+    to: business.offer.value_proposition
+    relation: related
+  - from: business.fit.products
+    to: business.offer.summary
+    relation: related
+  - from: business.fit.products
+    to: business.offer.value_proposition
+    relation: related
+  - from: business.fit.relievers
+    to: business.offer.value_proposition
+    relation: related
+  - from: business.fit.creators
+    to: business.offer.value_proposition
+    relation: related
   - from: business.offer.value_proposition
     to: business.marketing.objective
     relation: prerequisite

@@ -766,4 +766,7 @@ export const fa: Messages = {
   "command.state.missing": "خالی",
   "command.state.withheld": "پنهان",
   "command.state.not_applicable": "کاربرد ندارد",
+  // Visual V3.2: Strategy Lab pages.
+  "nav.swot": "SWOT / TOWS",
+  "nav.valueProposition": "بوم ارزش پیشنهادی",
 }

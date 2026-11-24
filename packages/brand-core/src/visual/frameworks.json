@@ -51,6 +51,42 @@
       "usage_note": "Original Brand OS layout for a character's expressions, poses and growth stages. Artwork comes only from approved catalog artwork and approved manifest assets; nothing is generated or inferred."
     },
     {
+      "framework_id": "SWOT",
+      "title": "SWOT analysis",
+      "kind": "professional_framework",
+      "authority": "Strategic planning practice (commonly traced to Stanford Research Institute, 1960s; origin disputed)",
+      "edition": "Method, no single edition",
+      "source_url": "https://en.wikipedia.org/wiki/SWOT_analysis",
+      "license_status": "public-method",
+      "permitted_claim": "informed_by",
+      "verified_on": null,
+      "usage_note": "Standard 2x2 layout: strengths and weaknesses (internal), opportunities and threats (external). Items are the owner's recorded lists with their sources; nothing is inferred or scored."
+    },
+    {
+      "framework_id": "TOWS",
+      "title": "TOWS matrix",
+      "kind": "professional_framework",
+      "authority": "Heinz Weihrich",
+      "edition": "The TOWS Matrix: A Tool for Situational Analysis, Long Range Planning 15(2), 1982",
+      "source_url": "https://doi.org/10.1016/0024-6301(82)90120-0",
+      "license_status": "citation-only",
+      "permitted_claim": "informed_by",
+      "verified_on": null,
+      "usage_note": "Standard matrix of SO, ST, WO and WT strategies. A strategy sits in the cell its recorded type names and links to the SWOT items it uses; nothing is placed or linked automatically."
+    },
+    {
+      "framework_id": "VPC",
+      "title": "Value Proposition Canvas",
+      "kind": "professional_framework",
+      "authority": "Alexander Osterwalder / Strategyzer",
+      "edition": "Value Proposition Design (2014)",
+      "source_url": "https://www.strategyzer.com/library/the-value-proposition-canvas",
+      "license_status": "attribution-and-software-use-review",
+      "permitted_claim": "informed_by",
+      "verified_on": null,
+      "usage_note": "Original Brand OS layout of the value map (square) and customer profile (circle). Not Strategyzer artwork; commercial embedding terms are under review. Fit is shown only where the owner linked a reliever to a pain or a creator to a gain."
+    },
+    {
       "framework_id": "CUSTOMER-JOURNEY-MAP",
       "title": "Customer journey map",
       "kind": "professional_framework",

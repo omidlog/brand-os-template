@@ -18,6 +18,8 @@ import { html, trusted } from '../apps/studio/src/views/html.js'
 import { printDocument } from '../apps/studio/src/views/visual.js'
 import { identityBookDocument } from '../apps/studio/src/views/visual-print-book.js'
 import { mascotPrintDocument } from '../apps/studio/src/views/visual-mascot.js'
+import { strategyPrintDocument } from '../apps/studio/src/views/visual-strategy.js'
+import { illustrativeSwotTows, illustrativeValueProposition } from '@brand-os/brand-core/visual'
 import { renderBlock } from '../apps/studio/src/views/visual-registry.js'
 import { planPrintDocument } from '../apps/studio/src/views/visual-plan.js'
 import { illustrativeJourney, illustrativeOkr, illustrativeSostac, type PlanFixtureVariant } from '@brand-os/brand-core/visual'
@@ -72,6 +74,12 @@ export function renderMascotGolden(lang: VisualLang, edition: 'internal' | 'publ
   return mascotPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html``, assetUrl: () => null }, (block, ctx) => renderBlock(block, { ...ctx, idPrefix: 'p' })).value
 }
 
+/** SWOT / TOWS and the Value Proposition Canvas fixtures (V3.2), A4 portrait. */
+export function renderStrategyGolden(lang: VisualLang, edition: 'internal' | 'public', kind: 'swot' | 'vpc'): string {
+  const doc = kind === 'swot' ? illustrativeSwotTows(lang, edition) : illustrativeValueProposition(lang, edition)
+  return strategyPrintDocument({ doc, lang, commit: null, head: html`<style>${trusted(inlineStyles())}</style>`, toolbar: html`` }, (block, ctx) => renderBlock(block, { ...ctx, idPrefix: 'p', assetUrl: () => null })).value
+}
+
 /** Visual V3.3 fixtures (A3 landscape): the journey swimlane, SOSTAC overview and OKR tree, full and empty. */
 export const PLAN_GOLDEN_KINDS = ['journey', 'sostac', 'okr'] as const
 
@@ -112,6 +120,12 @@ function main(): void {
         fs.writeFileSync(path.join(out, `${mascot}.html`), renderMascotGolden(lang, edition, variant))
         console.log(`wrote ${path.relative(ROOT, path.join(out, `${mascot}.html`))}`)
         print(chrome, Boolean(png), out, mascot)
+      }
+      for (const kind of ['swot', 'vpc'] as const) {
+        const strategy = `${kind}-illustrative.${edition}.${lang}`
+        fs.writeFileSync(path.join(out, `${strategy}.html`), renderStrategyGolden(lang, edition, kind))
+        console.log(`wrote ${path.relative(ROOT, path.join(out, `${strategy}.html`))}`)
+        print(chrome, Boolean(png), out, strategy)
       }
       // Visual V3.3: customer journey map, SOSTAC overview and OKR tree (A3 landscape).
       for (const kind of PLAN_GOLDEN_KINDS) {

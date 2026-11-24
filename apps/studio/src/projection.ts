@@ -19,6 +19,7 @@ import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
 import { buildPublishingGallery, questionClassifier, redactBook, redactVisualDocument, type PublishingGallery, type QuestionClassifier } from '@brand-os/brand-core/visual'
 import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
+import { buildSwotTows, buildValueProposition } from '@brand-os/brand-core/visual'
 import { buildPlanDocuments, type PlanDocuments } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
@@ -190,6 +191,13 @@ export interface StudioVisualProjection {
   /** The Business Report is the business plan as a book: never public (Visual V4.1 profiles), so its public slot is null. */
   books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: null } }
   /**
+   * SWOT / TOWS and the Value Proposition Canvas (V3.2), in both editions, from the list questions with their item
+   * sources (knowledge notes resolve to shared notes only). The lists are internal, so the public edition is empty by
+   * design; these types are not in the V4.1 publishing profiles yet (an owner question), so they are not passed through
+   * the profile redactor. Absent in caches written before it existed; sync rebuilds.
+   */
+  strategy?: { swot: { internal: VisualDocument; public: VisualDocument }; value_proposition: { internal: VisualDocument; public: VisualDocument } }
+  /**
    * Customer journey swimlane, SOSTAC overview and OKR tree (V3.3), in both editions. Internal: approved, labelled
    * drafts, gaps; public: approved and published only. `applies` follows the canvas (business brands, and personal
    * brands with a business facet). Absent in caches written before it existed; sync rebuilds those.
@@ -329,7 +337,7 @@ function projectCreative(root: string, slug: string): StudioCreativeProjection |
 }
 
 /** The visual documents; a failure here must not take down the brand view either. */
-function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], assets: MascotAssetCandidate[]): StudioVisualProjection | null {
+function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], assets: MascotAssetCandidate[], knowledge: StudioKnowledgeProjection | null = null): StudioVisualProjection | null {
   try {
     const classify = questionClassifier(engine)
     const visual: StudioVisualProjection = {
@@ -343,6 +351,12 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
     visual.books = {
       brand_book: { internal: book('brand_book', 'internal'), public: publicBook(book('brand_book', 'public'), classify) },
       business_report: { internal: book('business_report', 'internal'), public: null },
+    }
+    // V3.2: item sources may cite shared knowledge notes by id; only their titles are carried, never a body.
+    const sharedNotes = new Map((knowledge?.notes ?? []).map((note) => [note.id, note.title] as const))
+    visual.strategy = {
+      swot: { internal: buildSwotTows(engine, 'internal', { sharedNotes }), public: buildSwotTows(engine, 'public', { sharedNotes }) },
+      value_proposition: { internal: buildValueProposition(engine, 'internal', { sharedNotes }), public: buildValueProposition(engine, 'public', { sharedNotes }) },
     }
     visual.plans = { applies: canvasApplies(engine), internal: buildPlanDocuments(engine, 'internal'), public: buildPlanDocuments(engine, 'public') }
     assertNoSecrets(visual)
@@ -571,7 +585,8 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     }
   }
 
-  const visual = projectVisual(engine, logoCandidates, assetCandidates)
+  const knowledge = projectKnowledge(engine)
+  const visual = projectVisual(engine, logoCandidates, assetCandidates, knowledge)
   const projection: StudioProjection = {
     schema_version: 1,
     brand: {
@@ -618,7 +633,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     assets,
     mascot,
     personal: personal ? { facets, documents: personalDocs } : null,
-    knowledge: projectKnowledge(engine),
+    knowledge,
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),

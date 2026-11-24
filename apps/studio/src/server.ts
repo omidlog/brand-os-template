@@ -86,7 +86,7 @@ export function createStudio(deps: StudioDeps): {
       handle: openUpdatePull,
     },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
-    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(strategy/business-model|brand/book/visual-identity|market/competitors|brand/mascot)(?:/(print))?$`), auth: 'session', handle: visual },
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(strategy/business-model|brand/book/visual-identity|market/competitors|brand/mascot|strategy/swot-tows|strategy/value-proposition)(?:/(print))?$`), auth: 'session', handle: visual },
     // Visual V3.3: customer journey map, SOSTAC overview, OKR tree (and their print views).
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(${PLAN_ROUTE_PATHS.join('|')})(?:/(print))?$`), auth: 'session', handle: plan },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}(?:/(${BRAND_SECTIONS.join('|')}))?$`), auth: 'session', handle: brandPage },

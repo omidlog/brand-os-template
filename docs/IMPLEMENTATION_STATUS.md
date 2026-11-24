@@ -546,3 +546,18 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Done:** the creator / speaker rubrics no longer read an audience count ("2000 subscribers", «۲۰۰۰ نفر», "2000 abone") as a year; `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` are list fields for `sensitive-claim-wording`; one slot for a `potential_tension` under the finding cap; scoped `consistency_review` keeps brand-wide rule checks; `coach-rules/5`. `brand:assurance-link link --date` reports today's state. The acceptance leak check also searches JSON-escaped values.
 - **Correction:** of the coach audit's "Not done" line above, the `YEAR` count match, the finding-cap slot and the empty-id rule checks in scoped reviews are resolved by this change.
 - **Not done (owner decision or larger change):** negation of symbol terms ("#1"), a wider negation window and Turkish verb-suffix negation; evidence and deferrals in `contextDigest`; `verify` wording when a link changes but the digest is the same; recovery from a corrupted link file; wrapping each acceptance journey, mapping parse errors to codes and a signal handler in the harness; the paid-media `undecided` vs `--paid-media` question (Q-1).
+
+## Visual V3.2: SWOT / TOWS and Value Proposition Canvas
+
+Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas). Builds on the V3.1 list questions.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| SWOT, TOWS and canvas list questions | Done | Eleven optional, internal `repeating_entity` questions (`business.swot.*`, `business.fit.*`); bank, field registry and knowledge graph regenerated, additions only (the business bank now has no YAML aliases). `tests/visual-strategy.test.ts`. |
+| Item sources | Done | `sources` on items of these lists: answer id, `kn_…`, `ev-…`, https without credentials; `--sources` on `brand:interview --entity`. Resolved per edition, never guessed; web sources keep origin and path only. |
+| TOWS link rule | Done | The strategy type narrows the link targets (SO → strengths, opportunities …); untyped strategies are listed, never placed. |
+| Value fit | Done | Fit only from recorded links (reliever → pain, creator → gain), as counts; no score, nothing matched by wording. |
+| Studio pages and print | Done | `/strategy/swot-tows`, `/strategy/value-proposition` (+ `/print`, `?edition=public`), GET only; en/fa/tr, canonical topology in fa, Persian digits in marks, counts and folios. `tests/studio-visual-strategy.test.ts`. |
+| Public edition | Done (empty by design) | The lists are internal, so the public edition shows designed "Not published" states. Making any of them public is an owner question. |
+| Per-segment canvases, Task Context, Coach | Not started | One canvas for all segments (segment names on items). Task Context packs and the Coach do not read the V3.2 lists yet. |
+| Full Business Report chapter | Not started | The V4.2 Business Report does not include SWOT / TOWS or the canvas yet. |

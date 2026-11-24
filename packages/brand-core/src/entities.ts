@@ -54,6 +54,16 @@ export interface EntitySpec {
   no_amounts?: boolean
   /** One item, for headings and CLI output. */
   item_label: LocalizedPrompt
+  /**
+   * Visual V3.2: items may cite where they come from (`sources`): an approved answer (question id), a knowledge note
+   * (`kn_…`), an evidence record (`ev-0001`) or a public https page. Checked for form here; readers resolve them.
+   */
+  sources?: boolean
+  /**
+   * Visual V3.2: a choice field that narrows the link targets (a TOWS "SO" strategy links only to strengths and
+   * opportunities). Option → allowed target question ids; an item without the choice may link to any `links` target.
+   */
+  link_rule?: { field: string; targets: Readonly<Record<string, readonly string[]>> }
   /** Visual V3.3: at most this many links per item (a key result belongs to one objective). Default `ENTITY_LIMITS.links`. */
   max_links?: number
 }
@@ -62,6 +72,8 @@ export interface EntityItem {
   id: string
   fields: Record<string, string>
   links: string[]
+  /** Visual V3.2: source references, only on lists whose spec allows them. Absent when there are none. */
+  sources?: string[]
 }
 
 export interface EntityList {
@@ -76,7 +88,7 @@ export type EntityRead =
   | { state: 'legacy'; text: string }
   | { state: 'empty' }
 
-export const ENTITY_LIMITS = { name: 120, detail: 400, links: 12 } as const
+export const ENTITY_LIMITS = { name: 120, detail: 400, links: 12, sources: 8, source_length: 300 } as const
 
 const NAME: EntityFieldSpec = {
   key: 'name',
@@ -92,6 +104,30 @@ function detail(label: LocalizedPrompt): EntityFieldSpec {
 
 function choice(key: string, label: LocalizedPrompt, options: Record<string, LocalizedPrompt>): EntityFieldSpec {
   return { key, kind: 'choice', required: false, max: 0, options: Object.keys(options), label, option_labels: options }
+}
+
+/**
+ * Visual V3.2: one SWOT list. Every item names the point, says what it rests on and how sure the owner is; the
+ * confidence names are plain words, never a score.
+ */
+function swotSpec(questionId: string, prefix: string, itemLabel: LocalizedPrompt): EntitySpec {
+  return {
+    question_id: questionId,
+    id_prefix: prefix,
+    max_items: 12,
+    item_label: itemLabel,
+    sources: true,
+    fields: [
+      NAME,
+      detail({ en: 'What it rests on', fa: 'بر چه چیزی تکیه دارد', tr: 'Neye dayanıyor' }),
+      choice('confidence', { en: 'Confidence', fa: 'اطمینان', tr: 'Güven' }, {
+        evidenced: { en: 'Evidenced', fa: 'مستند', tr: 'Kanıtlı' },
+        owner_view: { en: "Owner's view", fa: 'نظر مالک', tr: 'Sahibin görüşü' },
+        hypothesis: { en: 'Hypothesis', fa: 'فرضیه', tr: 'Hipotez' },
+      }),
+    ],
+    links: [],
+  }
 }
 
 /**
@@ -165,6 +201,127 @@ export const ENTITY_SPECS: Readonly<Record<string, EntitySpec>> = {
     ],
     links: ['business.model.key_activities', 'business.model.key_resources'],
   },
+  // ---- Visual V3.2: SWOT / TOWS ------------------------------------------------------------------------------
+  'business.swot.strengths': swotSpec('business.swot.strengths', 'str', { en: 'Strength', fa: 'قوت', tr: 'Güçlü yön' }),
+  'business.swot.weaknesses': swotSpec('business.swot.weaknesses', 'wk', { en: 'Weakness', fa: 'ضعف', tr: 'Zayıf yön' }),
+  'business.swot.opportunities': swotSpec('business.swot.opportunities', 'opp', { en: 'Opportunity', fa: 'فرصت', tr: 'Fırsat' }),
+  'business.swot.threats': swotSpec('business.swot.threats', 'thr', { en: 'Threat', fa: 'تهدید', tr: 'Tehdit' }),
+  'business.swot.tows': {
+    question_id: 'business.swot.tows',
+    id_prefix: 'tows',
+    max_items: 16,
+    item_label: { en: 'TOWS strategy', fa: 'راهبرد TOWS', tr: 'TOWS stratejisi' },
+    sources: true,
+    fields: [
+      NAME,
+      detail({ en: 'What it means in practice', fa: 'در عمل یعنی چه', tr: 'Pratikte ne anlama geliyor' }),
+      choice('type', { en: 'Strategy type', fa: 'نوع راهبرد', tr: 'Strateji türü' }, {
+        so: { en: 'SO: use strengths to seize opportunities', fa: 'SO: استفاده از قوت‌ها برای گرفتن فرصت‌ها', tr: 'SO: güçlü yönlerle fırsatları yakala' },
+        st: { en: 'ST: use strengths to counter threats', fa: 'ST: استفاده از قوت‌ها برای مقابله با تهدیدها', tr: 'ST: güçlü yönlerle tehditleri karşıla' },
+        wo: { en: 'WO: fix weaknesses by using opportunities', fa: 'WO: رفع ضعف‌ها با کمک فرصت‌ها', tr: 'WO: fırsatlarla zayıf yönleri gider' },
+        wt: { en: 'WT: reduce weaknesses and avoid threats', fa: 'WT: کم کردن ضعف‌ها و دوری از تهدیدها', tr: 'WT: zayıf yönleri azalt, tehditlerden kaçın' },
+      }),
+    ],
+    links: ['business.swot.strengths', 'business.swot.weaknesses', 'business.swot.opportunities', 'business.swot.threats'],
+    link_rule: {
+      field: 'type',
+      targets: {
+        so: ['business.swot.strengths', 'business.swot.opportunities'],
+        st: ['business.swot.strengths', 'business.swot.threats'],
+        wo: ['business.swot.weaknesses', 'business.swot.opportunities'],
+        wt: ['business.swot.weaknesses', 'business.swot.threats'],
+      },
+    },
+  },
+  // ---- Visual V3.2: Value Proposition Canvas (customer profile and value map) ---------------------------------
+  'business.fit.jobs': {
+    question_id: 'business.fit.jobs',
+    id_prefix: 'job',
+    max_items: 16,
+    item_label: { en: 'Customer job', fa: 'کار مشتری', tr: 'Müşteri işi' },
+    sources: true,
+    fields: [
+      NAME,
+      detail({ en: 'When and why it matters', fa: 'کی و چرا مهم است', tr: 'Ne zaman ve neden önemli' }),
+      choice('kind', { en: 'Job type', fa: 'نوع کار', tr: 'İş türü' }, {
+        functional: { en: 'Functional', fa: 'کارکردی', tr: 'İşlevsel' },
+        social: { en: 'Social', fa: 'اجتماعی', tr: 'Sosyal' },
+        emotional: { en: 'Emotional', fa: 'احساسی', tr: 'Duygusal' },
+      }),
+    ],
+    links: ['business.model.segments'],
+  },
+  'business.fit.pains': {
+    question_id: 'business.fit.pains',
+    id_prefix: 'pain',
+    max_items: 16,
+    item_label: { en: 'Pain', fa: 'درد', tr: 'Sıkıntı' },
+    sources: true,
+    fields: [
+      NAME,
+      detail({ en: 'What happens today', fa: 'امروز چه اتفاقی می‌افتد', tr: 'Bugün ne oluyor' }),
+      choice('severity', { en: 'Severity', fa: 'شدت', tr: 'Şiddet' }, {
+        extreme: { en: 'Extreme', fa: 'شدید', tr: 'Çok yüksek' },
+        moderate: { en: 'Moderate', fa: 'متوسط', tr: 'Orta' },
+        light: { en: 'Light', fa: 'خفیف', tr: 'Hafif' },
+      }),
+    ],
+    links: ['business.model.segments', 'business.fit.jobs'],
+  },
+  'business.fit.gains': {
+    question_id: 'business.fit.gains',
+    id_prefix: 'gain',
+    max_items: 16,
+    item_label: { en: 'Gain', fa: 'دستاورد', tr: 'Kazanım' },
+    sources: true,
+    fields: [
+      NAME,
+      detail({ en: 'What the customer hopes for', fa: 'مشتری به چه چیزی امید دارد', tr: 'Müşteri neyi umuyor' }),
+      choice('relevance', { en: 'Relevance', fa: 'اهمیت', tr: 'Önem' }, {
+        required: { en: 'Required', fa: 'ضروری', tr: 'Zorunlu' },
+        expected: { en: 'Expected', fa: 'مورد انتظار', tr: 'Beklenen' },
+        desired: { en: 'Desired', fa: 'مطلوب', tr: 'İstenen' },
+        unexpected: { en: 'Unexpected', fa: 'غیرمنتظره', tr: 'Beklenmedik' },
+      }),
+    ],
+    links: ['business.model.segments', 'business.fit.jobs'],
+  },
+  'business.fit.products': {
+    question_id: 'business.fit.products',
+    id_prefix: 'prod',
+    max_items: 12,
+    item_label: { en: 'Product or service', fa: 'محصول یا خدمت', tr: 'Ürün veya hizmet' },
+    sources: true,
+    fields: [
+      NAME,
+      detail({ en: 'What the customer gets', fa: 'مشتری چه چیزی می‌گیرد', tr: 'Müşteri ne alıyor' }),
+      choice('kind', { en: 'Kind', fa: 'گونه', tr: 'Tür' }, {
+        physical: { en: 'Physical', fa: 'فیزیکی', tr: 'Fiziksel' },
+        digital: { en: 'Digital', fa: 'دیجیتال', tr: 'Dijital' },
+        service: { en: 'Service', fa: 'خدمت', tr: 'Hizmet' },
+        financial: { en: 'Financial', fa: 'مالی', tr: 'Finansal' },
+      }),
+    ],
+    links: ['business.model.segments', 'business.fit.jobs'],
+  },
+  'business.fit.relievers': {
+    question_id: 'business.fit.relievers',
+    id_prefix: 'rel',
+    max_items: 16,
+    item_label: { en: 'Pain reliever', fa: 'درمان درد', tr: 'Sıkıntı giderici' },
+    sources: true,
+    fields: [NAME, detail({ en: 'How it relieves the pain', fa: 'چطور درد را کم می‌کند', tr: 'Sıkıntıyı nasıl gideriyor' })],
+    links: ['business.fit.pains', 'business.fit.products'],
+  },
+  'business.fit.creators': {
+    question_id: 'business.fit.creators',
+    id_prefix: 'gcr',
+    max_items: 16,
+    item_label: { en: 'Gain creator', fa: 'خالق دستاورد', tr: 'Kazanım yaratıcı' },
+    sources: true,
+    fields: [NAME, detail({ en: 'How it creates the gain', fa: 'چطور دستاورد را می‌سازد', tr: 'Kazanımı nasıl yaratıyor' })],
+    links: ['business.fit.gains', 'business.fit.products'],
+  },
   // Visual V3.3: customer journey stages and structured OKRs (entities-plan.ts).
   ...PLAN_ENTITY_SPECS,
 }
@@ -186,7 +343,8 @@ type Result<T> = { ok: true; value: T } | { ok: false; message: string }
 export function entityFormat(spec: EntitySpec): string {
   const positional = spec.fields.map((field) => (field.kind === 'choice' ? `${field.key} (${(field.options ?? []).join('/')})` : field.key)).join(' | ')
   const links = spec.links.length ? ` [| links: ${spec.links.map((id) => `${ENTITY_SPECS[id]?.id_prefix ?? '?'}-1`).join(', ')}]` : ''
-  return `one ${spec.item_label.en.toLowerCase()} per line or ;: [${spec.id_prefix}-N:] ${positional}${links}. Only the name is required.`
+  const sources = spec.sources ? ' [| sources: business.offer.summary, kn_…, ev-0001, https://…]' : ''
+  return `one ${spec.item_label.en.toLowerCase()} per line or ;: [${spec.id_prefix}-N:] ${positional}${links}${sources}. Only the name is required.`
 }
 
 function fail<T>(spec: EntitySpec, message: string): Result<T> {
@@ -250,22 +408,68 @@ function checkMeasure(spec: EntitySpec, field: EntityFieldSpec, value: string, w
   return { ok: true, value: String(Number(ascii)) }
 }
 
-function checkLinks(spec: EntitySpec, raw: unknown, where: string): Result<string[]> {
+function checkLinks(spec: EntitySpec, raw: unknown, where: string, fields: Record<string, string> = {}): Result<string[]> {
   if (raw === undefined || raw === null) return { ok: true, value: [] }
   if (!Array.isArray(raw)) return fail(spec, `${where}: links must be a list of item ids.`)
-  const allowed = new Set(spec.links.map((id) => ENTITY_SPECS[id]?.id_prefix).filter((prefix): prefix is string => Boolean(prefix)))
+  // Visual V3.2: a rule choice (TOWS type) narrows the targets; without the choice every `links` target is allowed.
+  const ruled = spec.link_rule ? spec.link_rule.targets[fields[spec.link_rule.field] ?? ''] : undefined
+  const allowed = new Set((ruled ?? spec.links).map((id) => ENTITY_SPECS[id]?.id_prefix).filter((prefix): prefix is string => Boolean(prefix)))
   const out: string[] = []
   for (const link of raw) {
     const id = typeof link === 'string' ? link.trim().toLowerCase() : ''
     const match = id.match(LINK_ID)
     if (!match) return fail(spec, `${where}: link “${String(link)}” is not an item id such as seg-1.`)
     if (!allowed.has(match[1] ?? '')) {
+      if (ruled && spec.link_rule) {
+        return fail(spec, `${where}: ${fields[spec.link_rule.field]!.toUpperCase()} items link only to ${[...allowed].map((prefix) => `${prefix}-…`).join(', ')}.`)
+      }
       return fail(spec, allowed.size ? `${where}: ${spec.item_label.en.toLowerCase()}s may link only to ${[...allowed].map((prefix) => `${prefix}-…`).join(', ')}.` : `${where}: ${spec.item_label.en.toLowerCase()}s have no links.`)
     }
     if (!out.includes(id)) out.push(id)
   }
   const maxLinks = spec.max_links ?? ENTITY_LIMITS.links
   if (out.length > maxLinks) return fail(spec, `${where}: at most ${maxLinks} link${maxLinks === 1 ? '' : 's'}.`)
+  return { ok: true, value: out }
+}
+
+/** Visual V3.2: source reference forms. Ids are checked for form only; readers resolve them and never guess. */
+const SOURCE_FACT = /^(?:brand|business|personal)\.[a-z0-9_]+(?:\.[a-z0-9_]+){1,4}$/
+const SOURCE_NOTE = /^kn_[a-z0-9][a-z0-9-]{2,63}$/
+const SOURCE_EVIDENCE = /^ev-\d{4,6}$/
+
+export type SourceRefKind = 'fact' | 'knowledge' | 'evidence' | 'web'
+
+/** The kind of a stored source reference, or null when it is not one of the four forms. */
+export function sourceRefKind(ref: string): SourceRefKind | null {
+  if (SOURCE_FACT.test(ref)) return 'fact'
+  if (SOURCE_NOTE.test(ref)) return 'knowledge'
+  if (SOURCE_EVIDENCE.test(ref)) return 'evidence'
+  if (/^https:\/\//i.test(ref)) {
+    try {
+      const url = new URL(ref)
+      if (url.protocol !== 'https:' || url.username || url.password || !url.hostname.includes('.')) return null
+      return 'web'
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+function checkSources(spec: EntitySpec, raw: unknown, where: string): Result<string[]> {
+  if (raw === undefined || raw === null) return { ok: true, value: [] }
+  if (!spec.sources) return fail(spec, `${where}: ${spec.item_label.en.toLowerCase()}s do not take sources.`)
+  if (!Array.isArray(raw)) return fail(spec, `${where}: sources must be a list.`)
+  const out: string[] = []
+  for (const entry of raw) {
+    const ref = typeof entry === 'string' ? entry.trim() : ''
+    const normalized = /^https:/i.test(ref) ? ref : ref.toLowerCase()
+    if (!normalized || normalized.length > ENTITY_LIMITS.source_length || CONTROL.test(normalized) || /\s/.test(normalized) || !sourceRefKind(normalized)) {
+      return fail(spec, `${where}: source “${String(entry).slice(0, 80)}” must be an answer id (business.offer.summary), a knowledge note (kn_…), an evidence record (ev-0001) or an https link without a user name or password.`)
+    }
+    if (!out.includes(normalized)) out.push(normalized)
+  }
+  if (out.length > ENTITY_LIMITS.sources) return fail(spec, `${where}: at most ${ENTITY_LIMITS.sources} sources.`)
   return { ok: true, value: out }
 }
 
@@ -283,7 +487,7 @@ export function validateEntityList(spec: EntitySpec, input: { question?: unknown
     const where = `Item ${index + 1}`
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return fail(spec, `${where} is not an object.`)
     const record = raw as Record<string, unknown>
-    const allowedKeys = new Set(['id', 'links', ...spec.fields.map((field) => field.key)])
+    const allowedKeys = new Set(['id', 'links', ...(spec.sources ? ['sources'] : []), ...spec.fields.map((field) => field.key)])
     const unknown = Object.keys(record).find((key) => !allowedKeys.has(key))
     if (unknown) return fail(spec, `${where} has an unknown field “${unknown}”. Fields: ${spec.fields.map((field) => field.key).join(', ')}.`)
     const id = typeof record.id === 'string' ? record.id : ''
@@ -301,9 +505,11 @@ export function validateEntityList(spec: EntitySpec, input: { question?: unknown
     const nameKey = (fields.name ?? '').toLocaleLowerCase()
     if (seenNames.has(nameKey)) return fail(spec, `${where}: “${fields.name}” is listed twice.`)
     seenNames.add(nameKey)
-    const links = checkLinks(spec, record.links, `${where} (${id})`)
+    const links = checkLinks(spec, record.links, `${where} (${id})`, fields)
     if (!links.ok) return links
-    items.push({ id, fields, links: links.value })
+    const sources = checkSources(spec, record.sources, `${where} (${id})`)
+    if (!sources.ok) return sources
+    items.push({ id, fields, links: links.value, ...(sources.value.length ? { sources: sources.value } : {}) })
   }
   const next = typeof input.next === 'number' && Number.isInteger(input.next) ? input.next : highest + 1
   if (next <= highest || next > 99999) return fail(spec, `next must be greater than every item number (${highest}).`)
@@ -316,6 +522,7 @@ export function serializeEntityList(spec: EntitySpec, list: EntityList): string 
     const out: Record<string, unknown> = { id: item.id }
     for (const field of spec.fields) if (item.fields[field.key] !== undefined) out[field.key] = item.fields[field.key]
     if (item.links.length) out.links = [...item.links]
+    if (item.sources?.length) out.sources = [...item.sources]
     return out
   })
   return JSON.stringify({ schema: ENTITY_LIST_SCHEMA, question: spec.question_id, next: list.next, items })
@@ -366,11 +573,16 @@ export function parseEntityLines(spec: EntitySpec, raw: string, previous: Entity
     }
     const parts = rest.split('|').map((part) => part.trim())
     let links: string[] | undefined
-    const last = parts[parts.length - 1] ?? ''
-    const linkMatch = last.match(/^(?:links?|→|->)\s*:?\s*(.*)$/i)
-    if (parts.length > 1 && linkMatch) {
+    let sources: string[] | undefined
+    // Trailing `links: …` and (V3.2) `sources: …` parts, in either order.
+    for (let guard = 0; guard < 2 && parts.length > 1; guard += 1) {
+      const last = parts[parts.length - 1] ?? ''
+      const linkMatch = links === undefined ? last.match(/^(?:links?|→|->)\s*:?\s*(.*)$/i) : null
+      const sourceMatch = sources === undefined ? last.match(/^(?:sources?)\s*:\s*(.*)$/i) : null
+      if (linkMatch) links = (linkMatch[1] ?? '').split(/[,،\s]+/).map((part) => part.trim()).filter(Boolean)
+      else if (sourceMatch) sources = (sourceMatch[1] ?? '').split(/[,،\s]+/).map((part) => part.trim()).filter(Boolean)
+      else break
       parts.pop()
-      links = (linkMatch[1] ?? '').split(/[,،\s]+/).map((part) => part.trim()).filter(Boolean)
     }
     if (parts.length > spec.fields.length) return fail(spec, `“${line}” has more parts than ${spec.fields.map((field) => field.key).join(' | ')}.`)
     const record: Record<string, unknown> = {}
@@ -386,7 +598,7 @@ export function parseEntityLines(spec: EntitySpec, raw: string, previous: Entity
       next += 1
     }
     used.add(id)
-    drafts.push({ id, ...record, ...(links ? { links } : {}) })
+    drafts.push({ id, ...record, ...(links ? { links } : {}), ...(sources ? { sources } : {}) })
   }
   const highest = Math.max(0, ...[...used].map((id) => Number(id.split('-')[1])))
   return validateEntityList(spec, { question: spec.question_id, next: Math.max(next, highest + 1), items: drafts })
@@ -421,8 +633,8 @@ export function isCanonicalEntityValue(spec: EntitySpec, value: unknown): boolea
 // ---- item operations (add, edit, move, remove) -------------------------------------------------------------
 
 export type EntityOperation =
-  | { op: 'add'; fields: Record<string, string>; links?: string[]; position?: number }
-  | { op: 'edit'; id: string; fields: Record<string, string>; links?: string[] }
+  | { op: 'add'; fields: Record<string, string>; links?: string[]; sources?: string[]; position?: number }
+  | { op: 'edit'; id: string; fields: Record<string, string>; links?: string[]; sources?: string[] }
   | { op: 'move'; id: string; position: number }
   | { op: 'remove'; id: string }
 
@@ -433,7 +645,7 @@ export const ENTITY_OPERATIONS = ['add', 'edit', 'move', 'remove'] as const
  * through the normal interview change flow (a draft, or a change proposal when the list is approved).
  */
 export function applyEntityOperation(spec: EntitySpec, current: EntityList | null, operation: EntityOperation): Result<{ list: EntityList; value: string; item_id: string }> {
-  const items = (current?.items ?? []).map((item) => ({ id: item.id, fields: { ...item.fields }, links: [...item.links] }))
+  const items: EntityItem[] = (current?.items ?? []).map((item) => ({ id: item.id, fields: { ...item.fields }, links: [...item.links], ...(item.sources ? { sources: [...item.sources] } : {}) }))
   let next = current?.next ?? 1
   const find = (id: string): number => items.findIndex((item) => item.id === id.trim().toLowerCase())
   const keys = new Set(spec.fields.map((field) => field.key))
@@ -445,7 +657,7 @@ export function applyEntityOperation(spec: EntitySpec, current: EntityList | nul
       itemId = `${spec.id_prefix}-${next}`
       next += 1
       const at = operation.position === undefined ? items.length : Math.min(Math.max(Math.trunc(operation.position) - 1, 0), items.length)
-      items.splice(at, 0, { id: itemId, fields: { ...operation.fields }, links: operation.links ?? [] })
+      items.splice(at, 0, { id: itemId, fields: { ...operation.fields }, links: operation.links ?? [], ...(operation.sources?.length ? { sources: operation.sources } : {}) })
       break
     }
     case 'edit': {
@@ -458,6 +670,10 @@ export function applyEntityOperation(spec: EntitySpec, current: EntityList | nul
         else item.fields[key] = value
       }
       if (operation.links !== undefined) item.links = operation.links
+      if (operation.sources !== undefined) {
+        if (operation.sources.length) item.sources = operation.sources
+        else delete item.sources
+      }
       break
     }
     case 'move': {
@@ -478,7 +694,7 @@ export function applyEntityOperation(spec: EntitySpec, current: EntityList | nul
       break
     }
   }
-  const checked = validateEntityList(spec, { question: spec.question_id, next, items: items.map((item) => ({ id: item.id, ...item.fields, ...(item.links.length ? { links: item.links } : {}) })) })
+  const checked = validateEntityList(spec, { question: spec.question_id, next, items: items.map((item) => ({ id: item.id, ...item.fields, ...(item.links.length ? { links: item.links } : {}), ...(item.sources?.length ? { sources: item.sources } : {}) })) })
   if (!checked.ok) return checked
   return { ok: true, value: { list: checked.value, value: serializeEntityList(spec, checked.value), item_id: itemId } }
 }
@@ -500,6 +716,6 @@ export function entityLines(spec: EntitySpec, list: EntityList, lang: Lang = 'en
       .slice(1)
       .filter((field) => item.fields[field.key] !== undefined)
       .map((field) => (field.kind === 'choice' ? entityOptionLabel(spec, field.key, item.fields[field.key]!, lang) : item.fields[field.key]!))
-    return `${index + 1}. ${item.id} · ${item.fields.name ?? ''}${extras.length ? ` — ${extras.join(' · ')}` : ''}${item.links.length ? ` → ${item.links.join(', ')}` : ''}`
+    return `${index + 1}. ${item.id} · ${item.fields.name ?? ''}${extras.length ? ` — ${extras.join(' · ')}` : ''}${item.links.length ? ` → ${item.links.join(', ')}` : ''}${item.sources?.length ? ` [${item.sources.join(', ')}]` : ''}`
   })
 }

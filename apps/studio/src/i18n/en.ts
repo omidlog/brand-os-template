@@ -767,4 +767,7 @@ export const en = {
   "command.state.missing": "Missing",
   "command.state.withheld": "Withheld",
   "command.state.not_applicable": "Not applicable",
+  // Visual V3.2: Strategy Lab pages.
+  "nav.swot": "SWOT / TOWS",
+  "nav.valueProposition": "Value Proposition Canvas",
 } as const
