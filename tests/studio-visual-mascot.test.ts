@@ -125,6 +125,9 @@ test('Studio: the mascot atlas is read-only, approved-only, designed when empty,
     const fa = await owner.page(`/brands/${SLUG}/brand/mascot`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /اطلس ماسکات/)
+    // One Persian spelling everywhere (owner decision 2026-11-24): Studio's nav and labels match the book and atlas.
+    assert.match(fa.text, /دارایی‌ها و ماسکات/)
+    assert.equal(fa.text.includes('مسکات'), false, 'no "مسکات" left in Studio')
     assert.match(fa.text, /برگهٔ تکامل شش‌مرحله‌ای/)
     assert.ok(fa.text.includes(sha(ART)))
     await owner.get(`/brands/${SLUG}/brand/mascot?lang=tr`)

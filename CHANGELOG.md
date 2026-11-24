@@ -803,6 +803,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
 - `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
 
+## Unreleased — Studio: Persian mascot label ماسکات
+
+### Changed
+
+- Studio (fa): the mascot is spelled «ماسکات» everywhere in Studio (nav «دارایی‌ها و ماسکات», assets page, setup wizard, Publishing gallery «اطلس ماسکات»), matching the book and the atlas (owner decision 2026-11-24). Test: `studio-visual-mascot`.
+- Not changed in this PR: `docs/screenshots/coach-ux/coach-overview-fa.png` still shows the old spelling (it could not be regenerated here; regenerate with `STUDIO_E2E_SCREENSHOTS=<dir>` on `tests/studio-coach.test.ts`). Brand-core Persian text outside Studio (question bank, Visual DNA labels) still uses «مسکات».
+
 ## Unreleased — Owner decisions: Visual V4 audit
 
 ### Changed
