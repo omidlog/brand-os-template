@@ -1,5 +1,5 @@
 export * from './model.js'
-export { FRAMEWORK_REGISTRY_PATH, FRAMEWORK_REGISTRY_SCHEMA_PATH, frameworkClaimErrors, frameworkRegistryErrors, validateFrameworkRegistry } from './framework-registry.js'
+export { FRAMEWORK_REGISTRY_PATH, FRAMEWORK_REGISTRY_SCHEMA_PATH, frameworkClaimErrors, frameworkRegistryErrors, REVIEWER_PENDING, standardVerification, validateFrameworkRegistry } from './framework-registry.js'
 export type { FrameworkRegistry } from './framework-registry.js'
 export { BMC_FRAMEWORK, frameworkRef, frameworkRegistry } from './frameworks.js'
 export { BMC_ZONES, buildBusinessModelCanvas, canvasApplies, canvasDocument, entryFromItem, zoneState } from './bmc.js'
@@ -66,3 +66,20 @@ export type { BookChapter, BookChapterId, BookDocument, BookInput as BookCompose
 export { entryLabel, FULL_BOOK_TEXT, fullBookText } from './i18n-full-book.js'
 export type { FullBookText } from './i18n-full-book.js'
 export { FIXTURE_DRAFT_SENTINEL, FIXTURE_RESTRICTED_SENTINEL, illustrativeBook } from './fixtures-full-book.js'
+export {
+  AUDIT_CHECKS,
+  AUDIT_SCHEMA,
+  auditVisualModules,
+  catalogCheck,
+  coreCatalogs,
+  evaluateGate,
+  gatePolicyErrors,
+  PENDING_VISUAL_MODULES,
+  RELEASE_GATE_POLICY_PATH,
+  RUBRIC_VERSION,
+  VISUAL_MODULES,
+  VISUAL_RUBRIC,
+} from './audit.js'
+export type { AuditCheck, AuditCheckId, CatalogSet, CheckStatus, CitedStandard, GateOverride, GateResult, ModuleAudit, PendingModuleSpec, ReleaseGatePolicy, StandardRecord, TestEvidence, VisualAuditReport, VisualModuleSpec } from './audit.js'
+export { AUDIT_TEXT } from './i18n-audit.js'
+export type { AuditText } from './i18n-audit.js'
