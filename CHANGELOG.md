@@ -14,6 +14,7 @@
 ### Changed
 
 - The canvas zones Key activities and Key resources are answered by the new list questions instead of a "no question yet" gap; Customer segments and Cost structure also read their list. `relationships` is `{ modeled: true, links }` when list items exist, else `{ modeled: false, reason: 'no_list_items' }`.
+- Full Brand Book / Business Report (V4.2, after merging main): an approved list prints as its items (name, choice labels in the page language, detail, links by item name, numbered in the page's digits), never an item id. A draft, withheld or unpublished list carries no items into a book, and a report no longer embeds the canvas zone block (drafts, item ids); it keeps the framework reference. fa/tr book labels for the four list questions. Book reference screenshots unchanged.
 
 ## Unreleased — Nontechnical agent onboarding (fixes pack GAP-11, docs and test only)
 
