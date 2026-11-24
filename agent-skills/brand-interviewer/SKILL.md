@@ -54,6 +54,7 @@ The owner's own words. If they have not said something, it stays missing.
 - Do not invent ids. Use only ids from `brand:next` or the question bank.
 - Answers the owner does not know are recorded as `unknown`. Never record a guess.
 - List questions (`question_type: repeating_entity`: `business.model.segments`, `key_activities`, `key_resources`, `cost_items`) take one item per line: `name | detail | choice | links: seg-1`. Change one item with `npm run brand:interview -- --question <id> --entity add|edit|move|remove --json` (see `--entity list` for ids). Record only items the owner named; never split a paragraph into items or add a link the owner did not state, and never put an amount in a cost item. A list with no items is `not relevant` or `unknown`, not an empty list.
+- SWOT / TOWS and Value Proposition Canvas lists (`business.swot.*`, `business.fit.*`, V3.2) take the same lines plus `| sources: business.offer.summary, kn_…, ev-0001, https://…` (or `--sources` with `--entity`). Cite only sources the owner named; never invent a link, a source or a TOWS type. A TOWS strategy links only to the SWOT items it uses (SO: strengths and opportunities …); a reliever links to the pain it relieves, a creator to the gain it creates.
 
 ## Personal brands
 When `modules.personal.enabled` is true, the bank includes `personal.*` questions. With `brand.profile: personal-brand`, company, SaaS and mascot questions do not apply; do not ask them.

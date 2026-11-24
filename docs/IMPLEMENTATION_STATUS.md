@@ -498,3 +498,18 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Done:** a scoped `consistency_review --question <id>` applies the 20-conflict cap after filtering to that field, so its own conflict is never cut off. `consistency_review` counts only live answers to questions the bank still has (an `unanswered`/`deprecated` record or a retired id no longer makes an empty brand read as consistent). `brand:coach next` no longer names a restricted last answer and its fallback text is localized. fa/tr: lexicon matching folds Arabic kaf/yeh and the Turkish dotted `İ`; the rendered criterion and the "does not apply" reason are localized. `COACH_RULE_VERSION` is `coach-rules/2`; Studio rebuilds a cached coach card computed under an older rule version. Tests: `coach-core` (audit block).
 - **Not done (owner decisions pending, behaviour unchanged):** the five Coach UX questions in `docs-internal/COACH_UX_DECISION.md`; the bare Persian marker `همه` (may flag ordinary short answers); a `brand:propose` draft counting as the "first revision" for the after-answer moment.
 - **Main merge (2026-11-24):** merged with GAP-08 (`coach/rules.ts`, facet rubrics). Both sides had bumped `coach-rules/1` to `/2` independently, so the combined rules are `COACH_RULE_VERSION` `coach-rules/3`. The scoped cap fix applies to `findContradictions` conflicts; registry findings fill the remaining slots.
+
+## Visual V3.2: SWOT / TOWS and Value Proposition Canvas
+
+Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas). Builds on the V3.1 list questions.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| SWOT, TOWS and canvas list questions | Done | Eleven optional, internal `repeating_entity` questions (`business.swot.*`, `business.fit.*`); bank, field registry and knowledge graph regenerated, additions only (the business bank now has no YAML aliases). `tests/visual-strategy.test.ts`. |
+| Item sources | Done | `sources` on items of these lists: answer id, `kn_…`, `ev-…`, https without credentials; `--sources` on `brand:interview --entity`. Resolved per edition, never guessed; web sources keep origin and path only. |
+| TOWS link rule | Done | The strategy type narrows the link targets (SO → strengths, opportunities …); untyped strategies are listed, never placed. |
+| Value fit | Done | Fit only from recorded links (reliever → pain, creator → gain), as counts; no score, nothing matched by wording. |
+| Studio pages and print | Done | `/strategy/swot-tows`, `/strategy/value-proposition` (+ `/print`, `?edition=public`), GET only; en/fa/tr, canonical topology in fa, Persian digits in marks, counts and folios. `tests/studio-visual-strategy.test.ts`. |
+| Public edition | Done (empty by design) | The lists are internal, so the public edition shows designed "Not published" states. Making any of them public is an owner question. |
+| Per-segment canvases, Task Context, Coach | Not started | One canvas for all segments (segment names on items). Task Context packs and the Coach do not read the V3.2 lists yet. |
+| Full Business Report chapter | Not started | The V4.2 Business Report does not include SWOT / TOWS or the canvas yet. |
