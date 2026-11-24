@@ -6,7 +6,8 @@ This guide is for the brand owner. You do not need to know how to program. You c
 order. At the end, an AI agent (for example Claude Code) can **read** your approved brand facts, and nothing more.
 You can switch it off at any time.
 
-Every command below is tested automatically (`tests/fresh-agent-setup.test.ts`). The technical reference is
+The Brand OS commands below are tested automatically (`tests/fresh-agent-setup.test.ts`); the `claude mcp` and `read -rs`
+steps are Claude Code and shell commands and are not run by the test. The technical reference is
 [AI_CONNECTORS.md](AI_CONNECTORS.md).
 
 ## What you get, and what you do not

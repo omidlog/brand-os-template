@@ -111,7 +111,7 @@ test('every job of every workflow has a timeout, and each test step its own', ()
     }
   }
   const verify = workflow.jobs.verify!
-  assert.equal(verify.steps.find((s) => s.run === 'npm run test')?.['timeout-minutes'], 10)
+  assert.equal(verify.steps.find((s) => s.run === 'npm run test')?.['timeout-minutes'], 18)
   assert.equal(workflow.jobs.studio?.steps.find((s) => s.run === 'npm run test:studio')?.['timeout-minutes'], 12)
 })
 

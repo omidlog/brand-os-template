@@ -123,14 +123,16 @@ The result status is the worst verdict present: `needs_review` → `evidence_mis
 
 **The registry rules.** Each declares its fields, its exact condition and its guards, and has positive and
 negative tests in `tests/coach-rules.test.ts`. Matching is whole-phrase, case-insensitive and NFKC-normalised
-across en/fa/tr, with the lexicon in `rules.ts`.
+across en/fa/tr, with the lexicon in `rules.ts`. No rule reads a question that does not apply under the current
+config (module off, skip condition): it is `not_applicable` there too, as in `quality_review`. The cheap-price markers
+use the same negation guard as `sensitive-claim-wording` ("we are never cheap", «ارزان نیستیم», "ucuz değil").
 
 | Rule | Fields | Fires when | Stays silent when (guard) |
 | --- | --- | --- | --- |
 | `premium-vs-lowest-price` | `brand.strategy.differentiation`, `brand.strategy.promise`, `business.offer.value_proposition`; `business.sales.pricing` | a positioning answer uses a premium word (premium, luxury, high-end, لوکس, ممتاز, lüks, seçkin, …) **and** the pricing answer calls the price cheapest / cheap / lowest / bargain (ارزان‌ترین, en ucuz, …) | the pricing answer names an entry tier, plan, starter, trial, launch offer, first month, student or nonprofit price (پلن, ورودی, ماه اول, giriş, başlangıç, paket, …). A plain figure never fires, and neither does "affordable": the coach cannot know what is cheap in a given market |
 | `availability-held-back` | `business.product.public_status`, `business.marketing.availability_claim` | the product is `available` while marketing may say only `coming-soon` or nothing (`do-not-claim`): a staged launch is allowed, so it is a question | any other pair. The reverse (`available` claim, `unshipped` product) is the existing confirmed conflict and is not re-implemented |
 | `evidence-claim-unverified` | every answered question with `publication_requires: verified_evidence` | `claimVerification` is `unverified` or `owner_stated` | an independent source has been verified with `brand:evidence`. Owner testimony alone never settles it |
-| `sensitive-claim-wording` | every other answered, non-restricted free-text question, except `brand.verbal.forbidden` and `personal.governance.public_claim_policy` (they list such words) | the answer asserts a guarantee, certification, accreditation, "number one", award or proof (تضمینی, گواهی‌شده, garantili, sertifikalı, …) and the field has no verified independent source | the term is negated in the three words before it ("we never promise guaranteed results", هرگز, بدون, نمی…) or followed by Turkish `değil` |
+| `sensitive-claim-wording` | every other answered, non-restricted free-text question, except `brand.verbal.forbidden` and `personal.governance.public_claim_policy` (they list such words) | the answer asserts a guarantee, certification, accreditation, "number one", award or proof (تضمینی, گواهی‌شده, garantili, sertifikalı, …) and the field has no verified independent source | the term is negated in the three words before it ("we never promise guaranteed results", هرگز, بدون, نمی…) or followed by Turkish `değil` or Persian `نیست` (with personal endings) |
 
 **Sensitive claims stay unverified.** The coach reads the evidence register through `claimVerification` and
 never writes to it: a test adds a pending source and asserts the brand is byte-for-byte unchanged, and only
@@ -215,7 +217,7 @@ Findings:
    Read: question:business.customer.primary_segment, answer:ans-0002
 
 No model was called. Every finding is deterministic.
-engine coach/1 · rules coach-rules/3 · authorizes: []
+engine coach/1 · rules coach-rules/4 · authorizes: []
 ```
 
 (Line-wrapped here for the page; the command prints each field on one line.)

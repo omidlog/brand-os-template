@@ -1,5 +1,5 @@
 import type { FieldQuestion } from '../types.js'
-import { answerText, isDisposition, liveAnswer, verificationOf, type CoachContext } from './context.js'
+import { answerText, isDisposition, liveAnswer, notApplicableReason, verificationOf, type CoachContext } from './context.js'
 import { containsTerm, isFreeText, normalizeForMatch } from './lexicon.js'
 import type { CoachRuleCheckRecord, CoachSourceRef } from './model.js'
 
@@ -168,6 +168,8 @@ export const SENSITIVE_CLAIM_MARKERS: readonly string[] = [
 /** A negation shortly before a sensitive term ("we never promise guaranteed results") is not a claim. */
 const NEGATIONS: readonly string[] = ['not', 'no', 'never', 'without', "don't", 'dont', 'نه', 'هرگز', 'بدون', 'asla', 'değil', 'yok', 'olmadan']
 const NEGATION_WINDOW_WORDS = 3
+/** Negations that follow the word, with their personal endings: değil/değiliz, نیست/نیستیم. */
+const NEGATION_STEMS_AFTER: readonly string[] = ['değil', 'degil', 'نیست'].map((word) => normalizeForMatch(word))
 
 /** Fields whose purpose is to *list* banned or source-needing claims, so a marker there is not a claim. */
 const CLAIM_LIST_FIELDS: ReadonlySet<string> = new Set(['brand.verbal.forbidden', 'personal.governance.public_claim_policy', 'business.marketing.availability_claim'])
@@ -178,10 +180,12 @@ function markersIn(text: string, markers: readonly string[]): string[] {
   return markers.filter((term) => containsTerm(text, term))
 }
 
-/** The live, non-disposition, non-restricted answer text, or null when the field is open or settled. */
+/** The live, non-disposition, non-restricted answer text of an applicable question, or null otherwise. */
 function liveText(ctx: CoachContext, id: string): string | null {
   const question = ctx.byId.get(id)
   if (!question || question.sensitivity === 'restricted') return null
+  // A question the owner's config turned off is not_applicable: no rule reads it (as in quality_review).
+  if (notApplicableReason(ctx, question) !== null) return null
   const answer = liveAnswer(ctx, id)
   if (!answer || isDisposition(answer)) return null
   const text = answerText(answer)
@@ -206,7 +210,8 @@ export function assertedTerm(text: string, term: string): boolean {
     if (!stripped.every((word, k) => words[i + k] === word)) continue
     const before = words.slice(Math.max(0, i - NEGATION_WINDOW_WORDS), i)
     const after = words[i + stripped.length] ?? ''
-    if (!before.some(negated) && after !== 'değil' && after !== 'degil') return true
+    // Turkish and Persian also negate after the word: "ucuz değil", «ارزان نیست».
+    if (!before.some(negated) && !NEGATION_STEMS_AFTER.some((stem) => after.startsWith(stem))) return true
   }
   return false
 }
@@ -244,7 +249,8 @@ function premiumVsLowestPrice(ctx: CoachContext): RuleOutput {
   }
   const read = [...positioning.map(([id]) => id), PRICING_ID].sort()
   const premium = positioning.filter(([, text]) => markersIn(text, PREMIUM_MARKERS).length > 0).map(([id]) => id)
-  const lowest = markersIn(pricing, LOWEST_PRICE_MARKERS).length > 0
+  // "We are never cheap" is not a cheap price: a negated marker does not count.
+  const lowest = LOWEST_PRICE_MARKERS.some((term) => assertedTerm(pricing, term))
   if (premium.length === 0 || !lowest) return { check: { rule_id: rule, kind: 'tension', outcome: 'no_finding', basis: 'rule_silent', question_ids: read }, findings: [] }
   if (markersIn(pricing, PRICE_TIER_GUARDS).length > 0) return { check: { rule_id: rule, kind: 'tension', outcome: 'no_finding', basis: 'guard_matched', question_ids: read }, findings: [] }
   const related = [...premium, PRICING_ID].sort()

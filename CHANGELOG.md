@@ -32,6 +32,10 @@
 - The canvas zones Key activities and Key resources are answered by the new list questions instead of a "no question yet" gap; Customer segments and Cost structure also read their list. `relationships` is `{ modeled: true, links }` when list items exist, else `{ modeled: false, reason: 'no_list_items' }`.
 - Full Brand Book / Business Report (V4.2, after merging main): an approved list prints as its items (name, choice labels in the page language, detail, links by item name, numbered in the page's digits), never an item id. A draft, withheld or unpublished list carries no items into a book, and a report no longer embeds the canvas zone block (drafts, item ids); it keeps the framework reference. fa/tr book labels for the four list questions. Book reference screenshots unchanged.
 
+## Unreleased — CI
+
+- CI: the `brand tests` step timeout in `validate.yml` rises from 10 to 18 minutes (the suite now takes about 10 minutes on GitHub runners) and the `verify` job timeout from 20 to 28.
+
 ## Unreleased — Runtime: batch not-ready exits non-zero (PR-E owner decisions)
 
 ### Changed
@@ -727,3 +731,27 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 ### Fixed
 
 - Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
+
+## Unreleased — Audit: fixes pack area (GAP-08 coach rules)
+
+### Fixed
+
+- `premium-vs-lowest-price`: a negated cheap price ("we are never cheap", «ارزان نیستیم», "ucuz değil") no longer raises a trade-off question. The cheap-price markers use the same negation guard as `sensitive-claim-wording`; Persian `نیست` and Turkish `değil` with personal endings count after the word.
+- Coach registry rules no longer read a question the owner's config turned off (module disabled, skip condition). `consistency_review` said `needs_verification` for such a field while `quality_review` said `not_applicable`.
+- `COACH_RULE_VERSION` is `coach-rules/4` (verdicts changed for the same input). Tests: `coach-rules`.
+
+## Unreleased — Audit: fixes pack area (GAP-09 evidence links)
+
+### Fixed
+
+- `brand:assurance`: a research note linked to a verified evidence-register entry counts as `independent` only for a control that names the entry's claim question. A note tagged with two questions no longer makes the other question's control look independently evidenced; there it stays `owner_stated`. Test: `assurance-links`.
+
+## Unreleased — Audit: Visual V1 area fixes
+
+### Fixed
+
+- `brand:export-visual`: an output folder reached through a link (the folder itself or a parent) into `brand/` or a `.private` folder is refused. The check runs on the real path, before and after the folder is created. A link left in place of an output file (HTML, PDF or a temporary galley/check file) is refused, not followed.
+- `brand:export-visual` reads the working copy. When `brand/` has uncommitted changes, it says so, and the book imprint prints "plus changes in brand/ not yet committed" next to the source commit (en/fa/tr). It also says when the Chrome measuring pass fails and the estimates are used.
+- `tests/studio-visual-browser.test.ts`: restored the V1.2 print-book checks on real Studio data (one PDF page per sheet, no text block overflow, contents numbers = printed folios, folios on the outer edge in en/fa). The merge of #40 had dropped them, but `docs/IMPLEMENTATION_STATUS.md` still listed them.
+- `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
+- `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
