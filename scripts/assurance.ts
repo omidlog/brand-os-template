@@ -116,8 +116,10 @@ function options(values: Values): BridgeOptions {
 function warnDeprecatedPaidMedia(values: Values, snapshot: AssuranceSnapshot, language: AssuranceLang): void {
   if (values['paid-media'] === undefined) return
   console.error(BRIDGE_TEXT.paid_media_deprecated![language])
-  const source = snapshot.subject_provenance.find((entry) => entry.field === 'runs_paid_media')?.source
-  if (source === 'approved_fact') console.error(BRIDGE_TEXT.paid_media_ignored![language])
+  const entry = snapshot.subject_provenance.find((item) => item.field === 'runs_paid_media')
+  if (entry?.source !== 'approved_fact') return
+  // An approved `undecided` is the interview answer too: it wins, and the notice says so.
+  console.error(BRIDGE_TEXT[entry.value === 'unknown' ? 'paid_media_ignored_undecided' : 'paid_media_ignored']![language])
 }
 
 function run(values: Values): void {

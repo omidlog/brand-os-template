@@ -783,6 +783,12 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - Studio (fa): the mascot is spelled «ماسکات» everywhere in Studio (nav «دارایی‌ها و ماسکات», assets page, setup wizard, Publishing gallery «اطلس ماسکات»), matching the book and the atlas (owner decision 2026-11-24). Test: `studio-visual-mascot`.
 - Not changed in this PR: `docs/screenshots/coach-ux/coach-overview-fa.png` still shows the old spelling (it could not be regenerated here; regenerate with `STUDIO_E2E_SCREENSHOTS=<dir>` on `tests/studio-coach.test.ts`). Brand-core Persian text outside Studio (question bank, Visual DNA labels) still uses «مسکات».
 
+## Unreleased — Owner decision: undecided paid-media answer wins over --paid-media (2026-11-24)
+
+### Changed
+
+- `brand:assurance`: an approved `undecided` answer to `business.marketing.paid_media` now wins over the deprecated `--paid-media yes|no`. `subject.runs_paid_media` stays `unknown` (source `approved_fact`), the blocking item still points at the question, and the digest is the same with or without the flag. stderr says the flag was ignored and the interview answer is used (en/fa/tr). An approved `yes`/`no` already won; with no approved answer the flag still fills the gap. Bridge version `brand-os.assurance-bridge/4`. Tests: `assurance-followups`, `assurance-cli`.
+
 ## Unreleased — Audit: fixes pack minor findings (batched)
 
 ### Fixed
