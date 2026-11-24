@@ -68,6 +68,7 @@ export const tr: Messages = {
   'sync.synced': '{time} eşitlendi',
   'sync.never': 'Henüz eşitlenmedi',
   'sync.checking': 'GitHub’da güncellemeler denetleniyor…',
+  'sync.syncingSince': 'GitHub ile eşitleniyor ({time} başladı). Bitince bu sayfa kendini günceller.',
   'sync.stale': 'Güncel olmayabilir',
   'sync.staleBody': '{time} tarihli {sha} commit’i gösteriliyor. Daha yeni birleştirilmiş değişiklikler için yenileyin.',
   'sync.errorTitle': 'Son yenileme başarısız oldu',

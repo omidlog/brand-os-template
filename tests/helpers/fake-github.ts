@@ -149,6 +149,8 @@ export class FakeGitHub {
   readonly blobs = new Map<string, Buffer>()
   readonly calls: Call[] = []
   readonly faults: Fault[] = []
+  /** Milliseconds every tarball download waits before answering, to simulate a slow sync. */
+  tarballDelayMs = 0
   /** Number of `commits/<branch>` reads that answer 404 after a template generation (GitHub copies asynchronously). */
   generationDelay = 0
   /** Simulates GitHub ignoring `private: true`. */
@@ -230,12 +232,14 @@ export class FakeGitHub {
       this.calls.push({ method, path: url.pathname, token })
       const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/tar\.gz\/([0-9a-f]{40})$/)
       if (!match) return new Response('not found', { status: 404 })
+      if (this.tarballDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, this.tarballDelayMs))
       return this.archive(match[1]!, match[2]!, match[3]!)
     }
     if (url.hostname !== 'api.github.com') throw new Error(`FakeGitHub refused a request to ${url.hostname}`)
     const route = `${url.pathname}${url.search}`
     this.calls.push({ method, path: route, token })
     const fault = this.faults.find((item) => item.method === method && item.pattern.test(route) && item.times > 0)
+    if (this.tarballDelayMs > 0 && /\/tarball\//.test(route)) await new Promise((resolve) => setTimeout(resolve, this.tarballDelayMs))
     if (fault) {
       fault.times -= 1
       if (fault.network) throw new TypeError('fetch failed')

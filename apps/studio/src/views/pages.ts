@@ -436,14 +436,18 @@ function syncBanners(ctx: ViewContext, view: BrandView, flash: string | null): S
   if (flash === 'synced') out.push(banner({ tone: 'success', body: i.t('sync.done', { sha: shortSha(s.sha) }), live: true }))
   if (flash === 'failed') out.push(banner({ tone: 'danger', body: i.t('sync.failed'), live: true }))
   if (flash === 'too-soon') out.push(banner({ tone: 'info', body: i.t('sync.tooSoon'), live: true }))
+  if (view.refreshing) {
+    const started = view.refreshStartedAt ? i.dateTime(view.refreshStartedAt) : ''
+    out.push(banner({ tone: 'info', body: html`<span class="spinner" aria-hidden="true"></span> ${started ? i.t('sync.syncingSince', { time: started }) : i.t('sync.checking')}`, live: true }))
+  }
   if (s.last_error && flash !== 'failed') {
     out.push(
       view.cached.projection
         ? banner({ tone: 'warning', title: i.t('sync.errorTitle'), body: i.t('sync.errorBody', { sha: shortSha(s.sha), reason: s.last_error.message }) })
         : banner({ tone: 'danger', title: i.t('sync.errorTitle'), body: i.t('sync.errorNoData', { reason: s.last_error.message }), actions: refreshButton(ctx, view) }),
     )
-  } else if (view.stale && view.cached.projection && !flash) {
-    out.push(banner({ tone: 'neutral' as Tone, body: html`${view.refreshing ? html`<span class="spinner" aria-hidden="true"></span> ${i.t('sync.checking')} ` : ''}${i.t('sync.staleBody', { sha: shortSha(s.sha), time: i.dateTime(s.synced_at) })}` }))
+  } else if (view.stale && view.cached.projection && !flash && !view.refreshing) {
+    out.push(banner({ tone: 'neutral' as Tone, body: i.t('sync.staleBody', { sha: shortSha(s.sha), time: i.dateTime(s.synced_at) }) }))
   }
   if (s.repo_private === false) out.push(banner({ tone: 'danger', title: i.t('sync.public'), body: i.t('sync.publicWarning') }))
   return join(out)
@@ -456,7 +460,9 @@ export function brandShell(ctx: ViewContext, view: BrandView, section: BrandSect
   const content = view.cached.projection
     ? body
     : emptyState({ icon: view.refreshing ? 'refresh' : 'alert', title: view.cached.status.last_error ? i.t('sync.errorTitle') : i.t('sync.never'), body: view.cached.status.last_error?.message ?? i.t('sync.checking'), action: refreshButton(ctx, view) })
-  return shell(ctx, { title: `${title} · ${view.record.display_name}`, crumbs, brand: { view, section }, content: html`${syncBanners(ctx, view, flash)}${content}`, extraHead })
+  // While a sync runs the page reloads itself every few seconds, so the owner never waits on an open request.
+  const head = view.refreshing ? html`<meta http-equiv="refresh" content="5">${extraHead ?? html``}` : extraHead
+  return shell(ctx, { title: `${title} · ${view.record.display_name}`, crumbs, brand: { view, section }, content: html`${syncBanners(ctx, view, flash)}${content}`, extraHead: head })
 }
 
 export function brandHeader(ctx: ViewContext, view: BrandView, title: string, subtitle: string): SafeHtml {

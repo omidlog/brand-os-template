@@ -69,6 +69,7 @@ export const en = {
   'sync.synced': 'Synced {time}',
   'sync.never': 'Not synced yet',
   'sync.checking': 'Checking GitHub for updates…',
+  'sync.syncingSince': 'Syncing with GitHub (started {time}). This page updates itself when it is done.',
   'sync.stale': 'May be out of date',
   'sync.staleBody': 'Showing commit {sha} from {time}. Refresh to check GitHub for newer merged changes.',
   'sync.errorTitle': 'The last refresh failed',
