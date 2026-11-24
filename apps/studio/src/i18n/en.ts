@@ -743,6 +743,7 @@ export const en = {
   "publishing.gaps": "{count} open",
   "publishing.redacted": "{count} hidden for this audience",
   "publishing.print": "Print view",
+  "publishing.command": "Export with this command (run locally)",
   "publishing.planned": "Print layout not built yet",
   "publishing.noExport": "No export",
   "publishing.note": "Counts only. Studio never creates or sends a file. Finance figures never reach Studio.",

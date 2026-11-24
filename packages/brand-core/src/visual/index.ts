@@ -40,6 +40,7 @@ export {
   EXPORT_PROFILES,
   PROFILE_DOCUMENTS,
   profilePermits,
+  publishingExportCommand,
   PUBLISHING_DOCUMENT_TYPES,
   PUBLISHING_READINESS,
   questionClassifier,

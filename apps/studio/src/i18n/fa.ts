@@ -742,6 +742,7 @@ export const fa: Messages = {
   "publishing.gaps": "{count} باز",
   "publishing.redacted": "{count} پنهان برای این مخاطب",
   "publishing.print": "نمای چاپی",
+  "publishing.command": "خروجی با این دستور (روی رایانهٔ خودتان اجرا کنید)",
   "publishing.planned": "صفحه‌آرایی چاپی هنوز ساخته نشده",
   "publishing.noExport": "بدون خروجی",
   "publishing.note": "فقط شمارش. استودیو هرگز فایلی نمی‌سازد یا نمی‌فرستد. اعداد مالی هرگز به استودیو نمی‌رسند.",

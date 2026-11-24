@@ -776,6 +776,14 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
 - `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
 
+## Unreleased — Owner decisions: Visual V4 audit
+
+### Changed
+
+- Business Report: stays internal only (owner decision 2026-11-24). The code already matched: the projection builds no public edition, `--doc business-report --edition public` is refused, and `--edition` has no investor value. No behaviour change; the gallery offers no public or investor command for it (test).
+- Investor profile: a published logo master that still carries a `draft` tag is now drawn without any mark, the same as public. An unpublished draft-tagged master and draft-tagged mascot artwork stay hidden in both profiles. Test: `visual-publishing`.
+- Publishing gallery: the full Brand Book's public and internal cells show the real local export command (`npm run brand:export-visual -- --doc brand-book --edition public|internal`) as text, instead of "Print layout not built yet" (en/fa/tr; the command stays LTR in Persian). Studio never runs it. The investor cell is unchanged (no investor edition). New cell export kind `command`, core `publishingExportCommand`. Tests: `visual-publishing`, `studio-publishing`.
+
 ## Unreleased — Owner decision: undecided paid-media answer wins over --paid-media (2026-11-24)
 
 ### Changed
