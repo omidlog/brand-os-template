@@ -695,3 +695,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 ### Fixed
 
 - Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
+
+## Unreleased — Audit: Visual V1 area fixes
+
+### Fixed
+
+- `brand:export-visual`: an output folder reached through a link (the folder itself or a parent) into `brand/` or a `.private` folder is refused. The check runs on the real path, before and after the folder is created. A link left in place of an output file (HTML, PDF or a temporary galley/check file) is refused, not followed.
+- `brand:export-visual` reads the working copy. When `brand/` has uncommitted changes, it says so, and the book imprint prints "plus changes in brand/ not yet committed" next to the source commit (en/fa/tr). It also says when the Chrome measuring pass fails and the estimates are used.
+- `tests/studio-visual-browser.test.ts`: restored the V1.2 print-book checks on real Studio data (one PDF page per sheet, no text block overflow, contents numbers = printed folios, folios on the outer edge in en/fa). The merge of #40 had dropped them, but `docs/IMPLEMENTATION_STATUS.md` still listed them.
+- `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
+- `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
