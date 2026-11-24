@@ -125,3 +125,33 @@ test('positioning catalogs: fa and tr define every key, arrays match, placeholde
   assert.equal(POSITIONING_TEXT.fa.title, 'نقشهٔ جایگاه‌یابی')
   assert.equal(POSITIONING_TEXT.en.title, 'Positioning map')
 })
+
+test('aged at build time: a state shared as current reads stale once its newest source passes the threshold; only down', () => {
+  const landscape = illustrativeLandscape()
+  landscape.positioning = illustrativePositioning()
+  const read: SharedLandscapeRead = { state: 'shared', landscape }
+  const at = (now?: Date) => comparisonDocument({ brand_id: 'acme', brand_name: 'Acme', illustrative: false, read, own: {}, now })
+  // Without a day (golden fixtures) the shared states are drawn as shared.
+  const asShared = map(at())
+  assert.equal(asShared.points[0]!.x.state, 'evidenced')
+  // The own brand's owner statement was read 2026-11-10. 91 whole days later is not yet surely stale (one day is
+  // given back because only the day is shared); 92 days later it is.
+  assert.equal(map(at(new Date('2027-02-09T12:00:00Z'))).points[0]!.x.state, 'evidenced')
+  const late = at(new Date('2027-06-01T12:00:00Z'))
+  const m = map(late)
+  assert.equal(map(at(new Date('2027-02-10T12:00:00Z'))).points[0]!.x.state, 'stale')
+  for (const point of m.points) {
+    for (const p of [point.x, point.y]) assert.notEqual(p.state, 'evidenced', `${point.name}: an old source is never current`)
+  }
+  assert.equal(m.points.find((p) => p.name.startsWith('Avenra'))!.y.state, 'conflicting', 'a conflict stays a conflict')
+  assert.deepEqual(m.points.find((p) => p.name.startsWith('Avenra'))!.y.bands, ['lower_mid', 'mid'])
+  assert.equal(m.unplotted[0]!.y.state, 'unknown', 'unknown stays unknown')
+  const cells = matrix(late).rows.filter((r) => r.kind === 'competitor').flatMap((r) => r.cells)
+  assert.equal(cells.some((c) => c.state === 'present' || c.state === 'unverified'), false, 'matrix: old observations read historical')
+  assert.ok(cells.some((c) => c.state === 'conflicting') && cells.some((c) => c.state === 'needs_review'))
+  const strip = late.blocks.find((b) => b.type === 'price_strip') as { groups: Array<{ rows: Array<{ state: string }> }> }
+  assert.ok(strip.groups.flatMap((g) => g.rows).every((r) => r.state === 'historical'))
+  // The shared landscape itself is not changed.
+  assert.equal(landscape.positioning.own.x.state, 'evidenced')
+  assert.equal(landscape.competitors[0]!.cells[0]!.state, 'observed')
+})

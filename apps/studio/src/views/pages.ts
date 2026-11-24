@@ -28,6 +28,7 @@ import { html, join, safeGitHubUrl, safeHex, type SafeHtml } from './html.js'
 import { icon, type IconName } from './icons.js'
 import { brandAvatar, brandPath, plainShell, refreshButton, shell, type BrandSection, type BrandView, type ViewContext } from './layout.js'
 import { mascotLink } from './visual-mascot.js'
+import { commandStrip } from './publishing.js'
 
 /* ---------------------------------------------------------------- sign in */
 
@@ -541,7 +542,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
     </header>
     ${banner({ tone: 'info', body: html`${i.t('app.readOnlyNote')} <a href="${brandPath(view.record.slug, 'handoff')}">${i.t('nav.handoff')}</a>` })}
     ${!p.brand.initialized ? banner({ tone: 'warning', body: i.t('overview.notInitialized') }) : ''}
-    ${update ? updatePanel(ctx, view, update) : ''}
+    ${commandStrip(ctx, view)}
     <section class="stat-grid" aria-label="${i.t('overview.title')}">
       ${statCard({ label: i.t('overview.coverage'), value: i.percent(o.coverage), hint: i.t('overview.coverageHint'), ratio: o.coverage })}
       ${statCard({ label: i.t('overview.approval'), value: i.percent(o.approval), hint: i.t('overview.approvalHint'), ratio: o.approval, tone: 'success' })}
@@ -577,6 +578,7 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
           : html`<p class="muted">${i.t('overview.nextEmpty')}</p>`}
       </section>
     </div>
+    ${update ? updatePanel(ctx, view, update) : ''}
     <section class="card" aria-labelledby="recent-title">
       <div class="card-head"><h2 class="card-title" id="recent-title">${i.t('overview.recent')}</h2><a href="${brandPath(view.record.slug, 'history')}" class="link-sm">${i.t('nav.history')}</a></div>
       ${commits.length ? commitList(ctx, commits) : html`<p class="muted">${i.t('overview.recentEmpty')}</p>`}

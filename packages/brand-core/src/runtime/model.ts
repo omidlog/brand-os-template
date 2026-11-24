@@ -159,7 +159,7 @@ export interface BatchSummary {
 
 export class RuntimeError extends Error {
   constructor(
-    readonly code: 'invalid_pack' | 'wrong_task' | 'unsafe_output' | 'refused' | 'invalid_font' | 'invalid_batch',
+    readonly code: 'invalid_pack' | 'wrong_task' | 'unsafe_output' | 'refused' | 'invalid_font' | 'invalid_batch' | 'stale_pack',
     message: string,
   ) {
     super(message)
