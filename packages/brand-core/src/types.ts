@@ -173,6 +173,11 @@ export interface AnswerRecord {
   private_ref?: string | null
   /** Set when the answer came from an interview proposal (agent or model extraction). */
   proposal_state?: ProposalState | null
+  /**
+   * `agent` when an agent proposed the value and the owner confirmed it (`--origin agent_suggestion`).
+   * Set together with `source_type: agent_suggestion` and `authority: confirmed_by_owner`; absent otherwise.
+   */
+  suggested_by?: 'agent' | null
 }
 
 /**

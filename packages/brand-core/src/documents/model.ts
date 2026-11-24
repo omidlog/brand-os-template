@@ -5,6 +5,7 @@ import { readFacts, type CanonicalFact } from '../facts.js'
 import { factIsPublic } from '../publication.js'
 import { isStructuredType, parseStructured, type StructuredType, type StructuredValue } from '../structured.js'
 import { claimVerification, evidenceFor, readEvidence, type ClaimVerification, type EvidenceItem } from '../evidence.js'
+import { answerProvenance } from '../provenance.js'
 import type { AnswerRecord, FieldQuestion, PersonalFacet } from '../types.js'
 
 /**
@@ -54,6 +55,11 @@ export interface DocumentItem {
    * unverified (needs evidence, has none) or not_required. Null for non-personal items.
    */
   verification: ClaimVerification | null
+  /**
+   * Set to `agent_suggested_owner_confirmed` when an agent proposed the value and the owner confirmed it (BOS-06), so
+   * a reader never takes it for owner-authored wording. Absent for owner-originated items and in public editions.
+   */
+  provenance?: 'agent_suggested_owner_confirmed' | null
 }
 
 export interface LengthReport {
@@ -150,8 +156,10 @@ function missing(question: FieldQuestion, note: string, sources: string[] = []):
   }
 }
 
-function fromFact(question: FieldQuestion, fact: CanonicalFact, withheld: boolean): DocumentItem {
+function fromFact(question: FieldQuestion, fact: CanonicalFact, withheld: boolean, answer?: AnswerRecord): DocumentItem {
+  const confirmedSuggestion = answer && fact.source.answer_ids.includes(answer.answer_id) && answerProvenance(answer) === 'agent_suggested_owner_confirmed'
   return {
+    ...(confirmedSuggestion ? { provenance: 'agent_suggested_owner_confirmed' as const } : {}),
     id: question.id,
     label: question.label,
     tag: 'approved',
@@ -168,8 +176,11 @@ function fromFact(question: FieldQuestion, fact: CanonicalFact, withheld: boolea
 
 function fromDraft(question: FieldQuestion, answer: AnswerRecord): DocumentItem {
   const restricted = question.sensitivity === 'restricted'
-  const suggestion = answer.source_type === 'agent_suggestion'
-  const note = suggestion
+  const confirmed = answerProvenance(answer) === 'agent_suggested_owner_confirmed'
+  const suggestion = answer.source_type === 'agent_suggestion' && !confirmed
+  const note = confirmed
+    ? 'Agent-suggested, owner-confirmed. Not approved.'
+    : suggestion
     ? 'Agent suggestion. Not approved and not an owner decision.'
     : answer.proposal_state === 'tentative'
       ? 'Tentative. The owner described this as possible, not decided.'
@@ -180,6 +191,7 @@ function fromDraft(question: FieldQuestion, answer: AnswerRecord): DocumentItem 
     id: question.id,
     label: question.label,
     tag: suggestion ? 'recommendation' : 'assumption',
+    ...(confirmed ? { provenance: 'agent_suggested_owner_confirmed' as const } : {}),
     kind: kindOf(question),
     value: restricted ? null : displayValue(answer.value),
     structured: restricted ? null : structured(question, answer.value),
@@ -238,7 +250,7 @@ function baseItemFor(question: FieldQuestion, context: ItemContext): DocumentIte
     return missing(question, 'Not published.')
   }
   const restricted = question.sensitivity === 'restricted' || approved?.classification === 'restricted'
-  if (approved) return fromFact(question, approved, restricted)
+  if (approved) return fromFact(question, approved, restricted, context.answers.get(question.id))
   const answer = context.answers.get(question.id)
   if (answer && (answer.status === 'draft' || answer.status === 'in_review') && (answer.value !== null || answer.private_ref)) {
     return fromDraft(question, answer)

@@ -31,6 +31,7 @@ import { templateConfig } from './config.js'
 import { ensureStarterProfiles } from './personal.js'
 import type { ImpactReport, InitInput, StepResult } from './engine-types.js'
 import { dispositionFor } from './dispositions.js'
+import { answerProvenance, provenanceLabel, type AnswerOrigin } from './provenance.js'
 import { CONFIG_BINDINGS, isPersonalBrand, priorityRank } from './config-bindings.js'
 import { assertSlug, emptySession, personalInit, recordTemplate, syncManifest } from './init.js'
 import { identityIntakeRecord } from './identity-intake.js'
@@ -311,6 +312,7 @@ export class InterviewEngine {
       confidence?: number | null
       sourceReference?: string | null
       raw: string
+      suggestedBy?: 'agent' | null
     },
   ): StepResult {
     const normalized = normalizeAnswer(question, rawValue, this.context().answers.get(question.id)?.value ?? null)
@@ -329,6 +331,7 @@ export class InterviewEngine {
       confidence?: number | null
       sourceReference?: string | null
       raw?: string
+      suggestedBy?: 'agent' | null
     },
   ): StepResult {
     const latest = this.context().answers.get(question.id)
@@ -356,7 +359,7 @@ export class InterviewEngine {
     return { kind: 'recorded', questionId: question.id, status: answer.status, message }
   }
 
-  changeAnswer(questionId: string, rawValue: string, _confirm = false, _actor = 'owner'): StepResult {
+  changeAnswer(questionId: string, rawValue: string, _confirm = false, _actor = 'owner', options: { reason?: string | null } = {}): StepResult {
     const write = authorize(operatorContext(this.config().brand.slug), { brand_id: this.config().brand.slug, classification: 'internal', status: 'draft', publication: 'unpublished' }, 'write')
     if (!write.allow) return { kind: 'error', message: write.reason }
     const question = this.question(questionId)
@@ -378,10 +381,12 @@ export class InterviewEngine {
         if (!checked.ok) return { kind: 'error', questionId, message: checked.message }
         proposed = String(checked.value)
       }
-      const proposal = this.requestChange(questionId, proposed)
+      const proposal = this.requestChange(questionId, proposed, { reason: options.reason })
       return {
         kind: 'impact',
         questionId,
+        changeId: proposal.id,
+        expectedVersion: proposal.expected_version,
         impact: { ...impact, approvalsPreserved: true, requiresConfirmation: true },
         message: `Approved fact was not changed. Proposal ${proposal.id} is pending. A human must approve that proposal. confirm=true is not authority.`,
       }
@@ -420,7 +425,7 @@ export class InterviewEngine {
    * The same commands as the interactive interview apply (unknown, skip, n/a, estimate:). Questions
    * that the current configuration or answers make not applicable are refused rather than recorded.
    */
-  answerQuestion(questionId: string, rawInput: string): StepResult {
+  answerQuestion(questionId: string, rawInput: string, options: { origin?: AnswerOrigin } = {}): StepResult {
     const write = authorize(operatorContext(this.config().brand.slug), { brand_id: this.config().brand.slug, classification: 'internal', status: 'draft', publication: 'unpublished' }, 'write')
     if (!write.allow) return { kind: 'error', message: write.reason }
     const question = this.question(questionId)
@@ -432,18 +437,21 @@ export class InterviewEngine {
     if (disposition) {
       return this.record(question, null, { sourceType: 'owner', authority: 'unverified', status: disposition.status, uncertainty: disposition.uncertainty, raw })
     }
+    // BOS-06: a value the agent proposed and the owner confirmed keeps its agent origin. Dispositions stay the owner's.
+    const fromAgent = options.origin === 'agent_suggestion'
+    const origin = fromAgent ? { sourceType: 'agent_suggestion' as const, suggestedBy: 'agent' as const } : { sourceType: 'owner' as const }
     const estimate = raw.match(/^estimate\s*:\s*([\s\S]+)$/i)
     if (estimate) {
       return this.recordNormalized(question, estimate[1] ?? '', {
-        sourceType: 'owner',
+        ...origin,
         authority: 'estimated',
         status: 'draft',
-        uncertainty: 'Owner described this as an estimate.',
+        uncertainty: fromAgent ? 'Agent-suggested estimate, confirmed by the owner as an estimate.' : 'Owner described this as an estimate.',
         confidence: 0.4,
         raw,
       })
     }
-    return this.recordNormalized(question, raw, { sourceType: 'owner', authority: 'confirmed_by_owner', status: 'draft', uncertainty: null, raw })
+    return this.recordNormalized(question, raw, { ...origin, authority: 'confirmed_by_owner', status: 'draft', uncertainty: null, raw })
   }
 
   /** Null when the question applies; otherwise the reason it does not under the current config and answers. */
@@ -548,8 +556,8 @@ export class InterviewEngine {
     })
   }
 
-  requestChange(questionId: string, rawValue: string): { id: string; expected_version: number } {
-    return this.approvals().requestChange(questionId, rawValue)
+  requestChange(questionId: string, rawValue: string, options: { reason?: string | null } = {}): { id: string; expected_version: number } {
+    return this.approvals().requestChange(questionId, rawValue, options)
   }
 
   approveChange(changeId: string, proof: string | undefined, expectedVersion: number, actor = 'owner'): StepResult {
@@ -640,6 +648,7 @@ export class InterviewEngine {
       disposition_reason: meta.uncertainty,
       private_ref: privateRef,
       ...(meta.proposalState ? { proposal_state: meta.proposalState } : {}),
+      ...(meta.suggestedBy ? { suggested_by: meta.suggestedBy } : {}),
     }
     ledger.records.push(answer)
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
@@ -900,7 +909,7 @@ export class InterviewEngine {
         lines.push(`### ${question.label}`)
         lines.push(`- Status: ${answer.status}`)
         lines.push(`- Authority: ${answer.authority}`)
-        lines.push(`- Source: ${answer.source_type ?? 'none'}`)
+        lines.push(`- Source: ${answer.source_type ?? 'none'} (${provenanceLabel(answerProvenance(answer))})`)
         lines.push(`- Uncertainty: ${answer.uncertainty ?? 'none'}`)
         lines.push(`- Value: ${hidden ? '[restricted withheld]' : answer.value === null ? 'none' : String(answer.value)}`)
         lines.push('')

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — Approval CLI: one command for everything pending, Keychain proof, change flow, agent provenance (BOS-01, BOS-04, BOS-06, BOS-07)
+
+### Added
+
+- `npm run brand:approve -- --all-pending [--exclude id,…] [--dry-run] [--json]` (BOS-01): lists pending fact drafts, change proposals, evidence awaiting verification and draft assets, grouped by kind, and approves them with one proof. Each item is reported `approved`, `skipped`, `refused` or `stale`. Facts and changes go through `ApprovalService.approveBatch`, evidence through `reviewEvidence`, assets through `approveAssets`; no rule is duplicated. Tentative drafts and template example or placeholder assets are skipped (approve those by id). It refuses to run while `BRAND_OS_AGENT_TOKEN` is set, `--proof` on argv is refused, and a wrong proof writes nothing. With nothing approvable it reads no proof.
+- Opt-in macOS Keychain storage of the approval proof: `npm run brand:doctor -- --store-proof-keychain` stores `brand/.private/approval-secret` (service `brand-os-approval`, account = brand slug; the value goes to `security -i` on stdin, never argv, and is never printed); `--forget-proof-keychain` removes it. Both are refused under an agent token.
+- One proof resolver for every command that takes the proof (`brand:approve`, `publish`, `evidence verify|reject`, `retract`, `assets approve`, `tokens:approve|publish`, `agent-token`, `brand:strategy`, `brand:content`, `brand:creative`, restricted `brand:knowledge`): `BRAND_OS_APPROVAL_PROOF` → piped stdin → macOS Keychain (only when the entry exists; never while `BRAND_OS_AGENT_TOKEN` is set; `BRAND_OS_KEYCHAIN=off` disables it) → hidden prompt. `brand:knowledge` skips the stdin step because stdin carries note text there. Core: `packages/brand-core/src/approval-proof.ts` (injectable Keychain runner); CLI: `scripts/proof.ts`.
+- `npm run brand:interview -- --question ID --change "…" [--reason "…"] [--json]` (BOS-04): the non-interactive `change ID: value`. It files a `chg-…` proposal against the current approved version through the same `changeAnswer` path and prints the diff (approved vs proposed) and the impacted documents and questions. The reason is stored on the proposal and shown in `brand:review`. Stale handling is unchanged; restricted questions are refused on argv.
+- `brand:interview --answer … --origin agent_suggestion` (alias `--suggested-by agent`) (BOS-06): records `source_type: agent_suggestion`, `authority: confirmed_by_owner` and `suggested_by: agent`, kept through approval. `brand:review` (text and JSON `draft.provenance`), generated drafts, the document model (`DocumentItem.provenance`, internal editions only) and Studio (badge "Agent-suggested, owner-confirmed", en/fa/tr) show it apart from owner-originated answers. `agent-skills/brand-interviewer/SKILL.md` requires agents to pass the flag when the value came from them.
+- Tests: `approve-all-pending` (mixed batch of fact, change, stale change, evidence and assets; agent token, argv proof and wrong proof refused with nothing written; Keychain fake and resolver order; `--change`; `--origin`; dry-run wording; no `<placeholder>` beside a `<` redirect in docs and help).
+
+### Changed
+
+- `brand:approve --dry-run` (also with `--module` / `--ids`) no longer prints the review queue (BOS-07). It starts with `DRY RUN: N items would be approved. Nothing was changed.`, marks each item `would approve` or `would skip` with the reason, and ends with the same notice. `--json` returns `{ mode: "dry_run", dry_run: true, nothing_changed: true, notice, would_approve, would_skip, items[] }` instead of the queue. The real-approval JSON for `--module` / `--ids` is unchanged.
+- CLI help and README never show a `<placeholder>` in a command that also uses the `<` redirect; README explains that `<` is a shell redirect and shows a complete example.
+
 ## Unreleased — CI: private brands skip the public docs prepare
 
 ### Fixed

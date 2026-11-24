@@ -253,6 +253,8 @@ export const fa: Messages = {
   'doc.verification.owner_stated': 'به گفتهٔ مالک',
   'doc.verification.unverified': 'تأییدنشده',
   'doc.verification.not_required': 'نیازی به شاهد نیست',
+  'doc.provenance.agentConfirmed': 'پیشنهاد عامل، تأیید مالک',
+  'doc.provenanceHint.agentConfirmed': 'این متن را یک عامل هوش مصنوعی پیشنهاد کرده و مالک آن را تأیید کرده است. نوشتهٔ خود مالک نیست.',
   'doc.length': 'راهنمای طول {min} تا {max} واژه؛ متن تأییدشده {words} واژه دارد.',
   'doc.empty': 'این سند برای این برند بخشی ندارد.',
   'doc.missingValue': 'پاسخی ثبت نشده است.',

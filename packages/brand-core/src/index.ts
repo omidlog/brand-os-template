@@ -105,6 +105,9 @@ export type {
   BatchOutcome,
   BatchResult,
   ChangeProposal,
+  PendingKind,
+  PlanDecision,
+  PlanEntry,
   PublishOutcome,
   PublishResult,
   ReviewItem,
@@ -163,6 +166,21 @@ export type { EntityMigrationReport } from './entity-migration.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
 export { approveAssets } from './asset-approval.js'
 export type { AssetApprovalOutcome, AssetApprovalResult } from './asset-approval.js'
+export { approveAllPending, dryRunNotice, dryRunReport, formatAllPending, formatDryRun, PENDING_KINDS, planAllPending } from './approve-all.js'
+export type { AllPendingItem, AllPendingOutcome, AllPendingPlan, AllPendingResult, DryRunItem, DryRunReport } from './approve-all.js'
+export {
+  forgetKeychainProof,
+  KEYCHAIN_ENV,
+  KEYCHAIN_SERVICE,
+  keychainAvailable,
+  readKeychainProof,
+  resolveApprovalProof,
+  storeKeychainProof,
+  systemKeychainRunner,
+} from './approval-proof.js'
+export type { KeychainOptions, KeychainRun, KeychainRunner, KeychainStoreOutcome, KeychainStoreResult, ProofSource, ProofSources } from './approval-proof.js'
+export { ANSWER_ORIGINS, answerProvenance, provenanceLabel } from './provenance.js'
+export type { AnswerOrigin, AnswerProvenance } from './provenance.js'
 export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCES } from './token-generate.js'
 export type { GeneratedTokenResult, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult } from './token-generate.js'
 export {
