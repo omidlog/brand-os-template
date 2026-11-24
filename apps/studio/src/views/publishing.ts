@@ -1,4 +1,4 @@
-import { coverageCells, type CoverageState, type ExportProfile, type PublishingCell, type PublishingDocumentType, type PublishingReadiness } from '@brand-os/brand-core/visual'
+import { coverageCells, publishingExportCommand, type CoverageState, type ExportProfile, type PublishingCell, type PublishingDocumentType, type PublishingReadiness } from '@brand-os/brand-core/visual'
 import type { MessageKey } from '../i18n/index.js'
 import type { StudioProjection } from '../projection.js'
 import { badge, emptyState, type Tone } from './components.js'
@@ -11,8 +11,9 @@ import { brandHeader, brandShell } from './pages.js'
  * Visual V4.1: the Publishing gallery and the Command Center strip (R4).
  *
  * Both are read-only views over the sync-time projection. The gallery shows document types × export profiles with the
- * readiness measured on each profile's redacted output (`buildPublishingGallery` in core); it carries counts only and
- * links to the print views that already exist. Nothing here exports, renders a file, or writes.
+ * readiness measured on each profile's redacted output (`buildPublishingGallery` in core); it carries counts only,
+ * links to the print views that already exist and shows, as text, the local export command where one exists (the full
+ * Brand Book). Nothing here exports, renders a file, runs a command, or writes.
  */
 
 const READINESS: Record<PublishingReadiness, { tone: Tone; icon: IconName }> = {
@@ -67,9 +68,13 @@ function galleryCell(ctx: ViewContext, view: BrandView, cell: PublishingCell): S
     cell.redacted > 0 ? html` · <span class="pub-redacted">${icon('lock')} ${i.t('publishing.redacted', { count: i.number(cell.redacted) })}</span>` : ''
   }</p>`
   const href = cell.export === 'print' && cell.readiness !== 'not_applicable' ? printHref(view.record.slug, cell.document_type, cell.profile) : null
+  // A local export command (the full Brand Book, V4.2) is shown as text to copy; Studio never runs it.
+  const command = cell.export === 'command' && cell.readiness !== 'not_applicable' ? publishingExportCommand(cell.document_type, cell.profile) : null
   const action = href
     ? html`<a class="link-sm" href="${href}">${i.t('publishing.print')}</a>`
-    : html`<p class="muted small">${i.t(cell.export === 'planned' ? 'publishing.planned' : 'publishing.noExport')}</p>`
+    : command
+      ? html`<p class="muted small">${i.t('publishing.command')}</p><code class="mono pub-command" dir="ltr">${command}</code>`
+      : html`<p class="muted small">${i.t(cell.export === 'planned' ? 'publishing.planned' : 'publishing.noExport')}</p>`
   return html`<td class="pub-cell" data-readiness="${cell.readiness}" data-export="${cell.export}">${state}${counts}${action}</td>`
 }
 

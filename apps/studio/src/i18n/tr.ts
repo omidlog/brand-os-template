@@ -738,6 +738,7 @@ export const tr: Messages = {
   "publishing.gaps": "{count} açık",
   "publishing.redacted": "{count} bu kitleden gizlendi",
   "publishing.print": "Baskı görünümü",
+  "publishing.command": "Bu komutla dışa aktarın (yerelde çalıştırın)",
   "publishing.planned": "Baskı düzeni henüz yok",
   "publishing.noExport": "Dışa aktarım yok",
   "publishing.note": "Yalnızca sayılar. Studio hiçbir dosya oluşturmaz veya göndermez. Finans rakamları Studio'ya hiç ulaşmaz.",

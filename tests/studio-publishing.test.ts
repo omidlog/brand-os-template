@@ -82,7 +82,14 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     assert.ok(row('business_model_canvas').includes(`href="/brands/${SLUG}/strategy/business-model/print?edition=public"`))
     assert.ok(row('visual_identity').includes(`href="/brands/${SLUG}/brand/book/visual-identity/print?edition=public"`))
     assert.match(row('business_plan'), /hidden for this audience/, 'the investor plan counts the finance values it hides')
-    assert.match(row('brand_book'), /Print layout not built yet/)
+    // The full Brand Book shows its real local export command (V4.2) as text, in public and internal; investor has none.
+    const bookCells = row('brand_book').split('<td ').slice(1)
+    for (const index of [0, 2]) assert.equal(bookCells[index]!.includes('Print layout not built yet'), false, 'the Brand Book is no longer "not built"')
+    assert.match(bookCells[0]!, /<code class="mono pub-command" dir="ltr">npm run brand:export-visual -- --doc brand-book --edition public<\/code>/)
+    assert.match(bookCells[0]!, /Export with this command \(run locally\)/)
+    assert.match(bookCells[2]!, /<code class="mono pub-command" dir="ltr">npm run brand:export-visual -- --doc brand-book --edition internal<\/code>/)
+    assert.equal(bookCells[1]!.includes('brand:export-visual'), false, 'no investor edition of the Brand Book')
+    assert.equal(row('business_plan').includes('brand:export-visual'), false, 'the Business Report is not offered here')
     // No investor edition is printed yet: an investor cell never links to a print view (the internal one shows drafts).
     for (const type of ['brand_book', 'visual_identity', 'business_model_canvas', 'mascot_atlas', 'business_plan', 'marketing_plan']) {
       const investor = row(type).split('<td ')[2]!
@@ -116,7 +123,9 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     assert.match(fa.text, /بوم مدل کسب‌وکار/)
     assert.match(fa.text, /سرمایه‌گذار/)
     assert.match(fa.text, /[۰-۹]+ نمایش/)
-    for (const english of ['Print view', 'Not for this audience', 'Nothing to show yet', 'Investor', 'Document types × audiences']) assert.equal(main(fa.text).includes(english), false, `fa: no English left: ${english}`)
+    assert.match(fa.text, /خروجی با این دستور/)
+    assert.match(fa.text, /<code class="mono pub-command" dir="ltr">npm run brand:export-visual -- --doc brand-book --edition public<\/code>/, 'the command stays LTR inside RTL')
+    for (const english of ['Print view', 'Export with this command', 'Not for this audience', 'Nothing to show yet', 'Investor', 'Document types × audiences']) assert.equal(main(fa.text).includes(english), false, `fa: no English left: ${english}`)
     const faHome = await owner.page(`/brands/${SLUG}`)
     assert.match(faHome.text, /مرکز فرمان/)
     assert.match(faHome.text, /از [۰-۹]+ کامل/)
@@ -124,6 +133,7 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     const tr = await owner.page(`/brands/${SLUG}/governance/documents`)
     assert.match(tr.text, /Yayın galerisi/)
     assert.match(tr.text, /Yatırımcı/)
+    assert.match(tr.text, /Bu komutla dışa aktarın/)
   } finally {
     await s.close()
   }
