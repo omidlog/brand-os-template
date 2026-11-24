@@ -9,6 +9,7 @@ import { illustrativeBusinessModelCanvas } from './fixtures.js'
 import registryJson from './frameworks.json' with { type: 'json' }
 import { BOOK_TEXT } from './i18n-book.js'
 import { COMPETITOR_TEXT } from './i18n-competitors.js'
+import { ENTITY_TEXT } from './i18n-entities.js'
 import { FULL_BOOK_TEXT } from './i18n-full-book.js'
 import { IDENTITY_TEXT } from './i18n-identity.js'
 import { MASCOT_TEXT } from './i18n-mascot.js'
@@ -93,6 +94,7 @@ export function coreCatalogs(): CatalogSet {
   return {
     visual,
     identity: IDENTITY_TEXT,
+    entities: ENTITY_TEXT,
     book: BOOK_TEXT,
     full_book: FULL_BOOK_TEXT,
     mascot: MASCOT_TEXT,
@@ -107,12 +109,13 @@ export const VISUAL_MODULES: readonly VisualModuleSpec[] = [
   {
     id: 'business_model_canvas',
     title: 'Business Model Canvas',
-    slice: 'V0',
+    slice: 'V0 + V3.1',
     document_type: 'business_model_canvas',
     builder: { file: 'packages/brand-core/src/visual/bmc.ts', export: 'buildBusinessModelCanvas' },
     core_tests: ['tests/visual-bmc.test.ts'],
     studio_tests: ['tests/studio-visual.test.ts', 'tests/studio-visual-browser.test.ts'],
-    catalogs: ['visual'],
+    // V3.1 (structured BMC list zones, repeating_entity) landed inside this module: its catalog is checked here.
+    catalogs: ['visual', 'entities'],
     empty: () => illustrativeBusinessModelCanvas('en', 'internal'),
     public_fixture: () => VISUAL_LANGS.map((lang) => illustrativeBusinessModelCanvas(lang, 'public')),
     redaction_test: { file: 'tests/visual-publishing.test.ts', pattern: /buildBusinessModelCanvas\(engine, 'public'\)/ },
@@ -235,9 +238,9 @@ export const VISUAL_MODULES: readonly VisualModuleSpec[] = [
   },
 ]
 
-/** V3.x modules in flight in other slices. The probe scans `packages/brand-core/src/visual/*.ts` (not this file). */
+/**
+ * V3.x modules in flight in other slices (V3.1, structured BMC, landed inside `business_model_canvas`). The probe scans `packages/brand-core/src/visual/*.ts` (not this file). */
 export const PENDING_VISUAL_MODULES: readonly PendingModuleSpec[] = [
-  { id: 'structured_bmc', title: 'Repeating entities and structured BMC', slice: 'V3.1', probe: /repeating[_-]?entit|structured[_-]?bmc/i },
   { id: 'swot_tows', title: 'SWOT / TOWS', slice: 'V3.2', probe: /\bswot|\btows\b/i },
   { id: 'value_fit', title: 'Value proposition fit', slice: 'V3.2', probe: /value[_-]?fit|value_proposition_canvas/i },
   { id: 'customer_journey', title: 'Customer journey swimlane', slice: 'V3.3', probe: /customer[_-]?journey|journey[_-]?swimlane/i },
