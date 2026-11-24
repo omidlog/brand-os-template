@@ -18,6 +18,7 @@ import {
   SOSTAC_SPECS,
   SOSTAC_STAGES,
   VISUAL_LANGS,
+  visualProfilePermits,
   type JourneySwimlaneBlock,
   type OkrTreeBlock,
   type SostacBlock,
@@ -286,4 +287,15 @@ test('golden fixtures: illustrative, every state, public edition drops drafts, e
     assert.equal(journey(empty[0]!).stages.length, 0)
     assert.equal(okr(empty[1]!).objectives.length, 0)
   }
+})
+
+test('publishing profiles: the journey, SOSTAC and OKR views follow their plan (never public; investor and internal)', () => {
+  for (const kind of ['customer_journey', 'sostac_overview', 'okr_tree'] as const) {
+    assert.equal(visualProfilePermits('public', kind), false, `${kind} public`)
+    assert.equal(visualProfilePermits('investor', kind), true, `${kind} investor`)
+    assert.equal(visualProfilePermits('internal', kind), true, `${kind} internal`)
+  }
+  // Not gallery types yet (V3.2): no profile receives them through the publishing path.
+  for (const kind of ['swot_tows', 'value_proposition'] as const) assert.equal(visualProfilePermits('internal', kind), false, kind)
+  assert.equal(visualProfilePermits('public', 'business_model_canvas'), true)
 })

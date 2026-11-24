@@ -214,6 +214,15 @@ const VISUAL_TYPE: Partial<Record<VisualDocument['document_kind'], PublishingDoc
   okr_tree: 'business_plan',
 }
 
+/**
+ * Whether a profile may receive a visual document kind at all (the gate `redactVisualDocument` applies first). Studio
+ * asks this before offering or serving an edition, so a view of a plan never reaches a profile its plan may not.
+ */
+export function visualProfilePermits(profile: ExportProfile, kind: VisualDocument['document_kind']): boolean {
+  const type = VISUAL_TYPE[kind]
+  return type !== undefined && profilePermits(profile, type)
+}
+
 export interface RedactedVisual {
   profile: ExportProfile
   document: VisualDocument

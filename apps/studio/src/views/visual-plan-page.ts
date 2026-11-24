@@ -1,5 +1,5 @@
 import type { VisualDocument, VisualLang } from '@brand-os/brand-core/visual'
-import { fillVisual, planText, visualCatalog } from '@brand-os/brand-core/visual'
+import { fillVisual, planText, visualCatalog, visualProfilePermits } from '@brand-os/brand-core/visual'
 import { studioAssets } from '../static-assets.js'
 import { banner, emptyState } from './components.js'
 import { html, type SafeHtml } from './html.js'
@@ -13,8 +13,10 @@ import { frameworkNote } from './visual-identity.js'
 
 /**
  * Visual V3.3 pages: Customer Journey Map (`/market/customer-journey`), SOSTAC® overview (`/strategy/sostac`) and OKR
- * tree (`/strategy/okrs`), each with an A3 print view (`/print[?edition=public]`). GET only: no form and no link that
- * changes anything. The page shows the internal edition; the print view can show the public edition.
+ * tree (`/strategy/okrs`), each with an A3 print view (`/print`). GET only: no form and no link that changes anything.
+ * The page and the print view show the internal edition. These are views of the marketing plan (journey, SOSTAC) and
+ * the business plan (OKR), which the V4.1 public profile never receives (`PROFILE_DOCUMENTS`), so no public edition is
+ * offered or served: `?edition=public` answers 404, like the public Business Report.
  */
 
 export type PlanKind = 'journey' | 'sostac' | 'okr'
@@ -30,7 +32,8 @@ function extraHead(): SafeHtml {
 function docOf(view: BrandView, kind: PlanKind, edition: 'internal' | 'public'): VisualDocument | null {
   const plans = view.cached.projection?.visual?.plans
   if (!plans || !plans.applies) return null
-  return plans[edition][kind]
+  const doc = plans[edition][kind]
+  return edition === 'public' && !visualProfilePermits('public', doc.document_kind) ? null : doc
 }
 
 export function planPage(ctx: ViewContext, view: BrandView, kind: PlanKind, flash: string | null): SafeHtml {
@@ -57,7 +60,7 @@ export function planPage(ctx: ViewContext, view: BrandView, kind: PlanKind, flas
         <p class="vz-edition-line"><span class="vz-edition vz-edition--internal">${cat.text.editionInternal}</span> <span class="vz-muted">${asOf ? fillVisual(cat.text.asOf, { date: asOf }) : cat.text.asOfNone}</span></p>
         <div class="vz-actions">
           <a class="btn btn-secondary btn-sm" href="${base}/print">${icon('book')}<span>${t.common.openPrint}</span></a>
-          <a class="btn btn-ghost btn-sm" href="${base}/print?edition=public">${icon('globe')}<span>${t.common.openPrintPublic}</span></a>
+          ${visualProfilePermits('public', doc.document_kind) ? html`<a class="btn btn-ghost btn-sm" href="${base}/print?edition=public">${icon('globe')}<span>${t.common.openPrintPublic}</span></a>` : ''}
         </div>
       </div>
       ${doc.blocks.map((block) => renderBlock(block, blockCtx))}
