@@ -696,6 +696,14 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 
 - Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
 
+## Unreleased — Audit: fixes pack area (GAP-08 coach rules)
+
+### Fixed
+
+- `premium-vs-lowest-price`: a negated cheap price ("we are never cheap", «ارزان نیستیم», "ucuz değil") no longer raises a trade-off question. The cheap-price markers use the same negation guard as `sensitive-claim-wording`; Persian `نیست` and Turkish `değil` with personal endings count after the word.
+- Coach registry rules no longer read a question the owner's config turned off (module disabled, skip condition). `consistency_review` said `needs_verification` for such a field while `quality_review` said `not_applicable`.
+- `COACH_RULE_VERSION` is `coach-rules/4` (verdicts changed for the same input). Tests: `coach-rules`.
+
 ## Unreleased — Audit: fixes pack area (GAP-09 evidence links)
 
 ### Fixed
