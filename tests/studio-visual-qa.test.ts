@@ -3,9 +3,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { after, before, test } from 'node:test'
-import { illustrativeVisualIdentity, visualCatalog, type VisualLang } from '@brand-os/brand-core/visual'
+import { FIXTURE_DRAFT_SENTINEL, FIXTURE_RESTRICTED_SENTINEL, fullBookText, illustrativeBook, illustrativeVisualIdentity, visualCatalog, type VisualLang } from '@brand-os/brand-core/visual'
 import { html } from '../apps/studio/src/views/html.js'
 import { layoutIdentityBook } from '../apps/studio/src/views/visual-print-book.js'
+import { layoutFullBook } from '../apps/studio/src/views/visual-print-full.js'
 import { exportVisual } from '../scripts/export-visual.js'
 import { Browser, findChrome, type Page } from './helpers/browser.js'
 import { removeTempDir, teardown, tempDir } from './helpers/cleanup.js'
@@ -74,7 +75,7 @@ const files = new Map<string, string>()
 before(async () => {
   if (!chrome) return
   work = tempDir('visual-qa-')
-  for (const doc of ['identity', 'bmc'] as const) {
+  for (const doc of ['identity', 'bmc', 'brand-book', 'business-report'] as const) {
     const results = exportVisual({ root: ROOT, doc, langs: [...LANGS], edition: 'internal', profile: null, out: path.join(work, 'html'), fixture: true, pdf: false, chrome: null, log: () => {} })
     for (const result of results) files.set(`${doc}.${result.lang}`, result.html)
   }
@@ -260,8 +261,10 @@ test('canvas print footer fits the A3 page on the fixture', { skip, todo: 'fixtu
 /** Persian text in a PDF comes out in visual order and in presentation forms: compare normalized, either direction. */
 function pdfHas(text: string, expected: string): boolean {
   // Lower case: running heads print titles in capitals (text-transform), the contents in title case.
-  const flat = squash(text.normalize('NFKC').toLowerCase())
-  const want = squash(expected.normalize('NFKC').toLowerCase())
+  // "هٔ" is often one glyph (ۀ, U+06C0) in the PDF, which NFKC does not map back to ه + hamza: compare without it.
+  const fold = (value: string) => value.normalize('NFKC').toLowerCase().replaceAll('\u06C0', '\u0647').replaceAll('\u0654', '')
+  const flat = squash(fold(text))
+  const want = squash(fold(expected))
   if (flat.includes(want)) return true
   const reversed = [...want].reverse().join('')
   return flat.includes(reversed) || flat.replaceAll('لا', 'ال').includes(reversed)
@@ -316,5 +319,94 @@ test('digital PDF: headings, contents entries and folios in the text, Persian di
     if (rtl) for (const [i, p] of pdf.pages.entries()) assert.ok(p.fonts.some((name) => name.startsWith('Vazirmatn')), `fa: page ${i + 1} is set in Vazirmatn`)
     const fallback = [...names].filter((name) => !BUNDLED.includes(name))
     if (fallback.length) t.diagnostic(`${lang}: system fonts also embedded (not bundled): ${fallback.join(', ')}`)
+  }
+})
+
+// ---------------------------------------------------------------------------------------------------------------
+// Visual V4.2: the full Brand Book and the Business Report (same engine, same harness, same thresholds).
+
+test('reference screenshots: full Brand Book (cover, contents, a chapter) and Business Report (contents, a chapter), en and fa', { skip }, async () => {
+  const failures: Array<string | null> = []
+  for (const lang of LANGS) {
+    await open(`brand-book.${lang}`, 794)
+    failures.push(await compare(`brand-book-a4.cover.${lang}`, '#bk-p1'))
+    failures.push(await compare(`brand-book-a4.contents.${lang}`, '#bk-p3'))
+    failures.push(await compare(`brand-book-a4.chapter-strategy.${lang}`, '#bk-p5'))
+    await open(`business-report.${lang}`, 794)
+    failures.push(await compare(`business-report-a4.contents.${lang}`, '#bk-p3'))
+    failures.push(await compare(`business-report-a4.chapter-summary.${lang}`, '#bk-p4'))
+  }
+  assertAllMatch(failures)
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
+
+test('RTL and fit: full books have no overflowing page or heading, mirrored contents in Persian digits', { skip }, async () => {
+  for (const doc of ['brand-book', 'business-report'] as const) {
+    for (const lang of LANGS) {
+      const rtl = lang === 'fa'
+      await open(`${doc}.${lang}`, 794)
+      assert.equal(await page.eval<string>('document.documentElement.dir'), rtl ? 'rtl' : 'ltr', `${doc} ${lang}: dir`)
+      assert.deepEqual(await page.eval<string[]>(HEADING_ISSUES), [], `${doc} ${lang}: headings`)
+      // Built-in estimates (no measured pass here): still no page may overflow its text block.
+      const overflow = await page.eval<number[]>(`[...document.querySelectorAll('.bk-sheet')].filter((s) => { const b = s.querySelector('.bk-body'); return b && b.scrollHeight > b.clientHeight + 1 }).map((s) => Number(s.dataset.folio))`)
+      assert.deepEqual(overflow, [], `${doc} ${lang}: pages overflowing with built-in estimates`)
+      const toc = await page.eval<Array<{ name: [number, number]; page: [number, number]; text: string }>>(`[...document.querySelectorAll('.bk-toc-item')].map((li) => {
+        const x = (sel) => { const r = li.querySelector(sel).getBoundingClientRect(); return [r.left, r.right] }
+        return { name: x('.bk-toc-name'), page: x('.bk-toc-page'), text: li.querySelector('.bk-toc-page').textContent }
+      })`)
+      assert.ok(toc.length >= 10, `${doc} ${lang}: contents entries (${toc.length})`)
+      for (const item of toc) {
+        assert.ok(rtl ? item.page[1] <= item.name[0] : item.name[1] <= item.page[0], `${doc} ${lang}: contents order ${JSON.stringify(item)}`)
+        assert.match(item.text, rtl ? /^[۰-۹]+$/ : /^[0-9]+$/, `${doc} ${lang}: contents digits`)
+      }
+    }
+  }
+  assert.deepEqual(page.problems, [], 'no console error, exception or CSP violation')
+})
+
+test('digital PDF: full books, contents point at the printed pages, folios, fonts embedded, no draft or restricted value', { skip, timeout: 900_000 }, async (t) => {
+  const out = path.join(work, 'pdf-full')
+  for (const doc of ['brand-book', 'business-report'] as const) {
+    const kind = doc === 'brand-book' ? 'brand_book' : 'business_report'
+    const results = exportVisual({ root: ROOT, doc, langs: [...LANGS], edition: 'internal', profile: null, out, fixture: true, pdf: true, chrome, log: () => {} })
+    for (const result of results) {
+      const lang: VisualLang = result.lang
+      const rtl = lang === 'fa'
+      assert.ok(result.pdf && fs.existsSync(result.pdf), `${doc} ${lang}: a PDF`)
+      assert.deepEqual(result.overflow, [], `${doc} ${lang}: no page overflows after measuring`)
+      const pdf = readPdf(fs.readFileSync(result.pdf))
+      assert.equal(pdf.pages.length, result.pages, `${doc} ${lang}: page count`)
+      for (const p of pdf.pages) assert.ok(Math.abs(p.width - 595.28) < 2 && Math.abs(p.height - 841.89) < 2, `${doc} ${lang}: A4 portrait`)
+      const all = pdf.pages.map((p) => p.text).join('\n')
+      assert.equal(all.includes(FIXTURE_DRAFT_SENTINEL) || all.includes('DRAFT-SENTINEL'), false, `${doc} ${lang}: no draft value in the PDF`)
+      assert.equal(all.includes('RESTRICTED-SENTINEL') || all.includes('4,200,000'), false, `${doc} ${lang}: no restricted value in the PDF`)
+      assert.equal(FIXTURE_RESTRICTED_SENTINEL.includes('RESTRICTED-SENTINEL'), true)
+      assert.ok(pdfHasWords(pdf.pages[0]!.text, fullBookText(lang).book[kind].title), `${doc} ${lang}: cover title`)
+      assert.ok(pdfHas(pdf.pages[0]!.text, 'ILLUSTRATIVE / MOCK DATA'), `${doc} ${lang}: the fixture is stamped`)
+      const digits = (n: number) => new Intl.NumberFormat(rtl ? 'fa-IR' : 'en-US', { useGrouping: false }).format(n)
+      const layout = layoutFullBook({ book: illustrativeBook(kind, lang), lang, commit: null, head: html``, toolbar: html``, assetUrl: () => null })
+      const contents = pdf.pages[2]!.text
+      for (const section of layout.sections) {
+        assert.ok(pdfHasWords(contents, section.title), `${doc} ${lang}: contents lists "${section.title}"`)
+        // The appendix's printed heading is the sources table title; its running head is only on recto pages.
+        const heading = section.id === 'appendix' ? visualCatalog(lang).text.sourcesTitle : section.title
+        const target = pdf.pages.findIndex((p, i) => i >= 3 && pdfHasWords(p.text, heading)) + 1
+        assert.ok(target >= 4, `${doc} ${lang}: "${section.title}" is printed`)
+        assert.ok(pdfHas(contents, digits(target)), `${doc} ${lang}: contents shows page ${digits(target)} for "${section.title}"`)
+      }
+      pdf.pages.forEach((p, i) => {
+        if (i < 2) return
+        assert.ok(p.text.split('\n').map((line) => line.trim()).includes(digits(i + 1)), `${doc} ${lang}: page ${i + 1} prints its folio ${digits(i + 1)}`)
+      })
+      assert.deepEqual(pdf.fonts.filter((font) => !font.embedded).map((font) => font.name), [], `${doc} ${lang}: every font is embedded`)
+      const names = new Set(pdf.fonts.map((font) => font.name.split('-')[0]!))
+      // The Brand Book's type specimens use all three faces. The report uses Inter with Rajdhani for display in
+      // en, and Vazirmatn for both in fa (the Persian display face is Vazirmatn, owner decision).
+      const expected = doc === 'brand-book' ? BUNDLED : rtl ? ['Inter', 'Vazirmatn'] : ['Inter', 'Rajdhani']
+      for (const family of expected) assert.ok(names.has(family), `${doc} ${lang}: ${family} embedded (fonts: ${[...names].join(', ')})`)
+      if (rtl) for (const [i, p] of pdf.pages.entries()) assert.ok(p.fonts.some((name) => name.startsWith('Vazirmatn')), `${doc} fa: page ${i + 1} is set in Vazirmatn`)
+      const fallback = [...names].filter((name) => !BUNDLED.includes(name))
+      if (fallback.length) t.diagnostic(`${doc} ${lang}: system fonts also embedded (not bundled): ${fallback.join(', ')}`)
+    }
   }
 })
