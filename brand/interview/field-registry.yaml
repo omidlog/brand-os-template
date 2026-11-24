@@ -1912,6 +1912,21 @@ fields:
       - brand/generated/drafts/business-marketing.md
     validator: one_of
     related_ids: []
+  - id: business.marketing.journey_stages
+    module: business-marketing
+    field_path: business.marketing.journey_stages
+    label: Customer journey stages
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.marketing.journey_stages
+    documents:
+      - brand/generated/drafts/business-marketing.md
+    validator: structured
+    related_ids:
+      - business.marketing.journey
+      - business.model.segments
   - id: business.product.portfolio
     module: business-product
     field_path: business.product.portfolio
@@ -2734,6 +2749,36 @@ fields:
       - brand/generated/drafts/business-goals.md
     validator: non_empty
     related_ids: []
+  - id: business.goals.objectives
+    module: business-goals
+    field_path: business.goals.objectives
+    label: Objectives (OKR)
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.goals.objectives
+    documents:
+      - brand/generated/drafts/business-goals.md
+    validator: structured
+    related_ids:
+      - business.goals.annual
+      - business.goals.quarter
+  - id: business.goals.key_results
+    module: business-goals
+    field_path: business.goals.key_results
+    label: Key results (OKR)
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.goals.key_results
+    documents:
+      - brand/generated/drafts/business-goals.md
+    validator: structured
+    related_ids:
+      - business.goals.sources
+      - business.goals.plan_vs_actual
   - id: business.partners.channels
     module: business-partnerships
     field_path: business.partners.channels

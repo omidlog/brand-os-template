@@ -62,7 +62,8 @@ function latest(engine: InterviewEngine, id: string) {
 // ---- validator and canonical form ------------------------------------------------------------------------
 
 test('the four BMC list questions exist in the bank with canonical ids and a matching entity summary', () => {
-  assert.deepEqual([...ENTITY_QUESTION_IDS].sort(), [ACTIVITIES, RESOURCES, COSTS, SEGMENTS].sort())
+  // Visual V3.3 adds the journey stages and the structured OKR lists (tests/visual-plan.test.ts covers them).
+  assert.deepEqual([...ENTITY_QUESTION_IDS].filter((id) => id.startsWith('business.model.')).sort(), [ACTIVITIES, RESOURCES, COSTS, SEGMENTS].sort())
   const bank = new Map(allQuestions().map((question) => [question.id, question]))
   for (const id of ENTITY_QUESTION_IDS) {
     const question = bank.get(id)
