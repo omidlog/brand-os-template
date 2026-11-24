@@ -1,0 +1,115 @@
+# Engine release and fleet update (engine + data). After `validate` passes on main, build the Brand OS engine, publish
+# it as a GitHub release, and open one pull request in every brand repository (topic brand-os-brand) that brings it
+# to the new engine. Brands with the topic brand-os-auto-merge are merged once their own brand-check passes.
+#
+# The fleet step does nothing until the owner adds the BRAND_OS_FLEET_TOKEN secret (fine-grained token with
+# Contents, Pull requests and Workflows: read and write on the brand repositories) and the repository variable
+# BRAND_OS_FLEET_OWNERS (comma-separated GitHub owners whose brands are updated). Setup: docs/engine-updates.md
+name: engine-release
+
+on:
+  workflow_run:
+    workflows: [validate]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Brand repositories to update (owner/name, comma-separated). Empty: every brand of BRAND_OS_FLEET_OWNERS.'
+        required: false
+        default: ''
+
+concurrency:
+  group: engine-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.repository == 'omidlog/brand-os-template' && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: build engine
+        id: build
+        run: |
+          npm run engine:build
+          echo "version=$(cat dist/engine/VERSION)" >> "$GITHUB_OUTPUT"
+      - name: publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          tar -czf "brand-os-engine-$VERSION.tgz" -C dist engine
+          if gh release view "engine-v$VERSION" >/dev/null 2>&1; then
+            echo "engine-v$VERSION already exists"
+          else
+            gh release create "engine-v$VERSION" "brand-os-engine-$VERSION.tgz" --target "${{ github.event.workflow_run.head_sha || github.sha }}" --title "Brand OS engine $VERSION" --notes "Built from a green validate run on main. Brands are updated by the fleet job of this run."
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine
+          path: dist/engine/
+          retention-days: 7
+
+  fleet:
+    needs: release
+    if: github.repository == 'omidlog/brand-os-template'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: check setup
+        id: setup
+        env:
+          FLEET_TOKEN: ${{ secrets.BRAND_OS_FLEET_TOKEN }}
+          OWNERS: ${{ vars.BRAND_OS_FLEET_OWNERS }}
+        run: |
+          if [ -z "$FLEET_TOKEN" ] || [ -z "$OWNERS" ]; then
+            echo "::notice title=Fleet update is off::Add the secret BRAND_OS_FLEET_TOKEN and the variable BRAND_OS_FLEET_OWNERS to update brand repositories. See docs/engine-updates.md. Nothing was done."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.setup.outputs.enabled == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        if: steps.setup.outputs.enabled == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.setup.outputs.enabled == 'true'
+        run: npm ci
+      - uses: actions/download-artifact@v4
+        if: steps.setup.outputs.enabled == 'true'
+        with:
+          name: engine
+          path: dist/engine
+      - name: update brands
+        if: steps.setup.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BRAND_OS_FLEET_TOKEN }}
+          OWNERS: ${{ vars.BRAND_OS_FLEET_OWNERS }}
+          REPOS: ${{ github.event.inputs.repos }}
+        run: |
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          if [ -n "$REPOS" ]; then
+            npx tsx scripts/engine/fleet-update.ts --engine dist/engine --template-dir . --repos "$REPOS"
+          else
+            npx tsx scripts/engine/fleet-update.ts --engine dist/engine --template-dir . --discover "$OWNERS"
+          fi

@@ -3,6 +3,15 @@
 
 
 
+
+## Unreleased — engine releases and fleet updates (engine + data, part C)
+
+### Added
+
+- `.github/workflows/engine-release.yml`: after `validate` passes on `main`, build the engine, publish the release `engine-v<version>`, and open one pull request in every brand repository with the topic `brand-os-brand` (`scripts/engine/fleet-update.ts`). Brands with the topic `brand-os-auto-merge` are merged after their own `brand-check` passes. Off until the owner adds `BRAND_OS_FLEET_TOKEN` and `BRAND_OS_FLEET_OWNERS`.
+- `brand-os convert`: one-time conversion of an older brand (a full template copy) into a data-only repository. It removes template code and unchanged template copies (recognised against every version the template ever had), keeps real edits as overrides, turns profile copies into additions-only overrides, and never touches brand data.
+- `docs/engine-updates.md`: how engine updates reach brands, and the one-time setup.
+
 ## Unreleased — the bundled engine (engine + data, part B)
 
 ### Added

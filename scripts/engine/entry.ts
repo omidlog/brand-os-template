@@ -37,6 +37,7 @@ const loaders: Record<string, () => Promise<unknown>> = {
   'prepare-docs': () => import('../prepare-docs.js'),
   check: () => import('./check.js'),
   scaffold: () => import('./scaffold-cli.js'),
+  convert: () => import('./convert-cli.js'),
 }
 
 const [command, ...args] = process.argv.slice(2)
