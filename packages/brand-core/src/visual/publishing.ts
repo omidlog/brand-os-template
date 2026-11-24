@@ -413,6 +413,27 @@ function exportOf(type: PublishingDocumentType, profile: ExportProfile): Publish
   return publishingExportCommand(type, profile) ? 'command' : 'planned'
 }
 
+/**
+ * BOS-15: true when every entry of a visual document is a question the brand's interview profile does not ask and no
+ * personal answer stands in for (`na_reason: 'profile'`). The framework is then "not applicable to this profile".
+ */
+export function visualNotApplicable(doc: VisualDocument): boolean {
+  let entries = 0
+  let notApplicable = 0
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) return value.forEach(visit)
+    if (!value || typeof value !== 'object') return
+    if (isEntry(value)) {
+      entries += 1
+      if (value.na_reason === 'profile') notApplicable += 1
+      return
+    }
+    for (const child of Object.values(value)) visit(child)
+  }
+  for (const block of doc.blocks) visit(block)
+  return entries > 0 && entries === notApplicable
+}
+
 function countVisual(doc: VisualDocument): { shown: number; gaps: number } {
   let shown = 0
   let gaps = 0
@@ -511,7 +532,10 @@ export function buildPublishingGallery(engine: InterviewEngine, input: Publishin
       if (kind) {
         const redacted = redactDocumentModel(proseDoc(kind, spec.edition), profile, classify)
         const counts = redacted ? countDocument(redacted.document) : { shown: 0, gaps: 0 }
-        cells.push({ ...base, ...counts, redacted: redacted?.redacted ?? 0, readiness: readiness(counts), paper: 'book_a4_portrait' })
+        // BOS-15: a document whose every section is not applicable to the brand's profile is not applicable, not empty.
+        const sections = redacted?.document.sections ?? []
+        const notApplicable = sections.length > 0 && sections.every((section) => section.status === 'not_applicable')
+        cells.push({ ...base, ...counts, redacted: redacted?.redacted ?? 0, readiness: notApplicable ? 'not_applicable' : readiness(counts), paper: 'book_a4_portrait' })
         continue
       }
       const pair = editions(type)

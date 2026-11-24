@@ -1,3 +1,4 @@
+import { brandApplicability, type FrameworkRef } from '../applicability.js'
 import { allModules } from '../content/index.js'
 import { latestAnswers } from '../completeness.js'
 import type { InterviewEngine } from '../engine.js'
@@ -62,6 +63,11 @@ export interface DocumentItem {
    * a reader never takes it for owner-authored wording. Absent for owner-originated items and in public editions.
    */
   provenance?: 'agent_suggested_owner_confirmed' | null
+  /**
+   * BOS-15: the framework question this personal answer stands in for (a personal brand's own practice). `id` is the
+   * personal question; its approval, verification and visibility rules decided the value. Absent otherwise.
+   */
+  stands_for?: string
 }
 
 export interface LengthReport {
@@ -77,9 +83,15 @@ export interface DocumentSection {
   id: string
   title: string
   purpose: string
-  status: 'complete' | 'partial' | 'missing'
+  /** `not_applicable`: no question of this section applies to the brand's profile (BOS-15). */
+  status: 'complete' | 'partial' | 'missing' | 'not_applicable'
   items: DocumentItem[]
   length?: LengthReport
+  /**
+   * BOS-15: questions of this section the active profile does not ask and no personal answer stands in for. Labels and
+   * ids only; they are "not applicable to this profile", never missing, and never counted as open.
+   */
+  not_applicable?: Array<{ id: string; label: string }>
 }
 
 export interface DocumentModel {
@@ -110,6 +122,11 @@ export interface DocumentSpec {
   sections: SectionSpec[]
   /** Personal documents need the personal module; a facet document also needs its facet. */
   requires?: { personal: true; facet?: PersonalFacet }
+  /**
+   * BOS-15: a framework document (Brand Book, business and marketing plans) reads its questions through
+   * `brandApplicability`: each question shows itself, the personal answer standing in for it, or not applicable.
+   */
+  framework?: boolean
 }
 
 const MISSING_NOTES: Record<string, string> = {
@@ -277,8 +294,9 @@ export function lengthReport(items: DocumentItem[], guideline: [number, number])
   return { guideline, approved_words: count, state, note }
 }
 
-function sectionStatus(items: DocumentItem[]): DocumentSection['status'] {
+function sectionStatus(items: DocumentItem[], notApplicable = 0): DocumentSection['status'] {
   const facts = items.filter((item) => item.tag !== 'recommendation')
+  if (facts.length === 0 && notApplicable > 0) return 'not_applicable'
   const approved = facts.filter((item) => item.tag === 'approved').length
   if (facts.length > 0 && approved === facts.length) return 'complete'
   if (facts.some((item) => item.tag !== 'missing')) return 'partial'
@@ -299,14 +317,27 @@ export function buildDocument(engine: InterviewEngine, spec: DocumentSpec, audie
     now: new Date(),
   }
   const modules = new Map(allModules().map((module) => [module.id, module]))
+  const applicability = spec.framework ? brandApplicability(engine) : null
+  const resolve = (ids: readonly string[]): FrameworkRef[] => {
+    const known = ids.filter((id) => engine.question(id))
+    if (!applicability) return known.map((id) => ({ id, stands_for: null, profile_na: false }))
+    return applicability.refsFor(known)
+  }
   const sections: DocumentSection[] = spec.sections.map((section) => {
     const items: DocumentItem[] = []
     const moduleIds: string[] = []
-    for (const id of section.questions) {
-      const question = engine.question(id)
+    const notApplicable: Array<{ id: string; label: string }> = []
+    for (const ref of resolve(section.questions)) {
+      const question = engine.question(ref.id)
       if (!question) continue
-      items.push(itemFor(question, context))
-      if (!moduleIds.includes(question.module)) moduleIds.push(question.module)
+      if (ref.profile_na) {
+        notApplicable.push({ id: question.id, label: question.label })
+        continue
+      }
+      const item = itemFor(question, context)
+      items.push(ref.stands_for ? { ...item, stands_for: ref.stands_for } : item)
+      // Template guidance follows the framework questions that apply, not the personal answers standing in.
+      if (!ref.stands_for && !moduleIds.includes(question.module)) moduleIds.push(question.module)
     }
     if (audience === 'internal' && section.guidance) {
       for (const moduleId of moduleIds) {
@@ -327,7 +358,8 @@ export function buildDocument(engine: InterviewEngine, spec: DocumentSpec, audie
         })
       }
     }
-    const built: DocumentSection = { id: section.id, title: section.title, purpose: section.purpose, status: sectionStatus(items), items }
+    const built: DocumentSection = { id: section.id, title: section.title, purpose: section.purpose, status: sectionStatus(items, notApplicable.length), items }
+    if (notApplicable.length) built.not_applicable = notApplicable
     if (section.words) built.length = lengthReport(items, section.words)
     return built
   })

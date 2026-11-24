@@ -70,6 +70,13 @@ export interface VisualEntry {
   items?: VisualEntityItem[]
   /** Visual V3.1: a list question whose stored value is not a list. `value` is the text as written; flagged. */
   legacy?: true
+  /**
+   * BOS-15: the framework question this personal answer stands in for (a personal brand's own practice). `id` is then
+   * the personal question, whose approval, verification and visibility rules decided the value. Absent otherwise.
+   */
+  stands_for?: string
+  /** BOS-15: `not_applicable` because the active profile does not ask this question (not an owner answer). */
+  na_reason?: 'profile'
 }
 
 /** One item of a list question, as drawn on the canvas. Choice values are option keys; renderers label them. */

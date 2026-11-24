@@ -618,7 +618,9 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
         <div class="table-wrap"><table class="table">
           <thead><tr><th scope="col">${i.t('overview.group')}</th><th scope="col">${i.t('overview.requiredApproved')}</th><th scope="col">${i.t('overview.requiredUnanswered')}</th><th scope="col">${i.t('overview.pending')}</th></tr></thead>
           <tbody>${o.groups.map(
-            (group) => html`<tr>
+            (group) => group.applicable === 0
+              ? html`<tr data-applicable="false"><th scope="row">${GROUP_KEYS[group.group] ? i.t(GROUP_KEYS[group.group]!) : group.group}</th><td colspan="3" class="muted">${icon('skip')} ${i.t('doc.notApplicableTitle')}</td></tr>`
+              : html`<tr>
               <th scope="row">${GROUP_KEYS[group.group] ? i.t(GROUP_KEYS[group.group]!) : group.group}</th>
               <td><div class="cell-bar">${ratioBar(group.required ? group.required_approved / group.required : 0, `${group.required_approved}/${group.required}`, 'success')}<span>${i.t('common.of', { done: i.number(group.required_approved), total: i.number(group.required) })}</span></div></td>
               <td>${i.number(group.required_unanswered)}</td>
@@ -847,7 +849,12 @@ export function businessPage(ctx: ViewContext, view: BrandView, doc: 'business-p
       ${modules.length
         ? html`<div class="table-wrap"><table class="table">
             <thead><tr><th scope="col">${i.t('common.module')}</th><th scope="col">${i.t('overview.coverage')}</th><th scope="col">${i.t('overview.approval')}</th><th scope="col">${i.t('overview.requiredUnanswered')}</th><th scope="col">${i.t('overview.pending')}</th></tr></thead>
-            <tbody>${modules.map((module) => html`<tr><th scope="row" dir="auto">${module.title}</th><td><div class="cell-bar">${ratioBar(module.coverage, i.percent(module.coverage))}<span>${i.percent(module.coverage)}</span></div></td><td>${i.percent(module.approval)}</td><td>${i.number(module.required_unanswered)}</td><td>${i.number(module.pending_review)}</td></tr>`)}</tbody>
+            <tbody>${modules.map((module) =>
+              // BOS-15: a module with no applicable question is not applicable to this profile, never "100 %".
+              module.applicable === 0
+                ? html`<tr data-applicable="false"><th scope="row" dir="auto">${module.title}</th><td colspan="4" class="muted">${icon('skip')} ${i.t('doc.notApplicableTitle')}</td></tr>`
+                : html`<tr><th scope="row" dir="auto">${module.title}</th><td><div class="cell-bar">${ratioBar(module.coverage, i.percent(module.coverage))}<span>${i.percent(module.coverage)}</span></div></td><td>${i.percent(module.approval)}</td><td>${i.number(module.required_unanswered)}</td><td>${i.number(module.pending_review)}</td></tr>`,
+            )}</tbody>
           </table></div>`
         : html`<p class="muted">${i.t('business.empty')}</p>`}
     </section>

@@ -153,6 +153,8 @@ export function migratePersonal(root: string): string[] {
   }
 
   touched.push(...ensureStarterProfiles(root))
+  const profileFile = addPersonalStrategyQuestions(root)
+  if (profileFile) touched.push(profileFile)
 
   const configFile = path.join(root, 'brand', 'brand.config.yaml')
   if (fs.existsSync(configFile)) {
@@ -174,6 +176,37 @@ export function migratePersonal(root: string): string[] {
     }
   }
   return touched
+}
+
+/** BOS-15: purpose, vision, values and promise apply to a person too; the personal-brand profile asks them. */
+export const PERSONAL_STRATEGY_QUESTIONS = ['brand.strategy.purpose', 'brand.strategy.vision', 'brand.strategy.values', 'brand.strategy.promise'] as const
+
+/**
+ * Adds the BOS-15 strategy questions to an existing `personal-brand.yaml` that lacks them (the file is brand-owned, so
+ * a template update never rewrites it). Additive and idempotent: inserted as text before the shared brand questions
+ * (or at the end of the list), so the owner's edits, comments and order stay. Returns the path when it changed.
+ */
+export function addPersonalStrategyQuestions(root: string): string | null {
+  const file = path.join(root, 'brand', 'interview', 'profiles', 'personal-brand.yaml')
+  if (!fs.existsSync(file)) return null
+  const text = fs.readFileSync(file, 'utf8')
+  const doc = parse(text) as { question_ids?: unknown } | null
+  const ids = Array.isArray(doc?.question_ids) ? doc.question_ids.filter((id): id is string => typeof id === 'string') : null
+  if (!ids) return null
+  const missing = PERSONAL_STRATEGY_QUESTIONS.filter((id) => !ids.includes(id))
+  if (!missing.length) return null
+  const lines = text.split('\n')
+  const item = /^(\s*)-\s+(\S+)\s*$/
+  const listLines = lines.map((line, index) => ({ index, match: line.match(item) })).filter((row) => row.match && ids.includes(row.match[2]!))
+  if (!listLines.length) return null
+  const anchor = listLines.find((row) => row.match![2] === 'brand.personality.traits') ?? null
+  const indent = (anchor ?? listLines[0]!).match![1] ?? '  '
+  const at = anchor ? anchor.index : listLines[listLines.length - 1]!.index + 1
+  const next = [...lines.slice(0, at), ...missing.map((id) => `${indent}- ${id}`), ...lines.slice(at)].join('\n')
+  const parsed = parse(next) as { question_ids?: unknown }
+  if (!Array.isArray(parsed.question_ids) || !missing.every((id) => (parsed.question_ids as unknown[]).includes(id))) return null
+  writeAtomic(file, next)
+  return path.relative(root, file).split(path.sep).join('/')
 }
 
 /** Insert a block at the end of the top-level `modules:` mapping, keeping everything else byte-for-byte. */

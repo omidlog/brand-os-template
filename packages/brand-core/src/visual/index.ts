@@ -47,6 +47,7 @@ export {
   redactBook,
   redactDocumentModel,
   redactVisualDocument,
+  visualNotApplicable,
   visualProfilePermits,
 } from './publishing.js'
 export type {

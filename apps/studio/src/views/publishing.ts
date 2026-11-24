@@ -180,7 +180,7 @@ export function commandStrip(ctx: ViewContext, view: BrandView): SafeHtml {
           return html`<li class="cc-map-row">
             <a class="cc-map-name" href="${row.href}">${i.t(row.key)}</a>
             <span class="cc-map-cells" aria-hidden="true">${row.cells.map((cell) => html`<span class="cc-cell cc-cell--${cell.state}" title="${i.t(`command.state.${cell.state}` as MessageKey)}"></span>`)}</span>
-            <span class="cc-map-text small">${i.t('command.complete', { done: i.number(counts.complete), total: i.number(considered) })}${counts.partial ? html` · ${i.t('command.partial', { count: i.number(counts.partial) })}` : ''}${counts.missing ? html` · ${i.t('command.missing', { count: i.number(counts.missing) })}` : ''}</span>
+            <span class="cc-map-text small">${considered === 0 ? i.t('doc.notApplicableTitle') : i.t('command.complete', { done: i.number(counts.complete), total: i.number(considered) })}${counts.partial ? html` · ${i.t('command.partial', { count: i.number(counts.partial) })}` : ''}${counts.missing ? html` · ${i.t('command.missing', { count: i.number(counts.missing) })}` : ''}</span>
           </li>`
         })}</ul>
         <p class="cc-legend muted small" aria-hidden="true">${COVERAGE_ORDER.slice(0, 4).map((state) => html`<span class="cc-legend-item"><span class="cc-cell cc-cell--${state}"></span>${i.t(`command.state.${state}` as MessageKey)}</span>`)}</p>`

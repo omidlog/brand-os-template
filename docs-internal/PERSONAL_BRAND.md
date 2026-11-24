@@ -32,6 +32,44 @@ You can edit the facet list later. The interview, documents and docs build follo
 | `brand.profile: personal-brand` | The personal core, the selected facets and the shared voice and visual questions. | Exclusive. Company legal entity, SaaS, mascot and other Business OS questions are not applicable, not missing. They can still be answered by id. |
 | `brand.profile: universal`, personal on | The whole bank, including personal and the selected facets. | Everything counts. |
 
+Purpose, vision, values and promise apply to a person too: the `personal-brand` profile asks `brand.strategy.purpose`, `brand.strategy.vision`, `brand.strategy.values` and `brand.strategy.promise` (BOS-15). The profile file is brand-owned, so a template update does not rewrite it: `npm run brand:migrate` adds the four ids to an older `brand/interview/profiles/personal-brand.yaml` (additive, idempotent, the owner's edits kept), and `brand:next` then reports them as open.
+
+## Frameworks for a personal brand (decision, BOS-15)
+
+Owner decision, settled: for a `personal-brand` profile with a business facet (`founder-executive` or `consultant-expert`), the Business Model Canvas, the business plan, the marketing plan and the Strategy lab (SWOT / TOWS, Value Proposition Canvas, customer journey, SOSTAC, OKR) describe **the person's own practice**. They are built from approved personal answers wherever a mapping exists. Ventures in `personal.experience.relationships` (a company the person founded or advises) stay relationships; they are never the canvas subject.
+
+One rule decides what applies, in `packages/brand-core/src/applicability.ts` (`brandApplicability`), and `brand:next`, `brand:status` / completeness, the framework documents, the visual builders and every Studio framework and counter use it:
+
+- A question **applies** when it is in the completeness scope of the active profile (an exclusive profile lists it), its module is on and its `skip_when` does not hold (`questionApplies`). That is the set `brand:next` asks and `open` counts.
+- A framework question that does not apply is **mapped** when a personal answer describes the same thing. The framework then shows the personal answer under its own id (for example `personal.positioning.primary_audience`), with its own approval, verification label and visibility, and names the framework question it stands for (`stands_for`). Nothing is copied into a `business.*` or `brand.*` field.
+- Otherwise it is **not applicable to this profile**. Studio says so; it is never "missing" and never counted as open. A module or chapter with no applicable question shows "Not applicable", not "100 %".
+- An answer already recorded on a question outside the profile (it can be answered by id) is shown as itself.
+
+Invariant: if Studio shows a framework item as missing, it is a question of the active profile that `brand:next` asks (once its own dependencies are answered) and `open` counts it.
+
+| Framework question | Personal answer shown | Rows |
+| --- | --- | --- |
+| `brand.identity.public_name_override` | `personal.identity.public_name` | every personal profile |
+| `brand.verbal.tagline` | `personal.identity.headline` | every personal profile |
+| `brand.verbal.name_use` | `personal.identity.name_forms` | every personal profile |
+| `brand.strategy.differentiation` | `personal.positioning.perspective` | every personal profile |
+| `brand.gov.approver` | `personal.governance.reviewer` | every personal profile |
+| `business.customer.primary_segment` | `personal.positioning.primary_audience` | business facet |
+| `business.model.segments`, `business.sales.buyer` | `personal.consulting.target_clients` | business facet (consultant answers only when that facet is on) |
+| `business.offer.value_proposition`, `business.fit.creators` | `personal.positioning.outcome` | business facet |
+| `business.offer.summary`, `business.model.revenue` | `personal.services.offers` + `personal.consulting.engagements` | business facet |
+| `business.fit.products` | `personal.services.offers` | business facet |
+| `business.sales.pricing` | `personal.consulting.pricing_policy` (the policy; never an amount) | business facet |
+| `business.model.key_activities` | `personal.consulting.methodology` | business facet |
+| `business.marketing.channels`, `brand.social.channels` | `personal.content.channels` | business facet |
+| `business.marketing.pillars` | `personal.content.pillars` | business facet |
+| `business.marketing.objective`, `business.goals.annual` | `personal.goals.outcomes` | business facet |
+| `business.goals.north_star`, `business.goals.key_results` | `personal.goals.kpis` | business facet |
+
+The table is `PERSONAL_FRAMEWORK_SOURCES`. Everything else in the frameworks (company trade name, stage, product, finance, risks, key partners and resources, cost structure, customer relationships, SWOT, journey stages, the measurement section) is not applicable to a personal profile. Without a business facet the frameworks do not apply at all (Studio shows the canvas and plans as not used for this profile); the Brand Book still maps the `every personal profile` rows.
+
+**A full plan for a venture.** `brand:next` and `brand:status` say this for a personal profile: set `brand.profile: universal` and keep `modules.personal` enabled (the whole bank is asked, and the `business.*` questions describe the venture), or give the venture its own Brand OS repository. One repository has one `business.*` namespace, so it describes one business.
+
 ## Question bank
 
 The bank is `brand/interview/question-bank/personal.yaml`. It is generated from `packages/brand-core/src/content/personal-core.ts` and `personal-facets.ts` like every other bank, so `brand:validate` checks it for prompt drift. Prompts exist in English (base), Persian and Turkish as locale data.
