@@ -191,8 +191,21 @@ export {
 export type { KeychainOptions, KeychainRun, KeychainRunner, KeychainStoreOutcome, KeychainStoreResult, ProofSource, ProofSources } from './approval-proof.js'
 export { ANSWER_ORIGINS, answerProvenance, provenanceLabel } from './provenance.js'
 export type { AnswerOrigin, AnswerProvenance } from './provenance.js'
-export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCES } from './token-generate.js'
-export type { GeneratedTokenResult, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult } from './token-generate.js'
+export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCE_QUESTIONS, TOKEN_SOURCES, tokenNextStep } from './token-generate.js'
+export type { GeneratedTokenResult, SemanticMapReport, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult, TokenSourceState } from './token-generate.js'
+export {
+  BRAND_ROLE_PREFIX,
+  brandRoleTokenId,
+  parseSemanticMap,
+  SEMANTIC_COLOR_SLOTS,
+  SEMANTIC_MAP_FORMAT,
+  SEMANTIC_MAP_QUESTION,
+  SEMANTIC_SLOTS,
+  semanticAnswerText,
+  semanticSlotOf,
+  suggestSemanticMap,
+} from './token-semantic.js'
+export type { ParsedSemanticMap, SemanticAssignment, SemanticSlot, SemanticSuggestion } from './token-semantic.js'
 export {
   BRAND_BOOK,
   buildBrandBook,
@@ -210,8 +223,18 @@ export {
   lengthReport,
   PERSONAL_DOCUMENT_KINDS,
   PERSONAL_SPECS,
+  composeDrafts,
+  countWords,
+  DRAFT_CONNECTORS,
+  DRAFT_LABEL,
+  DRAFT_LOCALES,
+  draftLocales,
+  factLanguage,
+  localizedSegments,
+  TRANSLATION_COMPANIONS,
 } from './documents/index.js'
 export type { DocumentAudience, DocumentItem, DocumentKind, DocumentModel, DocumentSection, DocumentSpec, ItemTag, LengthReport, PersonalDocumentKind, SectionSpec } from './documents/index.js'
+export type { ComposedDraft, ComposeSource, DraftLocale, FactLanguage, UntranslatedFact } from './documents/index.js'
 export { evaluateCondition } from './conditions.js'
 export { questionTextDrift, tokenCssBuildNote, validateRepo } from './validate-repo.js'
 export { refreshQuestionText } from './question-text.js'

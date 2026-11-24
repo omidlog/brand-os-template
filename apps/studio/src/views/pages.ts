@@ -30,6 +30,7 @@ import { icon, type IconName } from './icons.js'
 import { brandAvatar, brandPath, plainShell, refreshButton, shell, type BrandSection, type BrandView, type ViewContext } from './layout.js'
 import { mascotLink } from './visual-mascot.js'
 import { commandStrip } from './publishing.js'
+import { personalDocumentView } from './personal-documents.js'
 
 /* ---------------------------------------------------------------- sign in */
 
@@ -708,22 +709,54 @@ export function designPage(ctx: ViewContext, view: BrandView, flash: string | nu
   const fonts = items.filter((item) => item.structured?.type === 'font' && item.tag === 'approved')
   const logos = items.filter((item) => item.structured?.type === 'logo_spec' && item.tag === 'approved')
   const colorTokens = p.tokens.items.filter((token) => token.type === 'color')
+  // BOS-17: template example colours are never shown next to the owner's approved colours without separation. With
+  // approved roles, the examples move into a collapsed "Template examples (not your brand)" section, and the page
+  // says when the approved roles are not tokens yet and which command turns them into drafts.
+  const hasApprovedRoles = colors.length > 0
+  const exampleColors = colorTokens.filter((token) => token.example)
+  const brandColorTokens = colorTokens.filter((token) => !token.example)
+  const roleTokens = colorTokens.filter((token) => token.id.startsWith('color.brand-role.'))
+  const separateExamples = hasApprovedRoles && exampleColors.length > 0
+  const shownColors = separateExamples ? brandColorTokens : colorTokens
   const groups = new Map<string, ProjectionToken[]>()
   for (const token of p.tokens.items) {
     const group = token.id.split('.')[0] ?? token.type
     groups.set(group, [...(groups.get(group) ?? []), token])
   }
   const dimension = p.tokens.items.filter((token) => token.type === 'dimension' && /^-?\d+(\.\d+)?px$/.test(token.value)).slice(0, 16)
+  const tokenNotice = !hasApprovedRoles
+    ? ''
+    : roleTokens.length === 0
+      ? banner({
+          tone: 'warning',
+          id: 'tokens-not-generated',
+          title: i.t('design.notTokensTitle'),
+          body: html`<p>${i.t('design.notTokensBody')}</p><p>${code('npm run brand:tokens:generate')}</p><p class="muted small">${i.t('design.notTokensDraft')}</p>`,
+        })
+      : exampleColors.length > 0
+        ? banner({
+            tone: 'info',
+            id: 'tokens-semantic-unmapped',
+            title: i.t('design.unmappedTitle', { count: i.number(exampleColors.length) }),
+            body: html`<p>${i.t('design.unmappedBody')} ${code('brand.color.semantic_map')}</p><p>${code('npm run brand:tokens:generate')}</p>`,
+          })
+        : ''
+  const swatches = (tokens: ProjectionToken[]) => html`<div class="swatch-grid swatch-grid-lg">${tokens.map((token) => colorSwatch({ hex: safeHex(token.value), name: token.id, meta: tokenState(ctx, token), i }))}</div>`
   const body = html`${brandHeader(ctx, view, i.t('design.title'), i.t('design.subtitle'))}
     <section class="card" aria-labelledby="brand-colors">
       <h2 class="card-title" id="brand-colors">${i.t('design.brandColors')}</h2>
       ${colors.length ? join(colors.map((item) => documentItem(i, item))) : html`<p class="muted">${i.t('design.brandColorsEmpty')}</p>`}
     </section>
+    ${tokenNotice}
     <section class="card" aria-labelledby="token-colors">
-      <div class="card-head"><h2 class="card-title" id="token-colors">${i.t('design.colors')}</h2><span class="muted">${i.t('design.tokenCount', { approved: i.number(colorTokens.filter((token) => token.state === 'approved').length), draft: i.number(colorTokens.filter((token) => token.state === 'draft').length) })}</span></div>
-      ${colorTokens.length
-        ? html`<div class="swatch-grid swatch-grid-lg">${colorTokens.map((token) => colorSwatch({ hex: safeHex(token.value), name: token.id, meta: tokenState(ctx, token), i }))}</div>`
-        : html`<p class="muted">${i.t('design.colorsEmpty')}</p>`}
+      <div class="card-head"><h2 class="card-title" id="token-colors">${i.t('design.colors')}</h2><span class="muted">${i.t('design.tokenCount', { approved: i.number(shownColors.filter((token) => token.state === 'approved').length), draft: i.number(shownColors.filter((token) => token.state === 'draft').length) })}</span></div>
+      ${shownColors.length ? swatches(shownColors) : html`<p class="muted">${i.t(separateExamples ? 'design.colorsNotGenerated' : 'design.colorsEmpty')}</p>`}
+      ${separateExamples
+        ? html`<details class="disclosure" id="template-examples" data-template-examples><summary>${icon('sparkle')} ${i.t('design.examplesSummary')} <span class="muted">${i.number(exampleColors.length)}</span></summary>
+            <p class="muted small">${i.t('design.examplesHint')}</p>
+            ${swatches(exampleColors)}
+          </details>`
+        : ''}
     </section>
     <div class="two-col">
       <section class="card" aria-labelledby="type-title">
@@ -745,6 +778,7 @@ export function designPage(ctx: ViewContext, view: BrandView, flash: string | nu
       : ''}
     <section class="card" aria-labelledby="tokens-title">
       <div class="card-head"><h2 class="card-title" id="tokens-title">${i.t('design.tokens')}</h2><span class="muted">${i.t('design.tokenCount', { approved: i.number(p.tokens.approved), draft: i.number(p.tokens.draft) })}</span></div>
+      ${separateExamples ? html`<p class="muted small">${icon('info')} ${i.t('design.allTokensExampleHint')}</p>` : ''}
       ${[...groups.entries()].map(
         ([group, tokens]) => html`<details class="disclosure"><summary><span class="mono" dir="ltr">${group}</span> <span class="muted">${i.number(tokens.length)}</span></summary>
           <div class="table-wrap"><table class="table table-compact"><thead><tr><th scope="col">${i.t('design.token')}</th><th scope="col">${i.t('design.type')}</th><th scope="col">${i.t('common.value')}</th><th scope="col">${i.t('common.status')}</th></tr></thead>
@@ -898,7 +932,7 @@ export function businessPage(ctx: ViewContext, view: BrandView, doc: 'business-p
   return brandShell(ctx, view, section, i.t('business.title'), body, flash)
 }
 
-export function personalPage(ctx: ViewContext, view: BrandView, doc: string | null, flash: string | null): SafeHtml {
+export function personalPage(ctx: ViewContext, view: BrandView, doc: string | null, flash: string | null, locale: string | null = null): SafeHtml {
   const { i } = ctx
   const p = view.cached.projection!
   const personal = p.personal!
@@ -907,7 +941,7 @@ export function personalPage(ctx: ViewContext, view: BrandView, doc: string | nu
   const titles = Object.fromEntries(kinds.map((kind) => [kind, p.documents[kind]?.title ?? kind])) as Partial<Record<DocumentKind, string>>
   const body = html`${brandHeader(ctx, view, i.t('personal.title'), i.t('personal.subtitle'))}
     <div class="facts-strip"><span class="muted">${i.t('personal.facets')}:</span> ${personal.facets.length ? join(personal.facets.map((facet) => badge(i.t(`wizard.facet.${facet}` as MessageKey), 'accent', 'user'))) : html`<span class="muted">${i.t('personal.noFacets')}</span>`}</div>
-    ${kinds.length ? html`${docPicker(ctx, brandPath(view.record.slug, 'personal'), kinds, current, titles)}${p.documents[current] ? documentView(i, p.documents[current]!, current) : ''}` : emptyState({ icon: 'user', title: i.t('personal.title'), body: i.t('doc.empty') })}`
+    ${kinds.length ? html`${docPicker(ctx, brandPath(view.record.slug, 'personal'), kinds, current, titles)}${p.documents[current] ? personalDocumentView(ctx, p.documents[current]!, current, `${brandPath(view.record.slug, 'personal')}?doc=${current}`, locale) : ''}` : emptyState({ icon: 'user', title: i.t('personal.title'), body: i.t('doc.empty') })}`
   return brandShell(ctx, view, 'personal', i.t('personal.title'), body, flash)
 }
 

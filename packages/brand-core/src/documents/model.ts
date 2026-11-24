@@ -8,6 +8,7 @@ import { isStructuredType, parseStructured, type StructuredType, type Structured
 import { claimEvidence, evidenceFor, readEvidence, verificationNote, type ClaimVerification, type EvidenceItem } from '../evidence.js'
 import { answerProvenance } from '../provenance.js'
 import type { AnswerRecord, FieldQuestion, PersonalFacet } from '../types.js'
+import type { ComposedDraft, DraftLocale } from './compose.js'
 
 /**
  * Section model shared by the Brand Book, business plan and marketing plan.
@@ -73,10 +74,13 @@ export interface DocumentItem {
 export interface LengthReport {
   /** Guideline word range. A guideline, never a target to pad toward. */
   guideline: [number, number]
-  /** Words in the approved values of this section. */
+  /** Words in the approved values of this section, or in the composed draft when `basis` says so. */
   approved_words: number
   state: 'below' | 'within' | 'above'
   note: string
+  /** BOS-19: personal documents count the composed draft of the first edition (`locale`), not the fact list. */
+  basis?: 'approved_values' | 'composed_draft'
+  locale?: DraftLocale
 }
 
 export interface DocumentSection {
@@ -92,6 +96,11 @@ export interface DocumentSection {
    * ids only; they are "not applicable to this profile", never missing, and never counted as open.
    */
   not_applicable?: Array<{ id: string; label: string }>
+  /**
+   * BOS-19, personal documents: one composed draft paragraph per language edition, built only from the approved items
+   * above (which stay as the Sources). Always a draft for the owner's approval.
+   */
+  drafts?: ComposedDraft[]
 }
 
 export interface DocumentModel {

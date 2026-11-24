@@ -68,6 +68,7 @@ question_ids:
   - brand.verbal.localization
   - brand.photo.direction
   - brand.color.roles
+  - brand.color.semantic_map
   - brand.type.intent
   - personal.founder.ventures
   - personal.founder.narrative

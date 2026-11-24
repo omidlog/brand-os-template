@@ -100,6 +100,10 @@ export const QUESTION_HELP_I18N: Record<string, { fa: QuestionHelpLocale; tr: Qu
     fa: { why: "نقش‌ها با تغییر فام رنگ باقی می‌مانند. نقش و کد hex تأییدشده به یک توکن پیش‌نویس تبدیل می‌شود؛ پیش از انتشار هنوز به تأیید توکن و بررسی کنتراست نیاز دارد.", example: "primary #123A73; onPrimary #FFFFFF; surface #F7F5F2" },
     tr: { why: "Roller bir renk tonu değişikliğinden sonra da geçerli kalır. Onaylı bir rol ve hex değeri taslak bir token'a dönüşür; yayımlanmadan önce yine token onayı ve kontrast denetimi gerekir.", example: "primary #123A73; onPrimary #FFFFFF; surface #F7F5F2" },
   },
+  "brand.color.semantic_map": {
+    fa: { why: "نام نقش‌های رنگی مال خودتان است. هر نقش تأییدشده یک توکن پیش‌نویس زیر color.brand-role می‌شود؛ این جواب می‌گوید جایگاه‌های تمپلیت (primary، canvas، text …) از کدام نقش استفاده کنند. هیچ‌وقت حدس زده نمی‌شود: نگاشت پیشنهادی تا تأیید شما فقط پیشنهاد می‌ماند.", example: "primary = brand-blue; onPrimary = white; canvas = paper; text = ink" },
+    tr: { why: "Rol adları size aittir. Onaylanan her rol color.brand-role altında taslak bir token olur; bu yanıt şablon yuvalarının (primary, canvas, text …) hangi rolü kullanacağını söyler. Asla tahmin edilmez: önerilen eşleme siz onaylayana kadar yalnızca öneridir.", example: "primary = brand-blue; onPrimary = white; canvas = paper; text = ink" },
+  },
   "brand.color.themes": {
     fa: { why: "فایل‌های توکن، روشن و تیره را گروه‌بندی می‌کنند، چون تصمیم محصول این را می‌گوید.", example: "both" },
     tr: { why: "Token dosyaları açık ve koyu temayı ürün kararı öyle dediği için gruplar.", example: "both" },

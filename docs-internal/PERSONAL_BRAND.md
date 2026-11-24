@@ -167,7 +167,16 @@ rights:
 | `services-pack` | Offers vs ideas, clients, method, boundaries, pricing policy (no amounts), proof, inquiry |
 | `evidence-register` | Every claim that needs evidence or permission, its sources, status, eligibility and re-verification date. Internal only; the public edition is empty. |
 
-Documents list approved facts. They do not write prose. Each personal item carries a verification label: `verified`, `partly_verified`, `owner_published`, `owner_stated` or `unverified`. The public edition contains only published facts and no evidence ids.
+Each personal item carries a verification label: `verified`, `partly_verified`, `owner_published`, `owner_stated` or `unverified`. The public edition contains only published facts and no evidence ids.
+
+**Composed drafts (BOS-19).** Every section of the nine pack documents (not the evidence register) also carries one composed draft paragraph per language edition (`drafts`, labelled "Draft for owner approval"), with the approved facts kept below as its Sources. Composition is deterministic templating in `packages/brand-core/src/documents/compose.ts`, never a model call:
+
+- Only approved facts the edition may show are used, verbatim. Drafts, gaps, withheld values and structured answers (lists, relationships) never enter the paragraph.
+- A fact goes into the edition of the language it is written in, read from its script (Arabic script is fa; Latin with ğ, ş, ı or İ is tr; other Latin is en; both scripts in similar measure is mixed). URLs and e-mail addresses do not count.
+- A fact in another language is used only through an approved translation: the language-labelled forms in `personal.identity.localized_headline` (for the headline) or `personal.identity.name_forms` (for the name), written `fa: … tr: …` (the labels `فارسی:`, `ترکی:`, `English:` and `Türkçe:` work too). Otherwise it is listed as untranslated and left out of that edition. Nothing is machine-translated. The public name stands in every edition unless an approved form for that language exists.
+- The only added words are neutral connectors defined per locale (`DRAFT_CONNECTORS`, such as "Known for:" / «شناخته‌شده به‌عنوان:» / "Bilinen yönü:") and the dash between name and headline.
+- Editions are the brand's supported locales among en, fa and tr, the default locale first. Word counts (`length`) count the composed draft of the first edition (`basis: composed_draft`); every draft also carries its own count.
+- `brand:document` prints the drafts above a "Sources" heading; Studio's Personal Brand page shows one edition at a time (`?locale=fa|en|tr`); `draft_personal_content` returns the same drafts in each section's `composed`, read through the caller's gate. The owner still approves the final text through the interview.
 
 ## Agents and drafting
 

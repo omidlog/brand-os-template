@@ -8,7 +8,7 @@ This repository is a Brand OS template. It does not contain an approved brand. T
 2. The question that owns a field. Do not create a second persona, price, or positioning.
 3. Drafts in `brand/generated/drafts/` and `brand/restricted/drafts/`. Drafts are not rules.
 4. Module guidance under `brand/content` and `brand/business-os`. Guidance is how to fill the system, not this brand's decisions.
-5. DTCG tokens in `brand/tokens`. They are EXAMPLE until a person approves them. Tokens in `brand/tokens/generated/` come from approved answers but are still drafts until their hash is approved (`brand:tokens:approve`, a human step).
+5. DTCG tokens in `brand/tokens`. They are EXAMPLE until a person approves them. Tokens in `brand/tokens/generated/` come from approved answers but are still drafts until their hash is approved (`brand:tokens:approve`, a human step). Each approved colour role becomes `color.brand-role.<role>`; a template id such as `color.brand.primary` comes only from the owner's approved `brand.color.semantic_map`. The mapping `brand:tokens:generate` suggests is not a decision: you may record it as a draft answer for the owner, never treat it as approved.
 6. The mascot catalog in `brand/mascot`. Rows without `source_assets` have no artwork.
 
 If a file disagrees with an approved fact, the approved fact wins until a person accepts a diff.

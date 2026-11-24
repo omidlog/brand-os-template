@@ -21,6 +21,12 @@ fields:
     status: unanswered
     sensitivity: internal
     notes: "TBD — no approved brand facts in the template"
+  brand.color.semantic_map:
+    label: "Semantic color mapping"
+    value: null
+    status: unanswered
+    sensitivity: internal
+    notes: "TBD — no approved brand facts in the template"
   brand.color.themes:
     label: "Themes"
     value: null

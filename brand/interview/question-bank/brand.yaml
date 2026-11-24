@@ -1013,6 +1013,68 @@ questions:
     weight: 2
     sector_hints: []
     status: unanswered
+  - id: brand.color.semantic_map
+    module: color-system
+    field_path: brand.color.semantic_map
+    label: Semantic color mapping
+    prompt:
+      en: "Which of your color roles plays each template slot? Write slot = role, separated by ; (slots:
+        primary, onPrimary, secondary, onSecondary, accent, canvas, text, muted, link, dark-canvas,
+        dark-text, dark-muted, dark-link, success, onSuccess, warning, danger, onDanger, info). Use
+        none to keep a slot on the template example. brand:tokens:generate prints a suggestion; it
+        applies nothing until you approve this answer."
+      fa: "کدام نقش رنگ شما هر جایگاه قالب را پر می‌کند؟ بنویسید slot = role و با ; جدا کنید (جایگاه‌ها:
+        primary، onPrimary، secondary، onSecondary، accent، canvas، text، muted، link، dark-canvas،
+        dark-text، dark-muted، dark-link، success، onSuccess، warning، danger، onDanger، info). برای
+        جایگاهی که باید نمونهٔ قالب بماند none بنویسید. brand:tokens:generate پیشنهادی چاپ می‌کند؛
+        تا این پاسخ را تأیید نکنید هیچ چیز اعمال نمی‌شود."
+      tr: "Şablondaki her yuvayı hangi renk rolünüz üstleniyor? slot = rol biçiminde, ; ile ayırarak yazın
+        (yuvalar: primary, onPrimary, secondary, onSecondary, accent, canvas, text, muted, link,
+        dark-canvas, dark-text, dark-muted, dark-link, success, onSuccess, warning, danger,
+        onDanger, info). Şablon örneğinde kalacak yuva için none yazın. brand:tokens:generate bir
+        öneri yazdırır; bu yanıtı onaylayana kadar hiçbir şey uygulanmaz."
+    why_it_matters: "Your role names are your own. Each approved role becomes a draft token under
+      color.brand-role; this answer says which of them the template slots (primary, canvas, text …)
+      use. It is never guessed: a suggested mapping stays a suggestion until you approve it."
+    why_it_matters_i18n:
+      fa: "نام نقش‌های رنگی مال خودتان است. هر نقش تأییدشده یک توکن پیش‌نویس زیر color.brand-role می‌شود؛
+        این جواب می‌گوید جایگاه‌های تمپلیت (primary، canvas، text …) از کدام نقش استفاده کنند.
+        هیچ‌وقت حدس زده نمی‌شود: نگاشت پیشنهادی تا تأیید شما فقط پیشنهاد می‌ماند."
+      tr: "Rol adları size aittir. Onaylanan her rol color.brand-role altında taslak bir token olur; bu
+        yanıt şablon yuvalarının (primary, canvas, text …) hangi rolü kullanacağını söyler. Asla
+        tahmin edilmez: önerilen eşleme siz onaylayana kadar yalnızca öneridir."
+    question_type: long_text
+    examples:
+      - "EXAMPLE ONLY: primary = brand-blue; onPrimary = white; canvas = paper; text = ink"
+    examples_i18n:
+      fa:
+        - "EXAMPLE ONLY: primary = brand-blue; onPrimary = white; canvas = paper; text = ink"
+      tr:
+        - "EXAMPLE ONLY: primary = brand-blue; onPrimary = white; canvas = paper; text = ink"
+    required_when: always
+    depends_on:
+      - brand.color.roles
+    priority: medium
+    order: 105
+    sensitivity: internal
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/color-system.md
+    related_ids: []
+    completion_rule: non_empty
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
   - id: brand.color.themes
     module: color-system
     field_path: brand.color.themes
