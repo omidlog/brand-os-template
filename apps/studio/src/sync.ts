@@ -91,9 +91,13 @@ function workerUrl(): URL {
 
 const WORKER_TIMEOUT_MS = 5 * 60_000
 
+/** The worker could not run the job at all (it failed to load or exited without replying), as opposed to a timeout. */
+class WorkerUnavailable extends Error {}
+
 function projectInWorker(job: ProjectionJob): Promise<ProjectionReply> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(workerUrl(), { workerData: { kind: 'studio-projection', job }, transferList: [job.archive.buffer as ArrayBuffer] })
+    // The archive is copied, not transferred, so the inline fallback can still read it.
+    const worker = new Worker(workerUrl(), { workerData: { kind: 'studio-projection', job } })
     let done = false
     const timer = setTimeout(() => {
       finish(() => reject(new Error('The projection build took too long.')))
@@ -106,8 +110,8 @@ function projectInWorker(job: ProjectionJob): Promise<ProjectionReply> {
       fn()
     }
     worker.once('message', (reply: ProjectionReply) => finish(() => resolve(reply)))
-    worker.once('error', (error) => finish(() => reject(error)))
-    worker.once('exit', (code) => finish(() => reject(new Error(`The projection worker exited with code ${code}.`))))
+    worker.once('error', (error) => finish(() => reject(new WorkerUnavailable(error instanceof Error ? error.message : String(error)))))
+    worker.once('exit', (code) => finish(() => reject(new WorkerUnavailable(`The projection worker exited with code ${code} before replying.`))))
   })
 }
 
@@ -235,7 +239,19 @@ export class SyncService {
 
   /** Extract and build in a worker thread (default) or inline; rethrows a ProjectionError with its code. */
   private async project(job: ProjectionJob): Promise<{ projection: StudioProjection; previews: PreviewFile[] }> {
-    const reply = this.deps.projection === 'inline' ? runProjectionJob(job) : await projectInWorker(job)
+    let reply: ProjectionReply
+    if (this.deps.projection === 'inline') reply = runProjectionJob(job)
+    else {
+      try {
+        reply = await projectInWorker(job)
+      } catch (error) {
+        // A worker that cannot start (for example a TypeScript entry under a loader that does not reach worker
+        // threads) must not break the sync: build inline once and say so. The bundled server always has the worker.
+        if (!(error instanceof WorkerUnavailable)) throw error
+        this.deps.log?.(`projection worker unavailable, building inline: ${error.message}`)
+        reply = runProjectionJob(job)
+      }
+    }
     if (reply.ok) return { projection: reply.projection as StudioProjection, previews: reply.previews }
     if (reply.projectionCode) throw new ProjectionError(reply.projectionCode, reply.message)
     throw new Error(reply.message)
