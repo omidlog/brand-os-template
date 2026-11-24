@@ -1,3 +1,4 @@
+import { entitySpec } from '../entities.js'
 import type {
   FieldQuestion,
   PublicationRequirement,
@@ -39,6 +40,13 @@ export interface FqInput {
   contact?: boolean
 }
 
+/** The question bank carries a summary of the item shape; `ENTITY_SPECS` stays the one definition. */
+function entitySummary(id: string): NonNullable<FieldQuestion['entity']> {
+  const spec = entitySpec(id)
+  if (!spec) throw new Error(`${id} is a repeating_entity question without an ENTITY_SPECS entry.`)
+  return { id_prefix: spec.id_prefix, max_items: spec.max_items, fields: spec.fields.map((field) => field.key), links: [...spec.links] }
+}
+
 const SOURCE_TYPES: SourceType[] = ['owner', 'approved_import', 'external_cited', 'agent_suggestion']
 
 export function fq(input: FqInput): FieldQuestion {
@@ -53,7 +61,7 @@ export function fq(input: FqInput): FieldQuestion {
           ? 'number'
           : type === 'url'
             ? 'url'
-            : type === 'color' || type === 'font' || type === 'logo_spec' || type === 'voice_pairs' || type === 'relationships'
+            : type === 'color' || type === 'font' || type === 'logo_spec' || type === 'voice_pairs' || type === 'relationships' || type === 'repeating_entity'
               ? 'structured'
               : 'non_empty')
   return {
@@ -76,6 +84,7 @@ export function fq(input: FqInput): FieldQuestion {
     ...(input.grant ? { approval_grant: input.grant } : {}),
     ...(input.requires?.length ? { publication_requires: input.requires } : {}),
     ...(input.contact ? { contact_field: true } : {}),
+    ...(type === 'repeating_entity' ? { entity: entitySummary(input.id) } : {}),
     language: ['en', 'fa', 'tr'],
     source_types: SOURCE_TYPES,
     related_outputs: input.docs ?? [],

@@ -173,13 +173,15 @@ test('book: cover, imprint, contents with real page numbers, running heads and f
 })
 
 test('canvas A3 print: the renderer output is byte-for-byte unchanged, and the canvas golden carries no book CSS', () => {
+  // Re-pinned in Visual V3.1: the illustrative canvas now carries list items, links and the links panel (an
+  // intended change to the canvas renderer). The book engine still adds nothing to the canvas output.
   const pinned: Record<string, string> = {
-    'en.internal': 'f40ad414388abb0890dbf1decfbdbfcb602b23beb72278afe9ab4745f4c03c64',
-    'en.public': '804813cdcf9617f05c6579d9f364732758a24b6d1ca48b94d42bdb3b9b1804a6',
-    'fa.internal': 'c3c411bc774f956ddca463969d972f1e51a8f8e58dbd8364ae661d19107526a7',
-    'fa.public': 'd37fa4c43179a8ccb17d3a56aba6c86cf6a55fdafc2b3bc66eddbe9accc1a118',
-    'tr.internal': 'a98ccb6a703c1d741d5cc8f8b3ef68cfb7bec284df8aef6a0b6f921784fc52cc',
-    'tr.public': '1222498fc61230d47269c762c964ebd7c1761c8e0aff227da27724ebe353b971',
+    'en.internal': '39605e0d27ea1600d0ea79e2786df8c2ac22af030201ed4a96d6aa3704f03edb',
+    'en.public': 'a49248f1095b4fe21ff5de810c86d84252fa9e637410c3f86ed86274b8941e9d',
+    'fa.internal': '6d722764bb1900ac03a4e316528e67d09fa8fc63ebda59fd037ef3444f1a970e',
+    'fa.public': 'ea15d7d2ef4998a2c9e4428738de59803f0a07be63bdcded7c54d6c99f7e1faf',
+    'tr.internal': 'f3d5cd55e4819417a9e25b04a6354fd98b5e126ab710eff22a86f75a4d8eba1d',
+    'tr.public': '61ceebaf4a96c9b234b2aac462bee037ae0c3c878e4f50bee3cd4cb1105cebd1',
   }
   for (const lang of VISUAL_LANGS) {
     for (const edition of ['internal', 'public'] as const) {

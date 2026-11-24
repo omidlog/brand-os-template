@@ -5,6 +5,8 @@ import type { PersonalFacet } from '../types.js'
 import { readEvidence } from '../evidence.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
 import { BMC_FRAMEWORK } from './frameworks.js'
+import { entitySpec, specForPrefix } from '../entities.js'
+import type { StructuredValue } from '../structured.js'
 import {
   BMC_ZONE_IDS,
   emptyStatusSummary,
@@ -12,11 +14,13 @@ import {
   type BmcZone,
   type BmcZoneId,
   type BusinessModelCanvasBlock,
+  type CanvasLink,
   type CitationListBlock,
   type DataState,
   type MissingReason,
   type NextQuestion,
   type VisualDocument,
+  type VisualEntityItem,
   type VisualEntry,
 } from './model.js'
 
@@ -34,13 +38,15 @@ export interface BmcZoneSpec {
 
 export const BMC_ZONES: readonly BmcZoneSpec[] = [
   { zone: 'key_partners', questions: ['business.partners.channels', 'business.ops.vendors'], proposed: [], related: ['business.partners.risk_process'] },
-  { zone: 'key_activities', questions: [], proposed: ['business.model.key_activities'], related: ['business.ops.sop', 'business.product.mvp'] },
-  { zone: 'key_resources', questions: [], proposed: ['business.model.key_resources'], related: ['business.ops.roles', 'business.engineering.stack'] },
+  // Visual V3.1: the four list questions answer their zones. They stay in `proposed` so a brand on an older template
+  // (without the questions) still sees them as proposed instead of an empty zone.
+  { zone: 'key_activities', questions: ['business.model.key_activities'], proposed: ['business.model.key_activities'], related: ['business.ops.sop', 'business.product.mvp'] },
+  { zone: 'key_resources', questions: ['business.model.key_resources'], proposed: ['business.model.key_resources'], related: ['business.ops.roles', 'business.engineering.stack'] },
   { zone: 'value_propositions', questions: ['business.offer.value_proposition', 'business.offer.summary'], proposed: [], related: ['business.problem.pains', 'business.product.jobs'] },
   { zone: 'customer_relationships', questions: ['business.sales.motion', 'business.cx.onboarding', 'business.cx.channels'], proposed: [], related: ['business.cx.churn'] },
   { zone: 'channels', questions: ['business.marketing.channels', 'business.sales.consumer_path'], proposed: [], related: ['brand.social.channels'] },
-  { zone: 'customer_segments', questions: ['business.customer.primary_segment', 'business.sales.buyer'], proposed: ['business.model.segments'], related: ['business.market.geography'] },
-  { zone: 'cost_structure', questions: ['business.finance.costs', 'business.finance.economics_note'], proposed: ['business.model.cost_items'], related: ['business.finance.basis'] },
+  { zone: 'customer_segments', questions: ['business.model.segments', 'business.customer.primary_segment', 'business.sales.buyer'], proposed: ['business.model.segments'], related: ['business.market.geography'] },
+  { zone: 'cost_structure', questions: ['business.model.cost_items', 'business.finance.costs', 'business.finance.economics_note'], proposed: ['business.model.cost_items'], related: ['business.finance.basis'] },
   { zone: 'revenue_streams', questions: ['business.model.revenue', 'business.sales.pricing'], proposed: [], related: ['business.finance.currency'] },
 ]
 
@@ -62,6 +68,21 @@ function isOverdue(fact: CanonicalFact | undefined, now: Date): boolean {
 }
 
 /** Maps one document item to a visual entry. The item already applies audience, restriction and draft rules. */
+/** Visual V3.1: the items of a list answer, as the canvas draws them. Choice values stay keys; renderers label them. */
+export function entityItems(structured: StructuredValue | null): VisualEntityItem[] | null {
+  if (structured?.type !== 'repeating_entity') return null
+  const spec = entitySpec(structured.question)
+  if (!spec) return null
+  const choices = spec.fields.filter((field) => field.kind === 'choice')
+  return structured.items.map((item) => ({
+    id: item.id,
+    name: item.fields.name ?? '',
+    detail: item.fields.detail ?? null,
+    tags: choices.filter((field) => item.fields[field.key] !== undefined).map((field) => ({ field: field.key, value: item.fields[field.key]! })),
+    links: [...item.links],
+  }))
+}
+
 export function entryFromItem(item: DocumentItem, fact: CanonicalFact | undefined, notApplicable: boolean, now: Date, missingReason: MissingReason = 'unanswered'): VisualEntry & { approved: boolean } {
   const approved = item.tag === 'approved'
   let state: DataState
@@ -70,19 +91,56 @@ export function entryFromItem(item: DocumentItem, fact: CanonicalFact | undefine
   else if (item.tag === 'assumption') state = 'assumption'
   else if (item.tag === 'recommendation') state = 'recommendation'
   else state = notApplicable ? 'not_applicable' : 'missing'
+  const hidden = state === 'withheld' || state === 'missing' || state === 'not_applicable'
+  const items = hidden ? null : entityItems(item.structured)
+  const legacy = !hidden && item.kind === 'repeating_entity' && items === null && item.value !== null && item.value !== ''
   return {
     id: item.id,
     label: item.label,
     state,
-    value: state === 'withheld' || state === 'missing' || state === 'not_applicable' ? null : text(item.value),
+    value: hidden ? null : items ? text(items.map((entry) => entry.name).join(' · ')) : text(item.value),
     sources: [...item.source_ids],
     version: item.version,
     approved_at: approved ? (fact?.approved_at ?? null) : null,
     review_due: approved ? (fact?.review_due ?? null) : null,
     note: item.note,
     missing_reason: state === 'missing' ? missingReason : null,
+    ...(items ? { items } : {}),
+    ...(legacy ? { legacy: true as const } : {}),
     approved,
   }
+}
+
+/** The zone a list item id belongs to (`seg-2` → customer segments), from the entity specs and the zone table. */
+function zoneOfItem(id: string): BmcZoneId | null {
+  const spec = specForPrefix(id.split('-')[0] ?? '')
+  if (!spec) return null
+  return BMC_ZONES.find((zone) => zone.questions.includes(spec.question_id))?.zone ?? null
+}
+
+/**
+ * Links recorded on visible list items. A link whose target is not visible in this edition (removed, unanswered,
+ * withheld or unpublished) is kept as `unresolved`; nothing is inferred from prose answers.
+ */
+export function canvasRelationships(zones: Array<{ spec: BmcZoneSpec; entries: VisualEntry[] }>): BusinessModelCanvasBlock['relationships'] {
+  const visible = new Map<string, BmcZoneId>()
+  for (const { spec, entries } of zones) for (const entry of entries) for (const item of entry.items ?? []) visible.set(item.id, spec.zone)
+  if (visible.size === 0) {
+    const lists = zones.some(({ spec }) => spec.questions.some((id) => entitySpec(id)))
+    return { modeled: false, reason: lists ? 'no_list_items' : 'single_prose_answers' }
+  }
+  const links: CanvasLink[] = []
+  for (const { spec, entries } of zones) {
+    for (const entry of entries) {
+      for (const item of entry.items ?? []) {
+        for (const target of item.links) {
+          const resolved = visible.get(target)
+          links.push({ from: item.id, from_zone: spec.zone, to: target, to_zone: resolved ?? zoneOfItem(target), state: resolved ? 'resolved' : 'unresolved' })
+        }
+      }
+    }
+  }
+  return { modeled: true, links }
 }
 
 export function zoneState(entries: Array<VisualEntry & { approved: boolean }>, gap: boolean): BmcZone['state'] {
@@ -156,7 +214,7 @@ export function canvasDocument(input: {
     renderer_variant: 'bmc.nine_zone.v1',
     layout_constraints: { preserve_topology: true, min_print_pt: 7, print_profile: 'canvas_a3_landscape' },
     zones,
-    relationships: { modeled: false, reason: 'single_prose_answers' },
+    relationships: canvasRelationships(input.zones),
   }
   const citations: CitationListBlock = {
     type: 'citation_list',

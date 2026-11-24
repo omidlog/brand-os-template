@@ -61,6 +61,36 @@ export interface VisualEntry {
   note: string | null
   /** For `missing` entries: why there is no value, so the renderer never says "not answered" about a hidden draft. */
   missing_reason: MissingReason | null
+  /**
+   * Visual V3.1: a list question (repeating_entity) with a visible value carries its items here, in the owner's
+   * order; `value` is then the item names joined, for tables. Absent for every other entry.
+   */
+  items?: VisualEntityItem[]
+  /** Visual V3.1: a list question whose stored value is not a list. `value` is the text as written; flagged. */
+  legacy?: true
+}
+
+/** One item of a list question, as drawn on the canvas. Choice values are option keys; renderers label them. */
+export interface VisualEntityItem {
+  id: string
+  name: string
+  detail: string | null
+  /** Choice fields that are set, e.g. `{ field: 'priority', value: 'primary' }`. */
+  tags: Array<{ field: string; value: string }>
+  links: string[]
+}
+
+/**
+ * A link between two items on the canvas (activity → segment, cost → resource …). `resolved` when the target item
+ * is visible in this edition; `unresolved` when it is not (removed, not answered, or not published), so the
+ * renderer shows the reference without inventing a target.
+ */
+export interface CanvasLink {
+  from: string
+  from_zone: BmcZoneId
+  to: string
+  to_zone: BmcZoneId | null
+  state: 'resolved' | 'unresolved'
 }
 
 export const MISSING_REASONS = ['unanswered', 'unknown', 'skipped', 'deprecated', 'not_published'] as const
@@ -116,10 +146,11 @@ export interface BusinessModelCanvasBlock extends BlockBase {
   type: 'business_model_canvas'
   zones: BmcZone[]
   /**
-   * Segment ↔ offer ↔ channel ↔ revenue links. The question bank stores one prose answer per field, so no link
-   * can be resolved yet; the renderer says so instead of drawing invented connectors.
+   * Links between zones. Until V3.1 every zone was prose (`single_prose_answers`). With list questions the canvas
+   * reads the links the owner recorded on items; with no visible list items yet the reason is `no_list_items`.
+   * Offers, channels and revenue streams are still prose, so they are never linked; nothing is inferred.
    */
-  relationships: { modeled: false; reason: 'single_prose_answers' }
+  relationships: { modeled: false; reason: 'single_prose_answers' | 'no_list_items' } | { modeled: true; links: CanvasLink[] }
 }
 
 export interface CitationListBlock extends BlockBase {

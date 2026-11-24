@@ -137,6 +137,28 @@ export type { MascotFilters, NamedFactTool, RetrieveKind, RetrieveRequest, Retri
 export { DRAFT_RULES, draftPersonalContent, MASCOT_FILTER_KEYS, NAMED_FACT_TOOL_IDS } from './query.js'
 export { asciiDigits, isStructuredType, normalizeStructured, parseStructured, STRUCTURED_FORMATS, STRUCTURED_TYPES, structuredFor } from './structured.js'
 export type { ColorEntry, FontEntry, LogoSpec, StructuredType, StructuredValue, VoicePair } from './structured.js'
+export {
+  applyEntityOperation,
+  ENTITY_LIMITS,
+  ENTITY_LIST_SCHEMA,
+  ENTITY_OPERATIONS,
+  ENTITY_QUESTION_IDS,
+  ENTITY_SPECS,
+  entityFormat,
+  entityLines,
+  entityOptionLabel,
+  entitySpec,
+  isCanonicalEntityValue,
+  normalizeEntityAnswer,
+  parseEntityLines,
+  readEntityList,
+  serializeEntityList,
+  specForPrefix,
+  validateEntityList,
+} from './entities.js'
+export type { EntityFieldSpec, EntityItem, EntityList, EntityOperation, EntityRead, EntitySpec } from './entities.js'
+export { formatEntityMigration, migrateEntityAnswers } from './entity-migration.js'
+export type { EntityMigrationReport } from './entity-migration.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
 export { approveAssets } from './asset-approval.js'
 export type { AssetApprovalOutcome, AssetApprovalResult } from './asset-approval.js'

@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
+import YAML from 'yaml'
 import { applyInit, ensureApprovalSecret, InterviewEngine, writeStarterWorkspace, type DocumentItem } from '@brand-os/brand-core'
 import {
   BMC_FRAMEWORK,
@@ -63,13 +64,18 @@ function entry(doc: VisualDocument, id: string) {
   return canvas(doc).zones.flatMap((item) => item.entries).find((item) => item.id === id)
 }
 
-test('every zone maps to questions that exist in the bank, and gap zones only to proposed ones', () => {
+test('every zone maps to questions that exist in the bank; proposed ids are now the V3.1 list questions of the same zone', () => {
   const { engine } = brand()
   const bank = new Set(engine.questions().map((question) => question.id))
   assert.deepEqual(BMC_ZONES.map((spec) => spec.zone), [...BMC_ZONE_IDS])
   for (const spec of BMC_ZONES) {
     for (const id of [...spec.questions, ...spec.related]) assert.ok(bank.has(id), `${spec.zone}: ${id} is a real question`)
-    for (const id of spec.proposed) assert.equal(bank.has(id), false, `${id} is proposed, not yet in the bank`)
+    // Visual V3.1: the proposed ids are in the bank and answer their own zone. They stay listed as proposed so a
+    // brand on an older template (without the questions) still sees them as proposed.
+    for (const id of spec.proposed) {
+      assert.ok(bank.has(id), `${id} is in the bank since V3.1`)
+      assert.ok(spec.questions.includes(id), `${id} answers ${spec.zone}`)
+    }
   }
   const used = BMC_ZONES.flatMap((spec) => spec.questions)
   assert.equal(new Set(used).size, used.length, 'a question owns at most one zone')
@@ -87,7 +93,7 @@ test('a fresh brand: nine canonical zones in order, everything missing, nothing 
     const block = canvas(doc)
     assert.deepEqual(block.zones.map((item) => [item.order, item.zone_id]), BMC_ZONE_IDS.map((id, index) => [index + 1, id]))
     assert.equal(block.layout_constraints.preserve_topology, true)
-    assert.equal(block.relationships.modeled, false, 'no invented links between zones')
+    assert.deepEqual(block.relationships, { modeled: false, reason: 'no_list_items' }, 'no invented links between zones')
     for (const item of block.zones) {
       assert.equal(item.state, 'missing', `${audience} ${item.zone_id}`)
       for (const value of item.entries) {
@@ -98,8 +104,8 @@ test('a fresh brand: nine canonical zones in order, everything missing, nothing 
     }
     for (const gap of ['key_activities', 'key_resources'] as const) {
       const item = zone(doc, gap)
-      assert.equal(item.entries.length, 0)
-      assert.deepEqual(item.next_questions, [{ id: `business.model.${gap}`, kind: 'proposed' }])
+      assert.deepEqual(item.entries.map((value) => value.id), [`business.model.${gap}`], 'the list question is the zone entry (V3.1)')
+      assert.deepEqual(item.next_questions, [{ id: `business.model.${gap}`, kind: 'existing' }])
     }
   }
 })
@@ -158,9 +164,13 @@ test('a zone whose every question is approved is complete; the canvas is determi
   approve(engine, proof, ['business.customer.primary_segment', 'business.sales.buyer'])
   const now = new Date('2026-11-23T00:00:00Z')
   const first = buildBusinessModelCanvas(engine, 'internal', { now })
-  assert.equal(zone(first, 'customer_segments').state, 'complete')
-  assert.deepEqual(zone(first, 'customer_segments').next_questions, [{ id: 'business.model.segments', kind: 'proposed' }], 'multi-segment capture is still proposed')
+  // Since V3.1 the segment list belongs to the zone too, so two approved prose answers make it partial, not complete.
+  assert.equal(zone(first, 'customer_segments').state, 'partial')
+  assert.deepEqual(zone(first, 'customer_segments').next_questions, [{ id: 'business.model.segments', kind: 'existing' }], 'the segment list is the next question')
   assert.deepEqual(buildBusinessModelCanvas(engine, 'internal', { now }), first)
+  answer(engine, 'business.model.segments', 'Adults learning for work | career change | primary')
+  approve(engine, proof, ['business.model.segments'])
+  assert.equal(zone(buildBusinessModelCanvas(engine, 'internal', { now }), 'customer_segments').state, 'complete')
 })
 
 test('an approved fact past its review date is stale, never shown as current', () => {
@@ -209,9 +219,79 @@ test('the golden example is marked illustrative, covers every state and drops dr
   assert.match(internal.brand_name, /fictional/)
   const states = new Set(canvas(internal).zones.flatMap((item) => item.entries.map((value) => value.state)))
   for (const state of ['approved', 'stale', 'assumption', 'missing', 'withheld', 'not_applicable']) assert.ok(states.has(state as never), state)
-  assert.ok(canvas(internal).zones.some((item) => item.entries.length === 0), 'a designed gap zone')
+  // Since V3.1 every zone has a question; the gap is the key-resources list with no items (designed empty state).
+  assert.ok(canvas(internal).zones.some((item) => item.state === 'missing' && item.entries.every((value) => value.value === null)), 'a designed gap zone')
   const pub = illustrativeBusinessModelCanvas('en', 'public')
   assert.equal(canvas(pub).zones.flatMap((item) => item.entries).some((value) => value.state === 'assumption'), false)
   assert.equal(JSON.stringify(pub).includes('Cloud hosting'), false, 'a fixture draft is not in the public edition')
   assert.match(illustrativeBusinessModelCanvas('fa').blocks.length ? JSON.stringify(illustrativeBusinessModelCanvas('fa')) : '', /[؀-ۿ]/)
+})
+
+// ---- Visual V3.1: list questions on the canvas (SYNTHETIC DEMO data) -------------------------------------------
+
+test('V3.1: list items fill their zones in the owner order, and recorded links are resolved between visible items', () => {
+  const { engine, proof } = brand()
+  answer(engine, 'business.customer.primary_segment', 'Working adults.')
+  answer(engine, 'business.model.segments', 'Independent cafés | weekly supply | primary\nOffice kitchens | bulk orders | secondary')
+  answer(engine, 'business.model.key_activities', 'Roasting | small batches | production | links: seg-1, res-1\nDelivery | links: seg-2, seg-7')
+  answer(engine, 'business.model.cost_items', 'Green coffee | rises with volume | variable | links: act-1')
+  approve(engine, proof, ['business.model.segments'])
+  const doc = buildBusinessModelCanvas(engine, 'internal', { now: new Date('2026-11-23T00:00:00Z') })
+  const segments = entry(doc, 'business.model.segments')!
+  assert.equal(segments.state, 'approved')
+  assert.deepEqual(segments.items?.map((item) => [item.id, item.name, item.detail, item.tags]), [
+    ['seg-1', 'Independent cafés', 'weekly supply', [{ field: 'priority', value: 'primary' }]],
+    ['seg-2', 'Office kitchens', 'bulk orders', [{ field: 'priority', value: 'secondary' }]],
+  ])
+  assert.equal(segments.value, 'Independent cafés · Office kitchens', 'tables get the item names, never raw JSON')
+  assert.equal(entry(doc, 'business.model.key_activities')?.state, 'assumption')
+  assert.equal(zone(doc, 'key_activities').state, 'partial')
+  assert.equal(zone(doc, 'key_resources').state, 'missing', 'an unanswered list leaves its zone missing')
+  const rel = canvas(doc).relationships
+  assert.ok(rel.modeled)
+  assert.deepEqual(rel.links, [
+    { from: 'act-1', from_zone: 'key_activities', to: 'seg-1', to_zone: 'customer_segments', state: 'resolved' },
+    { from: 'act-1', from_zone: 'key_activities', to: 'res-1', to_zone: 'key_resources', state: 'unresolved' },
+    { from: 'act-2', from_zone: 'key_activities', to: 'seg-2', to_zone: 'customer_segments', state: 'resolved' },
+    { from: 'act-2', from_zone: 'key_activities', to: 'seg-7', to_zone: 'customer_segments', state: 'unresolved' },
+    { from: 'cost-1', from_zone: 'cost_structure', to: 'act-1', to_zone: 'key_activities', state: 'resolved' },
+  ])
+  assert.equal(JSON.stringify(doc).includes('brand-os.entity-list'), false, 'the stored JSON never reaches the document')
+})
+
+test('V3.1: the public edition shows no draft list item and no link to or from one', () => {
+  const { engine } = brand()
+  answer(engine, 'business.model.segments', 'DRAFT-SEGMENT-CANARY | needs | primary')
+  answer(engine, 'business.model.key_activities', 'DRAFT-ACTIVITY-CANARY | links: seg-1')
+  const pub = buildBusinessModelCanvas(engine, 'public')
+  assert.equal(JSON.stringify(pub).includes('CANARY'), false)
+  assert.equal(entry(pub, 'business.model.segments')?.items, undefined)
+  assert.deepEqual(canvas(pub).relationships, { modeled: false, reason: 'no_list_items' })
+})
+
+test('V3.1: a list question holding legacy free text is shown as written and flagged, never parsed into items', () => {
+  const { root, engine } = brand()
+  const file = path.join(root, 'brand', 'interview', 'answer-ledger.yaml')
+  const ledger = YAML.parse(fs.readFileSync(file, 'utf8')) as { records: Array<Record<string, unknown>> }
+  ledger.records.push({ answer_id: 'ans-9001', question_id: 'business.model.key_resources', value: 'Our roaster and two trained staff.', raw_answer: 'Our roaster and two trained staff.', source_type: 'owner', source_reference: null, authority: 'confirmed_by_owner', confidence: null, status: 'draft', last_updated: '2026-01-01T00:00:00.000Z', reviewed_by: null, visibility: 'internal', uncertainty: null, session_id: 'legacy', normalized: null, superseded_by: null, disposition_reason: null, private_ref: null })
+  fs.writeFileSync(file, YAML.stringify(ledger))
+  void engine
+  const doc = buildBusinessModelCanvas(new InterviewEngine(root), 'internal')
+  const resources = entry(doc, 'business.model.key_resources')!
+  assert.equal(resources.legacy, true)
+  assert.equal(resources.value, 'Our roaster and two trained staff.')
+  assert.equal(resources.items, undefined)
+})
+
+test('V3.1: the illustrative canvas has list items, a resolved and an unresolved link, and a designed empty list zone', () => {
+  for (const lang of VISUAL_LANGS) {
+    const doc = illustrativeBusinessModelCanvas(lang)
+    assert.equal(doc.illustrative, true)
+    const rel = canvas(doc).relationships
+    assert.ok(rel.modeled, lang)
+    assert.ok(rel.links.some((link) => link.state === 'resolved'))
+    assert.ok(rel.links.some((link) => link.state === 'unresolved'))
+    assert.ok(entry(doc, 'business.model.segments')?.items?.length)
+    assert.equal(entry(doc, 'business.model.key_resources')?.state, 'missing')
+  }
 })

@@ -483,6 +483,179 @@ questions:
     weight: 2
     sector_hints: []
     status: unanswered
+  - id: business.model.segments
+    module: business-company
+    field_path: business.model.segments
+    label: Customer segments
+    prompt:
+      en: List each customer segment separately and say how it differs from the others.
+      fa: هر بخش مشتری را جدا بنویسید و بگویید با بقیه چه فرقی دارد.
+      tr: Her müşteri segmentini ayrı yazın ve diğerlerinden farkını belirtin.
+    why_it_matters: The Business Model Canvas, targeting and offers need each segment as its own item,
+      not one paragraph.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Independent cafés | want reliable weekly supply | primary"
+    required_when: always
+    depends_on:
+      - business.customer.primary_segment
+    priority: medium
+    order: 35
+    sensitivity: internal
+    entity:
+      id_prefix: seg
+      max_items: 12
+      fields:
+        - name
+        - detail
+        - priority
+      links: []
+    language:
+      - en
+      - fa
+      - tr
+    source_types: *a1
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.customer.primary_segment
+      - business.sales.buyer
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.model.key_activities
+    module: business-company
+    field_path: business.model.key_activities
+    label: Key activities
+    prompt:
+      en: Which activities must the business perform well to deliver each offer?
+      fa: کسب‌وکار برای ارائهٔ هر پیشنهاد باید کدام فعالیت‌ها را خوب انجام دهد؟
+      tr: İşletme her teklifi sunmak için hangi faaliyetleri iyi yapmalı?
+    why_it_matters: Operations, hiring and costs follow from what the business must do well every week.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Weekly roasting | small batches, quality checked | production | links: seg-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 36
+    sensitivity: internal
+    entity:
+      id_prefix: act
+      max_items: 20
+      fields:
+        - name
+        - detail
+        - category
+      links:
+        - business.model.segments
+        - business.model.key_resources
+    language:
+      - en
+      - fa
+      - tr
+    source_types: *a1
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+    related_ids:
+      - business.ops.sop
+      - business.product.mvp
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.model.key_resources
+    module: business-company
+    field_path: business.model.key_resources
+    label: Key resources
+    prompt:
+      en: Which resources (people, systems, IP, assets) are essential to deliver each offer?
+      fa: برای ارائهٔ هر پیشنهاد، کدام منابع (افراد، سامانه‌ها، دارایی فکری، تجهیزات) ضروری‌اند؟
+      tr: Her teklifi sunmak için hangi kaynaklar (insanlar, sistemler, fikri mülkiyet, varlıklar)
+        gerekli?
+    why_it_matters: A resource the offer depends on is a risk to protect and a cost to plan.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Roasting equipment | owned, one machine | physical | links: act-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 37
+    sensitivity: internal
+    entity:
+      id_prefix: res
+      max_items: 20
+      fields:
+        - name
+        - detail
+        - category
+      links:
+        - business.model.key_activities
+    language:
+      - en
+      - fa
+      - tr
+    source_types: *a1
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+    related_ids:
+      - business.ops.roles
+      - business.engineering.stack
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.model.cost_items
+    module: business-company
+    field_path: business.model.cost_items
+    label: Cost items
+    prompt:
+      en: List the main cost categories, fixed or variable, without amounts.
+      fa: دسته‌های اصلی هزینه را، ثابت یا متغیر، بدون مبلغ فهرست کنید.
+      tr: Ana maliyet kalemlerini, sabit veya değişken, tutar vermeden listeleyin.
+    why_it_matters: The canvas shows what costs money. Amounts stay in the restricted finance answers.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Green coffee | rises with volume | variable | links: act-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 38
+    sensitivity: internal
+    entity:
+      id_prefix: cost
+      max_items: 20
+      fields:
+        - name
+        - detail
+        - behaviour
+      links:
+        - business.model.key_activities
+        - business.model.key_resources
+    language:
+      - en
+      - fa
+      - tr
+    source_types: *a1
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+    related_ids:
+      - business.finance.costs
+      - business.finance.economics_note
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
   - id: business.marketing.objective
     module: business-marketing
     field_path: business.marketing.objective

@@ -1,3 +1,5 @@
+// entities.ts imports asciiDigits from here; only functions cross the cycle, never a top-level value.
+import { entitySpec, readEntityList, serializeEntityList, type EntityItem } from './entities.js'
 import type { FieldQuestion, QuestionType } from './types.js'
 
 /**
@@ -13,7 +15,7 @@ import type { FieldQuestion, QuestionType } from './types.js'
  * be ASCII.
  */
 
-export const STRUCTURED_TYPES = ['color', 'font', 'logo_spec', 'voice_pairs', 'relationships'] as const
+export const STRUCTURED_TYPES = ['color', 'font', 'logo_spec', 'voice_pairs', 'relationships', 'repeating_entity'] as const
 export type StructuredType = (typeof STRUCTURED_TYPES)[number]
 
 export interface ColorEntry {
@@ -61,6 +63,8 @@ export type StructuredValue =
   | { type: 'logo_spec'; logo: LogoSpec }
   | { type: 'voice_pairs'; pairs: VoicePair[] }
   | { type: 'relationships'; relationships: RelationshipEntry[] }
+  /** Visual V3.1 (D3). `question` names the entity spec (entities.ts) that defines the item fields. */
+  | { type: 'repeating_entity'; question: string; items: EntityItem[] }
 
 type Normalized = { ok: true; value: string } | { ok: false; message: string }
 
@@ -73,6 +77,7 @@ export const STRUCTURED_FORMATS: Record<StructuredType, string> = {
   voice_pairs: 'do | don\'t, one pair per line or ;. Example: Say what happened and what to do next | Blame the user',
   relationships:
     'relation | organization | from | to [| ownership], one per line or ;. Relation: founded, co-founded, employed, contracted, advised, consulted, collaborated, board, invested, volunteered, studied, taught. Dates: YYYY or YYYY-MM; to may be present; either may be unknown. Ownership: owner, co-owner, not-owner or unstated (the default). Example: co-founded | Example Studio | 2019 | present | not-owner',
+  repeating_entity: `one item per line or ;: name | detail | type [| links: id, id]. Each question lists its own fields (brand:interview shows them); the stored form is a brand-os.entity-list/1 list.`,
 }
 
 export function isStructuredType(type: QuestionType | string): type is StructuredType {
@@ -263,7 +268,27 @@ export function normalizeStructured(type: StructuredType, raw: string): Normaliz
       return normalizeVoice(value)
     case 'relationships':
       return normalizeRelationships(value)
+    case 'repeating_entity':
+      return normalizeEntityCanonical(value)
   }
+}
+
+/**
+ * Without the question, only the canonical list is accepted: it names its own question. Owner text (lines) is
+ * normalized by `normalizeAnswer`, which knows the question and the previous list (entities.ts).
+ */
+function normalizeEntityCanonical(value: string): Normalized {
+  let question: unknown
+  try {
+    question = (JSON.parse(value) as { question?: unknown } | null)?.question
+  } catch {
+    question = undefined
+  }
+  const spec = typeof question === 'string' ? entitySpec(question) : null
+  if (!spec) return fail('repeating_entity', 'This is not a list of items for a known question.')
+  const read = readEntityList(spec, value)
+  if (read.state !== 'items') return fail('repeating_entity', 'This is not a valid list of items.')
+  return { ok: true, value: serializeEntityList(spec, read.list) }
 }
 
 /** Typed data from a stored value. Returns null when the value is absent or not valid for the type. */
@@ -332,6 +357,12 @@ export function parseStructured(type: StructuredType, value: unknown): Structure
           }
         }),
       }
+    case 'repeating_entity': {
+      const question = (JSON.parse(canonical) as { question: string }).question
+      const spec = entitySpec(question)
+      const read = spec ? readEntityList(spec, canonical) : null
+      return read?.state === 'items' ? { type, question, items: read.list.items } : null
+    }
   }
 }
 
