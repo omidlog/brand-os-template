@@ -36,6 +36,7 @@ Which roles exist and what contrast bar they must meet.
 | Field | Required | Sensitivity | Question |
 | --- | --- | --- | --- |
 | Color roles | yes | internal | `brand.color.roles` |
+| Semantic color mapping | optional | internal | `brand.color.semantic_map` |
 | Themes | yes | internal | `brand.color.themes` |
 | Semantic colors | yes | internal | `brand.color.semantics` |
 | Contrast target | yes | internal | `brand.color.contrast` |

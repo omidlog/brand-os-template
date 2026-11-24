@@ -18,6 +18,9 @@ edges:
   - from: brand.personality.traits
     to: brand.verbal.voice_pairs
     relation: prerequisite
+  - from: brand.color.roles
+    to: brand.color.semantic_map
+    relation: prerequisite
   - from: brand.verbal.localization
     to: brand.type.rtl
     relation: prerequisite
