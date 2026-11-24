@@ -683,6 +683,13 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
 - `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
 
+## Unreleased — Audit: Visual V2 area fixes
+
+### Fixed
+
+- Brand Book reader (V2.4): an agent suggestion is labelled "Agent suggestion. Not approved and not an owner decision." instead of "Template guidance"; tentative and estimated drafts say so; a question the owner marked unknown, skipped, not applicable or deprecated says that instead of "Still to answer". en/fa/tr. Test: `studio-visual-book`.
+- Docs: `IMPLEMENTATION_STATUS.md` rows for V2.1, V2.2, V2.3 and the print engine use the stable V2.4 paths; `STUDIO.md` lists `/visual/mascot[/print]` among the 301 legacy paths.
+
 ## Unreleased — Audit: Visual V2 stale states at view time
 
 ### Fixed

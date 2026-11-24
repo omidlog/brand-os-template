@@ -42,6 +42,9 @@ test('Studio: the Brand Book reads as an editorial book with chapters, specimens
       })
       // An owner draft that is not approved: shown to the owner, labelled, never as published.
       engine.answerQuestion('brand.strategy.vision', 'A calmer classroom everywhere.')
+      // Owner decisions on a gap say what the owner decided, not "Still to answer".
+      engine.answerQuestion('brand.strategy.promise', 'n/a')
+      engine.answerQuestion('brand.strategy.decision_rule', 'unknown')
       addApprovedAsset(root, { id: 'asset.logo.pilito-wordmark', name: 'Pilito wordmark', file: 'brand/assets/logo/pilito-wordmark.svg', data: wordmark })
       const file = path.join(root, 'brand/assets/asset-manifest.yaml')
       const manifest = parse(fs.readFileSync(file, 'utf8')) as { assets: Array<Record<string, unknown>> }
@@ -79,6 +82,8 @@ test('Studio: the Brand Book reads as an editorial book with chapters, specimens
     assert.match(main, /A calmer classroom everywhere\./)
     assert.match(main, /Draft, not approved\. Never shown as published\./)
     assert.equal(/>\s*Published\s*</.test(main), false)
+    assert.match(main, /<p class="vz-bk-gap">[\s\S]*?<span>Marked not applicable by the owner\.<\/span><\/p>/)
+    assert.match(main, /<p class="vz-bk-gap">[\s\S]*?<span>The owner said this is unknown\. Nothing was invented\.<\/span><\/p>/)
     // Version footers per chapter.
     assert.equal((main.match(/<footer class="vz-bk-foot">/g) ?? []).length, 7)
     assert.match(main, /<span dir="auto">Chapter 02 · Strategy<\/span><span aria-hidden="true"> · <\/span><span dir="auto">Version 1<\/span>/)
@@ -98,13 +103,22 @@ test('Studio: the Brand Book reads as an editorial book with chapters, specimens
     assert.match(fa.text, /<p class="vz-bk-num">فصل ۰۱<\/p>/)
     assert.match(fa.text, /هویت کلامی/)
     assert.match(fa.text, /پیش‌نویس، تأییدنشده/)
+    assert.match(fa.text, /مالک این را «مربوط نیست» علامت زده است\./)
     assert.match(fa.text, /آزمایشگاه استراتژی/)
     await owner.get(`/brands/${SLUG}/brand/book?lang=tr`)
     const tr = await owner.page(`/brands/${SLUG}/brand/book`)
     assert.match(tr.text, /<p class="vz-bk-num">Bölüm 01<\/p>/)
     assert.match(tr.text, /Sözel kimlik/)
+    assert.match(tr.text, /Sahip bunu geçerli değil olarak işaretledi\./)
     assert.match(tr.text, /Strateji Laboratuvarı/)
   } finally {
     await s.close()
   }
+})
+
+test('reader: every item note it localizes is one the document model really writes (no silent drift)', async () => {
+  const { ITEM_NOTE_KEYS } = await import('../apps/studio/src/views/visual-book.js')
+  const model = fs.readFileSync(path.join(import.meta.dirname, '../packages/brand-core/src/documents/model.ts'), 'utf8')
+  for (const note of Object.keys(ITEM_NOTE_KEYS)) assert.ok(model.includes(`'${note}'`), `brand-core no longer writes: ${note}`)
+  assert.equal(ITEM_NOTE_KEYS['Agent suggestion. Not approved and not an owner decision.'], 'reader.suggestionNote')
 })
