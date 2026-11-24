@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Owner feedback: privacy guard, coach follow-up, localized help, validate noise (BOS-05, BOS-08, BOS-09, BOS-13)
+
+### Fixed
+
+- BOS-05: the personal privacy guard no longer reads a social profile URL with `/@handle` (TikTok, Medium, YouTube, Threads, Mastodon) or a bare `@handle` as an email address. In `personal.privacy.*` questions a category name without a value ("date of birth", «تاریخ تولد», "doğum tarihi") is allowed; a name followed by a value, and every phrase that states a value, is still refused. A refusal now says which kind of pattern triggered it and where (line and word), never the value. New export `PRIVATE_CATEGORY_NAMES`; the category names moved out of `PRIVATE_CUES`.
+- BOS-08: the coach chooses its clarifying question per question family (`clarifyQuestion`, `questionFamily`), so `personal.positioning.boundaries` gets a boundaries question instead of an audience one; the general `specificity` and `evidence_support` wordings no longer assume an audience or a company. A claim with verified, current, independent evidence gets no `evidence_support` note from the facet rubrics either. `COACH_RULE_VERSION` is `coach-rules/6`.
+- BOS-09: every question carries Persian and Turkish `why_it_matters_i18n` and `examples_i18n` (optional sibling fields; English stays in `why_it_matters` and `examples`; "EXAMPLE ONLY:" kept in every language). `brand:interview`, `brand:next --json` (`help_locale`) and `show examples` use the session locale with English fallback. Reworded in en, fa and tr: `personal.media.visual_templates` ("Which templates should be built first?"), `personal.goals.kpis` ("For each goal, which number do you watch, and what is it today (with source and date)?") and `brand.verbal.voice_pairs` ("In your own words, …"). `brand:validate` checks drift in the prompt, `why_it_matters` and `examples` for en, fa and tr; a bank without the new fields stays valid with one warning, and `npm run brand:migrate` refreshes question text only (`refreshQuestionText`).
+- BOS-13: `npm run validate` no longer warns "Token CSS has not been written". The docs build prints an informational note instead (`tokenCssBuildNote`); a stale built file is still an error.
+- Tests: `personal-privacy-guard`, `coach-question-family`, `question-help-i18n`.
+
 ## Unreleased — CI: private brands skip the public docs prepare
 
 ### Fixed

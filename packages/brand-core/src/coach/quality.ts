@@ -119,7 +119,9 @@ export function assessAnswer(ctx: CoachContext, question: FieldQuestion, locale:
     findings.push({ code: 'placeholder_value', criterion: 'relevance', status: 'needs_review', vars: { question: question.id }, relatedIds: [], sourceRefs: answerRef() })
   }
 
-  // evidence_support — only where the question itself declares a publication requirement.
+  // evidence_support — only where the question itself declares a publication requirement. `claimVerification`
+  // returns `verified` as soon as the register holds a verified, current, independent source for this claim, and
+  // then no evidence_support note is produced (here, in the facet rubrics, or in the moments built on them).
   if (question.publication_requires?.includes('verified_evidence')) {
     checked.push('evidence_support')
     const verification = verificationOf(ctx, question)

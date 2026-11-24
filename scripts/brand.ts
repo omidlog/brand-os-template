@@ -826,6 +826,7 @@ if (command === 'init') {
   console.log(`Migrated ${migrated.from} -> ${migrated.to}. Fact values and module prose were not rewritten.`)
   if (migrated.mascot.changed.length > 0) console.log(`Mascot lifecycle: ${migrated.mascot.changed.length} catalog states moved to the lifecycle enum (${migrated.mascot.files.join(', ')}).`)
   if (migrated.mascot.downgraded.length > 0) console.log(`These states claimed approved without artwork and are now defined: ${migrated.mascot.downgraded.join(', ')}`)
+  if (migrated.question_text.length > 0) console.log(`Question wording refreshed from the template (prompts, why it matters, examples; no answer changed): ${migrated.question_text.join(', ')}`)
   // Visual V3.1: list questions. Free text becomes a draft or a change proposal for review; nothing is approved, and
   // text that cannot be read as a list stays exactly as written and is flagged.
   const { formatEntityMigration, migrateEntityAnswers } = await import('@brand-os/brand-core')
@@ -1004,7 +1005,7 @@ async function interactive(): Promise<void> {
       console.log(`\n${question.id} [${question.priority}]`)
       if (prompt.fellBack) console.log(`No ${locale} prompt stored. Showing English.`)
       console.log(prompt.text)
-      console.log(`Why: ${question.why_it_matters}`)
+      console.log(`Why: ${engine.helpText(question, locale).why}`)
       if (question.options) console.log(`Options: ${question.options.join(', ')}`)
       if (question.question_type === 'repeating_entity') {
         const { entityFormat, entitySpec } = await import('@brand-os/brand-core')

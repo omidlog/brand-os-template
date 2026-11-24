@@ -13,9 +13,12 @@ export interface NextQuestion {
   question_type: FieldQuestion['question_type']
   prompt: string
   prompt_locale: Locale
+  /** In `help_locale`: the requested locale, or English when no translation is stored. */
   why_it_matters: string
   options: string[] | null
+  /** In `help_locale`. Every example keeps its "EXAMPLE ONLY:" marker. */
   examples: string[]
+  help_locale: Locale
   /** Why this question is suggested now. */
   reasons: string[]
   deferred: boolean
@@ -89,6 +92,7 @@ export function nextReport(engine: InterviewEngine, opts: { limit?: number; prof
 
   const next = ordered.slice(0, limit).map((question) => {
     const prompt = engine.promptText(question, locale)
+    const help = engine.helpText(question, locale)
     return {
       id: question.id,
       module: question.module,
@@ -97,9 +101,10 @@ export function nextReport(engine: InterviewEngine, opts: { limit?: number; prof
       question_type: question.question_type,
       prompt: prompt.text,
       prompt_locale: prompt.fellBack ? ('en' as Locale) : locale,
-      why_it_matters: question.why_it_matters,
+      why_it_matters: help.why,
       options: question.options ?? null,
-      examples: question.examples,
+      examples: help.examples,
+      help_locale: help.locale,
       reasons: reasonsFor(engine, question, sector, recent),
       deferred: deferred.has(question.id),
     }
