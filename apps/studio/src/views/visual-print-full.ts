@@ -1,6 +1,7 @@
-import type { BookChapter, BookDocument, DataState, VisualDocument, VisualEntry, VisualLang } from '@brand-os/brand-core/visual'
+import { entityOptionLabel, entitySpec } from '@brand-os/brand-core'
+import type { BookChapter, BookDocument, DataState, VisualDocument, VisualEntityItem, VisualEntry, VisualLang } from '@brand-os/brand-core/visual'
 import { bookText, emptyStatusSummary, entryLabel, fillVisual, fullBookText, VISUAL_SCHEMA, visualCatalog } from '@brand-os/brand-core/visual'
-import { html, type SafeHtml } from './html.js'
+import { html, join, type SafeHtml } from './html.js'
 import { icon } from './icons.js'
 import { plateHead } from './visual-identity.js'
 import { dateOnly, ghostChart, stateChip } from './visual-primitives.js'
@@ -104,8 +105,53 @@ function printed(entry: VisualEntry): boolean {
   return (entry.state === 'approved' || entry.state === 'stale') && entry.value !== null
 }
 
+/** Names of the list items this book prints, by item id, so a link reads as a name; an id is never printed. */
+type ItemNames = Map<string, string>
+
+function itemNames(book: BookDocument): ItemNames {
+  const names: ItemNames = new Map()
+  for (const chapter of book.chapters) {
+    const entries = chapter.kind === 'facts' || chapter.kind === 'plate' ? chapter.entries : chapter.kind === 'canvas' ? chapter.zones.flatMap((zone) => zone.entries) : []
+    for (const entry of entries) if (printed(entry)) for (const item of entry.items ?? []) names.set(item.id, item.name)
+  }
+  return names
+}
+
+/**
+ * Visual V3.1: an approved list answer prints as its items, in the owner's order, numbered in the page language:
+ * name, labelled choices, detail, and links as the target item's name (or "not shown in this edition"). Item ids are
+ * technical and never printed. Earlier free text kept on a list question prints as written, with its legacy note.
+ */
+function valueBody(entry: VisualEntry, names: ItemNames, lang: VisualLang, cls: string): SafeHtml {
+  const cat = visualCatalog(lang)
+  if (entry.items && entry.items.length) {
+    const spec = entitySpec(entry.id)
+    const label = (item: VisualEntityItem) => item.tags.map((tag) => html`<span class="fb-item-tag">${spec ? entityOptionLabel(spec, tag.field, tag.value, lang) : tag.value}</span>`)
+    return html`<ol class="fb-items ${cls}">${entry.items.map(
+      (item, i) => html`<li class="fb-item"><p class="fb-item-head"><span class="fb-item-num">${digits(lang, i + 1, 2)}</span><span class="fb-item-name" dir="auto">${item.name}</span>${label(item)}</p>${
+        item.detail ? html`<p class="fb-item-detail" dir="auto">${item.detail}</p>` : ''
+      }${
+        item.links.length
+          ? html`<p class="fb-item-links"><span class="fb-item-links-k">${cat.entities.linkTo}:</span> ${join(
+              item.links.map((link) => (names.has(link) ? html`<span dir="auto">${names.get(link)!}</span>` : html`<span class="fb-item-link--hidden">${cat.entities.linkHidden}</span>`)),
+              lang === 'fa' ? '، ' : ', ',
+            )}</p>`
+          : ''
+      }</li>`,
+    )}</ol>`
+  }
+  const value = html`<p class="fb-entry-value" dir="auto">${entry.value}</p>`
+  return entry.legacy ? html`${value}<p class="fb-legacy">${cat.entities.legacy}</p>` : value
+}
+
+/** Built-in height estimate of a printed value (list items take a row each, plus detail and links lines). */
+function valueMm(entry: VisualEntry, perLine: number, lineMm: number): number {
+  if (!entry.items?.length) return textMm(entry.value ?? '', perLine, lineMm) + (entry.legacy ? lineMm : 0)
+  return entry.items.reduce((sum, item) => sum + 2 + textMm(item.name, perLine, lineMm) + (item.detail ? textMm(item.detail, perLine, lineMm) : 0) + (item.links.length ? lineMm : 0), 0)
+}
+
 /** One entry: label, value and its approval line; or, for a gap, label and why there is no value. */
-function entryFlow(id: string, entry: VisualEntry, lang: VisualLang): BookFlow {
+function entryFlow(id: string, entry: VisualEntry, lang: VisualLang, names: ItemNames = new Map()): BookFlow {
   const cat = visualCatalog(lang)
   const t = fullBookText(lang)
   const label = entryLabel(lang, entry.id, entry.label)
@@ -116,8 +162,8 @@ function entryFlow(id: string, entry: VisualEntry, lang: VisualLang): BookFlow {
   const meta = [entry.version !== null ? fillVisual(cat.text.version, { version: digits(lang, entry.version) }) : null, date ? fillVisual(t.approvedOn, { date }) : null].filter((part): part is string => part !== null)
   return blockFlow(
     id,
-    html`<div class="fb-entry"><p class="fb-entry-label" dir="auto">${label}</p><p class="fb-entry-value" dir="auto">${entry.value}</p><p class="fb-entry-meta">${stateChip(cat, entry.state)}${meta.map((part) => html`<span>${part}</span>`)}</p></div>`,
-    18 + textMm(entry.value ?? ''),
+    html`<div class="fb-entry"><p class="fb-entry-label" dir="auto">${label}</p>${valueBody(entry, names, lang, '')}<p class="fb-entry-meta">${stateChip(cat, entry.state)}${meta.map((part) => html`<span>${part}</span>`)}</p></div>`,
+    18 + valueMm(entry, 72, 6),
   )
 }
 
@@ -155,14 +201,15 @@ function canvasFlows(chapter: Extract<BookChapter, { kind: 'canvas' }>, book: Bo
   const t = fullBookText(lang)
   const cat = visualCatalog(lang)
   const flows: BookFlow[] = [head(chapter.chapter_id, num, t.chapter.business_model_canvas.title, t.chapter.business_model_canvas.lead, true, lang)]
+  const names = itemNames(book)
   for (const zone of chapter.zones) {
     const entries = visible(zone.entries, book)
     const items = entries.map((entry) =>
       printed(entry)
-        ? html`<li class="fb-zone-entry"><p class="fb-entry-value" dir="auto">${entry.value}</p><p class="fb-entry-meta">${stateChip(cat, entry.state)}<span dir="auto">${entryLabel(lang, entry.id, entry.label)}</span></p></li>`
+        ? html`<li class="fb-zone-entry">${valueBody(entry, names, lang, 'fb-items--zone')}<p class="fb-entry-meta">${stateChip(cat, entry.state)}<span dir="auto">${entryLabel(lang, entry.id, entry.label)}</span></p></li>`
         : html`<li class="fb-zone-entry fb-zone-entry--gap">${stateChip(cat, entry.state)}<span dir="auto">${entryLabel(lang, entry.id, entry.label)}</span><span>${gapReason(entry, lang)}</span></li>`,
     )
-    const mm = 14 + entries.reduce((sum, entry) => sum + (printed(entry) ? 12 + textMm(entry.value ?? '', 72, 5.5) : 9), 0)
+    const mm = 14 + entries.reduce((sum, entry) => sum + (printed(entry) ? 12 + valueMm(entry, 72, 5.5) : 9), 0)
     flows.push(
       blockFlow(
         `canvas:${zone.zone_id}`,
@@ -175,15 +222,15 @@ function canvasFlows(chapter: Extract<BookChapter, { kind: 'canvas' }>, book: Bo
   return flows
 }
 
-function rulesFlows(id: string, entries: VisualEntry[], lang: VisualLang): BookFlow[] {
+function rulesFlows(id: string, entries: VisualEntry[], lang: VisualLang, names: ItemNames): BookFlow[] {
   if (!entries.length) return []
   const t = fullBookText(lang)
-  return [blockFlow(`${id}:rules`, html`<h3 class="vz-sub fb-rules-title">${t.rulesTitle}</h3>`, 10, { keepWithNext: true }), ...entries.map((entry, i) => entryFlow(`${id}:r${i}`, entry, lang))]
+  return [blockFlow(`${id}:rules`, html`<h3 class="vz-sub fb-rules-title">${t.rulesTitle}</h3>`, 10, { keepWithNext: true }), ...entries.map((entry, i) => entryFlow(`${id}:r${i}`, entry, lang, names))]
 }
 
 function plateFlows(chapter: Extract<BookChapter, { kind: 'plate' }>, book: BookDocument, builder: FlowBuilder, lang: VisualLang): BookFlow[] {
   const identity = book.identity
-  const rules = rulesFlows(chapter.chapter_id, visible(chapter.entries, book), lang)
+  const rules = rulesFlows(chapter.chapter_id, visible(chapter.entries, book), lang, itemNames(book))
   if (!identity) return rules
   if (chapter.chapter_id === 'color') {
     const block = identity.blocks.find(isBlock('color_palette'))
@@ -231,6 +278,7 @@ export function fullBookSections(input: FullBookInput): BookSection[] {
     const plate = { color: 1, type: 2, logo: 3 }[chapter.chapter_id as 'color' | 'type' | 'logo']
     if (chapter.kind === 'plate' && plate) plateNumbers.set(plate, digits(lang, i + 1, 2))
   })
+  const names = itemNames(book)
   const builder = bookBuilder({ doc: base, lang, assetUrl: input.assetUrl }, (n) => plateNumbers.get(n) ?? digits(lang, n, 2))
   const sections: BookSection[] = book.chapters.map((chapter, i) => {
     const num = digits(lang, i + 1, 2)
@@ -242,7 +290,7 @@ export function fullBookSections(input: FullBookInput): BookSection[] {
       return { id: chapter.chapter_id, title, num, state: { text: ready ? cat.identity.ready : cat.identity.waiting, ready }, flows: plateFlows(chapter, book, builder, lang) }
     }
     const lead = t.chapter[chapter.chapter_id as keyof typeof t.chapter].lead
-    const flows = [head(chapter.chapter_id, num, title, lead, true, lang), ...visible(chapter.entries, book).map((entry, j) => entryFlow(`${chapter.chapter_id}:e${j}`, entry, lang))]
+    const flows = [head(chapter.chapter_id, num, title, lead, true, lang), ...visible(chapter.entries, book).map((entry, j) => entryFlow(`${chapter.chapter_id}:e${j}`, entry, lang, names))]
     return { id: chapter.chapter_id, title, num, state: { text: t.stateReady, ready: true }, flows }
   })
   sections.push({ id: 'appendix', title: bookText(lang).appendixTitle, num: null, state: null, flows: appendixFlows({ audience: book.audience, framework_refs: base.framework_refs }, { items: citations(book, lang) }, builder, t.sourcesIntro) })
