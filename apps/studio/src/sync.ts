@@ -1,11 +1,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { Worker } from 'node:worker_threads'
 import { writeAtomic } from '@brand-os/brand-core'
 import { COACH_RULE_VERSION } from '@brand-os/brand-core/coach'
 import type { CommitSummary, GitHubClient, PullSummary } from './github/client.js'
 import { GitHubError } from './github/client.js'
-import { extractTarGz, studioPathAllowed } from './github/tar.js'
-import { buildProjection, IDENTITY_MASTER_RULE, ProjectionError, type StudioProjection } from './projection.js'
+import { IDENTITY_MASTER_RULE, ProjectionError, type PreviewFile, type StudioProjection } from './projection.js'
+import { runProjectionJob, type ProjectionJob, type ProjectionReply } from './projection-worker.js'
 import type { BrandRecord, Registry } from './registry.js'
 
 /**
@@ -50,6 +51,40 @@ export interface SyncDeps {
   ttlMs: number
   now?: () => Date
   log?: (line: string) => void
+  /**
+   * Where the tarball is extracted and the projection built. `worker` (the default) keeps the request
+   * event loop free during a sync, so pages and /healthz keep answering (BOS-14). `inline` is for tests.
+   */
+  projection?: 'worker' | 'inline'
+}
+
+/** The worker entry next to this module: `projection-worker.ts` under tsx, `projection-worker.mjs` in the bundle. */
+function workerUrl(): URL {
+  const here = import.meta.url
+  const ext = here.endsWith('.ts') ? '.ts' : here.endsWith('.mjs') ? '.mjs' : '.js'
+  return new URL(`./projection-worker${ext}`, here)
+}
+
+const WORKER_TIMEOUT_MS = 5 * 60_000
+
+function projectInWorker(job: ProjectionJob): Promise<ProjectionReply> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(workerUrl(), { workerData: { kind: 'studio-projection', job }, transferList: [job.archive.buffer as ArrayBuffer] })
+    let done = false
+    const timer = setTimeout(() => {
+      finish(() => reject(new Error('The projection build took too long.')))
+      void worker.terminate()
+    }, WORKER_TIMEOUT_MS)
+    const finish = (fn: () => void) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      fn()
+    }
+    worker.once('message', (reply: ProjectionReply) => finish(() => resolve(reply)))
+    worker.once('error', (error) => finish(() => reject(error)))
+    worker.once('exit', (code) => finish(() => reject(new Error(`The projection worker exited with code ${code}.`))))
+  })
 }
 
 const EMPTY: SyncStatus = { state: 'never', sha: null, committed_at: null, synced_at: null, checked_at: null, attempted_at: null, repo_private: null, last_error: null }
@@ -60,6 +95,7 @@ export function brandIsReady(record: BrandRecord): boolean {
 
 export class SyncService {
   private readonly running = new Map<string, Promise<CachedBrand>>()
+  private readonly startedAt = new Map<string, string>()
   private readonly dirty = new Set<string>()
   private readonly now: () => Date
 
@@ -141,6 +177,11 @@ export class SyncService {
     return this.running.has(slug)
   }
 
+  /** When the running refresh of this brand started (ISO time), or null when none runs. */
+  refreshStartedAt(slug: string): string | null {
+    return this.running.has(slug) ? (this.startedAt.get(slug) ?? null) : null
+  }
+
   async settled(): Promise<void> {
     await Promise.allSettled([...this.running.values()])
   }
@@ -159,9 +200,21 @@ export class SyncService {
   refresh(slug: string): Promise<CachedBrand> {
     const current = this.running.get(slug)
     if (current) return current
-    const job = this.doRefresh(slug).finally(() => this.running.delete(slug))
+    this.startedAt.set(slug, this.now().toISOString())
+    const job = this.doRefresh(slug).finally(() => {
+      this.running.delete(slug)
+      this.startedAt.delete(slug)
+    })
     this.running.set(slug, job)
     return job
+  }
+
+  /** Extract and build in a worker thread (default) or inline; rethrows a ProjectionError with its code. */
+  private async project(job: ProjectionJob): Promise<{ projection: StudioProjection; previews: PreviewFile[] }> {
+    const reply = this.deps.projection === 'inline' ? runProjectionJob(job) : await projectInWorker(job)
+    if (reply.ok) return { projection: reply.projection as StudioProjection, previews: reply.previews }
+    if (reply.projectionCode) throw new ProjectionError(reply.projectionCode, reply.message)
+    throw new Error(reply.message)
   }
 
   private async doRefresh(slug: string): Promise<CachedBrand> {
@@ -188,15 +241,14 @@ export class SyncService {
       if (!projection || previous?.status.sha !== head.sha || projection.knowledge === undefined || projection.creative === undefined || projection.calendar === undefined || projection.coach === undefined || (projection.coach !== null && projection.coach.rule_version !== COACH_RULE_VERSION) || projection.visual === undefined || projection.publishing === undefined || (projection.visual !== null && projection.visual.identity?.master_rule !== IDENTITY_MASTER_RULE) || (projection.visual !== null && projection.visual.competitors === undefined) || (projection.visual !== null && projection.visual.mascot === undefined) || (projection.visual !== null && projection.visual.strategy === undefined) || (projection.visual?.competitors !== undefined && !projection.visual.competitors.blocks.some((block) => block.type === 'positioning_map'))) {
         const archive = await this.deps.github.getTarball(owner, name, head.sha)
         const checkout = path.join(work, 'checkout')
-        extractTarGz(archive, { destRoot: checkout, include: studioPathAllowed })
-        const built = buildProjection(checkout, slug)
+        const built = await this.project({ archive: new Uint8Array(archive), checkout, slug })
         projection = built.projection
         const previewDir = path.join(this.dir(slug), 'previews')
         fs.rmSync(previewDir, { recursive: true, force: true })
         fs.mkdirSync(previewDir, { recursive: true, mode: 0o700 })
         previews = {}
         for (const preview of built.previews) {
-          fs.copyFileSync(preview.source, path.join(previewDir, preview.key))
+          await fs.promises.copyFile(preview.source, path.join(previewDir, preview.key))
           previews[preview.key] = preview.mime
         }
         status.synced_at = at
@@ -233,7 +285,7 @@ export class SyncService {
       this.deps.log?.(`sync failed for ${slug}: ${code}`)
       return { status, projection: next.projection, history: next.history }
     } finally {
-      fs.rmSync(work, { recursive: true, force: true })
+      await fs.promises.rm(work, { recursive: true, force: true })
     }
   }
 }

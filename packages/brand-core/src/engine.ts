@@ -40,8 +40,25 @@ export type { StepResult, ImpactReport, InitInput } from './engine-types.js'
 export { dispositionFor } from './dispositions.js'
 export { assertSlug, emptySession, personalInit, syncManifest, upgradeCore } from './init.js'
 
+/** Identity of a file on disk. writeAtomic renames a new file into place, so any write changes it. */
+function fileSignature(file: string): string | null {
+  try {
+    const stat = fs.statSync(file)
+    return `${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`
+  } catch {
+    return null
+  }
+}
+
 export class InterviewEngine {
   private cachedQuestions: FieldQuestion[] | null = null
+  /**
+   * Parsed ledger and config, keyed on the file signature. Parsing the ledger on every
+   * applicability check made projection time grow with questions x ledger size (BOS-14).
+   * Treat the cached objects as read-only: methods that write read a fresh copy instead.
+   */
+  private ledgerCache: { sig: string; value: LedgerFile } | null = null
+  private contextCache: { sig: string; value: ConditionContext } | null = null
 
   constructor(
     private readonly root: string,
@@ -83,9 +100,30 @@ export class InterviewEngine {
 
   private saveConfig(config: BrandConfig): void {
     writeYaml(this.file('brand', 'brand.config.yaml'), config)
+    this.invalidate()
   }
 
+  /** The answer ledger. Cached until the file changes; callers must not mutate it. */
   ledger(): LedgerFile {
+    const file = this.file('brand', 'interview', 'answer-ledger.yaml')
+    const sig = fileSignature(file)
+    if (sig && this.ledgerCache?.sig === sig) return this.ledgerCache.value
+    const value = readYaml<LedgerFile>(file)
+    this.ledgerCache = sig ? { sig, value } : null
+    return value
+  }
+
+  /**
+   * Drops the cached ledger and context. The file signature catches other writers; this catches the
+   * engine's own writes even when a rename reuses an inode within one coarse mtime tick.
+   */
+  invalidate(): void {
+    this.ledgerCache = null
+    this.contextCache = null
+  }
+
+  /** A private copy of the ledger for methods that modify and write it. */
+  private ledgerForWrite(): LedgerFile {
     return readYaml<LedgerFile>(this.file('brand', 'interview', 'answer-ledger.yaml'))
   }
 
@@ -99,7 +137,13 @@ export class InterviewEngine {
   }
 
   private context(): ConditionContext {
-    return { config: this.config(), answers: latestAnswers(this.ledger().records) }
+    const configSig = fileSignature(this.file('brand', 'brand.config.yaml'))
+    const ledgerSig = fileSignature(this.file('brand', 'interview', 'answer-ledger.yaml'))
+    const sig = configSig && ledgerSig ? `${configSig}|${ledgerSig}` : null
+    if (sig && this.contextCache?.sig === sig) return this.contextCache.value
+    const value = { config: this.config(), answers: latestAnswers(this.ledger().records) }
+    this.contextCache = sig ? { sig, value } : null
+    return value
   }
 
   private depsSatisfied(question: FieldQuestion, ctx: ConditionContext): boolean {
@@ -599,16 +643,17 @@ export class InterviewEngine {
   }
 
   private supersede(answerId: string): void {
-    const ledger = this.ledger()
+    const ledger = this.ledgerForWrite()
     const record = ledger.records.find((item) => item.answer_id === answerId && !item.superseded_by)
     if (!record) return
     const next = `ans-${String(ledger.records.length + 1).padStart(4, '0')}`
     record.superseded_by = next
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
+    this.invalidate()
   }
 
   private appendAnswer(question: FieldQuestion, value: AnswerRecord['value'], meta: AnswerMeta): AnswerRecord {
-    const ledger = this.ledger()
+    const ledger = this.ledgerForWrite()
     const sessionId = this.ensureSession()
     let storedValue = value
     let storedRaw = meta.raw ?? (value === null ? null : String(value))
@@ -643,6 +688,7 @@ export class InterviewEngine {
     }
     ledger.records.push(answer)
     writeYaml(this.file('brand', 'interview', 'answer-ledger.yaml'), ledger)
+    this.invalidate()
     const session = this.session()
     session.last_answer_id = answer.answer_id
     session.cursor_question_id = null
