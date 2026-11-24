@@ -86,7 +86,9 @@ export function fq(input: FqInput): FieldQuestion {
     ...(input.contact ? { contact_field: true } : {}),
     ...(type === 'repeating_entity' ? { entity: entitySummary(input.id) } : {}),
     language: ['en', 'fa', 'tr'],
-    source_types: SOURCE_TYPES,
+    // Each question owns its list: a shared array is written as a YAML alias, and a bank file with more than 100
+    // aliases is refused by the YAML parser's default alias limit (Visual V3.2 crossed it in business.yaml).
+    source_types: [...SOURCE_TYPES],
     related_outputs: input.docs ?? [],
     related_ids: input.related ?? [],
     completion_rule: completion,

@@ -39,7 +39,9 @@ function brand() {
 
 test('the list ids are canonical: question bank, field registry, and none collides with a Task Context id', () => {
   const registry = YAML.parse(fs.readFileSync(path.resolve('brand/interview/field-registry.yaml'), 'utf8')) as { fields: Array<{ id: string; module: string }> }
-  for (const id of ENTITY_QUESTION_IDS) assert.equal(registry.fields.find((field) => field.id === id)?.module, 'business-company', id)
+  // Visual V3.3: the journey stages live in the marketing module and the OKR lists in the goals module.
+  const moduleOf = (id: string) => (id.startsWith('business.marketing.') ? 'business-marketing' : id.startsWith('business.goals.') ? 'business-goals' : 'business-company')
+  for (const id of ENTITY_QUESTION_IDS) assert.equal(registry.fields.find((field) => field.id === id)?.module, moduleOf(id), id)
   // Task Context packs do not read list questions yet (an owner decision for a later slice); none of its ids is a list.
   const taskIds = taskFields({ personal: true, mascot: true }).flatMap((field) => field.fact_ids)
   for (const id of ENTITY_QUESTION_IDS) assert.equal(taskIds.includes(id), false, id)

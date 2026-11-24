@@ -172,7 +172,15 @@ const NEGATION_WINDOW_WORDS = 3
 const NEGATION_STEMS_AFTER: readonly string[] = ['değil', 'degil', 'نیست'].map((word) => normalizeForMatch(word))
 
 /** Fields whose purpose is to *list* banned or source-needing claims, so a marker there is not a claim. */
-const CLAIM_LIST_FIELDS: ReadonlySet<string> = new Set(['brand.verbal.forbidden', 'personal.governance.public_claim_policy', 'business.marketing.availability_claim'])
+const CLAIM_LIST_FIELDS: ReadonlySet<string> = new Set([
+  'brand.verbal.forbidden',
+  'personal.governance.public_claim_policy',
+  'business.marketing.availability_claim',
+  // Lists of what never to show or publish (audit O-2): a marker there names something to avoid.
+  'brand.mascot.forbidden',
+  'personal.media.avoid',
+  'personal.privacy.never_publish',
+])
 
 // ---- helpers ----------------------------------------------------------------------------------------
 

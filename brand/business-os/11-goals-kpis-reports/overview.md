@@ -41,6 +41,8 @@ What “good” means, and which number is a target rather than an actual.
 | Metric sources | yes | internal | `business.goals.sources` |
 | Review cadence | yes | internal | `business.goals.cadence` |
 | Plan versus actual | yes | internal | `business.goals.plan_vs_actual` |
+| Objectives (OKR) | optional | internal | `business.goals.objectives` |
+| Key results (OKR) | optional | internal | `business.goals.key_results` |
 | Next milestone | canonical reference | internal | `business.plan.milestone` |
 
 ## Guidance
