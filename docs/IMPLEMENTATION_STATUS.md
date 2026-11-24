@@ -536,3 +536,8 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 
 - **Done:** negated cheap-price wording does not fire `premium-vs-lowest-price` (en/fa/tr); registry rules skip questions that do not apply under the config; `coach-rules/4`.
 - **Not done (reported in the audit):** `YEAR` in the creator rubric also matches counts such as 2000 or 1450; negation of symbol terms ("#1") and a wider window; Turkish verb-suffix negation; one slot per verdict under the finding cap; empty-id rule checks in scoped reviews; evidence and deferrals in `contextDigest`.
+
+## Studio: Persian mascot label (owner decision, 2026-11-24)
+
+- **Done:** Studio's Persian catalog spells the mascot «ماسکات» (6 strings), matching the book and the atlas. The print baselines in `tests/visual-baselines/` come from brand-core book text, which already said «ماسکات», so none of them changed. Test: `studio-visual-mascot`.
+- **Not done:** `docs/screenshots/coach-ux/coach-overview-fa.png` (a docs reference image, not a compared baseline) still shows «مسکات»; Chrome would not start in the environment where this change was made. Brand-core fa text outside Studio (`content/brand-modules.ts` questions, `visual-dna/i18n.ts`) still says «مسکات».
