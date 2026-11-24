@@ -152,3 +152,20 @@ test('brand:acceptance CLI: usage errors and an unsafe --out are refused before 
   const tokened = spawnSync(NODE, tsxArgs('scripts/acceptance.ts', ['--demo', '--out', path.join(tempDir('acc-cli-'), 'o')]), { cwd: repo, encoding: 'utf8', env: { ...env, BRAND_OS_AGENT_TOKEN: 'not-a-real-token' }, input: '', timeout: 120_000 })
   assert.notEqual(tokened.status, 0, 'refused under an agent token')
 })
+
+test('--out through a linked parent folder that leads into brand/ is refused before anything is created (audit)', async () => {
+  const fixture = createAcceptanceFixture()
+  try {
+    const linkParent = path.join(tempDir('acc-link-'), 'via')
+    fs.symlinkSync(path.join(fixture.root, 'brand'), linkParent)
+    const before = treeDigest(path.join(fixture.root, 'brand'))
+    await assert.rejects(runAcceptance({ root: fixture.root, out: path.join(linkParent, 'acc', 'out'), origin: 'synthetic', canaries: fixture.canaries }), /outside any brand\/ folder/)
+    assert.equal(fs.existsSync(path.join(fixture.root, 'brand', 'acc')), false, 'nothing created inside brand/')
+    assert.equal(treeDigest(path.join(fixture.root, 'brand')), before)
+    const linkRoot = path.join(tempDir('acc-link-'), 'root')
+    fs.symlinkSync(fixture.root, linkRoot)
+    await assert.rejects(runAcceptance({ root: fixture.root, out: linkRoot, origin: 'synthetic', canaries: fixture.canaries }), /outside the brand checkout/)
+  } finally {
+    fixture.cleanup()
+  }
+})

@@ -141,9 +141,28 @@ function copyWorkspace(from: string, to: string): void {
   if (fs.existsSync(path.join(from, '.gitignore'))) fs.copyFileSync(path.join(from, '.gitignore'), path.join(to, '.gitignore'))
 }
 
-function prepareOut(out: string): string {
+/** The real path of `target`, following links on the closest existing parent (the rest may not exist yet). */
+function realPathOf(target: string): string {
+  let existing = target
+  const rest: string[] = []
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing)
+    if (parent === existing) break
+    rest.unshift(path.basename(existing))
+    existing = parent
+  }
+  return path.join(fs.realpathSync(existing), ...rest)
+}
+
+function prepareOut(out: string, root: string): string {
   const full = path.resolve(out)
-  if (full.split(path.sep).includes('brand')) throw new Error('--out must be outside any brand/ folder.')
+  // Checked on the typed and the real path, before anything is created: a linked parent cannot lead into brand/.
+  const real = realPathOf(full)
+  const realRoot = fs.realpathSync(root)
+  for (const candidate of [full, real]) {
+    if (candidate.split(path.sep).includes('brand')) throw new Error('--out must be outside any brand/ folder.')
+  }
+  if (real === realRoot || real.startsWith(`${realRoot}${path.sep}brand`)) throw new Error('--out must be outside the brand checkout.')
   if (fs.existsSync(full)) {
     if (fs.lstatSync(full).isSymbolicLink() || !fs.statSync(full).isDirectory()) throw new Error('--out must be a directory, not a link or a file.')
     if (fs.readdirSync(full).length > 0) throw new Error('--out must be empty.')
@@ -315,8 +334,7 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
   if (process.env[AGENT_TOKEN_ENV]) throw new Error(`The acceptance harness is an owner-local run. Refusing while ${AGENT_TOKEN_ENV} is set.`)
   const root = path.resolve(opts.root)
   if (!fs.existsSync(path.join(root, 'brand', 'brand.config.yaml'))) throw new Error('The root has no brand/brand.config.yaml.')
-  const out = prepareOut(opts.out)
-  if (out === root || out.startsWith(`${root}${path.sep}brand`)) throw new Error('--out must be outside the brand checkout.')
+  const out = prepareOut(opts.out, root)
   const progress = opts.progress ?? (() => {})
   const started = new Date()
   const rootBefore = treeDigest(path.join(root, 'brand'))
@@ -374,7 +392,9 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
     const rootAfter = treeDigest(path.join(root, 'brand'))
     const totals: Record<Verdict, number> = { PASS: 0, FAIL: 0, NOT_TESTED: 0 }
     for (const record of cases) totals[record.verdict] += 1
-    const verdict: Verdict = totals.FAIL > 0 ? 'FAIL' : totals.NOT_TESTED > 0 ? 'NOT_TESTED' : 'PASS'
+    const rootUnchanged = rootBefore === rootAfter
+    // A run that changed the checkout's brand/ failed, whatever its cases say.
+    const verdict: Verdict = totals.FAIL > 0 || !rootUnchanged ? 'FAIL' : totals.NOT_TESTED > 0 ? 'NOT_TESTED' : 'PASS'
     return {
       schema: ACCEPTANCE_SCHEMA,
       origin: opts.origin,
@@ -385,7 +405,7 @@ export async function runAcceptance(opts: AcceptanceOptions): Promise<Acceptance
       verdict,
       totals,
       cases,
-      workspace: { snapshot: true, root_unchanged: rootBefore === rootAfter },
+      workspace: { snapshot: true, root_unchanged: rootUnchanged },
       not_covered: [...NOT_COVERED],
       authorizes: [],
       permissions: { publish: false, schedule: false, spend: false, deploy: false },
@@ -440,6 +460,8 @@ async function singleVisual(ctx: Context): Promise<CaseRecord> {
     await run.check('reference.missing_stays_missing', 'FIX-03', () => {
       const mascotApproved = refs.filter((ref) => ref.via === 'mascot' && ref.state === 'approved').length
       const status = dna.mascot?.status ?? 'none'
+      // An error reply has no mascot section: that is not "missing stays missing", it is no answer.
+      if (dna.status !== 'ok' || !dna.mascot) return { verdict: 'FAIL', evidence: [`visual_dna:${dna.status ?? 'none'}`, `mascot:${status}`] }
       return { verdict: status !== 'resolved' && mascotApproved === 0 ? 'PASS' : 'FAIL', evidence: [`mascot:${status}`, `mascot_refs_approved:${mascotApproved}`, 'request:unlisted emotion/stage/angle'] }
     })
 
@@ -602,8 +624,8 @@ async function tenPosts(ctx: Context, revokedToken: string, otherBrandToken: str
     const guestReply = await guest.call('task_context', { task_type: 'social_batch', deliverable_count: 10, channel: 'instagram' })
     run.calls += 1
     await run.check('mcp.gated', 'FIX-02', () => {
-      const ok = (guestReply as Envelope).status === 'denied' && (guestReply as Envelope).data === null && revokedStart.code !== 0 && otherStart.code !== 0
-      return { verdict: ok ? 'PASS' : 'FAIL', evidence: [`guest:${String((guestReply as Envelope).status)}`, `revoked_token_server_exit:${revokedStart.code}`, `other_brand_token_server_exit:${otherStart.code}`] }
+      const ok = (guestReply as Envelope).status === 'denied' && (guestReply as Envelope).data === null && refused(revokedStart, /was revoked/) && refused(otherStart, /does not match an issued token|belongs to another brand/)
+      return { verdict: ok ? 'PASS' : 'FAIL', evidence: [`guest:${String((guestReply as Envelope).status)}`, `revoked_token_server_exit:${revokedStart.code}`, `revoked_reason:${refused(revokedStart, /was revoked/)}`, `other_brand_token_server_exit:${otherStart.code}`, `other_brand_reason:${refused(otherStart, /does not match an issued token|belongs to another brand/)}`] }
     })
 
     // Same request in en and tr: labels may change, approved values may not.
@@ -805,6 +827,11 @@ function readManifests(dir: string): ManifestReply[] {
 }
 
 const unescapeXml = (text: string): string => text.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+
+/** A server that refused to start for the expected reason, not one that crashed for another. */
+function refused(started: Ran, reason: RegExp): boolean {
+  return started.code !== 0 && started.code !== null && reason.test(started.stderr)
+}
 
 /** The error code a CLI printed (`code: message`), never the message itself. */
 function errorCode(stderr: string): string {

@@ -36,14 +36,15 @@ seconds. No quality score exists and none is invented.
 
 - **Never writes the given checkout.** It copies `brand/` into a temporary snapshot, issues tokens there, runs
   everything against the snapshot and deletes it. The checkout's `brand/` is hashed before and after
-  (`workspace.root_unchanged`). Mutations for negative tests (a changed asset byte, a changed approved fact via the
+  (`workspace.root_unchanged`); a run that changed it is a FAIL (exit 4) whatever its cases say. Mutations for negative tests (a changed asset byte, a changed approved fact via the
   owner change-request flow) happen on further copies.
 - **Owner-local.** Refused while `BRAND_OS_AGENT_TOKEN` is set. Children never inherit an agent token or an approval
   proof from the caller's shell. Knowledge GitHub sync is off.
 - **No model, no network.** Nothing is published, scheduled, spent, deployed or approved; `authorizes: []`.
 - **Report hygiene.** The report and the printed summary carry no brand sentence, token or path. Every reply is
   scanned for issued tokens, `.private` secrets and restricted values (`no_secrets`, `paid.no_budget_leak`).
-- `--out` must be new or empty and outside any `brand/` folder; it receives the drafted posts, the pack the posts
+- `--out` must be new or empty and outside any `brand/` folder, checked on the real path (a linked parent folder
+  cannot lead into `brand/`) before anything is created; it receives the drafted posts, the pack the posts
   were rendered from, and `acceptance-report.json`. **On a real brand these are private files**: keep them local.
 
 ## 3. Running it
@@ -56,7 +57,7 @@ npm run brand:acceptance -- --demo --out /tmp/acceptance-demo [--lang fa|en|tr] 
 npm run brand:acceptance -- --root ../my-brand --out /tmp/acceptance-my-brand --lang fa
 ```
 
-Exit 0 when no case failed, 4 when one did, 2 on a usage error, 1 when the run could not start. The synthetic run is
+Exit 0 when nothing failed, 4 when a case failed or the checkout changed, 2 on a usage error, 1 when the run could not start or stopped. The synthetic run is
 pinned in `tests/acceptance-harness.test.ts` (three cases PASS; the website brief stays NOT_TESTED because no brief
 renderer exists).
 
@@ -77,9 +78,10 @@ This is the path the harness exercises, written for the owner. Every step is loc
 5. **Open a new session** in the brand repository and ask, in your language: "۱۰ پست اینستاگرام برای برند بساز".
    The agent calls `task_context` once (skill `task-context`), then `production_readiness`, and asks you only for the
    question ids in `missing[]`.
-6. **Render the drafts yourself** (owner shell, no token): save the pack the agent got
-   (`npm run brand:query -- --tool task_context --task-type social_batch --count 10 > pack.json`), then
-   `npm run brand:runtime -- social-batch --pack pack.json --root . --out ../posts-draft`. With `--root` a pack that is
+6. **Render the drafts yourself.** The agent saves the pack it got, with its own token in its environment
+   (`npm run -s brand:query -- --tool task_context --task-type social_batch --count 10 --locale fa > pack.json`;
+   `-s` keeps npm's header out of the JSON, and without a token the query is refused). Then, in your shell without
+   an agent token: `npm run brand:runtime -- social-batch --pack pack.json --root . --out ../posts-draft`. With `--root` a pack that is
    older than an approved fact it cites is refused (`stale_pack`): build the pack again.
 7. **Check and review**: `npm run brand:runtime -- readiness --pack pack.json --root . --batch ../posts-draft`.
    `ready` only means no deterministic rule blocks. Look at every draft yourself; taste is `needs_human_review`.
