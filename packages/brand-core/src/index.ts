@@ -163,8 +163,21 @@ export type { EntityMigrationReport } from './entity-migration.js'
 export { BOOLEAN_WORDS, booleanWord } from './i18n.js'
 export { approveAssets } from './asset-approval.js'
 export type { AssetApprovalOutcome, AssetApprovalResult } from './asset-approval.js'
-export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCES } from './token-generate.js'
-export type { GeneratedTokenResult, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult } from './token-generate.js'
+export { approveTokens, generateTokens, publishTokens, readTokenApprovals, TOKEN_SOURCE_QUESTIONS, TOKEN_SOURCES, tokenNextStep } from './token-generate.js'
+export type { GeneratedTokenResult, SemanticMapReport, TokenGenerateReport, TokenOutcome, TokenReviewOutcome, TokenReviewResult, TokenSourceState } from './token-generate.js'
+export {
+  BRAND_ROLE_PREFIX,
+  brandRoleTokenId,
+  parseSemanticMap,
+  SEMANTIC_COLOR_SLOTS,
+  SEMANTIC_MAP_FORMAT,
+  SEMANTIC_MAP_QUESTION,
+  SEMANTIC_SLOTS,
+  semanticAnswerText,
+  semanticSlotOf,
+  suggestSemanticMap,
+} from './token-semantic.js'
+export type { ParsedSemanticMap, SemanticAssignment, SemanticSlot, SemanticSuggestion } from './token-semantic.js'
 export {
   BRAND_BOOK,
   buildBrandBook,

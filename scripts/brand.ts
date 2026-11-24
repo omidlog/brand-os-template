@@ -4,7 +4,7 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
-import { applyInit, backupBrand, CHANGE_DEPTHS, IDENTITY_INTENTS, InterviewEngine, LOGO_PRESENCE, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand, validateIdentityChoice } from '@brand-os/brand-core'
+import { applyInit, backupBrand, CHANGE_DEPTHS, IDENTITY_INTENTS, InterviewEngine, LOGO_PRESENCE, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand, tokenNextStep, validateIdentityChoice } from '@brand-os/brand-core'
 import type { BatchResult, IntakeReport, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
 import { coachAfterAnswer, coachBeforeApproval, renderAfterAnswer, renderBeforeApproval, type CoachMomentResult } from '@brand-os/brand-core/coach'
 
@@ -440,6 +440,10 @@ if (command === 'init') {
     const proof = await readApprovalProof()
     const result = withSelectionErrors(() => approvals.approveBatch(selection, proof, values.actor ?? 'owner'))
     console.log(values.json ? JSON.stringify(result, null, 2) : formatBatch(result))
+    // BOS-17: approving a token source (color roles, semantic map, type scale, logo size) leaves the draft tokens
+    // out of date. Say what to run next; nothing is generated here. Text mode only: the JSON contract is unchanged.
+    const nextStep = values.json ? null : tokenNextStep(result.results.filter((item) => item.outcome === 'approved').map((item) => item.question_id))
+    if (nextStep) console.log(nextStep)
     if (!result.ok) process.exit(1)
   } else {
     if (values['dry-run']) {
@@ -669,6 +673,14 @@ if (command === 'init') {
   else {
     for (const source of report.sources) console.log(`${source.state.padEnd(12)} ${source.question_id}`)
     for (const token of report.tokens) console.log(`${token.outcome.padEnd(16)} ${token.id}  ${token.reason}`)
+    const semantic = report.semantic
+    for (const item of semantic.applied) console.log(`mapped           ${item.token_id} = ${item.role}  From approved ${semantic.question_id}.`)
+    for (const problem of semantic.problems) console.log(`problem          ${semantic.question_id}: ${problem}`)
+    if (semantic.suggestions.length > 0) {
+      console.log(`\nSuggested mapping for ${semantic.question_id} (NOT applied; the template ids stay template examples until you approve an answer):`)
+      for (const item of semantic.suggestions) console.log(`  ${item.slot.padEnd(12)} = ${item.role.padEnd(16)} ${item.reason}`)
+      console.log(`Review and edit it, then record it as a draft answer and approve it:\n  ${semantic.answer_command}\n`)
+    }
     console.log(report.files.length ? `Wrote ${report.files.join(', ')}` : report.dry_run ? 'Dry run. Nothing was written.' : 'No token files changed.')
     console.log(report.note)
   }

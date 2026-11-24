@@ -297,6 +297,19 @@ fields:
       - brand/generated/drafts/product-ui.md
     validator: structured
     related_ids: []
+  - id: brand.color.semantic_map
+    module: color-system
+    field_path: brand.color.semantic_map
+    label: Semantic color mapping
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - brand.color.semantic_map
+    documents:
+      - brand/generated/drafts/color-system.md
+    validator: non_empty
+    related_ids: []
   - id: brand.color.themes
     module: color-system
     field_path: brand.color.themes

@@ -49,6 +49,7 @@ export const FOUNDER_CORE: InterviewProfile & { schema_version: 1 } = {
     'brand.logo.misuse',
     'brand.logo.min_size',
     'brand.color.roles',
+    'brand.color.semantic_map',
     'brand.color.themes',
     'brand.type.intent',
     'brand.type.scale',
@@ -69,6 +70,7 @@ export const PERSONAL_SHARED_QUESTIONS = [
   'brand.verbal.localization',
   'brand.photo.direction',
   'brand.color.roles',
+  'brand.color.semantic_map',
   'brand.type.intent',
 ]
 
