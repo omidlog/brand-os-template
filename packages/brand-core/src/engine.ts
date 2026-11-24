@@ -5,7 +5,7 @@ import { completeness, isOpenAnswer, latestAnswers } from './completeness.js'
 import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
 import { exists, readYaml, writeAtomic, writeYaml } from './fsutil.js'
-import { t, normalizeCommand, type Locale } from './i18n.js'
+import { t, normalizeCommand, questionHelp, type Locale } from './i18n.js'
 import { ApprovalService, isPersonalQuestion, normalizeAnswer, type AnswerMeta, type ApprovalStep } from './approval.js'
 import { exportPublic as projectPublic } from './projection.js'
 import { authorize, guestContext, operatorContext, verifiedHumanContext } from './auth.js'
@@ -229,6 +229,11 @@ export class InterviewEngine {
     return { text: question.prompt.en, fellBack: locale !== 'en' }
   }
 
+  /** `why_it_matters` and the examples in the locale, with English fallback. */
+  helpText(question: FieldQuestion, locale: Locale = this.session().locale): ReturnType<typeof questionHelp> {
+    return questionHelp(question, locale)
+  }
+
   submit(rawInput: string, actor = 'owner'): StepResult {
     const decision = authorize(operatorContext(this.config().brand.slug), { brand_id: this.config().brand.slug, classification: 'internal', status: 'draft', publication: 'unpublished' }, 'write')
     if (!decision.allow) return { kind: 'error', message: decision.reason }
@@ -267,7 +272,7 @@ export class InterviewEngine {
       return {
         kind: 'info',
         questionId: current.id,
-        message: `${t(locale, 'examplesTitle')}\n${current.examples.map((example) => `- ${example}`).join('\n')}`,
+        message: `${t(locale, 'examplesTitle')}\n${this.helpText(current, locale).examples.map((example) => `- ${example}`).join('\n')}`,
       }
     }
     if (lower === 'suggest options') {
