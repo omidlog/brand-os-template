@@ -540,3 +540,9 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 
 - **Done:** negated cheap-price wording does not fire `premium-vs-lowest-price` (en/fa/tr); registry rules skip questions that do not apply under the config; `coach-rules/4`.
 - **Not done (reported in the audit):** `YEAR` in the creator rubric also matches counts such as 2000 or 1450; negation of symbol terms ("#1") and a wider window; Turkish verb-suffix negation; one slot per verdict under the finding cap; empty-id rule checks in scoped reviews; evidence and deferrals in `contextDigest`.
+
+## Audit: fixes pack minor findings, batched (2026-11-24)
+
+- **Done:** the creator / speaker rubrics no longer read an audience count ("2000 subscribers", «۲۰۰۰ نفر», "2000 abone") as a year; `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` are list fields for `sensitive-claim-wording`; one slot for a `potential_tension` under the finding cap; scoped `consistency_review` keeps brand-wide rule checks; `coach-rules/5`. `brand:assurance-link link --date` reports today's state. The acceptance leak check also searches JSON-escaped values.
+- **Correction:** of the coach audit's "Not done" line above, the `YEAR` count match, the finding-cap slot and the empty-id rule checks in scoped reviews are resolved by this change.
+- **Not done (owner decision or larger change):** negation of symbol terms ("#1"), a wider negation window and Turkish verb-suffix negation; evidence and deferrals in `contextDigest`; `verify` wording when a link changes but the digest is the same; recovery from a corrupted link file; wrapping each acceptance journey, mapping parse errors to codes and a signal handler in the harness; the paid-media `undecided` vs `--paid-media` question (Q-1).

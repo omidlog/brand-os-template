@@ -21,7 +21,7 @@ import {
   type CoachStatus,
 } from './model.js'
 import { assessAnswer, topFindings, type QualityAssessment, type QualityFinding } from './quality.js'
-import { registryReview } from './rules.js'
+import { registryReview, type RegistryFinding } from './rules.js'
 
 /**
  * Assembling a `CoachResult`. One shape for all three modes, validated against the contract before it is
@@ -224,6 +224,18 @@ export function followUpReview(ctx: CoachContext, questionId: string, opts: Coac
   })
 }
 
+/**
+ * Registry findings within the budget, worst first. When the list is cut, one slot is kept for a
+ * `potential_tension`, so a long run of `needs_verification` never hides every tension that `rule_checks` names.
+ */
+function capRegistry(list: RegistryFinding[], budget: number): RegistryFinding[] {
+  if (list.length <= budget) return list
+  const kept = list.slice(0, budget)
+  const tension = list.find((item) => item.verdict === 'potential_tension')
+  if (budget > 1 && tension && !kept.includes(tension)) kept[budget - 1] = tension
+  return kept
+}
+
 /** `consistency_review` across the brand, or scoped to one question's conflicts when an id is given. */
 export function consistencyReview(ctx: CoachContext, questionId: string | null, opts: CoachOptions = {}): CoachResult {
   const locale = opts.locale ?? 'en'
@@ -231,8 +243,8 @@ export function consistencyReview(ctx: CoachContext, questionId: string | null, 
   const items = consistencyFindings(ctx, question?.id ?? null)
   const answered = answeredIds(ctx)
   const registry = registryReview(ctx)
-  const registryItems = (question === null ? registry.findings : registry.findings.filter((item) => item.relatedIds.includes(question.id))).slice(
-    0,
+  const registryItems = capRegistry(
+    question === null ? registry.findings : registry.findings.filter((item) => item.relatedIds.includes(question.id)),
     Math.max(0, COACH_LIMITS.maxConsistencyFindings - items.length),
   )
 
@@ -327,7 +339,8 @@ export function consistencyReview(ctx: CoachContext, questionId: string | null, 
     findings,
     source_refs: dedupeRefs([{ kind: 'profile', id: ctx.profileId }, ...findings.flatMap((finding) => finding.source_refs)]),
     notes: [NO_MODEL_NOTE, ADVISORY_NOTE, REGISTRY_NOTE, 'rules_source: findContradictions (packages/brand-core/src/contradictions.ts), reported unchanged'],
-    rule_checks: question === null ? registry.checks : registry.checks.filter((check) => check.question_ids.includes(question.id)),
+    // Scoped: the checks that name this question, plus brand-wide checks (no ids), which read it too.
+    rule_checks: question === null ? registry.checks : registry.checks.filter((check) => check.question_ids.length === 0 || check.question_ids.includes(question.id)),
   })
 }
 

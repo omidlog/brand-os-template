@@ -686,7 +686,8 @@ export function linkEvidence(root: string, input: LinkEvidenceInput, opts: { now
     ...(input.linked_on !== undefined ? { linked_on: input.linked_on } : {}),
     ...(input.expected_revision !== undefined ? { expected_revision: input.expected_revision } : {}),
   })
-  return { note_id: note.id, revision, state: linkState(revision, note, entry, revision.linked_on), authorizes: [] }
+  // The state reported is today's, also for a backdated link (`--date`): that is what the owner acts on.
+  return { note_id: note.id, revision, state: linkState(revision, note, entry, w.ws.now().toISOString().slice(0, 10)), authorizes: [] }
 }
 
 /** Removes a note's link (a new `unlink` revision; history stays). The note is owner-stated again. */
