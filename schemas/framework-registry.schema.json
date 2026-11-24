@@ -14,7 +14,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["framework_id", "title", "kind", "authority", "edition", "source_url", "license_status", "permitted_claim", "verified_on", "usage_note"],
+        "required": ["framework_id", "title", "kind", "authority", "edition", "source_url", "license_status", "permitted_claim", "verified_on", "reviewer", "usage_note"],
         "additionalProperties": false,
         "properties": {
           "framework_id": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]{1,39}$" },
@@ -26,6 +26,7 @@
           "license_status": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
           "permitted_claim": { "enum": ["informed_by", "aligned_with", "verified_against", "externally_certified", "original_professional_template"] },
           "verified_on": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "reviewer": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Who checked the source on verified_on (a name or role), or \"pending\" when nobody has. Never invented." },
           "usage_note": { "type": "string", "minLength": 1, "maxLength": 400 }
         }
       }

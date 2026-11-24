@@ -20,6 +20,18 @@ const CLAIMS_NEEDING_CHECK = new Set(['aligned_with', 'verified_against'])
 /** Words a registry entry may never use about itself: it describes a method, it does not certify anything. */
 const FORBIDDEN_WORDS = /\b(certified|certification|compliant|compliance|conformant|conformance|official)\b/i
 
+/** The reviewer value for "nobody has checked the source yet". */
+export const REVIEWER_PENDING = 'pending'
+
+/**
+ * Standards verification (V5.1): `verified` only when a dated check and a named reviewer are both recorded.
+ * Anything else is `pending`; the registry never guesses a date or a person.
+ */
+export function standardVerification(ref: Pick<FrameworkRef, 'verified_on' | 'reviewer'>): 'verified' | 'pending' {
+  const reviewer = typeof ref.reviewer === 'string' ? ref.reviewer.trim() : ''
+  return ref.verified_on && reviewer !== '' && reviewer.toLowerCase() !== REVIEWER_PENDING ? 'verified' : 'pending'
+}
+
 export interface FrameworkRegistry {
   schema_version: 1
   frameworks: FrameworkRef[]
@@ -48,6 +60,10 @@ export function frameworkClaimErrors(doc: FrameworkRegistry): string[] {
     if (ref.permitted_claim === 'externally_certified') errors.push(`${at}: externally_certified needs certificate evidence that Brand OS does not model; use informed_by`)
     if (CLAIMS_NEEDING_CHECK.has(ref.permitted_claim) && !ref.verified_on) errors.push(`${at}: ${ref.permitted_claim} needs verified_on (the date a person checked the source)`)
     if (ref.permitted_claim === 'original_professional_template' && ref.authority !== 'Brand OS') errors.push(`${at}: original_professional_template is only for Brand OS's own layouts`)
+    const reviewed = typeof ref.reviewer === 'string' && ref.reviewer.trim() !== '' && ref.reviewer.trim().toLowerCase() !== REVIEWER_PENDING
+    if (ref.verified_on && !reviewed) errors.push(`${at}: verified_on needs a named reviewer (who checked the source); keep both pending until a person has`)
+    if (!ref.verified_on && reviewed) errors.push(`${at}: a reviewer needs verified_on (the date they checked the source); use "pending" until then`)
+    if (ref.verified_on && Date.parse(`${ref.verified_on}T00:00:00Z`) > Date.now()) errors.push(`${at}: verified_on is in the future`)
     if (ref.verified_on && !Number.isFinite(Date.parse(`${ref.verified_on}T00:00:00Z`))) errors.push(`${at}: verified_on is not a date`)
     for (const field of ['title', 'usage_note', 'edition'] as const) {
       // "not an accessibility audit or a conformance claim" is a disclaimer; only flag positive use.

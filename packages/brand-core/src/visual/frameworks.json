@@ -1,5 +1,5 @@
 {
-  "$comment": "Visual framework registry (Visual Blueprint D5). Metadata only: what each method or standard is, who publishes it, and what a Brand OS page may claim about it. Never a fact store. Validated by npm run validate against schemas/framework-registry.schema.json and the claim rules in visual/framework-registry.ts. informed_by is the only claim used until a person has checked the source and recorded verified_on.",
+  "$comment": "Visual framework registry (Visual Blueprint D5). Metadata only: what each method or standard is, who publishes it, and what a Brand OS page may claim about it. Never a fact store. Validated by npm run validate against schemas/framework-registry.schema.json and the claim rules in visual/framework-registry.ts. informed_by is the only claim used until a person has checked the source and recorded verified_on and reviewer. Standards verification pass (V5.1, 2026-11-24): no source page has been checked by a person yet, so every entry is honestly verified_on null, reviewer pending.",
   "schema_version": 1,
   "frameworks": [
     {
@@ -12,6 +12,7 @@
       "license_status": "attribution-and-software-use-review",
       "permitted_claim": "informed_by",
       "verified_on": null,
+      "reviewer": "pending",
       "usage_note": "Original Brand OS layout of the nine business model components. Not Strategyzer artwork; commercial embedding terms are under review."
     },
     {
@@ -24,6 +25,7 @@
       "license_status": "w3c-document-license",
       "permitted_claim": "informed_by",
       "verified_on": null,
+      "reviewer": "pending",
       "usage_note": "Ratios are computed with the WCAG 2 relative-luminance formula from approved hex values. A ratio is a measurement of two colours, not an accessibility audit or a conformance claim for any product."
     },
     {
@@ -36,6 +38,7 @@
       "license_status": "template-licence",
       "permitted_claim": "original_professional_template",
       "verified_on": null,
+      "reviewer": "pending",
       "usage_note": "Original Brand OS chapter layout for colour, type and logo construction. Values come only from approved facts and the approved master asset."
     },
     {
@@ -48,6 +51,7 @@
       "license_status": "template-licence",
       "permitted_claim": "original_professional_template",
       "verified_on": null,
+      "reviewer": "pending",
       "usage_note": "Original Brand OS layout for a character's expressions, poses and growth stages. Artwork comes only from approved catalog artwork and approved manifest assets; nothing is generated or inferred."
     }
   ]
