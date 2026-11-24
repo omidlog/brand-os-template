@@ -269,7 +269,7 @@ test('reproducible: same input, same bytes; a snapshot as of yesterday ignores t
 
   const kept = owner(() => buildAssuranceSnapshot(brand.root, OPTS))
   assert.equal(canonicalSnapshot(owner(() => buildAssuranceSnapshot(brand.root, OPTS))), canonicalSnapshot(kept))
-  assert.equal(kept.bridge_version, 'brand-os.assurance-bridge/3')
+  assert.equal(kept.bridge_version, 'brand-os.assurance-bridge/4')
 
   brand.engine.approvals().withdrawEvidence(entry.id, 'SYNTHETIC DEMO')
   const checked = owner(() => verifyAssuranceSnapshot(brand.root, JSON.stringify(kept)))

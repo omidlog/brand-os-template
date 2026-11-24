@@ -44,6 +44,11 @@ export const BRIDGE_TEXT: Catalog = {
     fa: '‎--paid-media‎ نادیده گرفته شد: پاسخ تأییدشدهٔ business.marketing.paid_media به کار رفت.',
     tr: '--paid-media yok sayıldı: business.marketing.paid_media sorusunun onaylı yanıtı kullanıldı.',
   },
+  paid_media_ignored_undecided: {
+    en: '--paid-media was ignored: the approved interview answer to business.marketing.paid_media is "undecided", and that answer is used. Paid media stays unknown until you answer yes or no.',
+    fa: '‎--paid-media‎ نادیده گرفته شد: پاسخ تأییدشدهٔ مصاحبه به business.marketing.paid_media «هنوز تصمیم نگرفته‌ام» (undecided) است و همان پاسخ به کار رفت. تا وقتی «بله» یا «نه» پاسخ ندهید، تبلیغات پولی نامعلوم می‌ماند.',
+    tr: '--paid-media yok sayıldı: business.marketing.paid_media sorusunun onaylı görüşme yanıtı "kararsız" (undecided) ve bu yanıt kullanıldı. Evet ya da hayır yanıtlayana kadar ücretli medya bilinmiyor olarak kalır.',
+  },
   personal_brand: {
     en: 'Personal brand (personal module): tracked separately, facets {facets}. It does not change whether this brand is a company or a person.',
     fa: 'برند شخصی (ماژول personal): جداگانه پیگیری می‌شود، وجه‌ها {facets}. این تعیین نمی‌کند که این برند شرکت است یا شخص.',
