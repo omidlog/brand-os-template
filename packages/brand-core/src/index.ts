@@ -16,7 +16,7 @@ export { buildMascotCatalog, CANONICAL_ANGLES, CORE_MOTIONS, EXAMPLE_STAGES, cat
 export { InterviewEngine, applyInit, dispositionFor, emptySession, assertSlug, upgradeCore, syncManifest, personalInit } from './engine.js'
 export { completenessScope, listProfiles, loadProfile, profileErrors, UNIVERSAL_PROFILE } from './profiles.js'
 export { PERSONAL_BRAND, PERSONAL_SHARED_QUESTIONS, STARTER_PROFILES } from './content/profiles.js'
-export { canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSONAL_CANONICAL_REFERENCES } from './personal.js'
+export { addPersonalStrategyQuestions, canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSONAL_CANONICAL_REFERENCES, PERSONAL_STRATEGY_QUESTIONS } from './personal.js'
 export type { CanonicalReference } from './personal.js'
 export {
   addEvidence,
@@ -34,7 +34,9 @@ export {
 export type { AddEvidenceInput, ClaimVerification, EvidenceItem, EvidenceKind, EvidenceSource, EvidenceStatus } from './evidence.js'
 export { RIGHTS_SUBJECTS, rightsBlocker, rightsSubject } from './asset-rights.js'
 export type { RightsSubject } from './asset-rights.js'
-export { moduleEnabled, personalConfig } from './conditions.js'
+export { moduleEnabled, personalConfig, questionApplies } from './conditions.js'
+export { brandApplicability, BUSINESS_FACETS, frameworksApplyTo, PERSONAL_FRAMEWORK_SOURCES, VENTURE_PATH_NOTE } from './applicability.js'
+export type { ApplicabilityState, BrandApplicability, FrameworkRef, FrameworkSourceRow } from './applicability.js'
 export { PRIVATE_CUES, privateDataFindings, privateDataRefusal } from './personal-privacy.js'
 export type { PrivateDataFinding, PrivateDataKind } from './personal-privacy.js'
 export { OWNERSHIP_STATES, RELATION_TYPES } from './structured.js'

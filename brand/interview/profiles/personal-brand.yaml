@@ -6,8 +6,11 @@ description: "A person-centered brand: identity, positioning, story, experience 
   questions (founder-executive, consultant-expert, creator-educator, artist-designer,
   speaker-author) apply only for the facets selected in modules.personal.facets. The profile is
   exclusive: company legal-entity, SaaS, mascot and other Business OS questions count as not
-  applicable, not missing. A person who also runs a business can set brand.profile back to universal
-  and keep modules.personal enabled to work through both."
+  applicable, not missing. With a business facet (founder-executive, consultant-expert) the canvas,
+  business and marketing plans and the Strategy lab describe the person’s own practice from these
+  personal answers; parts with no personal answer are not applicable. For a full plan of a venture,
+  set brand.profile back to universal and keep modules.personal enabled, or give the venture its own
+  repository."
 exclusive: true
 question_ids:
   - personal.identity.public_name
@@ -54,6 +57,10 @@ question_ids:
   - personal.contact.public_channels
   - personal.governance.reviewer
   - personal.privacy.availability
+  - brand.strategy.purpose
+  - brand.strategy.vision
+  - brand.strategy.values
+  - brand.strategy.promise
   - brand.personality.traits
   - brand.verbal.voice
   - brand.verbal.voice_pairs

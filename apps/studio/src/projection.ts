@@ -111,7 +111,8 @@ export interface StudioProjection {
     approved_facts: number
     restricted_withheld: number
     contradictions: number
-    groups: Array<{ group: string; required: number; required_approved: number; required_unanswered: number; pending_review: number }>
+    /** `applicable`: questions of the group that apply to the brand's profile (BOS-15); 0 is "not applicable". Absent in older caches. */
+    groups: Array<{ group: string; required: number; required_approved: number; required_unanswered: number; pending_review: number; applicable?: number }>
     next: Array<{ id: string; priority: string; prompt: string }>
   }
   modules: DashboardModule[]
@@ -199,8 +200,9 @@ export interface StudioVisualProjection {
   strategy?: { swot: { internal: VisualDocument; public: VisualDocument }; value_proposition: { internal: VisualDocument; public: VisualDocument } }
   /**
    * Customer journey swimlane, SOSTAC overview and OKR tree (V3.3), in both editions. Internal: approved, labelled
-   * drafts, gaps; public: approved and published only. `applies` follows the canvas (business brands, and personal
-   * brands with a business facet). Absent in caches written before it existed; sync rebuilds those.
+   * drafts, gaps; public: approved and published only. `applies` follows the canvas (`brandApplicability().frameworks`:
+   * business brands, universal with personal on, and personal brands with a business facet). Absent in caches written
+   * before it existed; sync rebuilds those.
    */
   plans?: { applies: boolean; internal: PlanDocuments; public: PlanDocuments }
 }
@@ -441,8 +443,9 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
 
   const groups = new Map<string, StudioProjection['overview']['groups'][number]>()
   for (const module of dashboard.modules) {
-    const entry = groups.get(module.group) ?? { group: module.group, required: 0, required_approved: 0, required_unanswered: 0, pending_review: 0 }
+    const entry = groups.get(module.group) ?? { group: module.group, required: 0, required_approved: 0, required_unanswered: 0, pending_review: 0, applicable: 0 }
     entry.required += module.required
+    entry.applicable = (entry.applicable ?? 0) + module.applicable
     entry.required_approved += module.required_approved
     entry.required_unanswered += module.required_unanswered
     entry.pending_review += module.pending_review

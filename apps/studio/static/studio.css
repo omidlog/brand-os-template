@@ -597,6 +597,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .doc-section-head h2 { font: 600 24px/1.2 var(--studio-font-display); }
 .doc-section-purpose { color: var(--studio-color-text-secondary); max-width: 720px; }
 .doc-items { display: grid; gap: var(--studio-space-3); }
+/* BOS-15: questions the brand's profile does not ask, listed apart from the items (never as missing). */
+.doc-na { margin-top: var(--studio-space-3); font: var(--studio-type-caption); }
+.doc-na ul { margin: var(--studio-space-2) 0 0; padding-inline-start: var(--studio-space-4); }
 .doc-item { background: var(--studio-color-bg-surface); border: 1px solid var(--studio-color-border-subtle); border-inline-start-width: 3px; border-radius: var(--studio-radius-md); padding: var(--studio-space-4); display: grid; gap: var(--studio-space-2); }
 .doc-item-approved { border-inline-start-color: var(--studio-color-status-approved); }
 .doc-item-assumption { border-inline-start-color: var(--studio-color-status-draft); }

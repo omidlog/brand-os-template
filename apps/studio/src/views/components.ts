@@ -190,7 +190,24 @@ export function itemValue(i: I18n, item: DocumentItem): SafeHtml {
 
 function sectionBadge(i: I18n, status: DocumentSection['status']): SafeHtml {
   const tone: Tone = status === 'complete' ? 'success' : status === 'partial' ? 'warning' : 'neutral'
-  return badge(i.t(`doc.section.${status}` as MessageKey), tone, status === 'complete' ? 'checkCircle' : status === 'partial' ? 'clock' : 'circle')
+  return badge(i.t(`doc.section.${status}` as MessageKey), tone, status === 'complete' ? 'checkCircle' : status === 'partial' ? 'clock' : status === 'not_applicable' ? 'skip' : 'circle')
+}
+
+/** BOS-15: a personal answer standing in for a framework question says so, with both ids. */
+export function standsForNote(i: I18n, item: { id: string; stands_for?: string }): SafeHtml {
+  if (!item.stands_for) return html``
+  return html`<p class="doc-item-note muted small" dir="auto">${icon('user')} ${i.t('doc.standsFor', { id: item.id, target: item.stands_for })}</p>`
+}
+
+/** BOS-15: the questions of a section the brand's profile does not ask; labels only, never "missing". */
+export function notApplicableList(i: I18n, section: Pick<DocumentSection, 'not_applicable'>): SafeHtml {
+  const rows = section.not_applicable ?? []
+  if (!rows.length) return html``
+  return html`<details class="doc-na">
+    <summary>${icon('skip')} <span>${i.t('doc.notApplicableTitle')}</span> <span class="muted">(${i.number(rows.length)})</span></summary>
+    <p class="muted small">${i.t('doc.notApplicableHint')}</p>
+    <ul>${rows.map((row) => html`<li><span dir="auto">${row.label}</span> ${code(row.id, 'source-id')}</li>`)}</ul>
+  </details>`
 }
 
 export function documentItem(i: I18n, item: DocumentItem): SafeHtml {
@@ -201,6 +218,7 @@ export function documentItem(i: I18n, item: DocumentItem): SafeHtml {
     </header>
     ${itemValue(i, item)}
     ${item.note && item.value !== null && !item.withheld ? html`<p class="doc-item-note muted" dir="auto">${item.note}</p>` : ''}
+    ${standsForNote(i, item)}
     <footer class="doc-item-foot">
       ${item.source_ids.length ? html`<span class="muted">${i.t('common.sources')}:</span> ${join(item.source_ids.slice(0, 4).map((id) => code(id, 'source-id')), ' ')}` : ''}
       ${item.version !== null ? html`<span class="muted">${i.t('common.version', { version: item.version })}</span>` : ''}
@@ -230,6 +248,7 @@ export function documentView(i: I18n, model: DocumentModel, idPrefix: string): S
           ${section.purpose ? html`<p class="doc-section-purpose" dir="auto">${section.purpose}</p>` : ''}
           ${section.length ? html`<p class="doc-length muted">${i.t('doc.length', { min: section.length.guideline[0], max: section.length.guideline[1], words: section.length.approved_words })}</p>` : ''}
           <div class="doc-items">${section.items.map((item) => documentItem(i, item))}</div>
+          ${notApplicableList(i, section)}
         </section>`,
       )}
     </div>

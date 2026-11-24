@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { disabledModule, shouldSkip, type ConditionContext } from './conditions.js'
+import { brandApplicability, VENTURE_PATH_NOTE } from './applicability.js'
+import { disabledModule, questionApplies, shouldSkip, type ConditionContext } from './conditions.js'
 import { completeness, isOpenAnswer, latestAnswers } from './completeness.js'
 import { findContradictions } from './contradictions.js'
 import { fieldBlock, renderDraftFile, upsertFieldBlock } from './documents.js'
@@ -128,8 +129,7 @@ export class InterviewEngine {
     const inProfile = profile ? new Set(profile.question_ids) : null
     return this.questions()
       .filter((question) => {
-        if (inProfile && !inProfile.has(question.id)) return false
-        if (disabledModule(question.id, ctx) || shouldSkip(question.skip_when, ctx)) return false
+        if (!questionApplies(question, ctx, inProfile)) return false
         // A retracted (deprecated) answer reopens the question; see isOpenAnswer.
         if (!isOpenAnswer(ctx.answers.get(question.id))) return false
         return this.depsSatisfied(question, ctx)
@@ -788,6 +788,11 @@ export class InterviewEngine {
       'Next questions:',
       ...report.next.map((item) => `- [${item.priority}] ${item.id}`),
     ]
+    // BOS-15: a module with no applicable question is "not applicable", never "100 %".
+    const notApplicable = report.modules.filter((score) => score.applicable === 0).length
+    if (notApplicable > 0) lines.push(`Modules not applicable to this profile: ${notApplicable}`)
+    const applicability = brandApplicability(this)
+    if (applicability.exclusive && (this.config().brand.profile === 'personal-brand' || this.config().modules.personal?.enabled === true)) lines.push(applicability.frameworks ? VENTURE_PATH_NOTE : 'Business frameworks do not apply to this profile. For a plan of a venture, set brand.profile: universal with modules.personal enabled, or use a separate repository.')
     return lines.join('\n')
   }
 

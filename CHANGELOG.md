@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — BOS-15: one definition of "applies" for the CLI and Studio
+
+### Fixed
+
+- `brand:next` could report a personal brand's interview as complete while Studio showed the canvas, business plan, marketing plan and Strategy lab as mostly missing: the interview profile excluded `business.*` questions and the Studio frameworks included them. One rule now decides, `brandApplicability` (`packages/brand-core/src/applicability.ts`, predicate `questionApplies` in `conditions.ts`), used by `brand:next`, `brand:status` / completeness, the Brand Book, business and marketing plan documents, the canvas, SWOT / TOWS, Value Proposition Canvas, journey, SOSTAC, OKR, the full books, the publishing gallery and every Studio counter. If Studio shows an item as missing, `brand:next` asks it and `open` counts it.
+- Coverage maths: a module, group, section or chapter with no applicable question shows "Not applicable to this profile" instead of "100 %" (Business OS module list, Command Center groups and framework map, Brand Book chapters). `completeness()` and the dashboard carry an `applicable` count per module.
+
+### Changed
+
+- Owner decision: for a `personal-brand` profile with a business facet, the frameworks describe the person's own practice. A framework question the profile does not ask shows the approved personal answer that describes the same thing (for example `business.customer.primary_segment` ← `personal.positioning.primary_audience`), under the personal id, with its own approval, verification and visibility and a `stands_for` reference; without a mapping it is not applicable, never missing. Ventures stay relationships. The table is `PERSONAL_FRAMEWORK_SOURCES`; the decision is in `docs-internal/PERSONAL_BRAND.md`.
+- The `personal-brand` profile asks `brand.strategy.purpose`, `brand.strategy.vision`, `brand.strategy.values` and `brand.strategy.promise`. The profile file is brand-owned, so `npm run brand:migrate` adds them to an older `personal-brand.yaml` (additive, idempotent; `addPersonalStrategyQuestions`), and `brand:next` then reports them as open.
+- `brand:next --json` has a `frameworks` object (`applies`, `practice`, `note`); for a personal profile it and `brand:status` point to `brand.profile: universal` with personal on, or a separate repository, for a full venture plan.
+- Document sections can be `not_applicable` and list the questions the profile does not ask (`not_applicable`); visual entries carry `stands_for` and `na_reason: 'profile'`; book chapters have the unavailable reason `not_applicable`. New strings in en/fa/tr (Studio and visual catalogs). Studio rebuilds a cached projection without the module `applicable` counts once at the same commit.
+- Tests: `studio-applicability` (personal without business facets, personal with business facets, universal with personal on; synthetic data).
+
 ## Unreleased — CI: private brands skip the public docs prepare
 
 ### Fixed

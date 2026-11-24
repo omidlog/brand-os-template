@@ -680,6 +680,8 @@
 .vz-legacy { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 11px; color: var(--vz-text-3); }
 .vz-legacy svg { width: 13px; height: 13px; }
 .vz-legacy-hint { flex-basis: 100%; }
+/* BOS-15: a personal answer standing in for a framework question names its source. */
+.vz-entry-from { margin: 0 0 6px; font-size: 11px; color: var(--vz-text-3); overflow-wrap: anywhere; }
 .vz-links-table .vz-link--unresolved td { color: var(--vz-text-3); }
 /* Print (A3 canvas page): lists stay compact so the nine zones keep to one page. */
 .vz-page .vz-items { gap: 1.2mm; margin-block-end: 1.2mm; }
