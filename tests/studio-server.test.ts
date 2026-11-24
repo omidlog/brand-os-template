@@ -436,6 +436,8 @@ test('the owner previews a draft asset badged as a draft in en, fa (RTL) and tr;
     })
     const csrf = await client.csrf('/brands/acme-learning')
     assert.equal((await client.request('POST', '/brands/acme-learning/refresh', { form: { _csrf: csrf, return: '/brands/acme-learning/brand/assets' } })).status, 303)
+    // Refresh answers before a slow sync finishes (BOS-14); wait for it before reading the page.
+    await s.studio.sync.settled()
 
     const expected = {
       en: { dir: 'ltr', flag: 'Draft, not approved', alt: 'Mascot stage 1 (draft, not approved)' },
