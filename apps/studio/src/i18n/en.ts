@@ -709,6 +709,10 @@ export const en = {
   "reader.ch.logo.lead": "Variants, minimum size, clear space and misuse.",
   "reader.ch.governance.title": "Governance",
   "reader.ch.governance.lead": "Who approves brand changes, how versions and deprecations work, and the rules for AI use.",
+  // Visual V3.3: customer journey map, SOSTAC overview, OKR tree.
+  "nav.journey": "Customer journey map",
+  "nav.sostac": "SOSTAC® overview",
+  "nav.okr": "OKR tree",
   "nav.publishing": "Publishing gallery",
   "publishing.title": "Publishing gallery",
   "publishing.subtitle": "Every document type for each audience, and how ready it is. Read only.",

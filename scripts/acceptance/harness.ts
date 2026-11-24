@@ -245,9 +245,13 @@ function approvedFingerprint(pack: TaskContextPack): string {
   return sha256(rows.join('\n'))
 }
 
-function leaks(transcript: string[], secrets: string[]): string[] {
+/**
+ * Secrets found in the transcript. Replies are JSON text, so a value with `"`, `\\` or a newline appears
+ * escaped there; both the raw and the JSON-escaped form are searched.
+ */
+export function leaks(transcript: string[], secrets: string[]): string[] {
   const text = transcript.join('\n')
-  return secrets.filter((secret) => secret.length >= 6 && text.includes(secret))
+  return secrets.filter((secret) => secret.length >= 6 && (text.includes(secret) || text.includes(JSON.stringify(secret).slice(1, -1))))
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

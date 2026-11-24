@@ -11,6 +11,7 @@ import { requestGuards } from './routes/guards.js'
 import { provisioningRoutes } from './routes/provisioning.js'
 import { systemRoutes } from './routes/system.js'
 import { visualRoutes } from './routes/visual.js'
+import { PLAN_ROUTE_PATHS, planRoutes } from './routes/visual-plan.js'
 import * as pages from './views/pages.js'
 
 export type { RouteInfo, StudioDeps } from './routes/context.js'
@@ -55,6 +56,7 @@ export function createStudio(deps: StudioDeps): {
   const { account } = accountRoutes(core)
 
   const { visual } = visualRoutes(core)
+  const { plan } = planRoutes(core)
 
   const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)'
   const routes: Route[] = [
@@ -85,6 +87,8 @@ export function createStudio(deps: StudioDeps): {
     },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/assets/file/([0-9a-f]{64})$`), auth: 'session', handle: assetFile },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(strategy/business-model|brand/book/visual-identity|market/competitors|brand/mascot)(?:/(print))?$`), auth: 'session', handle: visual },
+    // Visual V3.3: customer journey map, SOSTAC overview, OKR tree (and their print views).
+    { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(${PLAN_ROUTE_PATHS.join('|')})(?:/(print))?$`), auth: 'session', handle: plan },
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}(?:/(${BRAND_SECTIONS.join('|')}))?$`), auth: 'session', handle: brandPage },
     // Old flat paths (before Visual V2.4): 301 to the stable path, for one release.
     { method: 'GET', pattern: new RegExp(`^/brands/${SLUG}/(${LEGACY_PATHS.join('|')})$`), auth: 'session', handle: legacyRedirect },
