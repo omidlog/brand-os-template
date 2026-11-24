@@ -496,3 +496,8 @@ Still external: SSO and hosted or remote MCP authentication (the `resolveAgentCo
 
 - **Done:** `brand:runtime social-batch` writes the drafts and `production-readiness.json`, then exits 3 when production is `not_ready` (0 when ready), with an en/fa/tr line on stderr. Owner decisions 1–7 for PR-E recorded in `docs-internal/BRAND_RUNTIME.md`. Test in `tests/production-readiness.test.ts`.
 - **Correction:** the PR-E "Not done" line above (`social-batch` exits 0 even when production is `not_ready`) is resolved by this change.
+
+## Audit: fixes pack area, coach rules (2026-11-24)
+
+- **Done:** negated cheap-price wording does not fire `premium-vs-lowest-price` (en/fa/tr); registry rules skip questions that do not apply under the config; `coach-rules/4`.
+- **Not done (reported in the audit):** `YEAR` in the creator rubric also matches counts such as 2000 or 1450; negation of symbol terms ("#1") and a wider window; Turkish verb-suffix negation; one slot per verdict under the finding cap; empty-id rule checks in scoped reviews; evidence and deferrals in `contextDigest`.
