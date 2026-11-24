@@ -86,6 +86,7 @@
     "studio": "tsx apps/studio/src/cli.ts",
     "studio:hash-password": "tsx apps/studio/src/cli.ts hash-password",
     "studio:build": "tsx scripts/build-studio.ts",
+    "engine:build": "tsx scripts/build-engine.ts",
     "example:education": "tsx scripts/example-run.ts education-app",
     "example:b2b": "tsx scripts/example-run.ts b2b-saas"
   },
