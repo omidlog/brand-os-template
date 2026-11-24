@@ -27,10 +27,13 @@ import {
  * - A source under `.private` is never cited outside the internal profile, and an entry that cites one loses its value.
  * - Public and investor show approved values only (stale = approved but review overdue still counts). Drafts,
  *   estimates and suggestions lose their value.
- * - Draft marks never leave the owner (owner decision 2026-11-23): no badge survives outside the internal profile. The
- *   investor profile (built from the internal edition) does not draw an asset still tagged `draft`; the public edition
- *   comes from the public builders, which draw only published assets and never attach a draft mark, so a published
- *   asset that still carries a `draft` tag is drawn there without the mark.
+ * - Draft marks never leave the owner (owner decision 2026-11-23): no badge survives outside the internal profile.
+ *   Investor follows public for a draft-tagged asset (owner decision 2026-11-24): a published logo master that still
+ *   carries a `draft` tag is drawn without any mark in both, and an unpublished one tagged `draft` is drawn in neither.
+ *   The public edition comes from the public builders, which draw only published masters and never attach a mark; the
+ *   investor profile (built from the internal edition) keeps a draft-tagged master only when it has no `internal_only`
+ *   badge (that is, it is published). Mascot artwork tagged `draft` is never drawn in public (the mascot builder's
+ *   rule), so investor does not draw it either.
  * - An entry whose question is unknown to the bank fails closed outside the internal profile.
  * - A document type a profile does not permit (competitor analysis outside internal; business and marketing plans in
  *   public) is refused: the redactor returns null.
@@ -167,7 +170,8 @@ function clearDerived(block: Mutable<VisualDocument['blocks'][number]>, spec: Ex
   if (block.type === 'logo_construction') {
     if (block.source.value === null) block.spec = null
     if (!spec.draft_marks && block.master) {
-      if (block.master.badges.includes('draft_tag')) {
+      // Same as public: a draft-tagged master is drawn only when it is published (no `internal_only` badge).
+      if (block.master.badges.includes('draft_tag') && block.master.badges.includes('internal_only')) {
         block.master = null
         block.master_state = 'missing'
       } else block.master = { ...block.master, badges: [] }
@@ -332,8 +336,11 @@ export function coverageCells(doc: VisualDocument | DocumentModel): Array<{ id: 
 export const PUBLISHING_READINESS = ['ready', 'partial', 'empty', 'not_applicable', 'blocked'] as const
 export type PublishingReadiness = (typeof PUBLISHING_READINESS)[number]
 
-/** How the cell can be exported today: an existing print view, a composer still planned, or nothing. */
-export type PublishingExport = 'print' | 'planned' | 'none'
+/**
+ * How the cell can be exported today: an existing print view in Studio, a command the owner runs locally (Studio shows
+ * it as text and never runs it), a composer still planned, or nothing.
+ */
+export type PublishingExport = 'print' | 'command' | 'planned' | 'none'
 
 export interface PublishingCell {
   document_type: PublishingDocumentType
@@ -364,9 +371,28 @@ const PRINT_VIEWS: Partial<Record<PublishingDocumentType, readonly ExportProfile
   competitor_comparison: ['internal'],
 }
 
+/**
+ * Local export commands that exist today (`brand:export-visual`, V4.2), by document type and profile. The full Brand
+ * Book prints in the internal and public editions; there is no investor edition, and the Business Report is internal
+ * only (owner decision 2026-11-24), so neither is listed for investor.
+ */
+const EXPORT_COMMANDS: Partial<Record<PublishingDocumentType, Partial<Record<ExportProfile, string>>>> = {
+  brand_book: {
+    public: 'npm run brand:export-visual -- --doc brand-book --edition public',
+    internal: 'npm run brand:export-visual -- --doc brand-book --edition internal',
+  },
+}
+
+/** The local command that exports this document for this profile, or null when none exists. Text only. */
+export function publishingExportCommand(type: PublishingDocumentType, profile: ExportProfile): string | null {
+  if (!profilePermits(profile, type)) return null
+  return EXPORT_COMMANDS[type]?.[profile] ?? null
+}
+
 function exportOf(type: PublishingDocumentType, profile: ExportProfile): PublishingExport {
   if (!profilePermits(profile, type)) return 'none'
-  return PRINT_VIEWS[type]?.includes(profile) ? 'print' : 'planned'
+  if (PRINT_VIEWS[type]?.includes(profile)) return 'print'
+  return publishingExportCommand(type, profile) ? 'command' : 'planned'
 }
 
 function countVisual(doc: VisualDocument): { shown: number; gaps: number } {

@@ -18,6 +18,7 @@ import {
   coverageCells,
   EXPORT_PROFILES,
   illustrativeMascotAtlas,
+  publishingExportCommand,
   PUBLISHING_DOCUMENT_TYPES,
   questionClassifier,
   redactBook,
@@ -170,6 +171,24 @@ test('draft marks never leave the owner: a draft-tagged master is not drawn for 
   assert.equal(JSON.stringify(investor).includes('draft_tag'), false)
 })
 
+test('investor follows public for a published logo that still carries a draft tag: drawn, with no mark (owner decision 2026-11-24)', () => {
+  const { engine, proof } = brand()
+  approve(engine, proof, { 'brand.logo.min_size': 'min-size: 80px; clear-space: 0.4x' })
+  const classify = questionClassifier(engine)
+  const logo = (doc: VisualDocument) => doc.blocks.find((b): b is LogoConstructionBlock => b.type === 'logo_construction')!
+  const published = { ...MASTER, published: true }
+  const internal = buildVisualIdentity(engine, 'internal', { masters: [published] })
+  assert.deepEqual(logo(internal).master?.badges, ['draft_tag'], 'fixture: the owner sees the draft tag on a published master')
+  const pub = redactVisualDocument(buildVisualIdentity(engine, 'public', { masters: [published] }), 'public', classify)!.document
+  assert.equal(logo(pub).master?.asset_id, published.asset_id, 'public draws the published, draft-tagged master')
+  const investor = redactVisualDocument(internal, 'investor', classify)!.document
+  assert.equal(logo(investor).master?.asset_id, published.asset_id, 'investor draws it too, same as public')
+  assert.equal(logo(investor).master_state, logo(pub).master_state)
+  assert.deepEqual(logo(investor).master?.badges, [], 'without any draft mark')
+  assert.equal(JSON.stringify(investor).includes('draft_tag'), false)
+  assert.deepEqual(logo(redactVisualDocument(internal, 'internal', classify)!.document).master?.badges, ['draft_tag'], 'the owner keeps the tag')
+})
+
 test('mascot atlas: draft-tagged artwork and in-review slots are not drawn for investors', () => {
   const { engine } = brand()
   const classify = questionClassifier(engine)
@@ -204,7 +223,16 @@ test('the gallery lists every document type × profile, blocks what a profile ma
   assert.equal(cell('competitor_comparison', 'internal').readiness, 'empty', 'not shared: a designed empty state, not invented rows')
   assert.equal(cell('business_model_canvas', 'public').export, 'print')
   assert.equal(cell('business_model_canvas', 'investor').export, 'planned')
-  assert.equal(cell('brand_book', 'internal').export, 'planned')
+  // The full Brand Book exports with a local command (V4.2) in public and internal; there is no investor edition.
+  assert.equal(cell('brand_book', 'internal').export, 'command')
+  assert.equal(cell('brand_book', 'public').export, 'command')
+  assert.equal(cell('brand_book', 'investor').export, 'planned')
+  assert.equal(publishingExportCommand('brand_book', 'public'), 'npm run brand:export-visual -- --doc brand-book --edition public')
+  assert.equal(publishingExportCommand('brand_book', 'internal'), 'npm run brand:export-visual -- --doc brand-book --edition internal')
+  assert.equal(publishingExportCommand('brand_book', 'investor'), null)
+  // The Business Report stays internal only (owner decision 2026-11-24): no public or investor command.
+  assert.equal(publishingExportCommand('business_plan', 'public'), null)
+  assert.equal(publishingExportCommand('business_plan', 'investor'), null)
   assert.ok(cell('business_model_canvas', 'investor').redacted >= 4, 'investor counts what it removed')
   assert.ok(cell('business_plan', 'investor').redacted >= 1)
   assert.ok(['partial', 'ready'].includes(cell('business_model_canvas', 'internal').readiness))
