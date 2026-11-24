@@ -18,6 +18,7 @@ import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/br
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
 import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
+import { buildPlanDocuments, type PlanDocuments } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -180,6 +181,12 @@ export interface StudioVisualProjection {
    * written before it existed; sync rebuilds those.
    */
   books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: BookDocument } }
+  /**
+   * Customer journey swimlane, SOSTAC overview and OKR tree (V3.3), in both editions. Internal: approved, labelled
+   * drafts, gaps; public: approved and published only. `applies` follows the canvas (business brands, and personal
+   * brands with a business facet). Absent in caches written before it existed; sync rebuilds those.
+   */
+  plans?: { applies: boolean; internal: PlanDocuments; public: PlanDocuments }
 }
 
 /**
@@ -328,6 +335,7 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
       brand_book: { internal: book('brand_book', 'internal'), public: book('brand_book', 'public') },
       business_report: { internal: book('business_report', 'internal'), public: book('business_report', 'public') },
     }
+    visual.plans = { applies: canvasApplies(engine), internal: buildPlanDocuments(engine, 'internal'), public: buildPlanDocuments(engine, 'public') }
     assertNoSecrets(visual)
     return visual
   } catch {

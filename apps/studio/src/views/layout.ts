@@ -34,6 +34,9 @@ export type BrandSection =
   | 'visual'
   | 'competitors'
   | 'coach'
+  | 'journey'
+  | 'sostac'
+  | 'okr'
 
 export interface BrandView {
   record: BrandRecord
@@ -67,7 +70,14 @@ const SECTIONS: Array<{ id: BrandSection; group: NavGroup; key: MessageKey; icon
   { id: 'knowledge', group: 'market', key: 'nav.knowledge', icon: 'idea', path: '/market/knowledge' },
   { id: 'history', group: 'governance', key: 'nav.history', icon: 'history', path: '/governance/history' },
   { id: 'handoff', group: 'governance', key: 'nav.handoff', icon: 'handoff', path: '/governance/github' },
+  // Visual V3.3: served by the plan route (routes/visual-plan.ts), listed at the end of their groups.
+  { id: 'sostac', group: 'strategy', key: 'nav.sostac', icon: 'layers', path: '/strategy/sostac' },
+  { id: 'okr', group: 'strategy', key: 'nav.okr', icon: 'checkCircle', path: '/strategy/okrs' },
+  { id: 'journey', group: 'market', key: 'nav.journey', icon: 'user', path: '/market/customer-journey' },
 ]
+
+/** Sections served by their own visual route instead of the brand page handler. */
+const VISUAL_ROUTE_SECTIONS: readonly BrandSection[] = ['visual', 'competitors', 'journey', 'sostac', 'okr']
 
 /** Stable path of a brand page, for links between pages. */
 export function brandPath(slug: string, section: BrandSection, rest = ''): string {
@@ -77,7 +87,7 @@ export function brandPath(slug: string, section: BrandSection, rest = ''): strin
 
 /** Page sections served by the brand page handler: stable path segment (after the slug) -> section. */
 export const PAGE_SECTION_PATHS: ReadonlyArray<readonly [string, BrandSection]> = SECTIONS.filter(
-  (item) => item.path.startsWith('/') && !['visual', 'competitors'].includes(item.id),
+  (item) => item.path.startsWith('/') && !VISUAL_ROUTE_SECTIONS.includes(item.id),
 ).map((item) => [item.path.slice(1), item.id] as const)
 
 /**
@@ -119,6 +129,8 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'visual') return projection?.visual?.bmc.applies !== false
     // Listed when the merged commit has a competitor comparison document (a designed empty state until one is shared).
     if (section.id === 'competitors') return Boolean(projection?.visual?.competitors)
+    // Visual V3.3: listed when the plan documents apply to this profile (as the canvas).
+    if (section.id === 'journey' || section.id === 'sostac' || section.id === 'okr') return projection?.visual?.plans?.applies !== false && projection?.visual?.bmc.applies !== false
     // An anchor on the overview, listed only when the Strategic Coach card has notes.
     if (section.id === 'coach') return Boolean(projection?.coach && projection.coach.notes.length > 0)
     return true

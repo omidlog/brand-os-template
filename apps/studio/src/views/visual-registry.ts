@@ -5,6 +5,7 @@ import { colorPaletteView, identitySources, logoConstructionView, typographySpec
 import { competitorMatrixView, priceStripView } from './visual-competitors.js'
 import { positioningMapView } from './visual-positioning.js'
 import { mascotAtlasView, mascotEvolutionView } from './visual-mascot.js'
+import { journeyView, okrTreeView, sostacView } from './visual-plan.js'
 
 /**
  * Renderer registry (Visual Blueprint V1.1): one renderer per block type. The map is typed over every
@@ -50,6 +51,9 @@ const RENDERERS: RendererMap = {
   positioning_map: positioningMapView,
   mascot_atlas: mascotAtlasView,
   mascot_evolution: mascotEvolutionView,
+  journey_swimlane: journeyView,
+  sostac_overview: sostacView,
+  okr_tree: okrTreeView,
 }
 
 export function renderBlock(block: VisualBlock, ctx: BlockContext): SafeHtml {
