@@ -10,6 +10,16 @@
 - Studio (GET only): `/market/customer-journey`, `/strategy/sostac`, `/strategy/okrs`, each with an A3 landscape print view (`/print[?edition=public]`). The swimlane (a real table with an emotion curve) and the OKR tree follow the page direction, so Persian mirrors them; SOSTAC keeps its canonical stage order in the reading direction. Ids only in the details disclosure and the internal print appendix; Persian folios, versions and counters in Persian digits. Designed empty states. en/fa/tr text (`visual/i18n-plan.ts`), nav entries, ILLUSTRATIVE fixtures in `npm run visual:golden`.
 - Tests: `visual-plan` (validator, documents, public edition, legacy text, fixtures, catalogs), `studio-visual-plan` (pages, print, public edition, no ids in the main view, fa/tr, empty states, cache rebuild).
 
+## Unreleased — Audit: Visual V4 area (V4.1 Command Center and Publishing gallery, V4.2 full books)
+
+### Fixed
+
+- Publishing gallery: an investor cell never links to a print view (there is no investor edition yet; the internal one shows labelled drafts).
+- Command Center strip in Persian: the coverage heading no longer letter-spaces Persian text, and the half-filled "partial" square mirrors in RTL.
+- Docs: the draft-mark comment in `visual/publishing.ts` matches the code (public draws a published asset without its mark; investor does not draw a draft-tagged asset); `docs-internal/STUDIO.md` screens table lists the Command Center and the Publishing gallery.
+- Tests: investor cells carry no print link; the Persian gallery has no English leftovers.
+- Separate PR (redaction logic): the public Brand Book passes the same public-profile redactor as every other public print, and the Business Report has no public edition.
+
 ## Unreleased — Visual V3.1: repeating_entity question type and structured BMC (D3)
 
 ### Added

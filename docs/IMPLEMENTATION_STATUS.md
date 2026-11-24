@@ -507,6 +507,12 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Not done (owner decisions pending, behaviour unchanged):** the five Coach UX questions in `docs-internal/COACH_UX_DECISION.md`; the bare Persian marker `همه` (may flag ordinary short answers); a `brand:propose` draft counting as the "first revision" for the after-answer moment.
 - **Main merge (2026-11-24):** merged with GAP-08 (`coach/rules.ts`, facet rubrics). Both sides had bumped `coach-rules/1` to `/2` independently, so the combined rules are `COACH_RULE_VERSION` `coach-rules/3`. The scoped cap fix applies to `findContradictions` conflicts; registry findings fill the remaining slots.
 
+## Audit: Visual V4 area (2026-11-24)
+
+- **Done (this PR):** investor gallery cells never link a print view; RTL fixes in the Command Center strip; draft-mark comment and Studio screens table match the code; two test asserts (investor links, Persian leftovers).
+- **Done (separate PR, redaction logic):** `redactBook` in `visual/publishing.ts`; the public Brand Book passes it in the projection; the Business Report has no public edition (`--doc business-report --edition public` is refused, en/fa/tr).
+- **Not done (owner decisions pending, behaviour unchanged):** investor hides a published logo that still has a `draft` tag while public draws it; the gallery says "Print layout not built yet" for the Brand Book although `brand:export-visual --doc brand-book` exists; Persian "ماسکات" (book, atlas) vs "مسکات" (Studio nav). Report: `brand-os-template-notes/audit-visual-v4-report.md` (owner-local).
+
 ## Visual V3.1 × V4.2: list questions in the full books (main merge, 2026-11-24)
 
 - **Done:** the Business Report's canvas chapter prints an approved list answer as items (name, labelled choices, detail, links by item name; numbers in the page's digits; no item ids). Drafts, withheld and unpublished lists carry no items into a book; `book.canvas` keeps the framework reference without the zone block. fa/tr labels for `business.model.segments`, `key_activities`, `key_resources`, `cost_items`. Tests: `visual-full-book` (V3.1 case), `studio-visual-full-book` (items, no ids, no draft item). Book reference screenshots unchanged (the canvas chapter is not a reference page; contents folios unchanged).
