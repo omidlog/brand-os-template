@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import Ajv from 'ajv'
+import YAML from 'yaml'
 import addFormats from 'ajv-formats'
 import {
   assertedTerm,
@@ -17,7 +18,7 @@ import {
   TENSION_QUESTIONS,
   type CoachResult,
 } from '@brand-os/brand-core/coach'
-import { addEvidence } from '@brand-os/brand-core'
+import { addEvidence, InterviewEngine } from '@brand-os/brand-core'
 import { answer, ANSWER_CANARY, approved, assertUnchanged, coachBrand, defer, disposition, snapshot, type CoachBrand } from './helpers/coach.js'
 import { useTestKey } from './helpers/knowledge.js'
 
@@ -357,4 +358,35 @@ test('facet rubrics: off when the personal module is off, absent from follow_up,
     for (const id of rubric.questions) assert.ok(questionIds.has(id), `${rubric.id}: ${id} is a canonical question`)
     if (rubric.canonical) assert.ok(questionIds.has(rubric.canonical), `${rubric.id}: ${rubric.canonical} is a canonical question`)
   }
+})
+
+test('tension (audit): a negated cheap price is not a cheap price, in en, fa and tr', () => {
+  const pricing = [
+    `We are never cheap; one monthly price of 400 EUR. ${ANSWER_CANARY}`,
+    `ما ارزان نیستیم؛ یک قیمت ماهانه ۴۰۰ یورو. ${ANSWER_CANARY}`,
+    `ارزان نیست؛ یک قیمت ماهانه ۴۰۰ یورو. ${ANSWER_CANARY}`,
+    `Ucuz değil; aylık tek fiyat 400 EUR. ${ANSWER_CANARY}`,
+  ]
+  for (const value of pricing) {
+    const brand = coachBrand()
+    answer(brand, 'brand.strategy.differentiation', PREMIUM)
+    answer(brand, 'business.sales.pricing', value)
+    const result = run(brand, 'consistency_review')
+    assert.equal(check(result, 'premium-vs-lowest-price').outcome, 'no_finding', value)
+    assert.ok(!verdicts(result).includes('potential_tension'), value)
+  }
+})
+
+test('applicability (audit): rules do not read a question the owner config turned off', () => {
+  const brand = coachBrand({ personal: true })
+  approved(brand, 'personal.credibility.credentials', 'Practice-management certificate from the Example Institute, 2024 (SYNTHETIC DEMO).')
+  assert.equal(check(run(brand, 'consistency_review'), 'evidence-claim-unverified').outcome, 'needs_verification')
+  const file = path.join(brand.root, 'brand', 'brand.config.yaml')
+  const config = YAML.parse(fs.readFileSync(file, 'utf8')) as { modules: { personal: { enabled: boolean } } }
+  config.modules.personal.enabled = false
+  fs.writeFileSync(file, YAML.stringify(config))
+  const off: CoachBrand = { ...brand, engine: new InterviewEngine(brand.root) }
+  const result = run(off, 'consistency_review')
+  assert.notEqual(check(result, 'evidence-claim-unverified').outcome, 'needs_verification')
+  assert.ok(!verdicts(result).includes('needs_verification'), JSON.stringify(codes(result)))
 })
