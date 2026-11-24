@@ -9,7 +9,9 @@ import { validateMascotLifecycle } from './mascot-lifecycle.js'
 import { evaluateCondition } from './conditions.js'
 import { templateConfig } from './config.js'
 import { readYaml } from './fsutil.js'
+import { readFacts } from './facts.js'
 import { readIdentityIntake } from './identity-intake.js'
+import { checkLogoMastersInRepo } from './logo-masters.js'
 import { approvalGrantErrors } from './permissions.js'
 import { canonicalReferenceErrors } from './personal.js'
 import { profileErrors, profileExists } from './profiles.js'
@@ -21,6 +23,11 @@ export interface ValidationReport {
   ok: boolean
   errors: string[]
   warnings: string[]
+}
+
+/** Earlier English prompts the template reworded; a brand bank that still has one gets a warning, not a drift error. */
+const RETIRED_PROMPTS: Record<string, string[]> = {
+  'brand.logo.masters': ['Where will approved masters live (path, Figma, or not yet)?'],
 }
 
 const SECRET_PATTERNS = [/BEGIN (?:RSA |OPENSSH )?PRIVATE KEY/, /ghp_[A-Za-z0-9]{20,}/, /xox[baprs]-[A-Za-z0-9-]{10,}/]
@@ -35,7 +42,12 @@ export function validateRepo(root: string): ValidationReport {
     for (const question of starter) {
       const stored = byId.get(question.id)
       if (!stored) errors.push(`Question bank is missing starter question ${question.id}`)
-      else if (stored.prompt.en !== question.prompt.en) errors.push(`Prompt drift for ${question.id}`)
+      else if (stored.prompt.en !== question.prompt.en) {
+        // A brand repository keeps its own question bank (brand/** is brand-owned), so a prompt the template reworded
+        // stays valid there: a warning names the newer wording instead of failing validate after a template update.
+        if (RETIRED_PROMPTS[question.id]?.includes(stored.prompt.en)) warnings.push(`${question.id} still has the earlier prompt in brand/interview/question-bank. The template now asks: "${question.prompt.en}" Copy the en/fa/tr prompt of this question from the template's question bank when convenient; answers are unaffected.`)
+        else errors.push(`Prompt drift for ${question.id}`)
+      }
     }
     const modules = new Set(starter.map((question) => question.module))
     for (const moduleId of modules) {
@@ -57,6 +69,7 @@ export function validateRepo(root: string): ValidationReport {
     errors.push(...llmConfigErrors(config))
     const identity = readIdentityIntake(config)
     if (identity.state === 'invalid') warnings.push(`brand.config.yaml onboarding.identity is ignored (${identity.reason}); it reads as unknown / undecided`)
+    warnings.push(...logoMastersWarnings(root, config))
   }
   validateMascot(root, errors)
   errors.push(...validateAssets(root))
@@ -71,6 +84,20 @@ export function validateRepo(root: string): ValidationReport {
   scanSecrets(root, errors)
   scanCanary(root, errors)
   return { ok: errors.length === 0, errors, warnings }
+}
+
+/** BOS-16: the approved `brand.logo.masters` answer must name an asset exactly, or the brand book cannot find the master. */
+function logoMastersWarnings(root: string, config: BrandConfig): string[] {
+  try {
+    const slug = config.brand?.slug
+    if (typeof slug !== 'string' || !slug) return []
+    const fact = readFacts(root, 'approved', slug)['brand.logo.masters']
+    if (!fact || fact.status !== 'approved' || typeof fact.value !== 'string') return []
+    const check = checkLogoMastersInRepo(root, fact.value)
+    return check.message ? [check.message] : []
+  } catch {
+    return []
+  }
 }
 
 function safeStarter(errors: string[]): FieldQuestion[] | null {

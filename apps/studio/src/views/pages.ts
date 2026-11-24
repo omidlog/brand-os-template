@@ -714,6 +714,8 @@ function svgIssue(ctx: ViewContext, asset: ProjectionAsset): SafeHtml | string {
 function assetCard(ctx: ViewContext, slug: string, asset: ProjectionAsset): SafeHtml {
   const { i } = ctx
   const status = asset.published ? badge(i.t('assets.status.published'), 'accent', 'globe') : asset.approved ? badge(i.t('assets.status.approved'), 'success', 'checkCircle') : badge(i.t('assets.status.draft'), 'warning', 'clock')
+  // BOS-16: approved but not in the publication policy: say so, so the owner's preview is not read as published.
+  const unpublished = asset.approved && !asset.published ? html`<span data-asset-unpublished>${badge(i.t('assets.notPublished'), 'neutral', 'lock', i.t('assets.notPublishedHint'))}</span>` : ''
   return html`<li class="asset-card" data-kind="${asset.kind}">
     <div class="asset-preview${asset.preview_state === 'draft' ? ' asset-preview-draft' : ''}">${asset.preview_key
       ? asset.preview_state === 'draft'
@@ -722,7 +724,7 @@ function assetCard(ctx: ViewContext, slug: string, asset: ProjectionAsset): Safe
       : html`<div class="asset-placeholder">${icon('image')}<span>${i.t('assets.noPreview')}</span><span class="muted small">${asset.unavailable_reason ? i.t(`assets.reason.${asset.unavailable_reason}` as MessageKey) : ''}</span>${svgIssue(ctx, asset)}</div>`}</div>
     <div class="asset-body">
       <h3 class="asset-name" dir="auto">${asset.name}</h3>
-      <div class="asset-badges">${status}${badge(asset.kind, 'neutral')}</div>
+      <div class="asset-badges">${status}${unpublished}${badge(asset.kind, 'neutral')}</div>
       <dl class="asset-meta">
         <div><dt>${i.t('assets.visibility')}</dt><dd>${asset.visibility}</dd></div>
         ${asset.license ? html`<div><dt>${i.t('assets.license')}</dt><dd dir="auto">${asset.license}</dd></div>` : ''}
@@ -733,6 +735,33 @@ function assetCard(ctx: ViewContext, slug: string, asset: ProjectionAsset): Safe
   </li>`
 }
 
+/**
+ * BOS-12: the gallery order and what it leaves out. Real published, then approved, then other real assets, template
+ * examples last (stable within a group). A template example is hidden once an approved real asset of the same kind
+ * exists, and the mascot module's placeholders and empty slots are hidden while it is off (its filter too); the page
+ * says how many were hidden and why.
+ */
+export function galleryAssets(assets: ProjectionAsset[], mascotEnabled: boolean): { shown: ProjectionAsset[]; hiddenExamples: number; hiddenMascot: number } {
+  const example = (asset: ProjectionAsset) => asset.example ?? /EXAMPLE/.test(asset.license ?? '')
+  const realKinds = new Set(assets.filter((asset) => asset.approved && !example(asset)).map((asset) => asset.kind))
+  let hiddenExamples = 0
+  let hiddenMascot = 0
+  const shown = assets.filter((asset) => {
+    // Module off: its template placeholders and empty slots go; a real mascot file the brand added stays visible.
+    if (!mascotEnabled && asset.kind === 'mascot' && (example(asset) || (!asset.approved && asset.unavailable_reason === 'not_present'))) {
+      hiddenMascot += 1
+      return false
+    }
+    if (example(asset) && realKinds.has(asset.kind)) {
+      hiddenExamples += 1
+      return false
+    }
+    return true
+  })
+  const rank = (asset: ProjectionAsset) => (example(asset) ? 3 : asset.published ? 0 : asset.approved ? 1 : 2)
+  return { shown: shown.map((asset, index) => ({ asset, index })).sort((a, b) => rank(a.asset) - rank(b.asset) || a.index - b.index).map((item) => item.asset), hiddenExamples, hiddenMascot }
+}
+
 function countTable(ctx: ViewContext, title: string, counts: Record<string, number>): SafeHtml {
   return html`<div><h3 class="subhead">${title}</h3><ul class="count-list">${Object.entries(counts).map(([key, count]) => html`<li><span class="mono" dir="ltr">${key}</span><span>${ctx.i.number(count)}</span></li>`)}</ul></div>`
 }
@@ -741,15 +770,21 @@ export function assetsPage(ctx: ViewContext, view: BrandView, flash: string | nu
   const { i } = ctx
   const p = view.cached.projection
   if (!p) return brandShell(ctx, view, 'assets', i.t('assets.title'), html``, flash)
-  const kinds = [...new Set(p.assets.map((asset) => asset.kind))].sort()
+  const gallery = galleryAssets(p.assets, p.brand.modules.mascot)
+  const kinds = [...new Set(gallery.shown.map((asset) => asset.kind))].filter((kind) => p.brand.modules.mascot || kind !== 'mascot').sort()
+  const hidden = [
+    gallery.hiddenExamples ? i.t('assets.hiddenExamples', { count: i.number(gallery.hiddenExamples) }) : null,
+    gallery.hiddenMascot ? i.t('assets.hiddenMascot', { count: i.number(gallery.hiddenMascot) }) : null,
+  ].filter((line): line is string => line !== null)
   const body = html`${brandHeader(ctx, view, i.t('assets.title'), i.t('assets.subtitle'))}
-    ${p.assets.length
+    ${hidden.length ? html`<p class="muted small" data-assets-hidden>${join(hidden.map((line) => html`<span>${line}</span>`), ' ')}</p>` : ''}
+    ${gallery.shown.length
       ? html`<div class="filter-bar" data-asset-filter hidden role="group" aria-label="${i.t('assets.filter')}">
           <button type="button" class="chip" aria-pressed="true" data-filter="*">${i.t('common.all')}</button>
           ${kinds.map((kind) => html`<button type="button" class="chip" aria-pressed="false" data-filter="${kind}">${kind}</button>`)}
         </div>
         <h2 class="visually-hidden" id="asset-list-title">${i.t('nav.assets')}</h2>
-        <ul class="asset-grid" role="list" aria-labelledby="asset-list-title">${p.assets.map((asset) => assetCard(ctx, view.record.slug, asset))}</ul>`
+        <ul class="asset-grid" role="list" aria-labelledby="asset-list-title">${gallery.shown.map((asset) => assetCard(ctx, view.record.slug, asset))}</ul>`
       : emptyState({ icon: 'image', title: i.t('assets.empty'), body: i.t('assets.subtitle') })}
     ${p.mascot
       ? html`<section class="card" aria-labelledby="mascot-title">
