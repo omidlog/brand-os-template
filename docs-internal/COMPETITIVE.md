@@ -168,6 +168,8 @@ Its state is `missing`, `candidate_only`, `evidence_insufficient` or `evidence_a
 
 **Studio** (`readSharedLandscape`) admits only that exact path (tar allowlist). It checks the exact key set at every level, so any extra field, a ranked price list, a URL as a host, another brand's file, a symlink or secret-looking text withholds the whole file. The projection still passes `assertNoSecrets`.
 
+**Freshness after sharing.** The file freezes each state on the day of the share. When Studio builds the page later, a cell or price shared as current reads `historical`, and a map placement shared as `evidenced` reads `stale`, once its newest source is more than 90 days old (counted from the shared day, plus one day). States only go down; run `share` again to refresh them.
+
 **Privacy note.** Competitor names and the shared labels become visible to everyone with read access to the brand repository.
 
 ## Positioning map (Visual V2.3, owner decision D2)

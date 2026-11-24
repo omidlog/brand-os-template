@@ -663,3 +663,9 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `writeBatch` refuses a dangling symlink and a linked parent directory that leads into a `brand/` folder (checked on the real path before and after the directory is created).
 - Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
 - `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
+
+## Unreleased — Audit: Visual V2 stale states at view time
+
+### Fixed
+
+- Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
