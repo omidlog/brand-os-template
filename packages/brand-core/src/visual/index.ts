@@ -59,3 +59,8 @@ export type {
   RedactedDocument,
   RedactedVisual,
 } from './publishing.js'
+export { BOOK_CHAPTER_IDS, BOOK_KINDS, BOOK_SCHEMA, buildBook, composeBook, printableEntry, UNAVAILABLE_REASONS } from './full-book.js'
+export type { BookChapter, BookChapterId, BookDocument, BookInput as BookComposeInput, BookKind, BuildBookOptions, PlateChapterId, UnavailableReason } from './full-book.js'
+export { entryLabel, FULL_BOOK_TEXT, fullBookText } from './i18n-full-book.js'
+export type { FullBookText } from './i18n-full-book.js'
+export { FIXTURE_DRAFT_SENTINEL, FIXTURE_RESTRICTED_SENTINEL, illustrativeBook } from './fixtures-full-book.js'

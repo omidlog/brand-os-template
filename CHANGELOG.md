@@ -12,6 +12,25 @@
 
 - Overview is now the **Command Center** (R4): a 30-second strip (decisions needed, review due, contradictions, exports ready) and a coverage mini-map per framework lead the page; the template update panel moved lower. Labels in en/fa/tr (Command Center / مرکز فرمان / Komuta Merkezi).
 - Public visual editions in the Studio projection pass the core public-profile redactor; the projection gains `publishing` (older caches rebuild on sync).
+## Unreleased — Pilot and workflow acceptance (fixes pack PR-F)
+
+### Added
+
+- `npm run brand:acceptance -- (--demo | --root <checkout>) --out <empty dir> [--lang en|fa|tr] [--json]`: runs the four journeys of the fixes pack (single visual, ten Instagram posts, website brief, paid-ad brief) end to end through the real stdio MCP server and the real `brand:runtime` / `brand:visual-dna` CLIs, and records PASS / FAIL / NOT_TESTED per check with id-only evidence for FIX-01…FIX-08. Owner checkouts are read through a temporary snapshot and hashed before and after; refused under an agent token; no model, no network, `authorizes: []`. Report contract `schemas/acceptance-report.schema.json` (`brand-os/acceptance-report/v1`); printed summary in en/fa (RTL)/tr. Synthetic fixture in `scripts/acceptance/fixture.ts` (demo brand plus restricted canaries, an approved paid strategy, an approved motion fact and a draft logo answer). Guide and end-to-end setup guide: `docs-internal/ACCEPTANCE.md`. Tests: `acceptance-harness`.
+
+### Fixed
+
+- A stale pack is no longer rendered: with `--root`, `brand:runtime social-batch --pack` stops with `stale_pack` before writing when an approved fact the pack cites changed or is no longer approved, and `brand:runtime readiness` adds the blocking check `context.source_drift`. Without `--root` nothing changes. (`packSourceDrift`, found by the acceptance harness.)
+
+## Unreleased — Nontechnical agent onboarding (fixes pack GAP-11, docs and test only)
+
+### Added
+
+- `docs-internal/AGENT_ONBOARDING.md` (en), `AGENT_ONBOARDING.fa.md` (fa, RTL), `AGENT_ONBOARDING.tr.md` (tr): a plain-language owner guide to set up one fresh authorised agent over the existing local stdio MCP server and agent token: create the approval secret, issue a token (proof read from the secret file, never argv), connect Claude Code with `claude mcp add --scope local` (token never in history or the repo), verify, see what is refused, revoke.
+- `docs-internal/AGENT_ONBOARDING_HOSTED.md`: design note listing what a hosted remote MCP would need. **Not built**; needs an owner decision and a new security review.
+- Test `fresh-agent-setup`: walks the guide's commands as child processes in a temporary synthetic brand (secret, issue, `brand:query` check, stdio MCP read of allowed data, out-of-profile/restricted/forged arguments withheld, owner-only actions refused, revoke, restart fails closed), and checks that every `npm run` command and profile named in the three guides exists.
+
+No runtime behaviour, profile, tool or Studio route changed.
 
 ## Unreleased — Research notes linked to the evidence register (GAP-09 follow-up)
 
@@ -24,6 +43,22 @@
 ### Changed
 
 - The bridge (`brand-os.assurance-bridge/3`) counts a linked note as `independent` while the register entry qualifies on the `--as-of` day (verified, not owner testimony, same question, not past its review date) and the note is unchanged; otherwise `owner_stated`. The snapshot lists `evidence_links` (ids and a state); a new non-blocking gap `independent_evidence` points at `brand:assurance-link`. A qualifying link makes a PRR-08 judgment stale. Unapproved answers still lower the ratio; never a certification.
+
+## Unreleased — Visual V4.2: full Brand Book and Business Report PDF
+
+### Added
+
+- `npm run brand:export-visual -- --doc brand-book|business-report`: the full Brand Book and the Business Report as A4 portrait books on the V1.2 engine (cover, imprint, contents with real folios, running heads, numbered notes), en/fa/tr, internal and public editions, HTML and digital PDF. Persian mirrors the book and uses Persian digits for folios and chapter numbers.
+- Core `visual/full-book.ts` (`BookDocument`, `composeBook`, `buildBook`): chapters from the Brand Book and business plan sections, the "Visual identity" plates and the Business Model Canvas. Approved values only: drafts print as labels, recommendations are dropped, restricted values (finance figures) are never printed in any edition; the public edition shows no draft or restricted mark.
+- Designed "not yet available" pages for chapters with nothing approved, planned chapters (Motion, Applications) and chapters that print on their own today (Mascot atlas, Competitive landscape). Nothing is invented.
+- en/fa/tr text for the books, including fa/tr field labels for every printed question (`visual/i18n-full-book.ts`); ILLUSTRATIVE / MOCK DATA fixture `illustrativeBook`.
+- Studio projection `visual.books` (read by the export command; no new Studio route).
+- Visual QA: 10 new baselines (Brand Book cover, contents, Strategy; Business Report contents, Executive summary; en and fa), overflow and RTL checks, and PDF read-back checks (contents point at printed pages, folios, embedded fonts, Vazirmatn on fa pages, no draft or restricted value).
+
+### Changed
+
+- The book engine is generic (`renderBook`, `layoutBook`, `bookGalley`); the identity book's output is byte-identical. Plate heads accept a book-wide number. A contents page with more than seven entries uses compact rows.
+
 
 ## Unreleased — Coach contradiction and facet rubrics (fixes pack GAP-08)
 
@@ -620,6 +655,17 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `brand:assurance` no longer turns a company brand into a person when the personal module is on. `entity_kind: person` comes only from `brand.profile: personal-brand`. A founder's personal brand in a company repository is recorded separately as `snapshot.personal_brand` and does not change the subject or the digest. Bridge version `brand-os.assurance-bridge/2`.
 - Tests: `assurance-followups` (paid-media question and source, deprecated alias, company stays company, person profile, en/fa/tr text), plus a deprecated-flag case in `assurance-cli`.
 
+## Unreleased — Audit: Trust area fixes (Assurance / GAP-09)
+
+### Fixed
+
+- `brand:assurance-review record` refuses a judgment note that looks like a credential (the Knowledge credential check). The note is stored in plain text; nothing is written and the text is never echoed.
+- `brand:assurance snapshot|assess --pin` refuses a snapshot kept for another brand or method (`invalid_pin`) instead of reporting its revisions as changed sources.
+- `brand:assurance verify` explains, in en/fa/tr, a digest change with no changed cited source (an answer approved, a research note added, or a judgment recorded for that day).
+- Persian text of the bridge and review commands uses «واقعیت» instead of the English word "fact", and the Persian comma «،» in lists.
+- `docs-internal/ASSURANCE.md`: an owner `yes` replaces PRR-08's evidence minimum; a same-day judgment changes that day's snapshot; dates are UTC days. Tests: `assurance-audit`.
+- After merging main (GAP-09 evidence links): `brand:assurance-link list` in Persian uses the Persian comma «،» and shows the register status (pending, verified, rejected, withdrawn) in en/fa/tr instead of the English token. `verify` with `--pin` keeps both the brand/method check and the evidence-link comparison.
+
 ## Unreleased — Audit: Runtime area fixes
 
 ### Fixed
@@ -629,3 +675,9 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `writeBatch` refuses a dangling symlink and a linked parent directory that leads into a `brand/` folder (checked on the real path before and after the directory is created).
 - Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
 - `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
+
+## Unreleased — Audit: Visual V2 stale states at view time
+
+### Fixed
+
+- Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
