@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — CI
+
+- CI: the `brand tests` step timeout in `validate.yml` rises from 10 to 18 minutes (the suite now takes about 10 minutes on GitHub runners) and the `verify` job timeout from 20 to 28.
+
 ## Unreleased — Runtime: batch not-ready exits non-zero (PR-E owner decisions)
 
 ### Changed
