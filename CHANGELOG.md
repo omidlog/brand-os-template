@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Runtime: batch not-ready exits non-zero (PR-E owner decisions)
+
+### Changed
+
+- `brand:runtime social-batch` exits **3** when production readiness is `not_ready` (was 0). The drafts, `batch-summary.json` and `production-readiness.json` are still written; one en/fa/tr line goes to stderr so `--json` stdout stays clean. Scripts that ran `social-batch` with `--require logo` and no `--root` now see exit 3.
+- `docs-internal/BRAND_RUNTIME.md` records the seven PR-E owner decisions (contrast and duplicates review only, only the logo requirable, partial data a warning, no signing, access-log line ids only in `brand/.private`, not-ready exit 3).
+
 ## Unreleased — Visual V4.1: Command Center, Publishing gallery, audience redaction
 
 ### Added
