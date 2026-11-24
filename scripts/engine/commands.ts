@@ -37,6 +37,7 @@ export const ENGINE_COMMANDS: Record<string, EngineCommand> = {
   'prepare-docs': { script: 'prepare-docs', prefix: [], npm: null, entry: 'prepare-docs' },
   check: { script: 'check', prefix: [], npm: 'check' },
   scaffold: { script: 'scaffold', prefix: [], npm: 'brand-os:scaffold' },
+  convert: { script: 'convert', prefix: [], npm: null },
 }
 
 /** npm scripts for a data-only brand repository: every command above, run through the committed engine. */
