@@ -512,7 +512,21 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Done:** the Business Report's canvas chapter prints an approved list answer as items (name, labelled choices, detail, links by item name; numbers in the page's digits; no item ids). Drafts, withheld and unpublished lists carry no items into a book; `book.canvas` keeps the framework reference without the zone block. fa/tr labels for `business.model.segments`, `key_activities`, `key_resources`, `cost_items`. Tests: `visual-full-book` (V3.1 case), `studio-visual-full-book` (items, no ids, no draft item). Book reference screenshots unchanged (the canvas chapter is not a reference page; contents folios unchanged).
 - **Not done:** the plan's "Business Model Canvas lists" section has no text chapter of its own in the report; the lists print in the canvas chapter only.
 
+## Audit: fixes pack area, evidence link scope (2026-11-24)
+
+- **Done:** a linked research note is `independent` only for the control that names the verified register entry's claim question; for its other questions it stays `owner_stated` (`assurance/workspace.ts`, test in `assurance-links`).
+
+## Audit: Visual V1 area (2026-11-24)
+
+- **Done:** review of the print engine (V1.2: `visual/print-profiles.ts`, `views/visual-print-book.ts`, `static/visual-book.css`, `brand:export-visual`) and visual QA (V1.3: baselines, digital PDF, RTL). Fixed: the export output check now resolves links (a linked folder or parent into `brand/` or `.private` is refused, and links are never written through); the imprint marks uncommitted `brand/` changes; the export reports a failed measuring pass; the V1.2 browser checks lost in the merge of #40 are restored; the PDF contents check is per entry; `VISUAL.md` is corrected.
+- **Not done:** the fixture A3 canvas footer is still clipped by about 7 mm (`todo` test, owner question from V1.3). In fa, the section numbers (01, 02, 03) stay in Latin digits (owner question from V1.2/V1.3). The competitor and mascot print views do not use the V1.2 engine.
+
 ## Runtime: batch not-ready exits non-zero (PR-E owner decisions, 2026-11-24)
 
 - **Done:** `brand:runtime social-batch` writes the drafts and `production-readiness.json`, then exits 3 when production is `not_ready` (0 when ready), with an en/fa/tr line on stderr. Owner decisions 1–7 for PR-E recorded in `docs-internal/BRAND_RUNTIME.md`. Test in `tests/production-readiness.test.ts`.
 - **Correction:** the PR-E "Not done" line above (`social-batch` exits 0 even when production is `not_ready`) is resolved by this change.
+
+## Audit: fixes pack area, coach rules (2026-11-24)
+
+- **Done:** negated cheap-price wording does not fire `premium-vs-lowest-price` (en/fa/tr); registry rules skip questions that do not apply under the config; `coach-rules/4`.
+- **Not done (reported in the audit):** `YEAR` in the creator rubric also matches counts such as 2000 or 1450; negation of symbol terms ("#1") and a wider window; Turkish verb-suffix negation; one slot per verdict under the finding cap; empty-id rule checks in scoped reviews; evidence and deferrals in `contextDigest`.

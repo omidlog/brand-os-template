@@ -43,6 +43,7 @@ export {
   PUBLISHING_DOCUMENT_TYPES,
   PUBLISHING_READINESS,
   questionClassifier,
+  redactBook,
   redactDocumentModel,
   redactVisualDocument,
 } from './publishing.js'
@@ -58,6 +59,7 @@ export type {
   PublishingReadiness,
   QuestionClass,
   QuestionClassifier,
+  RedactedBook,
   RedactedDocument,
   RedactedVisual,
 } from './publishing.js'
