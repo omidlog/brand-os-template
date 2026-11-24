@@ -38,3 +38,8 @@ export type { BookChapter, BookChapterId, BookDocument, BookInput as BookCompose
 export { entryLabel, FULL_BOOK_TEXT, fullBookText } from './i18n-full-book.js'
 export type { FullBookText } from './i18n-full-book.js'
 export { FIXTURE_DRAFT_SENTINEL, FIXTURE_RESTRICTED_SENTINEL, illustrativeBook } from './fixtures-full-book.js'
+export { buildSwotTows, buildValueProposition, SEGMENTS_QUESTION, strategyListsApply, SWOT_AREAS, SWOT_TOWS_QUESTIONS, swotTowsDocument, TOWS_AREA, VALUE_FIT_AREAS, VALUE_FIT_QUESTIONS, valuePropositionDocument } from './strategy-lists.js'
+export type { ListAreaSpec, ResolvedSource, StrategyEntry, StrategyListInput, StrategyListOptions } from './strategy-lists.js'
+export { STRATEGY_TEXT, strategyText } from './i18n-strategy.js'
+export type { StrategyText } from './i18n-strategy.js'
+export { illustrativeSwotTows, illustrativeValueProposition } from './fixtures-strategy.js'

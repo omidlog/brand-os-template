@@ -80,6 +80,8 @@ export function entityItems(structured: StructuredValue | null): VisualEntityIte
     detail: item.fields.detail ?? null,
     tags: choices.filter((field) => item.fields[field.key] !== undefined).map((field) => ({ field: field.key, value: item.fields[field.key]! })),
     links: [...item.links],
+    // Visual V3.2: source references (lists whose spec allows them); resolved and numbered by the reader.
+    ...(item.sources?.length ? { sources: [...item.sources] } : {}),
   }))
 }
 

@@ -76,6 +76,11 @@ export interface VisualEntityItem {
   /** Choice fields that are set, e.g. `{ field: 'priority', value: 'primary' }`. */
   tags: Array<{ field: string; value: string }>
   links: string[]
+  /**
+   * Visual V3.2: source references the item cites, in the owner's order (lists whose spec allows them). In the
+   * public edition only references shown in that edition remain. Renderers number them through a `source_notes` block.
+   */
+  sources?: string[]
 }
 
 /**
@@ -244,11 +249,15 @@ export type VisualBlock =
   | MascotAtlasBlock
   | MascotEvolutionBlock
   | PositioningMapBlock
+  | SwotBlock
+  | TowsMatrixBlock
+  | ValuePropositionCanvasBlock
+  | SourceNotesBlock
 
 export interface VisualDocument {
   schema: typeof VISUAL_SCHEMA
   schema_version: 1
-  document_kind: 'business_model_canvas' | 'visual_identity' | 'competitor_comparison' | 'mascot_atlas'
+  document_kind: 'business_model_canvas' | 'visual_identity' | 'competitor_comparison' | 'mascot_atlas' | 'swot_tows' | 'value_proposition'
   brand_id: string
   brand_name: string
   audience: VisualAudience
@@ -478,4 +487,100 @@ export interface MascotEvolutionBlock extends BlockBase {
   recorded: number
   /** Any recorded stage still says `configuration: example` (the template's example configuration). */
   example_configuration: boolean
+}
+
+// ---- Visual V3.2: SWOT / TOWS and the Value Proposition Canvas --------------------------------------------------
+
+/** A list area (SWOT quadrant, canvas zone) drawn from one list question. Same states as a canvas zone. */
+export interface ListArea<Id extends string> {
+  area_id: Id
+  /** 1… in the framework's canonical reading order. */
+  order: number
+  state: BmcZone['state']
+  /** The list answer; null when this template has no such question (an older bank). */
+  entry: VisualEntry | null
+  next_questions: NextQuestion[]
+  /** Existing prose answers that inform the area but do not answer it. Ids only; values are not copied. */
+  related: string[]
+}
+
+/** A link from one visible item to another item, resolved against what this edition shows. */
+export interface ItemLink {
+  from: string
+  to: string
+  state: 'resolved' | 'unresolved'
+}
+
+export const SWOT_QUADRANTS = ['strengths', 'weaknesses', 'opportunities', 'threats'] as const
+export type SwotQuadrantId = (typeof SWOT_QUADRANTS)[number]
+
+/** SWOT: internal/external × helpful/harmful, in the standard 2×2 order (S W / O T). */
+export interface SwotBlock extends BlockBase {
+  type: 'swot'
+  quadrants: Array<ListArea<SwotQuadrantId>>
+}
+
+export const TOWS_TYPES = ['so', 'st', 'wo', 'wt'] as const
+export type TowsType = (typeof TOWS_TYPES)[number]
+
+/**
+ * TOWS matrix: strategies from `business.swot.tows`, placed in the cell their recorded type names (SO, ST, WO, WT).
+ * A strategy without a type is listed as unplaced, never guessed into a cell. Links read as SWOT item names.
+ */
+export interface TowsMatrixBlock extends BlockBase {
+  type: 'tows_matrix'
+  area: ListArea<'tows'>
+  cells: Record<TowsType, string[]>
+  unplaced: string[]
+  links: ItemLink[]
+  /** Item names of the SWOT lists visible in this edition, by id, so links read as names. */
+  names: Record<string, string>
+}
+
+export const VALUE_FIT_ZONES = ['products_services', 'gain_creators', 'pain_relievers', 'customer_jobs', 'gains', 'pains'] as const
+export type ValueFitZoneId = (typeof VALUE_FIT_ZONES)[number]
+
+/** One pain or gain and the visible value-map items linked to it. Nothing is matched by wording. */
+export interface FitRow {
+  id: string
+  addressed_by: string[]
+}
+
+/**
+ * Value Proposition Canvas (Strategyzer topology): the value map (square: products and services, gain creators,
+ * pain relievers) beside the customer profile (circle: gains, pains, customer jobs). Fit is read only from links the
+ * owner recorded (a reliever → a pain, a creator → a gain), as counts, never a score.
+ */
+export interface ValuePropositionCanvasBlock extends BlockBase {
+  type: 'value_proposition_canvas'
+  zones: Array<ListArea<ValueFitZoneId>>
+  fit: { pains: FitRow[]; gains: FitRow[] }
+  links: ItemLink[]
+  /** Names of visible items (all six lists and customer segments), by id, so links read as names. */
+  names: Record<string, string>
+}
+
+export const SOURCE_NOTE_STATUSES = ['approved', 'shared', 'verified', 'recorded', 'not_available'] as const
+export type SourceNoteStatus = (typeof SOURCE_NOTE_STATUSES)[number]
+
+/**
+ * One numbered source an item cites. `fact`: an approved answer (label only, never its value). `knowledge`: a
+ * shared knowledge note (title only; an idea, not a fact). `evidence`: an evidence record (status only). `web`: a
+ * public https page (host; `url` without query or fragment). `not_available`: not visible in this edition.
+ */
+export interface SourceNote {
+  n: number
+  kind: 'fact' | 'knowledge' | 'evidence' | 'web'
+  ref: string
+  label: string | null
+  host: string | null
+  url: string | null
+  status: SourceNoteStatus
+}
+
+export interface SourceNotesBlock extends BlockBase {
+  type: 'source_notes'
+  notes: SourceNote[]
+  /** Public edition: item sources left out because they are internal (knowledge notes, evidence, unpublished answers). */
+  hidden: number
 }
