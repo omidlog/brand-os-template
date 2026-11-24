@@ -47,6 +47,12 @@
 
 - Each generated question owns its `source_types` list, so `brand/interview/question-bank/business.yaml` has no YAML aliases. With V3.2 the file would have crossed the YAML parser's default limit of 100 aliases and stopped loading. Values are unchanged; `knowledge-graph.yaml` also gains the V3.1 and V3.2 edges it was missing.
 
+## Unreleased — Audit: Visual V3, plan views are never public
+
+### Changed
+
+- Studio no longer offers or serves a public print of the customer journey, SOSTAC overview or OKR tree (`?edition=public` answers 404, and the page has no public print link). V3.3 maps these to the marketing plan and the business plan, which the V4.1 public profile never receives. Before, Studio served their public edition without the profile gate, the same gap the V4 audit closed for the public Business Report. `visualProfilePermits(profile, kind)` is exported from `@brand-os/brand-core/visual`. Owner question in the audit report.
+
 ## Unreleased — Audit: Visual V4 area (V4.1 Command Center and Publishing gallery, V4.2 full books)
 
 ### Fixed

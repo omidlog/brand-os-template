@@ -108,12 +108,14 @@ test('Studio: journey map, SOSTAC overview and OKR tree are read-only, labelled,
       assert.match(print.text, new RegExp(sha.slice(0, 12)), 'the print view names the source commit')
       assert.equal(/<script(?![^>]*src="\/static\/visual\.js\?v=[A-Za-z0-9_-]+")/.test(print.text), false, 'only the static helper script')
       assert.equal(/\sstyle="/.test(print.text), false)
-      const pub = await owner.page(`/brands/${SLUG}/${pathname}/print?edition=public`)
-      assert.equal(pub.res.status, 200)
-      assert.match(pub.text, /Public edition/)
-      for (const draft of ['DRAFT-KR', 'DRAFT-CHANNEL', 'APPROVED-ANNUAL', 'Build a daily habit', 'Discover']) assert.equal(pub.text.includes(draft), false, `${pathname}: ${draft} is not in the public edition`)
-      assert.equal(/stage-1|obj-1|kr-1/.test(pub.text), false, 'no item ids in the public edition')
+      // Audit (Visual V3): these are views of the marketing and business plans, which the V4.1 public profile never
+      // receives (PROFILE_DOCUMENTS), so there is no public edition to link to or serve.
+      const pub = await owner.get(`/brands/${SLUG}/${pathname}/print?edition=public`)
+      assert.equal(pub.status, 404, `${pathname}: no public edition`)
+      const body = await pub.text()
+      for (const draft of ['DRAFT-KR', 'DRAFT-CHANNEL', 'APPROVED-ANNUAL', 'Build a daily habit', 'Discover']) assert.equal(body.includes(draft), false, `${pathname}: ${draft} is not served`)
     }
+    for (const page of [journey, okr, sostac]) assert.equal(page.text.includes('print?edition=public'), false, 'no public print link on a plan view')
 
     const cache = fs.readFileSync(path.join(s.config.dataDir, 'cache', SLUG, 'state.json'), 'utf8')
     for (const text of [journey.text, okr.text, sostac.text, cache]) assert.equal(text.includes('CANARY-RESTRICTED-COSTS'), false, 'restricted value never reaches Studio')
@@ -177,9 +179,7 @@ test('Studio: an empty brand gets designed empty states, and a personal brand wi
     assert.match(okr.text, /No objectives or key results recorded yet/)
     const sostac = await owner.page('/brands/empty-plan/strategy/sostac')
     assert.equal((sostac.text.match(/class="vz-zchip vz-zchip--missing"/g) ?? []).length, 6)
-    const publicPrint = await owner.page('/brands/empty-plan/strategy/okrs/print?edition=public')
-    assert.match(publicPrint.text, /No approved, published objectives yet/)
-    assert.equal(publicPrint.text.includes('How to fill this page'), false, 'owner prompts stay out of the public edition')
+    assert.equal((await owner.get('/brands/empty-plan/strategy/okrs/print?edition=public')).status, 404, 'the OKR tree is a business-plan view: never public')
 
     const personal = await owner.page('/brands/alex-example')
     for (const pathname of PAGES) assert.equal(personal.text.includes(`href="/brands/alex-example/${pathname}"`), false, pathname)

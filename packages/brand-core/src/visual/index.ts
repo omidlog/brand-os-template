@@ -47,6 +47,7 @@ export {
   redactBook,
   redactDocumentModel,
   redactVisualDocument,
+  visualProfilePermits,
 } from './publishing.js'
 export type {
   CoverageState,
