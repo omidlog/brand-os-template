@@ -553,6 +553,11 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Correction:** of the coach audit's "Not done" line above, the `YEAR` count match, the finding-cap slot and the empty-id rule checks in scoped reviews are resolved by this change.
 - **Not done (owner decision or larger change):** negation of symbol terms ("#1"), a wider negation window and Turkish verb-suffix negation; evidence and deferrals in `contextDigest`; `verify` wording when a link changes but the digest is the same; recovery from a corrupted link file; wrapping each acceptance journey, mapping parse errors to codes and a signal handler in the harness; the paid-media `undecided` vs `--paid-media` question (Q-1).
 
+## Audit: Visual V3, plan views never public (2026-11-24)
+
+- **Done:** the journey, SOSTAC and OKR pages have no public print. `?edition=public` answers 404, following V4.1 `PROFILE_DOCUMENTS` (marketing and business plans are not public). `tests/studio-visual-plan.test.ts`, `tests/visual-plan.test.ts`.
+- **Not done:** investor-profile prints of these views (no investor composer exists yet).
+
 ## Visual V3.2: SWOT / TOWS and Value Proposition Canvas
 
 Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas). Builds on the V3.1 list questions.
