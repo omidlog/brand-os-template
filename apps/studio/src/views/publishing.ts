@@ -25,6 +25,8 @@ const READINESS: Record<PublishingReadiness, { tone: Tone; icon: IconName }> = {
 
 /** Print views that exist today, by document type. The public edition is the same path with `?edition=public`. */
 function printHref(slug: string, type: PublishingDocumentType, profile: ExportProfile): string | null {
+  // No investor edition is printed yet; never fall back to the internal one, which shows labelled drafts.
+  if (profile === 'investor') return null
   const edition = profile === 'public' ? '?edition=public' : ''
   if (type === 'business_model_canvas') return brandPath(slug, 'visual', `/print${edition}`)
   if (type === 'visual_identity') return `/brands/${slug}/brand/book/visual-identity/print${edition}`
