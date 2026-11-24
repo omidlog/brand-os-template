@@ -784,6 +784,12 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - Investor profile: a published logo master that still carries a `draft` tag is now drawn without any mark, the same as public. An unpublished draft-tagged master and draft-tagged mascot artwork stay hidden in both profiles. Test: `visual-publishing`.
 - Publishing gallery: the full Brand Book's public and internal cells show the real local export command (`npm run brand:export-visual -- --doc brand-book --edition public|internal`) as text, instead of "Print layout not built yet" (en/fa/tr; the command stays LTR in Persian). Studio never runs it. The investor cell is unchanged (no investor edition). New cell export kind `command`, core `publishingExportCommand`. Tests: `visual-publishing`, `studio-publishing`.
 
+## Unreleased — Owner decision: undecided paid-media answer wins over --paid-media (2026-11-24)
+
+### Changed
+
+- `brand:assurance`: an approved `undecided` answer to `business.marketing.paid_media` now wins over the deprecated `--paid-media yes|no`. `subject.runs_paid_media` stays `unknown` (source `approved_fact`), the blocking item still points at the question, and the digest is the same with or without the flag. stderr says the flag was ignored and the interview answer is used (en/fa/tr). An approved `yes`/`no` already won; with no approved answer the flag still fills the gap. Bridge version `brand-os.assurance-bridge/4`. Tests: `assurance-followups`, `assurance-cli`.
+
 ## Unreleased — Audit: fixes pack minor findings (batched)
 
 ### Fixed
