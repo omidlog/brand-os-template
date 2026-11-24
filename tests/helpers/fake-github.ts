@@ -134,7 +134,6 @@ function readTree(root: string, base = root, out: Tree = new Map()): Tree {
 
 /** The Brand OS starter workspace plus decoys that Studio must never read or copy. */
 export function templateTree(): Tree {
-  const repo = path.resolve(import.meta.dirname, '..', '..')
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-template-'))
   writeStarterWorkspace(root)
   const tree = readTree(root)
