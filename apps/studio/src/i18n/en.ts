@@ -255,6 +255,8 @@ export const en = {
   'doc.verification.owner_stated': 'Owner-stated',
   'doc.verification.unverified': 'Unverified',
   'doc.verification.not_required': 'Evidence not required',
+  'doc.provenance.agentConfirmed': 'Agent-suggested, owner-confirmed',
+  'doc.provenanceHint.agentConfirmed': 'An agent proposed this wording and the owner confirmed it. It is not owner-authored.',
   'doc.length': 'Length guideline {min}–{max} words; approved text has {words}.',
   'doc.empty': 'This document has no sections for this brand.',
   'doc.missingValue': 'No answer recorded.',

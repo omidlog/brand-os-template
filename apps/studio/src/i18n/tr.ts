@@ -254,6 +254,8 @@ export const tr: Messages = {
   'doc.verification.owner_stated': 'Sahibin beyanı',
   'doc.verification.unverified': 'Doğrulanmadı',
   'doc.verification.not_required': 'Kanıt gerekmiyor',
+  'doc.provenance.agentConfirmed': 'Ajan önerisi, sahip onaylı',
+  'doc.provenanceHint.agentConfirmed': 'Bu ifadeyi bir ajan önerdi, sahip onayladı. Sahibin kendi yazdığı metin değildir.',
   'doc.length': 'Uzunluk rehberi {min}–{max} kelime; onaylı metin {words} kelime.',
   'doc.empty': 'Bu belgenin bu marka için bölümü yok.',
   'doc.missingValue': 'Kayıtlı yanıt yok.',

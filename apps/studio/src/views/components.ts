@@ -30,6 +30,12 @@ export function verificationBadge(i: I18n, value: DocumentItem['verification']):
   return badge(i.t(`doc.verification.${value}` as MessageKey), tone, name)
 }
 
+/** BOS-06: an agent proposed the value and the owner confirmed it. Never shown as owner-authored. */
+export function provenanceBadge(i: I18n, value: DocumentItem['provenance']): SafeHtml {
+  if (value !== 'agent_suggested_owner_confirmed') return html``
+  return badge(i.t('doc.provenance.agentConfirmed'), 'accent', 'sparkle', i.t('doc.provenanceHint.agentConfirmed'))
+}
+
 export function pageHeader(input: { title: string; subtitle?: string; eyebrow?: SafeHtml | string; actions?: SafeHtml; meta?: SafeHtml }): SafeHtml {
   return html`<header class="page-header">
     <div class="page-header-text">
@@ -197,7 +203,7 @@ export function documentItem(i: I18n, item: DocumentItem): SafeHtml {
   return html`<article class="doc-item doc-item-${item.tag}">
     <header class="doc-item-head">
       <h3 class="doc-item-label" dir="auto">${item.label}</h3>
-      <div class="doc-item-badges">${tagBadge(i, item.tag)}${verificationBadge(i, item.verification)}</div>
+      <div class="doc-item-badges">${tagBadge(i, item.tag)}${verificationBadge(i, item.verification)}${provenanceBadge(i, item.provenance)}</div>
     </header>
     ${itemValue(i, item)}
     ${item.note && item.value !== null && !item.withheld ? html`<p class="doc-item-note muted" dir="auto">${item.note}</p>` : ''}

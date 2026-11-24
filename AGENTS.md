@@ -30,7 +30,7 @@ If a file disagrees with an approved fact, the approved fact wins until a person
 - Do not invent a name, color, price, metric, legal status, customer, or character.
 - Do not mark a missing asset approved. `present: false` means the file is absent.
 - Do not paste restricted values into public docs, issues, or tool replies. Restricted drafts live under `brand/restricted/`.
-- Do not rewrite an approved field in place. Run the interview change flow so the owner sees the diff and the impacted ids.
+- Do not rewrite an approved field in place. Run the interview change flow (`brand:interview --question <id> --change "…"`) so the owner sees the diff and the impacted ids.
 - Do not translate an approved brand sentence into another language unless that translation is itself approved.
 - Do not assume you can see this private repository, Figma, or a hosted MCP server. Access is described in `docs-internal/AI_CONNECTORS.md`.
 
@@ -41,7 +41,8 @@ If a file disagrees with an approved fact, the approved fact wins until a person
 An agent can run the interview as a conversation. Follow `agent-skills/brand-interviewer/SKILL.md`. In short:
 
 - `npm run brand:next -- --json` returns the next questions with reasons, plus conflicts, follow-ups, and owner-only questions.
-- `npm run brand:interview -- --question <id> --answer "…" --json` answers any question in any order.
+- `npm run brand:interview -- --question <id> --answer "…" --json` answers any question in any order. When the value came from you (your suggestion, default or wording that the owner only confirmed), add `--origin agent_suggestion`. It is recorded as agent-suggested, owner-confirmed, never as owner-authored.
+- `npm run brand:interview -- --question <id> --change "…" [--reason "…"] --json` proposes a replacement for an approved fact: a pending `chg-…` against the current version, with the diff and the impacted ids. Hand the `chg-` id to the owner.
 - `npm run brand:propose -- --file batch.json --json` stores extracted proposals as drafts. Each proposal needs a verbatim quotation and a state: `proposed`, `tentative`, or `unresolved` with value `null`.
 - `npm run brand:interview -- --assist --file - --json` runs the built-in extractor. It uses a configured model, or deterministic rules if none is set.
 
@@ -55,7 +56,7 @@ The content strategy (`npm run brand:content`, a `content` strategy record in `b
 
 All of these produce drafts only. Restricted questions are refused: the owner answers them in the interactive interview. `brand.profile: founder-core` in `brand/brand.config.yaml` narrows the interview to about 40 questions. `brand.profile: personal-brand` interviews a person (see below).
 
-Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, or a hidden prompt; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.
+Approval is a human step: `npm run brand:review -- --module <id>`, then `npm run brand:approve -- --module <id>` (or `-- --ids <id,chg-…>`, or `-- --all-pending` for every pending fact, change, evidence item and draft asset). The proof comes from `BRAND_OS_APPROVAL_PROOF`, piped stdin, the owner's macOS Keychain entry, or a hidden prompt; the Keychain is never read while `BRAND_OS_AGENT_TOKEN` is set; `--proof` on the command line is refused, and both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set. `--actor owner` alone is rejected. The proof file is `brand/.private/approval-secret` and is not committed. Finance and restricted fields need the finance or owner role plus that proof. Publication is a separate command, `npm run brand:publish -- --ids <id>`, and accepts only approved public facts. An agent never approves or publishes; it stops and hands the ids to a human.
 
 Assets follow the same rule. An agent may run `npm run brand:assets -- check` and `npm run brand:assets -- normalize <id>`; it never runs `npm run brand:assets -- approve`. If normalizing resets an approval, hand the asset id to the owner.
 
