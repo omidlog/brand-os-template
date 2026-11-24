@@ -64,7 +64,7 @@ function galleryCell(ctx: ViewContext, view: BrandView, cell: PublishingCell): S
   const counts = html`<p class="pub-counts small"><span>${i.t('publishing.shown', { count: i.number(cell.shown) })}</span> · <span>${i.t('publishing.gaps', { count: i.number(cell.gaps) })}</span>${
     cell.redacted > 0 ? html` · <span class="pub-redacted">${icon('lock')} ${i.t('publishing.redacted', { count: i.number(cell.redacted) })}</span>` : ''
   }</p>`
-  const href = cell.export === 'print' ? printHref(view.record.slug, cell.document_type, cell.profile) : null
+  const href = cell.export === 'print' && cell.readiness !== 'not_applicable' ? printHref(view.record.slug, cell.document_type, cell.profile) : null
   const action = href
     ? html`<a class="link-sm" href="${href}">${i.t('publishing.print')}</a>`
     : html`<p class="muted small">${i.t(cell.export === 'planned' ? 'publishing.planned' : 'publishing.noExport')}</p>`

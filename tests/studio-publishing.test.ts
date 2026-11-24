@@ -69,7 +69,7 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     assert.ok(home.text.split('<main')[0]!.includes('<span>Command Center</span>'))
 
     // The gallery: seven document types × three audiences, counts only.
-    const page = await owner.page(`/brands/${SLUG}/governance/publishing`)
+    const page = await owner.page(`/brands/${SLUG}/governance/documents`)
     assert.equal(page.res.status, 200)
     const g = main(page.text)
     assert.equal([...g.matchAll(/<tr data-document-type="/g)].length, 7)
@@ -98,14 +98,14 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     assert.ok(ownerIdentity.text.includes(`/brands/${SLUG}/assets/file/${checksum}`))
 
     // GET only; guests sign in first; forged slugs are 404.
-    for (const method of ['POST', 'PUT', 'DELETE']) assert.equal((await owner.request(method, `/brands/${SLUG}/governance/publishing`, { form: { _csrf: 'x' } })).status, 405, method)
+    for (const method of ['POST', 'PUT', 'DELETE']) assert.equal((await owner.request(method, `/brands/${SLUG}/governance/documents`, { form: { _csrf: 'x' } })).status, 405, method)
     const guest = new Client(s.url)
-    assert.equal((await guest.get(`/brands/${SLUG}/governance/publishing`)).headers.get('location'), `/login?next=${encodeURIComponent(`/brands/${SLUG}/governance/publishing`)}`)
-    assert.equal((await owner.get('/brands/not-registered/governance/publishing')).status, 404)
+    assert.equal((await guest.get(`/brands/${SLUG}/governance/documents`)).headers.get('location'), `/login?next=${encodeURIComponent(`/brands/${SLUG}/governance/documents`)}`)
+    assert.equal((await owner.get('/brands/not-registered/governance/documents')).status, 404)
 
     // Persian: RTL, Persian digits, standard names.
-    await owner.get(`/brands/${SLUG}/governance/publishing?lang=fa`)
-    const fa = await owner.page(`/brands/${SLUG}/governance/publishing`)
+    await owner.get(`/brands/${SLUG}/governance/documents?lang=fa`)
+    const fa = await owner.page(`/brands/${SLUG}/governance/documents`)
     assert.match(fa.text, /<html lang="fa" dir="rtl">/)
     assert.match(fa.text, /گالری انتشار/)
     assert.match(fa.text, /بوم مدل کسب‌وکار/)
@@ -114,8 +114,8 @@ test('Studio: Command Center strip, Publishing gallery, and public editions with
     const faHome = await owner.page(`/brands/${SLUG}`)
     assert.match(faHome.text, /مرکز فرمان/)
     assert.match(faHome.text, /از [۰-۹]+ کامل/)
-    await owner.get(`/brands/${SLUG}/governance/publishing?lang=tr`)
-    const tr = await owner.page(`/brands/${SLUG}/governance/publishing`)
+    await owner.get(`/brands/${SLUG}/governance/documents?lang=tr`)
+    const tr = await owner.page(`/brands/${SLUG}/governance/documents`)
     assert.match(tr.text, /Yayın galerisi/)
     assert.match(tr.text, /Yatırımcı/)
   } finally {

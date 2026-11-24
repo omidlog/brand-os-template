@@ -822,3 +822,5 @@ a.cc-tile:hover { background: var(--studio-color-bg-hover); }
   .cc-map-text { white-space: normal; }
 }
 @media print { .cc-strip { break-inside: avoid; } }
+/* V4.1: the coach card's command line wraps on narrow screens instead of widening the page. */
+.coach-card code { overflow-wrap: anywhere; white-space: normal; }

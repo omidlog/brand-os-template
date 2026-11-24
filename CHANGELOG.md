@@ -5,7 +5,7 @@
 ### Added
 
 - `packages/brand-core/src/visual/publishing.ts`: export profiles `public`, `investor`, `internal`; `redactVisualDocument` and `redactDocumentModel` (restricted never shown; finance, `.private`-sourced, unapproved and unknown-id values and draft marks never in public or investor; competitor analysis internal only; business and marketing plans never public); `buildPublishingGallery` (document types × profiles, readiness on redacted output, counts only, review-due count); `coverageCells`.
-- Studio Publishing gallery at `/brands/<slug>/governance/publishing` (GET only, en/fa/tr, RTL), in the Publishing & Governance group.
+- Studio Publishing gallery at `/brands/<slug>/governance/documents` (GET only, en/fa/tr, RTL), in the Publishing & Governance group.
 - Tests: `visual-publishing`, `studio-publishing` (synthetic brands only).
 
 ### Changed

@@ -66,7 +66,7 @@ const SECTIONS: Array<{ id: BrandSection; group: NavGroup; key: MessageKey; icon
   { id: 'competitors', group: 'market', key: 'nav.competitors', icon: 'shield', path: '/market/competitors' },
   { id: 'calendar', group: 'market', key: 'nav.calendar', icon: 'clock', path: '/market/content-calendar' },
   { id: 'knowledge', group: 'market', key: 'nav.knowledge', icon: 'idea', path: '/market/knowledge' },
-  { id: 'publishing', group: 'governance', key: 'nav.publishing', icon: 'book', path: '/governance/publishing' },
+  { id: 'publishing', group: 'governance', key: 'nav.publishing', icon: 'book', path: '/governance/documents' },
   { id: 'history', group: 'governance', key: 'nav.history', icon: 'history', path: '/governance/history' },
   { id: 'handoff', group: 'governance', key: 'nav.handoff', icon: 'handoff', path: '/governance/github' },
 ]
