@@ -72,6 +72,7 @@
     "brand:visual-dna": "tsx scripts/visual-dna.ts",
     "brand:content": "tsx scripts/content.ts",
     "brand:runtime": "tsx scripts/runtime.ts",
+    "brand:acceptance": "tsx scripts/acceptance.ts",
     "brand:assurance": "tsx scripts/assurance.ts",
     "brand:assurance-review": "tsx scripts/assurance-review.ts",
     "brand:assurance-link": "tsx scripts/assurance-link.ts",

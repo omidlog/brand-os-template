@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Pilot and workflow acceptance (fixes pack PR-F)
+
+### Added
+
+- `npm run brand:acceptance -- (--demo | --root <checkout>) --out <empty dir> [--lang en|fa|tr] [--json]`: runs the four journeys of the fixes pack (single visual, ten Instagram posts, website brief, paid-ad brief) end to end through the real stdio MCP server and the real `brand:runtime` / `brand:visual-dna` CLIs, and records PASS / FAIL / NOT_TESTED per check with id-only evidence for FIX-01…FIX-08. Owner checkouts are read through a temporary snapshot and hashed before and after; refused under an agent token; no model, no network, `authorizes: []`. Report contract `schemas/acceptance-report.schema.json` (`brand-os/acceptance-report/v1`); printed summary in en/fa (RTL)/tr. Synthetic fixture in `scripts/acceptance/fixture.ts` (demo brand plus restricted canaries, an approved paid strategy, an approved motion fact and a draft logo answer). Guide and end-to-end setup guide: `docs-internal/ACCEPTANCE.md`. Tests: `acceptance-harness`.
+
+### Fixed
+
+- A stale pack is no longer rendered: with `--root`, `brand:runtime social-batch --pack` stops with `stale_pack` before writing when an approved fact the pack cites changed or is no longer approved, and `brand:runtime readiness` adds the blocking check `context.source_drift`. Without `--root` nothing changes. (`packSourceDrift`, found by the acceptance harness.)
+
 ## Unreleased — Nontechnical agent onboarding (fixes pack GAP-11, docs and test only)
 
 ### Added
