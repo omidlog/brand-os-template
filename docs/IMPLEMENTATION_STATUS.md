@@ -541,6 +541,12 @@ Guide: `docs-internal/VISUAL.md` (List questions and canvas links). Supersedes t
 - **Done:** negated cheap-price wording does not fire `premium-vs-lowest-price` (en/fa/tr); registry rules skip questions that do not apply under the config; `coach-rules/4`.
 - **Not done (reported in the audit):** `YEAR` in the creator rubric also matches counts such as 2000 or 1450; negation of symbol terms ("#1") and a wider window; Turkish verb-suffix negation; one slot per verdict under the finding cap; empty-id rule checks in scoped reviews; evidence and deferrals in `contextDigest`.
 
+## Assurance: undecided paid-media answer wins (owner decision, 2026-11-24)
+
+- **Done:** an approved `undecided` for `business.marketing.paid_media` is the interview answer: `runs_paid_media` stays `unknown` and `--paid-media yes|no` is ignored with an en/fa/tr notice on stderr. Confirmed unchanged: an approved `yes`/`no` wins; with no approved answer the flag still works. `brand-os.assurance-bridge/4`. Tests: `assurance-followups`, `assurance-cli`.
+- **Correction:** the GAP-09 follow-up line "the flag still fills it" for an approved `undecided` (`docs-internal/ASSURANCE.md`) no longer holds.
+- **Not done:** removing the deprecated `--paid-media` flag.
+
 ## Audit: fixes pack minor findings, batched (2026-11-24)
 
 - **Done:** the creator / speaker rubrics no longer read an audience count ("2000 subscribers", «۲۰۰۰ نفر», "2000 abone") as a year; `brand.mascot.forbidden`, `personal.media.avoid` and `personal.privacy.never_publish` are list fields for `sensitive-claim-wording`; one slot for a `potential_tension` under the finding cap; scoped `consistency_review` keeps brand-wide rule checks; `coach-rules/5`. `brand:assurance-link link --date` reports today's state. The acceptance leak check also searches JSON-escaped values.

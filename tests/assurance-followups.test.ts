@@ -99,7 +99,13 @@ test('a draft or undecided answer is never treated as approved: paid media stays
   for (const brand of [draft, undecided]) {
     const snapshot = build(brand)
     assert.equal(snapshot.subject.runs_paid_media, 'unknown')
-    assert.equal(paidSource(snapshot)?.source, 'none')
+    // A draft is no answer; an approved `undecided` is the interview answer (owner decision, 2026-11-24).
+    assert.deepEqual(
+      paidSource(snapshot),
+      brand === draft
+        ? { field: 'runs_paid_media', value: 'unknown', source: 'none', question_id: null }
+        : { field: 'runs_paid_media', value: 'unknown', source: 'approved_fact', question_id: PAID_MEDIA_QUESTION },
+    )
     const missing = snapshot.missing.find((entry) => entry.field === 'runs_paid_media')
     assert.ok(missing?.blocking)
     assert.deepEqual(missing.question_ids, [PAID_MEDIA_QUESTION])
@@ -120,6 +126,25 @@ test('deprecated --paid-media: still works while unanswered, and never overrides
   assert.equal(contradicted.subject.runs_paid_media, 'no', 'the recorded answer wins')
   assert.equal(paidSource(contradicted)?.source, 'approved_fact')
   assert.equal(contradicted.source_snapshot_digest, plain.source_snapshot_digest, 'the flag cannot change what is assessed once the question is answered')
+})
+
+test('owner decision 2026-11-24: an approved undecided answer wins over --paid-media yes|no', () => {
+  const brand = coachBrand({ slug: 'assurance-paid-undecided-wins' })
+  approved(brand, PAID_MEDIA_QUESTION, 'undecided')
+  const plain = build(brand)
+  for (const flag of ['yes', 'no'] as const) {
+    const flagged = build(brand, { paidMedia: flag })
+    assert.equal(flagged.subject.runs_paid_media, 'unknown', `--paid-media ${flag} does not fill an undecided answer`)
+    assert.deepEqual(paidSource(flagged), { field: 'runs_paid_media', value: 'unknown', source: 'approved_fact', question_id: PAID_MEDIA_QUESTION })
+    assert.equal(flagged.paid_media_statement, flag, 'the statement is still recorded as given')
+    assert.equal(flagged.source_snapshot_digest, plain.source_snapshot_digest, 'the flag cannot change what is assessed')
+    const missing = flagged.missing.find((entry) => entry.field === 'runs_paid_media')
+    assert.ok(missing?.blocking, 'the gap stays open and blocking')
+    assert.deepEqual(missing.question_ids, [PAID_MEDIA_QUESTION])
+  }
+  // Without any interview answer the flag still works as before.
+  const unanswered = coachBrand({ slug: 'assurance-paid-undecided-control' })
+  assert.equal(build(unanswered, { paidMedia: 'no' }).subject.runs_paid_media, 'no')
 })
 
 test('a snapshot kept with the deprecated flag still verifies', () => {
@@ -176,7 +201,7 @@ test('only the personal-brand profile makes the brand a person', () => {
 // ---- text ----------------------------------------------------------------------------------------
 
 test('new text exists in en, fa and tr, and the summary names the separate personal brand', () => {
-  for (const key of ['paid_media_deprecated', 'paid_media_ignored', 'personal_brand', 'no_facets']) {
+  for (const key of ['paid_media_deprecated', 'paid_media_ignored', 'paid_media_ignored_undecided', 'personal_brand', 'no_facets']) {
     for (const lang of ['en', 'fa', 'tr'] as const) assert.ok(BRIDGE_TEXT[key]?.[lang]?.trim(), `${key}.${lang}`)
     assert.match(BRIDGE_TEXT[key]!.fa, /[؀-ۿ]/, `${key}.fa is Persian`)
   }

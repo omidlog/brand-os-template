@@ -776,6 +776,12 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `tests/studio-visual-qa.test.ts`: the digital PDF check now compares each contents entry's own page number with the PDF page that prints the section. Before, it only checked that the digit appeared somewhere on the contents page.
 - `docs-internal/VISUAL.md`: the mascot print view no longer says the V1.2 engine is not on main. It records that the competitor and mascot print views still use the earlier `.vz-page--book` page, so those CSS rules are live.
 
+## Unreleased — Owner decision: undecided paid-media answer wins over --paid-media (2026-11-24)
+
+### Changed
+
+- `brand:assurance`: an approved `undecided` answer to `business.marketing.paid_media` now wins over the deprecated `--paid-media yes|no`. `subject.runs_paid_media` stays `unknown` (source `approved_fact`), the blocking item still points at the question, and the digest is the same with or without the flag. stderr says the flag was ignored and the interview answer is used (en/fa/tr). An approved `yes`/`no` already won; with no approved answer the flag still fills the gap. Bridge version `brand-os.assurance-bridge/4`. Tests: `assurance-followups`, `assurance-cli`.
+
 ## Unreleased — Audit: fixes pack minor findings (batched)
 
 ### Fixed
