@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Pilot and workflow acceptance (fixes pack PR-F)
+
+### Added
+
+- `npm run brand:acceptance -- (--demo | --root <checkout>) --out <empty dir> [--lang en|fa|tr] [--json]`: runs the four journeys of the fixes pack (single visual, ten Instagram posts, website brief, paid-ad brief) end to end through the real stdio MCP server and the real `brand:runtime` / `brand:visual-dna` CLIs, and records PASS / FAIL / NOT_TESTED per check with id-only evidence for FIX-01…FIX-08. Owner checkouts are read through a temporary snapshot and hashed before and after; refused under an agent token; no model, no network, `authorizes: []`. Report contract `schemas/acceptance-report.schema.json` (`brand-os/acceptance-report/v1`); printed summary in en/fa (RTL)/tr. Synthetic fixture in `scripts/acceptance/fixture.ts` (demo brand plus restricted canaries, an approved paid strategy, an approved motion fact and a draft logo answer). Guide and end-to-end setup guide: `docs-internal/ACCEPTANCE.md`. Tests: `acceptance-harness`.
+
+### Fixed
+
+- A stale pack is no longer rendered: with `--root`, `brand:runtime social-batch --pack` stops with `stale_pack` before writing when an approved fact the pack cites changed or is no longer approved, and `brand:runtime readiness` adds the blocking check `context.source_drift`. Without `--root` nothing changes. (`packSourceDrift`, found by the acceptance harness.)
+
 ## Unreleased — Nontechnical agent onboarding (fixes pack GAP-11, docs and test only)
 
 ### Added
@@ -653,6 +663,12 @@ Known limits are listed in `docs/IMPLEMENTATION_STATUS.md`. No approved brand fa
 - `writeBatch` refuses a dangling symlink and a linked parent directory that leads into a `brand/` folder (checked on the real path before and after the directory is created).
 - Production readiness: an asset id the Visual DNA resolver would refuse no longer voids every asset verdict; that asset stays `not_tested`. `social-batch --root` resolves every approved pack asset (logos first), the same ids `readiness --root` resolves, so both report the same asset verdicts.
 - `docs-internal/BRAND_RUNTIME.md` and `docs-internal/TASK_CONTEXT.md` match the code (writer rules, `social-batch` exit code, locale from the request, test counts).
+
+## Unreleased — Audit: Visual V2 stale states at view time
+
+### Fixed
+
+- Competitor comparison page (Studio): the shared landscape freezes each state on the day the owner ran `brand:competitive share`. The page now ages those states to the day it is built: a matrix cell or price shared as `observed`/`unverified` reads `historical`, and a positioning placement shared as `evidenced` reads `stale`, once its newest source is past the 90-day market-observation threshold (one day is given back, because only the day is shared). States only go down; conflicts, needs-review and unknown are unchanged; the shared file is not touched. Golden fixtures (no day given) draw as shared. Test: `visual-positioning` (aged at build time).
 
 ## Unreleased — Audit: Visual V1 area fixes
 
