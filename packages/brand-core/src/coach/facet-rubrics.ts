@@ -74,7 +74,34 @@ const ROLE_TITLES_WITH_OWNER: readonly string[] = ['product owner', 'process own
 const NONE_ANSWER = /^(none|no|nothing yet|not yet|n\/a|هیچ|هیچی|ندارم|هنوز نه|yok|henüz yok)\.?$/i
 
 /** A four-digit Gregorian (19xx/20xx) or Solar Hijri (13xx/14xx) year, after Persian digits are folded. */
-const YEAR = /(?:^|[^\d])(?:19|20|13|14)\d{2}(?:[^\d]|$)/
+const YEAR = /(?<!\d)(?:19|20|13|14)\d{2}(?!\d)/g
+
+/**
+ * Words that make a year-shaped number a count ("2000 subscribers", "subscribers: 1450", «۲۰۰۰ نفر»,
+ * "2000 abone"). Matched as a word start, so plurals and suffixes count. A count is not a date.
+ */
+const COUNT_NOUNS: readonly string[] = [
+  'subscriber', 'follower', 'member', 'reader', 'viewer', 'views', 'listener', 'download', 'student', 'attendee', 'people', 'sign-up', 'signup',
+  'نفر', 'مشترک', 'دنبال\u200cکننده', 'دنبال کننده', 'عضو', 'بازدید', 'خواننده', 'دانشجو', 'شاگرد',
+  'abone', 'takipçi', 'üye', 'kişi', 'okuyucu', 'izlenme', 'görüntülenme', 'öğrenci', 'indirme',
+]
+const COUNT_ALT = COUNT_NOUNS.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+/** Right after the number: an optional "+" and one word like "active" or "paid", then a count noun. */
+const COUNT_AFTER = new RegExp(`^\\s*\\+?\\s*(?:(?:active|paid|monthly|total|new)\\s+)?(?:${COUNT_ALT})`, 'iu')
+/** Right before the number: a count noun (any suffix), then an optional ":" or "=". */
+const COUNT_BEFORE = new RegExp(`(?:^|[^\\p{L}])(?:${COUNT_ALT})[\\p{L}\\p{M}\\u200c]*\\s*[:=：]?\\s*$`, 'iu')
+
+/** True when the text names a year: a year-shaped number that is not a count of people, copies or views. */
+function hasYear(text: string): boolean {
+  const folded = asciiDigits(text)
+  for (const match of folded.matchAll(YEAR)) {
+    const start = match.index
+    const end = start + match[0].length
+    if (COUNT_AFTER.test(folded.slice(end)) || COUNT_BEFORE.test(folded.slice(0, start))) continue
+    return true
+  }
+  return false
+}
 
 function stripRoleTitles(text: string): string {
   let out = text
@@ -90,7 +117,7 @@ function companionOpen(ctx: CoachContext, id: string): boolean {
 
 function undated(text: string): boolean {
   if (NONE_ANSWER.test(text.trim()) || contentWordCount(text) === 0) return false
-  return !YEAR.test(asciiDigits(text))
+  return !hasYear(text)
 }
 
 const RUBRICS: readonly FacetRubric[] = [
