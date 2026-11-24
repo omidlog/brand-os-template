@@ -9,6 +9,7 @@ import {
   assertedTerm,
   coachAnalyze,
   coachI18nErrors,
+  COACH_LIMITS,
   COACH_REGISTRY_RULES,
   COACH_RULE_VERSION,
   COACH_TENSION_RULES,
@@ -414,4 +415,34 @@ test('applicability (audit): rules do not read a question the owner config turne
   const result = run(off, 'consistency_review')
   assert.notEqual(check(result, 'evidence-claim-unverified').outcome, 'needs_verification')
   assert.ok(!verdicts(result).includes('needs_verification'), JSON.stringify(codes(result)))
+})
+
+test('cap (audit O-3): many unverified claims never push the only tension out of the findings', () => {
+  const brand = coachBrand({ personal: true })
+  answer(brand, 'brand.strategy.differentiation', PREMIUM)
+  answer(brand, 'business.sales.pricing', 'The cheapest clinic software in the market, one price for everyone.')
+  const skip = new Set(['brand.strategy.differentiation', 'business.sales.pricing'])
+  let recorded = 0
+  for (const question of brand.engine.questions()) {
+    if (recorded >= 80) break
+    if (skip.has(question.id) || (question.question_type !== 'long_text' && question.question_type !== 'short_text')) continue
+    if (brand.engine.changeAnswer(question.id, 'Guaranteed results for every clinic.').kind === 'recorded') recorded += 1
+  }
+  const result = run(brand, 'consistency_review')
+  const unverified = result.findings.filter((finding) => finding.verdict === 'needs_verification').length
+  assert.ok(unverified >= COACH_LIMITS.maxConsistencyFindings - 1, `the cap is reached (${unverified} unverified)`)
+  assert.equal(check(result, 'premium-vs-lowest-price').outcome, 'potential_tension')
+  assert.ok(codes(result).includes('consistency_tension'), 'the tension rule_checks names is in the findings')
+  assert.ok(result.findings.length <= COACH_LIMITS.maxConsistencyFindings)
+})
+
+test('scoped rule_checks (audit O-4): brand-wide checks with no question ids stay in a scoped review', () => {
+  const brand = coachBrand()
+  answer(brand, 'brand.strategy.differentiation', PREMIUM)
+  const whole = run(brand, 'consistency_review')
+  const scoped = run(brand, 'consistency_review', 'brand.strategy.differentiation')
+  const brandWide = (whole.rule_checks ?? []).filter((item) => item.question_ids.length === 0).map((item) => item.rule_id)
+  assert.ok(brandWide.includes('approved-placeholder') && brandWide.includes('module-disabled-with-approval'), JSON.stringify(brandWide))
+  const scopedIds = (scoped.rule_checks ?? []).map((item) => item.rule_id)
+  for (const rule of brandWide) assert.ok(scopedIds.includes(rule), `${rule} is reported in the scoped review`)
 })
