@@ -9,6 +9,7 @@ import {
   demoPack,
   loadApprovedLogo,
   openOwnerWorkspace,
+  packSourceDrift,
   packAssetIds,
   parseRequiredAssets,
   productionReadiness,
@@ -42,7 +43,8 @@ import { MAX_ASSET_IDS, runVisualDnaTool } from '@brand-os/brand-core/visual-dna
  * readiness --pack <file> prints the production-readiness projection (`docs-internal/BRAND_RUNTIME.md` § Production
  * readiness): a separate view that never changes the pack's own `readiness`. With --root the pack's assets are checked
  * through the Visual DNA resolver as the owner; with --batch the files a social-batch run wrote are re-checked on their
- * bytes. Exit 0 when ready, 3 when not_ready. social-batch also writes production-readiness.json next to its summary.
+ * bytes. Exit 0 when ready, 3 when not_ready. social-batch also writes production-readiness.json next to its summary
+ * and, like readiness, exits 3 when production is not_ready, after the drafts are written (PR-E owner decision 3).
  */
 
 const HELP = `brand:runtime social-batch (--demo | --pack <file> [--root <dir>]) --out <empty dir>
@@ -54,7 +56,8 @@ brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require 
              brand:query --tool task_context --task-type social_batch --count 10 [--locale fa]
              verified like the demo pack; the pack's own task locale is used
   --root     with --pack only, owner-local: the owner's checkout of the same brand. Enables the Coach and the
-             approved logo (publication gate + checksum). Read-only; refused under an agent token
+             approved logo (publication gate + checksum), and refuses a stale pack (a cited approved fact
+             changed since the pack was built). Read-only; refused under an agent token
   --as-of    with --pack: ISO date for the Coach and the assessment (default: now)
   --final    final export: convert text to outlines (drafts keep live, editable text). Needs an approved
              brand.type.scale and --font-file for every approved first family; nothing is substituted
@@ -65,6 +68,8 @@ brand:runtime readiness --pack <file> [--root <dir>] [--batch <dir>] [--require 
   --require  repeatable, owner task input: an asset this task must carry (logo). A required logo that is
              missing, changed, withheld or unverifiable makes production not_ready. Optional assets never block
   --json     print the batch summary (social-batch) or the projection (readiness) as JSON
+
+social-batch  exit 0 when production is ready; exit 3 when it is not_ready (the drafts are still written).
 
 readiness   production readiness of a pack (separate from the pack's own context readiness). --root checks the
             pack's assets through Visual DNA as the owner; --batch re-checks a social-batch output directory on its
@@ -139,14 +144,23 @@ async function main(): Promise<void> {
     if (Number.isNaN(now.getTime())) usage('--as-of must be an ISO date.')
     const pack = readPackFile(values.pack!)
     const engine = values.root ? openOwnerWorkspace(values.root, pack) : null
+    // A brand that changed after the pack was built: stop before anything is written (rebuild the pack instead).
+    const drift = engine ? packSourceDrift(engine, pack) : null
+    if (drift && drift.length > 0) throw new RuntimeError('stale_pack', `The pack is stale: ${drift.length} cited approved fact(s) changed since it was built (${drift.join(', ')}). Rebuild it with brand:query --tool task_context. Nothing was written.`)
     const loaded = engine ? loadApprovedLogo(engine.workspaceRoot(), pack) : null
     result = runSocialBatch(pack, { demo: false, logo: loaded?.logo ?? null, logoConsidered: loaded?.considered ?? null, coach: engine, now, origin: 'pack_file', final })
-    production = productionReadiness({ pack, required_assets: required, references: loaded ? loaded.references : null, batch: result })
+    production = productionReadiness({ pack, required_assets: required, references: loaded ? loaded.references : null, batch: result, source_drift: drift })
   }
   // An additive file next to the summary: batch-summary.json (runtime-batch/v1) is unchanged.
   result.files.set('production-readiness.json', `${JSON.stringify(production, null, 2)}\n`)
   const written = writeBatch(out, result)
   const note = values.png ? await previews(out, result) : null
+  // PR-E owner decision 3: the drafts are written, but a not_ready batch exits 3 so scripts and CI notice.
+  // The line goes to stderr so --json stdout stays one JSON document.
+  if (production.production_ready !== 'ready') {
+    process.exitCode = 3
+    console.error(productionText(production.locale).labels.not_ready_exit)
+  }
   if (values.json) {
     console.log(JSON.stringify(result.summary, null, 2))
     return
@@ -191,16 +205,18 @@ function readiness(args: string[]): void {
   const required = requiredOf(values.require)
   const pack = readPackFile(values.pack)
   let references = null
+  let drift: string[] | null = null
   if (values.root) {
     // Owner-local: openOwnerWorkspace refuses under an agent token and for another brand.
     const engine = openOwnerWorkspace(values.root, pack)
+    drift = packSourceDrift(engine, pack)
     const ids = packAssetIds(pack).slice(0, MAX_ASSET_IDS)
     const dna = ids.length > 0 ? runVisualDnaTool(engine, operatorContext(pack.brand_id), { asset_ids: ids }) : null
     references = dna === null ? [] : dna.status === 'ok' ? dna.references : null
   }
   const batch = values.batch ? readBatchDir(values.batch) : null
   const locale = (values.locale as 'fa' | 'en' | 'tr' | undefined) ?? pack.task.locale
-  const result = productionReadiness({ pack, locale, required_assets: required, references, batch })
+  const result = productionReadiness({ pack, locale, required_assets: required, references, batch, source_drift: drift })
   if (values.json) console.log(JSON.stringify(result, null, 2))
   else {
     const t = productionText(locale)

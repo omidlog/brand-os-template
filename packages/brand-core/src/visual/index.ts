@@ -33,6 +33,34 @@ export { MASCOT_TEXT, mascotText } from './i18n-mascot.js'
 export type { MascotText } from './i18n-mascot.js'
 export { illustrativeMascotAtlas } from './fixtures-mascot.js'
 export type { MascotFixtureVariant } from './fixtures-mascot.js'
+export {
+  buildPublishingGallery,
+  coverageCells,
+  EXPORT_PROFILE_SPECS,
+  EXPORT_PROFILES,
+  PROFILE_DOCUMENTS,
+  profilePermits,
+  PUBLISHING_DOCUMENT_TYPES,
+  PUBLISHING_READINESS,
+  questionClassifier,
+  redactDocumentModel,
+  redactVisualDocument,
+} from './publishing.js'
+export type {
+  CoverageState,
+  ExportProfile,
+  ExportProfileSpec,
+  PublishingCell,
+  PublishingDocumentType,
+  PublishingExport,
+  PublishingGallery,
+  PublishingInput,
+  PublishingReadiness,
+  QuestionClass,
+  QuestionClassifier,
+  RedactedDocument,
+  RedactedVisual,
+} from './publishing.js'
 export { BOOK_CHAPTER_IDS, BOOK_KINDS, BOOK_SCHEMA, buildBook, composeBook, printableEntry, UNAVAILABLE_REASONS } from './full-book.js'
 export type { BookChapter, BookChapterId, BookDocument, BookInput as BookComposeInput, BookKind, BuildBookOptions, PlateChapterId, UnavailableReason } from './full-book.js'
 export { entryLabel, FULL_BOOK_TEXT, fullBookText } from './i18n-full-book.js'

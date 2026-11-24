@@ -106,11 +106,17 @@ export interface BookDocument {
   chapters: BookChapter[]
 }
 
-/** Draft and recommendation values never reach a book; withheld stays withheld. */
+/** An entry without any value: no text, no list items (Visual V3.1), no legacy mark. Label and state stay. */
+function valueless(entry: VisualEntry): VisualEntry {
+  const { items: _items, legacy: _legacy, ...rest } = entry
+  return { ...rest, value: null }
+}
+
+/** Draft and recommendation values never reach a book; withheld stays withheld. A list's items go with its value. */
 export function printableEntry(entry: VisualEntry): VisualEntry | null {
   if (entry.state === 'recommendation') return null
   if (entry.state === 'approved' || entry.state === 'stale') return entry
-  return { ...entry, value: null }
+  return valueless(entry)
 }
 
 /**
@@ -121,7 +127,7 @@ function printable(entries: VisualEntry[], audience: DocumentAudience): VisualEn
   return entries
     .map(printableEntry)
     .filter((entry): entry is VisualEntry => entry !== null)
-    .map((entry) => (audience === 'public' && entry.state !== 'approved' && entry.state !== 'stale' ? { ...entry, state: 'missing' as const, value: null, note: null, missing_reason: 'not_published' as const } : entry))
+    .map((entry) => (audience === 'public' && entry.state !== 'approved' && entry.state !== 'stale' ? { ...valueless(entry), state: 'missing' as const, note: null, missing_reason: 'not_published' as const } : entry))
 }
 
 function hasValue(entries: VisualEntry[]): boolean {
@@ -172,6 +178,15 @@ function latest(dates: Array<string | null | undefined>): string | null {
   return dates.filter((date): date is string => Boolean(date)).sort().at(-1) ?? null
 }
 
+/**
+ * The canvas document a report keeps for its framework reference and citations. Its zone block is dropped: the
+ * canvas chapter carries the printable zones, and the source block still holds draft values and list items (with
+ * their ids) for the owner's own canvas, which a book never carries.
+ */
+function referenceOnly(canvas: VisualDocument): VisualDocument {
+  return { ...canvas, blocks: canvas.blocks.filter((block) => block.type !== 'business_model_canvas') }
+}
+
 /** Pure: assembles a book from entries and visual documents. The engine wrapper and the fixtures both use it. */
 export function composeBook(input: BookInput): BookDocument {
   const { audience } = input
@@ -214,7 +229,7 @@ export function composeBook(input: BookInput): BookDocument {
     origin: input.illustrative ? 'illustrative_fixture' : 'brand_repository',
     as_of: latest([...printed.map((entry) => (entry.value !== null ? entry.approved_at : null)), input.kind === 'brand_book' ? input.identity?.as_of : null]),
     identity: input.kind === 'brand_book' ? (input.identity ?? null) : null,
-    canvas: input.kind === 'business_report' ? (input.canvas ?? null) : null,
+    canvas: input.kind === 'business_report' && input.canvas ? referenceOnly(input.canvas) : null,
     chapters,
   }
 }
@@ -242,7 +257,7 @@ function specEntries(engine: InterviewEngine, spec: DocumentSpec, audience: Docu
       const notApplicable = item.tag === 'missing' && audience === 'internal' && answer?.status === 'not_applicable'
       const { approved: _approved, ...entry } = entryFromItem(item, facts[id], notApplicable, now, missingReason(audience, answer?.status))
       // Defence in depth: a restricted question never carries a value into a book, whatever the fact says.
-      return [question.sensitivity === 'restricted' ? { ...entry, value: null, state: (audience === 'public' ? 'missing' : 'withheld') as DataState, missing_reason: audience === 'public' ? ('not_published' as const) : null } : entry]
+      return [question.sensitivity === 'restricted' ? { ...valueless(entry), state: (audience === 'public' ? 'missing' : 'withheld') as DataState, missing_reason: audience === 'public' ? ('not_published' as const) : null } : entry]
     })
   }
   return out

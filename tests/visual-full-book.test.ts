@@ -133,3 +133,48 @@ test('buildBook on a brand: approved values only, drafts without value, restrict
   const mascot = buildBook(engine, 'brand_book', 'internal').chapters.find((c) => c.chapter_id === 'mascot')
   assert.ok(mascot?.kind === 'unavailable' && mascot.reason === 'module_off')
 })
+
+test('Visual V3.1 list answers: approved items reach the book, draft items and the canvas source block never do', () => {
+  const draftList: VisualEntry = { ...entry('business.model.key_activities', 'assumption', 'Draft A · Draft B'), items: [{ id: 'act-1', name: 'Draft A', detail: null, tags: [], links: [] }], legacy: true }
+  const stripped = printableEntry(draftList)!
+  assert.equal(stripped.value, null)
+  assert.equal('items' in stripped || 'legacy' in stripped, false, 'a draft list loses its items with its value')
+
+  for (const lang of VISUAL_LANGS) {
+    for (const audience of ['internal', 'public'] as const) {
+      const book = illustrativeBook('business_report', lang, audience)
+      const json = JSON.stringify(book)
+      const canvas = book.chapters.find((c) => c.chapter_id === 'business_model_canvas')
+      assert.ok(canvas?.kind === 'canvas')
+      const all = canvas.zones.flatMap((zone) => zone.entries)
+      const segments = all.find((e) => e.id === 'business.model.segments')
+      assert.equal(segments?.items?.length, 2, `${lang} ${audience}: approved segments keep their items`)
+      for (const id of ['business.model.key_activities', 'business.model.cost_items']) {
+        const draft = all.find((e) => e.id === id)
+        if (draft) assert.equal(draft.items, undefined, `${lang} ${audience}: ${id} is a draft, no items`)
+      }
+      for (const draftName of ['Lesson production', 'Partner onboarding', 'Cloud hosting', 'تولید درس', 'Ders üretimi']) assert.equal(json.includes(draftName), false, `${lang} ${audience}: draft item ${draftName} never carried`)
+      for (const id of ['act-1', 'act-2', 'cost-1', 'cost-2']) assert.equal(json.includes(`"${id}"`), false, `${lang} ${audience}: draft item id ${id} never carried`)
+      assert.ok(!book.canvas?.blocks.some((block) => block.type === 'business_model_canvas'), 'the canvas source block (drafts, links) is not embedded; the chapter carries the printable zones')
+      assert.ok((book.canvas?.framework_refs.length ?? 0) > 0, 'the framework reference is kept')
+    }
+  }
+
+  const { engine, proof } = brand()
+  answer(engine, 'business.model.segments', 'Independent cafés | Morning rush buyers | primary; Office kitchens')
+  answer(engine, 'business.model.key_activities', 'CANARY-DRAFT-ACTIVITY | weekly | production')
+  const approved = engine.approvals().approveBatch({ ids: ['business.model.segments'] }, proof)
+  assert.equal(approved.approved, 1, JSON.stringify(approved.results))
+  for (const audience of ['internal', 'public'] as const) {
+    const report = buildBook(engine, 'business_report', audience, { canvas: buildBusinessModelCanvas(engine, audience) })
+    const json = JSON.stringify(report)
+    assert.equal(json.includes('CANARY-DRAFT-ACTIVITY'), false, `${audience}: a draft list never reaches a book`)
+    const segments = entries(report).filter((e) => e.id === 'business.model.segments' && e.value !== null)
+    // Approved but not published: the public edition does not print it; the internal edition prints its items.
+    if (audience === 'internal') assert.ok(segments.length > 0, 'internal: the approved list is printed')
+    for (const seg of segments) {
+      assert.equal(seg.state, 'approved')
+      assert.deepEqual(seg.items?.map((item) => [item.name, item.detail, item.tags]), [['Independent cafés', 'Morning rush buyers', [{ field: 'priority', value: 'primary' }]], ['Office kitchens', null, []]])
+    }
+  }
+})
