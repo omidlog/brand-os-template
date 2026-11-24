@@ -108,6 +108,8 @@ if (command === 'init') {
       item: { type: 'string' },
       field: { type: 'string', multiple: true },
       links: { type: 'string' },
+      // Visual V3.2: source references on SWOT, TOWS and Value Proposition Canvas items.
+      sources: { type: 'string' },
       position: { type: 'string' },
     },
   })
@@ -916,9 +918,9 @@ function formatNext(report: NextReport): string {
  * Every write goes through the normal change flow: a draft, or a pending change proposal when the list is approved.
  * Nothing is approved here.
  */
-async function entityCommand(values: { question?: string; entity?: string; item?: string; field?: string[]; links?: string; position?: string; json?: boolean }): Promise<void> {
+async function entityCommand(values: { question?: string; entity?: string; item?: string; field?: string[]; links?: string; sources?: string; position?: string; json?: boolean }): Promise<void> {
   const { ENTITY_OPERATIONS, entityFormat, entityLines, entitySpec, readEntityList } = await import('@brand-os/brand-core')
-  const usage = 'Usage: brand:interview --question <list question id> --entity list | add --field name=… [--field key=…] [--links id,id] [--position N] | edit --item <id> [--field key=…] [--links id,id|none] | move --item <id> --position N | remove --item <id> [--json]'
+  const usage = 'Usage: brand:interview --question <list question id> --entity list | add --field name=… [--field key=…] [--links id,id] [--sources ref,ref] [--position N] | edit --item <id> [--field key=…] [--links id,id|none] [--sources ref,ref|none] | move --item <id> --position N | remove --item <id> [--json]'
   const done = (ok: boolean, payload: Record<string, unknown>, text: string): never => {
     if (values.json) console.log(JSON.stringify({ ok, ...payload }, null, 2))
     else (ok ? console.log : console.error)(text)
@@ -939,6 +941,7 @@ async function entityCommand(values: { question?: string; entity?: string; item?
     fields[pair.slice(0, eq).trim()] = pair.slice(eq + 1)
   }
   const links = values.links === undefined ? undefined : values.links.trim().toLowerCase() === 'none' ? [] : values.links.split(/[,،\s]+/).filter(Boolean)
+  const sources = values.sources === undefined ? undefined : values.sources.trim().toLowerCase() === 'none' ? [] : values.sources.split(/[,،\s]+/).filter(Boolean)
   const position = values.position === undefined ? undefined : Number(values.position)
   if (operation === 'list') {
     const latest = engine.ledger().records.filter((record) => record.question_id === values.question && !record.superseded_by).at(-1)
@@ -950,9 +953,9 @@ async function entityCommand(values: { question?: string; entity?: string; item?
   if (position !== undefined && !Number.isInteger(position)) done(false, { kind: 'error', message: '--position must be a whole number' }, '--position must be a whole number.')
   const op =
     operation === 'add'
-      ? { op: 'add' as const, fields, links, position }
+      ? { op: 'add' as const, fields, links, sources, position }
       : operation === 'edit'
-        ? { op: 'edit' as const, id: values.item!, fields, links }
+        ? { op: 'edit' as const, id: values.item!, fields, links, sources }
         : operation === 'move'
           ? { op: 'move' as const, id: values.item!, position: position ?? 0 }
           : { op: 'remove' as const, id: values.item! }

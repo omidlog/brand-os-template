@@ -28,7 +28,7 @@ questions:
       - en
       - fa
       - tr
-    source_types: &a1
+    source_types:
       - owner
       - approved_import
       - external_cited
@@ -66,7 +66,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/brand-strategy.md
@@ -99,7 +103,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids: []
@@ -142,7 +150,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids: []
@@ -173,7 +185,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/business-product.md
@@ -210,7 +226,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids: []
@@ -241,7 +261,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/brand-strategy.md
@@ -275,7 +299,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/brand-strategy.md
@@ -311,7 +339,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/brand-strategy.md
@@ -346,7 +378,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids: []
@@ -377,7 +413,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/business-sales.md
@@ -410,7 +450,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids: []
@@ -441,7 +485,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids: []
@@ -472,7 +520,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/business-partnerships.md
@@ -514,7 +566,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
       - brand/generated/drafts/brand-strategy.md
@@ -558,7 +614,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids:
@@ -601,7 +661,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids:
@@ -644,12 +708,541 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-company.md
     related_ids:
       - business.finance.costs
       - business.finance.economics_note
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.swot.strengths
+    module: business-company
+    field_path: business.swot.strengths
+    label: Strengths
+    prompt:
+      en: Which strengths does the business have today, inside its own control?
+      fa: کسب‌وکار امروز چه قوت‌هایی دارد که در کنترل خودش است؟
+      tr: İşletmenin bugün kendi kontrolündeki güçlü yönleri neler?
+    why_it_matters: A SWOT strength is internal and real today; strategies are built on it.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Roasts every batch to order | weekly roast log | evidenced | sources:
+        business.offer.summary"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 39
+    sensitivity: internal
+    entity:
+      id_prefix: str
+      max_items: 12
+      fields:
+        - name
+        - detail
+        - confidence
+      links: []
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - brand.strategy.differentiation
+      - business.model.defensibility
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.swot.weaknesses
+    module: business-company
+    field_path: business.swot.weaknesses
+    label: Weaknesses
+    prompt:
+      en: Which weaknesses hold the business back today, inside its own control?
+      fa: کدام ضعف‌ها امروز کسب‌وکار را عقب نگه می‌دارند و در کنترل خودش هستند؟
+      tr: Bugün işletmeyi geri tutan, kendi kontrolündeki zayıf yönler neler?
+    why_it_matters: Naming weaknesses honestly is what makes WO and WT strategies possible.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: One roaster, no backup | single machine | owner_view"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 40
+    sensitivity: internal
+    entity:
+      id_prefix: wk
+      max_items: 12
+      fields:
+        - name
+        - detail
+        - confidence
+      links: []
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.plan.risks
+      - business.ops.roles
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.swot.opportunities
+    module: business-company
+    field_path: business.swot.opportunities
+    label: Opportunities
+    prompt:
+      en: Which outside opportunities could the business use?
+      fa: چه فرصت‌هایی در بیرون از کسب‌وکار هست که می‌تواند از آن استفاده کند؟
+      tr: İşletmenin kullanabileceği dış fırsatlar neler?
+    why_it_matters: "Opportunities are external: market, customers, technology, regulation. Each should
+      cite where it was seen."
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: More cafés buy local | trade survey | evidenced | sources:
+        https://example.com/report"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 41
+    sensitivity: internal
+    entity:
+      id_prefix: opp
+      max_items: 12
+      fields:
+        - name
+        - detail
+        - confidence
+      links: []
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.market.geography
+      - business.growth.hypothesis
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.swot.threats
+    module: business-company
+    field_path: business.swot.threats
+    label: Threats
+    prompt:
+      en: Which outside threats could hurt the business?
+      fa: چه تهدیدهایی از بیرون می‌تواند به کسب‌وکار آسیب بزند؟
+      tr: İşletmeye zarar verebilecek dış tehditler neler?
+    why_it_matters: Threats are external. Naming them early lets ST and WT strategies answer them.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Green coffee prices rising | supplier notice | evidenced"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 42
+    sensitivity: internal
+    entity:
+      id_prefix: thr
+      max_items: 12
+      fields:
+        - name
+        - detail
+        - confidence
+      links: []
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.plan.risks
+      - business.partners.risk_process
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.swot.tows
+    module: business-company
+    field_path: business.swot.tows
+    label: TOWS strategies
+    prompt:
+      en: Which strategies follow from your SWOT? Link each to the strengths, weaknesses, opportunities or
+        threats it uses.
+      fa: چه راهبردهایی از SWOT شما نتیجه می‌شود؟ هر راهبرد را به قوت، ضعف، فرصت یا تهدیدی که از آن
+        استفاده می‌کند پیوند دهید.
+      tr: SWOT analizinizden hangi stratejiler çıkıyor? Her birini kullandığı güçlü yön, zayıf yön, fırsat
+        veya tehdide bağlayın.
+    why_it_matters: "TOWS turns the four SWOT lists into actions: SO, ST, WO and WT strategies, each
+      traceable to its items."
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Offer a local-café subscription | weekly delivery | so | links: str-1, opp-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 43
+    sensitivity: internal
+    entity:
+      id_prefix: tows
+      max_items: 16
+      fields:
+        - name
+        - detail
+        - type
+      links:
+        - business.swot.strengths
+        - business.swot.weaknesses
+        - business.swot.opportunities
+        - business.swot.threats
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.goals.quarter
+      - business.plan.risks
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.fit.jobs
+    module: business-company
+    field_path: business.fit.jobs
+    label: Customer jobs
+    prompt:
+      en: Which jobs is the customer trying to get done? List each job separately.
+      fa: مشتری می‌خواهد چه کارهایی را انجام دهد؟ هر کار را جدا بنویسید.
+      tr: Müşteri hangi işleri halletmeye çalışıyor? Her işi ayrı yazın.
+    why_it_matters: "The Value Proposition Canvas starts from the customer: the jobs they hire a product for."
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Keep the espresso menu consistent | every morning shift | functional | links:
+        seg-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 44
+    sensitivity: internal
+    entity:
+      id_prefix: job
+      max_items: 16
+      fields:
+        - name
+        - detail
+        - kind
+      links:
+        - business.model.segments
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.product.jobs
+      - business.model.segments
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.fit.pains
+    module: business-company
+    field_path: business.fit.pains
+    label: Customer pains
+    prompt:
+      en: What annoys the customer or goes wrong before, during or after the job?
+      fa: قبل، حین یا بعد از انجام کار، چه چیزی مشتری را آزار می‌دهد یا خراب می‌شود؟
+      tr: İşten önce, iş sırasında veya sonra müşteriyi ne rahatsız ediyor ya da ne ters gidiyor?
+    why_it_matters: Pains are what pain relievers must answer; an unanswered pain is a visible gap in fit.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Beans arrive stale | supplier ships monthly | extreme | links: seg-1, job-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 45
+    sensitivity: internal
+    entity:
+      id_prefix: pain
+      max_items: 16
+      fields:
+        - name
+        - detail
+        - severity
+      links:
+        - business.model.segments
+        - business.fit.jobs
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.problem.pains
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.fit.gains
+    module: business-company
+    field_path: business.fit.gains
+    label: Customer gains
+    prompt:
+      en: Which outcomes and benefits does the customer want?
+      fa: مشتری چه نتیجه‌ها و منفعت‌هایی می‌خواهد؟
+      tr: Müşteri hangi sonuçları ve faydaları istiyor?
+    why_it_matters: "Gains are what gain creators must deliver: required, expected, desired or unexpected."
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Regulars notice the quality | repeat visits | desired | links: seg-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 46
+    sensitivity: internal
+    entity:
+      id_prefix: gain
+      max_items: 16
+      fields:
+        - name
+        - detail
+        - relevance
+      links:
+        - business.model.segments
+        - business.fit.jobs
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.offer.value_proposition
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.fit.products
+    module: business-company
+    field_path: business.fit.products
+    label: Products and services
+    prompt:
+      en: Which products and services does the value proposition rest on?
+      fa: گزارهٔ ارزش بر کدام محصولات و خدمات تکیه دارد؟
+      tr: Değer önerisi hangi ürün ve hizmetlere dayanıyor?
+    why_it_matters: The value map lists what you offer before it says how it relieves pains and creates gains.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Weekly fresh-roast delivery | 1 kg bags | physical | links: seg-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 47
+    sensitivity: internal
+    entity:
+      id_prefix: prod
+      max_items: 12
+      fields:
+        - name
+        - detail
+        - kind
+      links:
+        - business.model.segments
+        - business.fit.jobs
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.offer.summary
+      - business.offer.value_proposition
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.fit.relievers
+    module: business-company
+    field_path: business.fit.relievers
+    label: Pain relievers
+    prompt:
+      en: How do your products and services relieve each pain? Link each reliever to the pain it answers.
+      fa: محصولات و خدمات شما هر درد را چطور کم می‌کنند؟ هر درمان را به دردی که پاسخ می‌دهد پیوند دهید.
+      tr: Ürün ve hizmetleriniz her sıkıntıyı nasıl gideriyor? Her gidericiyi yanıtladığı sıkıntıya
+        bağlayın.
+    why_it_matters: Fit is visible only when each reliever is linked to a pain; nothing is matched automatically.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Roasted within 48 hours of delivery | dated bags | links: pain-1, prod-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 48
+    sensitivity: internal
+    entity:
+      id_prefix: rel
+      max_items: 16
+      fields:
+        - name
+        - detail
+      links:
+        - business.fit.pains
+        - business.fit.products
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.offer.value_proposition
+    completion_rule: structured
+    allows_unknown: true
+    required: false
+    weight: 1
+    sector_hints: []
+    status: unanswered
+  - id: business.fit.creators
+    module: business-company
+    field_path: business.fit.creators
+    label: Gain creators
+    prompt:
+      en: How do your products and services create each gain? Link each creator to the gain it delivers.
+      fa: محصولات و خدمات شما هر دستاورد را چطور می‌سازند؟ هر خالق دستاورد را به دستاوردی که می‌سازد پیوند
+        دهید.
+      tr: Ürün ve hizmetleriniz her kazanımı nasıl yaratıyor? Her yaratıcıyı sağladığı kazanıma bağlayın.
+    why_it_matters: Fit is visible only when each creator is linked to a gain; nothing is matched automatically.
+    question_type: repeating_entity
+    examples:
+      - "EXAMPLE ONLY: Origin card for the counter | tasting notes per batch | links: gain-1, prod-1"
+    required_when: always
+    depends_on: []
+    priority: medium
+    order: 49
+    sensitivity: internal
+    entity:
+      id_prefix: gcr
+      max_items: 16
+      fields:
+        - name
+        - detail
+      links:
+        - business.fit.gains
+        - business.fit.products
+    language:
+      - en
+      - fa
+      - tr
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
+    related_outputs:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    related_ids:
+      - business.offer.value_proposition
     completion_rule: structured
     allows_unknown: true
     required: false
@@ -679,7 +1272,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
     related_ids: []
@@ -710,7 +1307,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
     related_ids: []
@@ -742,7 +1343,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
     related_ids: []
@@ -773,7 +1378,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
       - brand/generated/drafts/social.md
@@ -805,7 +1414,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/restricted/drafts/business-marketing.md
     related_ids: []
@@ -843,7 +1456,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
     related_ids: []
@@ -879,7 +1496,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
     related_ids:
@@ -911,7 +1532,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
     related_ids: []
@@ -950,7 +1575,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-marketing.md
     related_ids: []
@@ -982,7 +1611,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
     related_ids: []
@@ -1014,7 +1647,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
       - brand/generated/drafts/brand-strategy.md
@@ -1046,7 +1683,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
     related_ids: []
@@ -1082,7 +1723,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
       - brand/generated/drafts/business-marketing.md
@@ -1116,7 +1761,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
     related_ids: []
@@ -1147,7 +1796,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
       - brand/generated/drafts/product-ui.md
@@ -1179,7 +1832,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
     related_ids: []
@@ -1213,7 +1870,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
     related_ids: []
@@ -1247,7 +1908,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
     related_ids: []
@@ -1279,7 +1944,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-product.md
     related_ids: []
@@ -1319,7 +1988,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
     related_ids: []
@@ -1356,7 +2029,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
     related_ids:
@@ -1388,7 +2065,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
       - brand/generated/drafts/business-marketing.md
@@ -1422,7 +2103,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
     related_ids: []
@@ -1454,7 +2139,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
     related_ids: []
@@ -1486,7 +2175,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
     related_ids: []
@@ -1519,7 +2212,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
     related_ids: []
@@ -1553,7 +2250,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-sales.md
     related_ids: []
@@ -1588,7 +2289,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-customer.md
       - brand/generated/drafts/product-ui.md
@@ -1620,7 +2325,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-customer.md
     related_ids: []
@@ -1651,7 +2360,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-customer.md
     related_ids: []
@@ -1689,7 +2402,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-customer.md
     related_ids: []
@@ -1720,7 +2437,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-customer.md
     related_ids: []
@@ -1751,7 +2472,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-customer.md
     related_ids: []
@@ -1782,7 +2507,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-operations.md
     related_ids: []
@@ -1813,7 +2542,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-operations.md
       - brand/generated/drafts/governance.md
@@ -1845,7 +2578,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-operations.md
     related_ids: []
@@ -1879,7 +2616,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-operations.md
     related_ids: []
@@ -1910,7 +2651,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-operations.md
     related_ids: []
@@ -1941,7 +2686,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-operations.md
     related_ids: []
@@ -1972,7 +2721,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-finance.md
     related_ids: []
@@ -2008,7 +2761,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-finance.md
     related_ids: []
@@ -2039,7 +2796,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/restricted/drafts/business-finance.md
     related_ids: []
@@ -2070,7 +2831,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/restricted/drafts/business-finance.md
     related_ids: []
@@ -2101,7 +2866,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/restricted/drafts/business-finance.md
     related_ids: []
@@ -2136,7 +2905,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-finance.md
     related_ids:
@@ -2168,7 +2941,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-finance.md
     related_ids: []
@@ -2199,7 +2976,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-finance.md
     related_ids: []
@@ -2230,7 +3011,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-engineering.md
     related_ids: []
@@ -2261,7 +3046,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-engineering.md
     related_ids: []
@@ -2293,7 +3082,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-engineering.md
     related_ids: []
@@ -2324,7 +3117,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-engineering.md
     related_ids: []
@@ -2355,7 +3152,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-engineering.md
     related_ids: []
@@ -2386,7 +3187,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-engineering.md
     related_ids: []
@@ -2417,7 +3222,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-legal.md
     related_ids: []
@@ -2455,7 +3264,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-legal.md
     related_ids: []
@@ -2489,7 +3302,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-legal.md
       - brand/generated/drafts/business-marketing.md
@@ -2521,7 +3338,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-legal.md
     related_ids: []
@@ -2554,7 +3375,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-legal.md
       - brand/generated/drafts/typography.md
@@ -2587,7 +3412,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-legal.md
     related_ids: []
@@ -2618,7 +3447,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-growth.md
     related_ids: []
@@ -2649,7 +3482,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-growth.md
     related_ids: []
@@ -2680,7 +3517,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-growth.md
     related_ids: []
@@ -2711,7 +3552,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-growth.md
     related_ids: []
@@ -2744,7 +3589,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-growth.md
     related_ids: []
@@ -2775,7 +3624,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-growth.md
     related_ids: []
@@ -2806,7 +3659,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-goals.md
     related_ids: []
@@ -2837,7 +3694,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-goals.md
     related_ids: []
@@ -2868,7 +3729,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-goals.md
       - brand/generated/drafts/business-marketing.md
@@ -2900,7 +3765,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-goals.md
     related_ids: []
@@ -2931,7 +3800,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-goals.md
     related_ids: []
@@ -2963,7 +3836,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-goals.md
     related_ids: []
@@ -2994,7 +3871,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-partnerships.md
     related_ids: []
@@ -3025,7 +3906,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/restricted/drafts/business-partnerships.md
     related_ids: []
@@ -3056,7 +3941,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-partnerships.md
       - brand/generated/drafts/business-company.md
@@ -3089,7 +3978,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-partnerships.md
     related_ids: []
@@ -3120,7 +4013,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/generated/drafts/business-partnerships.md
     related_ids: []
@@ -3151,7 +4048,11 @@ questions:
       - en
       - fa
       - tr
-    source_types: *a1
+    source_types:
+      - owner
+      - approved_import
+      - external_cited
+      - agent_suggestion
     related_outputs:
       - brand/restricted/drafts/business-partnerships.md
     related_ids: []

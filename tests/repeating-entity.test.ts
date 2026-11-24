@@ -62,7 +62,9 @@ function latest(engine: InterviewEngine, id: string) {
 // ---- validator and canonical form ------------------------------------------------------------------------
 
 test('the four BMC list questions exist in the bank with canonical ids and a matching entity summary', () => {
-  assert.deepEqual([...ENTITY_QUESTION_IDS].sort(), [ACTIVITIES, RESOURCES, COSTS, SEGMENTS].sort())
+  // V3.2 adds the SWOT / TOWS and Value Proposition Canvas lists (tests/visual-strategy.test.ts); the four BMC lists stay.
+  for (const id of [ACTIVITIES, RESOURCES, COSTS, SEGMENTS]) assert.ok(ENTITY_QUESTION_IDS.includes(id), id)
+  assert.equal(ENTITY_QUESTION_IDS.length, 4 + 11)
   const bank = new Map(allQuestions().map((question) => [question.id, question]))
   for (const id of ENTITY_QUESTION_IDS) {
     const question = bank.get(id)
