@@ -5,6 +5,7 @@ import { isVisualLang } from '@brand-os/brand-core/visual'
 import type { MessageKey } from '../i18n/index.js'
 import type { ProjectionAsset, ProjectionToken, StudioProjection } from '../projection.js'
 import type { BrandRecord, ProvisionRequest } from '../registry.js'
+import type { PendingPull } from '../sync.js'
 import type { UpdateStatus } from '../template-update.js'
 import { cloneCommand, starterPrompt } from '../starter-prompt.js'
 import {
@@ -453,6 +454,55 @@ function syncBanners(ctx: ViewContext, view: BrandView, flash: string | null): S
   return join(out)
 }
 
+/* BOS-02: open pull requests as counts only. Unmerged, never canonical, never brand truth. */
+
+function pendingPulls(view: BrandView): PendingPull[] {
+  return view.cached.projection ? (view.cached.history?.pulls ?? []) : []
+}
+
+function pendingTitle(ctx: ViewContext, count: number): string {
+  return count === 1 ? ctx.i.t('pending.titleOne') : ctx.i.t('pending.titleMany', { count: ctx.i.number(count) })
+}
+
+/** What one pull request would change, in words; never a value, file name or diff line. */
+export function pullChangeSummary(ctx: ViewContext, pull: PendingPull): SafeHtml {
+  const { i } = ctx
+  const c = pull.changes
+  if (!c) return html`<p class="pull-changes muted small">${i.t('pending.unknown')}</p>`
+  const parts: Array<[MessageKey, number]> = [
+    ['pending.facts', c.facts],
+    ['pending.evidence', c.evidence],
+    ['pending.assets', c.assets],
+    ['pending.other', c.other],
+  ]
+  return html`<p class="pull-changes small" data-pull-changes="${pull.number}">${join(
+    parts.map(([key, value]) => html`<span class="pull-count" data-kind="${key.slice('pending.'.length)}">${i.t(key, { count: i.number(value) })}</span>`),
+    '<span class="pull-count-sep" aria-hidden="true"> · </span>',
+  )}${c.partial ? html` <span class="muted">${i.t('pending.partial')}</span>` : ''}</p>`
+}
+
+function pendingPullsCard(ctx: ViewContext, view: BrandView): SafeHtml | '' {
+  const pulls = pendingPulls(view)
+  if (!pulls.length) return ''
+  const { i } = ctx
+  return html`<section class="card pending-card" id="pending-pulls" aria-labelledby="pending-title" data-pending-pulls="${pulls.length}">
+    <div class="card-head"><h2 class="card-title" id="pending-title">${icon('pr')} ${pendingTitle(ctx, pulls.length)}</h2>${badge(i.t('pending.label'), 'warning', 'alert')}</div>
+    <p class="muted small">${i.t('pending.body')}</p>
+    <ul class="pull-list">${pulls.map((pull) => {
+      const url = safeGitHubUrl(pull.html_url)
+      const label = html`#${pull.number} <span dir="auto">${pull.title}</span>`
+      return html`<li class="pull">${icon('pr', 'commit-icon')}<div class="commit-body"><p class="commit-title">${url ? externalLink(url, label, i, 'pull-link') : label}</p>${pullChangeSummary(ctx, pull)}</div><div class="pull-badges">${badge(i.t('pending.label'), 'warning', 'alert')}${pull.draft ? badge(i.t('history.draftPr'), 'neutral') : ''}</div></li>`
+    })}</ul>
+  </section>`
+}
+
+/** The compact line on every other brand page. */
+function pendingPullsLine(ctx: ViewContext, view: BrandView): SafeHtml | '' {
+  const pulls = pendingPulls(view)
+  if (!pulls.length) return ''
+  return html`<p class="pending-line" data-pending-pulls="${pulls.length}">${icon('pr')}<span>${pendingTitle(ctx, pulls.length)}</span> <span class="badge badge-warning">${ctx.i.t('pending.label')}</span> <a href="${brandPath(view.record.slug, 'overview')}#pending-pulls" class="link-sm">${ctx.i.t('pending.view')}</a></p>`
+}
+
 export function brandShell(ctx: ViewContext, view: BrandView, section: BrandSection, title: string, body: SafeHtml, flash: string | null, extraHead?: SafeHtml): SafeHtml {
   const { i } = ctx
   const crumbs: Array<{ label: string; href?: string }> = [{ label: i.t('nav.myBrands'), href: '/brands' }, { label: view.record.display_name, href: `/brands/${view.record.slug}` }]
@@ -462,14 +512,14 @@ export function brandShell(ctx: ViewContext, view: BrandView, section: BrandSect
     : emptyState({ icon: view.refreshing ? 'refresh' : 'alert', title: view.cached.status.last_error ? i.t('sync.errorTitle') : i.t('sync.never'), body: view.cached.status.last_error?.message ?? i.t('sync.checking'), action: refreshButton(ctx, view) })
   // While a sync runs the page reloads itself every few seconds, so the owner never waits on an open request.
   const head = view.refreshing ? html`<meta http-equiv="refresh" content="5">${extraHead ?? html``}` : extraHead
-  return shell(ctx, { title: `${title} · ${view.record.display_name}`, crumbs, brand: { view, section }, content: html`${syncBanners(ctx, view, flash)}${content}`, extraHead: head })
+  return shell(ctx, { title: `${title} · ${view.record.display_name}`, crumbs, brand: { view, section }, content: html`${syncBanners(ctx, view, flash)}${section !== 'overview' ? pendingPullsLine(ctx, view) : ''}${content}`, extraHead: head })
 }
 
 export function brandHeader(ctx: ViewContext, view: BrandView, title: string, subtitle: string): SafeHtml {
   const p = view.cached.projection!
   const { i } = ctx
   return pageHeader({
-    eyebrow: html`${brandAvatar(p.brand.name)} <span dir="auto">${p.brand.name}</span>`,
+    eyebrow: html`${brandAvatar(view.record.display_name)} <span dir="auto">${view.record.display_name}</span>`,
     title,
     subtitle,
     meta: html`${profileBadge(ctx, p.brand.kind)}${view.cached.status.repo_private ? badge(i.t('sync.private'), 'neutral', 'lock') : ''}${code(`${view.record.repo.owner}/${view.record.repo.name}`)}`,
@@ -540,14 +590,15 @@ export function overviewPage(ctx: ViewContext, view: BrandView, flash: string | 
   const commits = view.cached.history?.commits.slice(0, 4) ?? []
   const body = html`
     <header class="brand-hero">
-      <div class="brand-hero-id">${brandAvatar(p.brand.name, 'brand-avatar-xl')}<div>
-        <h1 class="page-title" dir="auto">${p.brand.name}</h1>
+      <div class="brand-hero-id">${brandAvatar(view.record.display_name, 'brand-avatar-xl')}<div>
+        <h1 class="page-title" dir="auto">${view.record.display_name}</h1>
         <div class="page-meta">${profileBadge(ctx, p.brand.kind)}${view.cached.status.repo_private ? badge(i.t('sync.private'), 'neutral', 'lock') : ''}${code(`${view.record.repo.owner}/${view.record.repo.name}`)}</div>
       </div></div>
       <a class="btn btn-secondary" href="${brandPath(view.record.slug, 'handoff')}">${icon('handoff')}<span>${i.t('nav.handoff')}</span></a>
     </header>
     ${banner({ tone: 'info', body: html`${i.t('app.readOnlyNote')} <a href="${brandPath(view.record.slug, 'handoff')}">${i.t('nav.handoff')}</a>` })}
     ${!p.brand.initialized ? banner({ tone: 'warning', body: i.t('overview.notInitialized') }) : ''}
+    ${pendingPullsCard(ctx, view)}
     ${commandStrip(ctx, view)}
     <section class="stat-grid" aria-label="${i.t('overview.title')}">
       ${statCard({ label: i.t('overview.coverage'), value: i.percent(o.coverage), hint: i.t('overview.coverageHint'), ratio: o.coverage })}
@@ -842,7 +893,7 @@ export function historyPage(ctx: ViewContext, view: BrandView, flash: string | n
         ${history?.pulls.length
           ? html`<ul class="pull-list">${history.pulls.map((pull) => {
               const url = safeGitHubUrl(pull.html_url)
-              return html`<li class="pull">${icon('pr', 'commit-icon')}<div class="commit-body"><p class="commit-title" dir="auto">${url ? html`<a href="${url}" target="_blank" rel="noopener noreferrer">#${pull.number} ${pull.title}<span class="visually-hidden"> ${i.t('common.opensNewTab')}</span></a>` : html`#${pull.number} ${pull.title}`}</p><p class="commit-meta muted">${code(pull.head_ref)} · ${i.relative(pull.updated_at, ctx.now)}</p></div><div class="pull-badges">${badge(i.t('history.noncanonical'), 'warning', 'alert')}${pull.draft ? badge(i.t('history.draftPr'), 'neutral') : ''}</div></li>`
+              return html`<li class="pull">${icon('pr', 'commit-icon')}<div class="commit-body"><p class="commit-title" dir="auto">${url ? html`<a href="${url}" target="_blank" rel="noopener noreferrer">#${pull.number} ${pull.title}<span class="visually-hidden"> ${i.t('common.opensNewTab')}</span></a>` : html`#${pull.number} ${pull.title}`}</p><p class="commit-meta muted">${code(pull.head_ref)} · ${i.relative(pull.updated_at, ctx.now)}</p>${pullChangeSummary(ctx, pull)}</div><div class="pull-badges">${badge(i.t('history.noncanonical'), 'warning', 'alert')}${pull.draft ? badge(i.t('history.draftPr'), 'neutral') : ''}</div></li>`
             })}</ul>`
           : html`<p class="muted">${i.t('history.pullsEmpty')}</p>`}
       </section>
@@ -910,7 +961,27 @@ export interface AccountState {
   template: string
   allowedOwners: string[]
   webhookConfigured: boolean
+  /** Where GitHub should send push events (`<public origin>/webhooks/github`). */
+  webhookUrl: string
+  /** Default-branch head poll interval (0 = off). */
+  headPollMs: number
   test: { read: string | null; provision: string | null; error: string | null } | null
+}
+
+/** BOS-11: one-step webhook setup, shown only while no secret is configured. Names the variable, never a value. */
+function webhookGuide(ctx: ViewContext, state: AccountState): SafeHtml {
+  const { i } = ctx
+  const intro = state.headPollMs > 0 ? i.t('account.webhookSetupIntro', { minutes: i.number(Math.round((state.headPollMs / 60_000) * 10) / 10) }) : i.t('account.webhookSetupIntroNoPoll')
+  return html`<section class="card" id="webhook-setup" aria-labelledby="webhook-setup-title">
+    <h2 class="card-title" id="webhook-setup-title">${i.t('account.webhookSetupTitle')}</h2>
+    <p>${intro}</p>
+    <dl class="meta-list">
+      <div><dt>${i.t('account.webhookPayloadUrl')}</dt><dd>${code(state.webhookUrl)}</dd></div>
+      <div><dt>${i.t('account.webhookContentType')}</dt><dd>${code('application/json')}</dd></div>
+      <div><dt>${i.t('account.webhookEvents')}</dt><dd>${i.t('account.webhookEventsValue')}</dd></div>
+      <div><dt>${i.t('account.webhookSecret')}</dt><dd>${i.t('account.webhookSecretValue')}</dd></div>
+    </dl>
+  </section>`
 }
 
 export function accountPage(ctx: ViewContext, state: AccountState): SafeHtml {
@@ -934,6 +1005,7 @@ export function accountPage(ctx: ViewContext, state: AccountState): SafeHtml {
           <div><dt>${i.t('account.template')}</dt><dd>${code(state.template)}</dd></div>
           <div><dt>${i.t('account.allowedOwners')}</dt><dd>${state.allowedOwners.length ? join(state.allowedOwners.map((owner) => code(owner)), ' ') : '—'}</dd></div>
           <div><dt>${i.t('account.webhook')}</dt><dd>${yesNo(state.webhookConfigured)}</dd></div>
+          <div><dt>${i.t('account.headPoll')}</dt><dd>${state.headPollMs > 0 ? i.t('account.headPollEvery', { minutes: i.number(Math.round((state.headPollMs / 60_000) * 10) / 10) }) : i.t('account.headPollOff')}</dd></div>
         </dl>
         <p class="muted small">${icon('shield')} ${i.t('account.capabilities')}</p>
         ${state.test
@@ -943,7 +1015,8 @@ export function accountPage(ctx: ViewContext, state: AccountState): SafeHtml {
           : ''}
         <a class="btn btn-secondary" href="/account?test=1">${icon('refresh')}<span>${i.t('account.test')}</span></a>
       </section>
-    </div>`
+    </div>
+    ${state.webhookConfigured ? '' : webhookGuide(ctx, state)}`
   return shell(ctx, { title: i.t('account.title'), crumbs: [{ label: i.t('nav.account') }], content: body })
 }
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — Studio: open pull requests, automatic refresh, approved names, mixed fa/en text (BOS-02, BOS-11, BOS-20, BOS-21)
+
+### Added
+
+- BOS-02: the brand overview shows "N changes are waiting in open pull requests" with a link to each pull request and what it would change: facts (answer-ledger records), evidence (register and index entries), assets (manifest rows) and other files. Every other brand page shows the same as one compact line. Everything is labelled "Unmerged, not canonical"; no branch value, file name or diff line is shown or cached. The background sync reads each pull request's file list (`GET /repos/{owner}/{repo}/pulls/{n}/files`, new `GitHubClient.listPullFiles`), caches the counts in `state.json` with the history, re-reads a pull request only when its `updated_at` changed, and stops reading file lists for the rest of a sync after a GitHub error or rate limit (those counts show as "could not be read yet"). The History page shows the same counts.
+- BOS-11: a background poll of each brand's default-branch head (`HeadPollJob`, one `GET git/ref/heads/<branch>` per ready brand per interval, read credential). When the head moved, the brand is marked dirty and the same read-only refresh as **Refresh** runs, so a merge appears within the interval without a webhook. New setting `STUDIO_HEAD_POLL_SECONDS` (default `180`; `0` off; otherwise 60 to 3600). Started only by `main.ts`, never by tests or CLI commands; a rate limit waits at least 15 minutes, errors back off up to an hour. `check-config` prints the interval.
+- BOS-11: while no webhook secret is configured, the Account page shows one-step webhook setup: payload URL (`<public origin>/webhooks/github`), content type `application/json`, "Just the push event", and that the secret goes in GitHub and in `STUDIO_GITHUB_WEBHOOK_SECRET` (never printed). It also shows the poll interval.
+
+### Fixed
+
+- BOS-20: Studio shows the synced, approved `brand.name` (`name_status: approved`) on every surface: sidebar switcher, brand list, breadcrumbs, page titles, the overview hero, page headers and the GitHub & Claude Code header. The name recorded at registration is used only before that (first sync, or a name that is not approved yet). The registry file is not rewritten.
+- BOS-21: owner-written text that mixes Persian and Latin script no longer renders out of order. Any value placed in a `dir="auto"` element goes through one central rule in `views/html.ts`: the element gets the direction of most of its words (not of its first letter), marked `data-bidi="mixed"`, and runs of the other script (file names, URLs, product names) are wrapped in `<bdi class="bidi-run">`. `.bidi-run` and `[data-bidi]` use `unicode-bidi: isolate` (in `studio.css` and, for the print views, `visual.css`). Values in one script only are unchanged.
+
+### Tests
+
+- `studio-pending-sync`: record counting, paginated GET-only file lists, caching and rate limits in the sync, the overview card and compact line in en/fa/tr with no branch content, the head poll (one GET per brand, moved head refreshes, rate-limit back-off, configuration), `/healthz` while GitHub fails, the webhook guide, approved names on every surface, and mixed fa/en markup (`dir`, `<bdi>`) in the helpers and on a real page.
+- `studio-browser`: a mixed fa/en value with parentheses, a file name and a URL reads in logical order in the en and fa UI (skips without Chrome).
+
 ## Unreleased — CI: private brands skip the public docs prepare
 
 ### Fixed

@@ -7,6 +7,7 @@ import type { CommitSummary, GitHubClient, PullSummary } from './github/client.j
 import { GitHubError } from './github/client.js'
 import { IDENTITY_MASTER_RULE, ProjectionError, type PreviewFile, type StudioProjection } from './projection.js'
 import { runProjectionJob, type ProjectionJob, type ProjectionReply } from './projection-worker.js'
+import { countPullChanges, type PullChanges } from './pull-changes.js'
 import type { BrandRecord, Registry } from './registry.js'
 
 /**
@@ -27,10 +28,33 @@ export interface SyncStatus {
   last_error: { code: string; message: string; at: string } | null
 }
 
+/**
+ * An open pull request with what it would change (BOS-02). `changes` is null when the file list could not be read.
+ * Unmerged and never canonical: these are counts only, cached with the history.
+ */
+export interface PendingPull extends PullSummary {
+  changes?: PullChanges | null
+}
+
 export interface History {
   commits: CommitSummary[]
-  pulls: PullSummary[]
+  pulls: PendingPull[]
   error: string | null
+}
+
+/**
+ * The name Studio shows for a brand (BOS-20): the synced `brand.name` once the merged config marks it approved;
+ * before the first sync, or while the name is not approved, the name recorded when the brand was registered.
+ */
+export function brandDisplayName(record: BrandRecord, projection: StudioProjection | null): string {
+  const name = projection?.brand.name_status === 'approved' && typeof projection.brand.name === 'string' ? projection.brand.name.trim() : ''
+  return name ? name.slice(0, 200) : record.display_name
+}
+
+/** The record with its display name resolved from the sync cache (BOS-20). The registry itself is not changed. */
+export function withDisplayName(record: BrandRecord, projection: StudioProjection | null): BrandRecord {
+  const display_name = brandDisplayName(record, projection)
+  return display_name === record.display_name ? record : { ...record, display_name }
 }
 
 export interface CachedBrand {
@@ -217,6 +241,38 @@ export class SyncService {
     throw new Error(reply.message)
   }
 
+  /**
+   * BOS-02: counts what each open pull request would change, from its file list (GET only). A pull request whose
+   * `updated_at` is unchanged keeps its cached counts, so a refresh costs one request per new or updated pull
+   * request. After a GitHub error (a rate limit included) no further list is read in this sync; those pull requests
+   * keep their earlier counts when still current, otherwise `null`.
+   */
+  private async pullChanges(owner: string, name: string, pulls: PullSummary[], previous: PendingPull[]): Promise<PendingPull[]> {
+    const known = new Map(previous.map((pull) => [pull.number, pull]))
+    let stopped = false
+    const out: PendingPull[] = []
+    for (const pull of pulls) {
+      const before = known.get(pull.number)
+      if (before?.changes && before.updated_at === pull.updated_at) {
+        out.push({ ...pull, changes: before.changes })
+        continue
+      }
+      if (stopped || pull.number < 1) {
+        out.push({ ...pull, changes: null })
+        continue
+      }
+      try {
+        const listed = await this.deps.github.listPullFiles(owner, name, pull.number)
+        out.push({ ...pull, changes: countPullChanges(listed.files, listed.truncated) })
+      } catch (error) {
+        stopped = true
+        this.deps.log?.(`pull request files not read for ${owner}/${name}#${pull.number}: ${error instanceof GitHubError ? error.kind : 'error'}`)
+        out.push({ ...pull, changes: null })
+      }
+    }
+    return out
+  }
+
   private async doRefresh(slug: string): Promise<CachedBrand> {
     const record = this.deps.registry.get(slug)
     if (!record || !brandIsReady(record)) throw new Error('Brand is not ready.')
@@ -258,7 +314,7 @@ export class SyncService {
       let history: History
       try {
         const [commits, pulls] = await Promise.all([this.deps.github.listCommits(owner, name, repo.default_branch || branch), this.deps.github.listOpenPulls(owner, name)])
-        history = { commits, pulls, error: null }
+        history = { commits, pulls: await this.pullChanges(owner, name, pulls, previous?.history?.pulls ?? []), error: null }
       } catch (error) {
         history = { commits: previous?.history?.commits ?? [], pulls: previous?.history?.pulls ?? [], error: error instanceof GitHubError ? error.message : 'History could not be read.' }
       }

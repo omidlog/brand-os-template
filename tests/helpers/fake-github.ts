@@ -29,9 +29,16 @@ interface Repo {
   is_template: boolean
   default_branch: string
   head: string | null
-  pulls: Array<{ number: number; title: string; head: string; draft: boolean; base?: string; body?: string; state?: 'open' | 'closed'; comments?: string[] }>
+  pulls: Array<{ number: number; title: string; head: string; draft: boolean; base?: string; body?: string; state?: 'open' | 'closed'; comments?: string[]; files?: FakePullFile[]; updated_at?: string }>
   /** Branches other than the default branch (name -> commit). */
   branches: Map<string, string>
+}
+
+/** A file of a fake pull request; `patch: null` mimics GitHub leaving out a large diff. */
+export interface FakePullFile {
+  filename: string
+  status?: string
+  patch?: string | null
 }
 
 export interface Fault {
@@ -214,6 +221,15 @@ export class FakeGitHub {
     return this.commitTree(repo, tree, message)
   }
 
+  /** Opens a pull request from a branch made outside Studio (BOS-02), with the file list GitHub would report. */
+  openPull(owner: string, name: string, input: { title: string; head: string; files: FakePullFile[]; draft?: boolean }): number {
+    const repo = this.repo(owner, name)!
+    if (!repo.branches.has(input.head)) repo.branches.set(input.head, repo.head!)
+    const number = repo.pulls.reduce((max, pull) => Math.max(max, pull.number), 0) + 1
+    repo.pulls.push({ number, title: input.title, head: input.head, draft: input.draft ?? false, base: repo.default_branch, files: input.files, updated_at: new Date().toISOString() })
+    return number
+  }
+
   fail(method: string, pattern: RegExp, status: number, times = 1, extra: Partial<Fault> = {}): void {
     this.faults.push({ method, pattern, status, times, ...extra })
   }
@@ -326,10 +342,18 @@ export class FakeGitHub {
       }
       return json(200, out)
     }
+    if (method === 'GET' && rest[0] === 'pulls' && rest.length === 3 && rest[2] === 'files') {
+      const pull = repo.pulls.find((item) => item.number === Number(rest[1]))
+      if (!pull) return json(404, { message: 'Not Found' })
+      const perPage = Math.min(100, Number(url.searchParams.get('per_page') ?? '30') || 30)
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? '1') || 1)
+      const files = (pull.files ?? []).map((file) => ({ filename: file.filename, status: file.status ?? 'modified', ...(file.patch === null ? {} : { patch: file.patch ?? '' }) }))
+      return json(200, files.slice((page - 1) * perPage, page * perPage))
+    }
     if (method === 'GET' && rest[0] === 'pulls') {
       return json(
         200,
-        repo.pulls.filter((pull) => pull.state !== 'closed').map((pull) => ({ number: pull.number, title: pull.title, html_url: `https://github.com/${repo.owner}/${repo.name}/pull/${pull.number}`, head: { ref: pull.head }, draft: pull.draft, updated_at: new Date().toISOString() })),
+        repo.pulls.filter((pull) => pull.state !== 'closed').map((pull) => ({ number: pull.number, title: pull.title, html_url: `https://github.com/${repo.owner}/${repo.name}/pull/${pull.number}`, head: { ref: pull.head }, draft: pull.draft, updated_at: pull.updated_at ?? new Date().toISOString() })),
       )
     }
     if (method === 'GET' && rest[0] === 'tarball' && rest[1]) {
@@ -385,7 +409,7 @@ export class FakeGitHub {
       if (String(body.base) !== repo.default_branch) return json(422, { message: 'Validation Failed: base' })
       if (repo.pulls.some((pull) => pull.head === head && pull.state !== 'closed')) return json(422, { message: 'A pull request already exists' })
       const number = repo.pulls.reduce((max, pull) => Math.max(max, pull.number), 0) + 1
-      const pull = { number, title: String(body.title), head, draft: false, base: String(body.base), body: String(body.body) }
+      const pull = { number, title: String(body.title), head, draft: false, base: String(body.base), body: String(body.body), updated_at: new Date().toISOString() }
       repo.pulls.push(pull)
       return json(201, { number, title: pull.title, html_url: `https://github.com/${repo.owner}/${repo.name}/pull/${number}`, head: { ref: head }, draft: false, updated_at: new Date().toISOString() })
     }

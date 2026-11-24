@@ -11,6 +11,10 @@
 @font-face { font-family: "Studio Rajdhani"; src: url("/static/fonts/rajdhani-bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
 @font-face { font-family: "Studio Vazirmatn"; src: url("/static/fonts/vazirmatn-var.woff2") format("woff2"); font-weight: 400 700; font-style: normal; font-display: swap; unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200F, U+FB50-FDFF, U+FE70-FEFF; }
 
+/* BOS-21 (also in studio.css, for the standalone print views): mixed Persian/Latin values keep their logical order. */
+.bidi-run, [data-bidi] { unicode-bidi: isolate; }
+[data-bidi="mixed"][dir="rtl"] { text-align: start; }
+
 :root {
   --vz-lime: #d5fe00;
   --vz-ink: #121212;
