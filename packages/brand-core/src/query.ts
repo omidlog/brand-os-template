@@ -984,7 +984,8 @@ export function resolveAgentRequest(engine: InterviewEngine, requestId: 'instagr
 export const DRAFT_RULES = [
   'This is a draft operation. It has no authority to approve, publish, or write brand facts.',
   'Use only the facts returned here. Do not add degrees, clients, awards, numbers, testimonials or outcomes.',
-  'A fact labelled owner_stated or unverified must not be presented as independently verified.',
+  'A fact labelled owner_stated, owner_published or unverified must not be presented as independently verified. owner_published means the only source is one the owner controls (their own website or company).',
+  'A fact labelled partly_verified is only partly backed by an independent source: present it as the owner\'s statement, never as verified as a whole.',
   'Missing facts stay missing: say what is missing instead of inventing a replacement.',
   'Never include private contact details, home location, family or health information.',
   'Return the draft to the owner. Only the owner approves it, with the approval proof, in a trusted local shell.',

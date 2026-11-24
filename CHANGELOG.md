@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — Evidence labels: owner-published sources, mixed claims, idempotent verify (BOS-18, BOS-10)
+
+### Fixed
+
+- A source the owner controls no longer shows as independent verification. Before, every `link`, `document`, `public_record` or `third_party` entry counted as independent, so a claim backed only by the owner's own website or company site was labelled **Verified**. Such a claim is now **Owner-published / not independently verified** (`owner_published`) in brand-core labels, documents and their Markdown, `brand:evidence check`, `brand_retrieve` / `draft_personal_content`, the coach, Studio personal pages (en/fa/tr) and the assurance link check (`not_independent`; linking such an entry is refused).
+- A field backed by an independent source and by the owner's word (testimony or an owner-published source) is **Partly verified** (`partly_verified`), never **Verified**. Internal documents and the evidence register name the owner-stated part by evidence id and quote. Studio shows it with a warning tone.
+- `brand:evidence verify` on evidence that is already verified (and `reject` on rejected evidence) prints "already verified" / "already rejected", writes nothing and exits 0, so re-running leaves `git status` clean. `reviewEvidence` keeps its signature and adds `unchanged: true` to its result.
+
+### Added
+
+- `owned` on evidence-register entries (optional; absent in older registers). `brand:evidence add --owned` sets it. It is also inferred, on add and on every read, from the brand's own domains in approved facts: `personal.contact.public_channels` (work-email domains too), `personal.content.channels`, `personal.consulting.cta`, `personal.founder.ventures`, and `personal.experience.relationships` entries the person founded, co-founded, owns or co-owns that name a domain. Shared platforms match only the owner's own profile path; public mail providers never count. Inference only marks sources as owned, never the reverse, and a read never rewrites the register.
+- `brand:evidence verify|reject --id a,b,c` (or `--ids`): several ids with one proof, each reported; exits 1 if any id fails.
+- Core: `claimEvidence`, `verificationNote`, `isIndependentSource`, `withOwnership`, `CLAIM_VERIFICATIONS`, and `evidence-ownership.ts` (`ownedLocations`, `ownedMatch`).
+- Tests: `personal-evidence-ownership`.
+
+### Upgrading a brand
+
+- No migration is required: entries without `owned` are inferred from the brand's approved domains when read. Labels can only become more conservative: a claim whose only verified source is the owner's own site turns from Verified to Owner-published, and a claim that requires `verified_evidence` with no other independent source is hidden from public readers at read time (run `brand:evidence check` to see which). For an owner-controlled source the domains cannot reveal (a company brochure or deck), record a new entry with `--owned` and withdraw the old one. A mixed field with redundant owner testimony shows Partly verified; withdraw the testimony if the independent source covers the whole claim.
+
 ## Unreleased — CI: private brands skip the public docs prepare
 
 ### Fixed

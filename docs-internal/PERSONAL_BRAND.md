@@ -78,7 +78,10 @@ npm run brand:evidence -- add --claim personal.credibility.credentials --source 
   --reference "https://registry.example.org/…" [--review-due 2027-06-30]
 npm run brand:evidence -- add --claim personal.portfolio.projects --kind permission --scope public \
   --source document --reference "Signed consent, held offline" --granted-by "Client marketing lead"
+npm run brand:evidence -- add --claim personal.positioning.known_for --source link \
+  --reference "https://your-site.example/about" --owned   # the owner's own site or company: owner-published
 npm run brand:evidence -- verify --id ev-0001     # owner proof from env, stdin or a hidden prompt
+npm run brand:evidence -- verify --id ev-0002,ev-0003   # several ids, one proof; each id is reported
 npm run brand:evidence -- withdraw --id ev-0002 --reason "Client revoked consent"
 npm run brand:evidence -- check                   # verification state and blockers per claim
 npm run brand:retract -- --question personal.credibility.awards --reason "Wrong year"
@@ -86,6 +89,9 @@ npm run brand:retract -- --question personal.credibility.awards --reason "Wrong 
 
 - Anyone, including an agent, may record evidence. It starts `pending`. Only the owner, with the approval proof, marks it `verified` or `rejected`. Both commands refuse to run while `BRAND_OS_AGENT_TOKEN` is set.
 - Owner testimony (`--source owner_testimony`) is recorded and shown as owner-stated. It never counts as independent verification.
+- A source the owner controls (their own website or profile, a venture they founded or own) carries `owned: true` and is shown as **Owner-published**. It never counts as independent verification. `brand:evidence add --owned` sets it; it is also inferred, on add and on every read, from the brand's own domains: approved `personal.contact.public_channels` (including a work-email domain), `personal.content.channels`, `personal.consulting.cta`, `personal.founder.ventures`, and `personal.experience.relationships` entries that are `founded`/`co-founded` or `owner`/`co-owner` and name a domain. Shared platforms (LinkedIn, YouTube, Medium, …) match only the owner's own profile path; public mail providers never count. Inference only ever marks a source as owned. Registers written before the flag need no migration: entries without `owned` are inferred on read and never rewritten. Mark an owner-controlled source the domains cannot reveal (a company brochure) by recording a new entry with `--owned` and withdrawing the old one.
+- Labels: `verified` (only independent, current sources), `partly_verified` (an independent source plus an owner-stated or owner-published part, named by evidence id in internal documents), `owner_published`, `owner_stated`, `unverified`, `not_required`. One independent item never makes a mixed field `verified`. Publication still needs at least one independent source; a partly verified claim can be published, and drafts must present its owner part as the owner's statement.
+- Verifying evidence that is already verified (or rejecting a rejected one) prints "already verified" and writes nothing, so re-running leaves Git clean.
 - A question can declare `publication_requires`:
   - `verified_evidence`: credentials, awards, demonstrable results, case studies, ventures, prior talks, publications, exhibitions and creator metrics. Publication needs at least one verified, current, independent source.
   - `rights_permission`: case studies, testimonials and portraits. Publication needs a verified, current permission with `scope: public`.
@@ -121,7 +127,7 @@ rights:
 | `services-pack` | Offers vs ideas, clients, method, boundaries, pricing policy (no amounts), proof, inquiry |
 | `evidence-register` | Every claim that needs evidence or permission, its sources, status, eligibility and re-verification date. Internal only; the public edition is empty. |
 
-Documents list approved facts. They do not write prose. Each personal item carries a verification label: `verified`, `owner_stated` or `unverified`. The public edition contains only published facts and no evidence ids.
+Documents list approved facts. They do not write prose. Each personal item carries a verification label: `verified`, `partly_verified`, `owner_published`, `owner_stated` or `unverified`. The public edition contains only published facts and no evidence ids.
 
 ## Agents and drafting
 

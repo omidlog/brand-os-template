@@ -297,7 +297,9 @@ if (command === 'init') {
       'granted-by': { type: 'string' },
       scope: { type: 'string' },
       'review-due': { type: 'string' },
+      owned: { type: 'boolean', default: false },
       id: { type: 'string' },
+      ids: { type: 'string' },
       reason: { type: 'string' },
       json: { type: 'boolean', default: false },
       proof: { type: 'string' },
@@ -311,7 +313,7 @@ if (command === 'init') {
   try {
     if (action === 'add') {
       if (!values.claim || !values.source || !values.reference) {
-        console.error('Usage: brand:evidence add --claim <question id> --source owner_testimony|document|public_record|third_party|link --reference <url or where it is held> [--kind verification|permission] [--scope public|internal] [--granted-by <role or organization>] [--quote <text>] [--note <text>] [--review-due YYYY-MM-DD]')
+        console.error('Usage: brand:evidence add --claim <question id> --source owner_testimony|document|public_record|third_party|link --reference <url or where it is held> [--owned] [--kind verification|permission] [--scope public|internal] [--granted-by <role or organization>] [--quote <text>] [--note <text>] [--review-due YYYY-MM-DD]. --owned marks a source the owner controls (their own website or company); a reference on the brand\'s own domains is marked owned automatically.')
         process.exit(2)
       }
       const item = addEvidence(root, engine.questions(), {
@@ -325,20 +327,42 @@ if (command === 'init') {
         scope: (values.scope as 'public' | 'internal' | undefined) ?? null,
         review_due: values['review-due'] ?? null,
         recorded_by: process.env.BRAND_OS_AGENT_TOKEN ? 'agent' : 'owner',
+        owned: values.owned,
       })
-      console.log(values.json ? JSON.stringify(item, null, 2) : `Recorded ${item.id} for ${item.claim_id} as pending. The owner verifies it with brand:evidence verify --id ${item.id}.`)
+      const ownedNote = item.owned
+        ? values.owned
+          ? ' Marked owner-published: it never counts as independent verification.'
+          : ' The reference is on one of the brand\'s own domains, so it was marked owner-published: it never counts as independent verification.'
+        : ''
+      console.log(values.json ? JSON.stringify(item, null, 2) : `Recorded ${item.id} for ${item.claim_id} as pending.${ownedNote} The owner verifies it with brand:evidence verify --id ${item.id}.`)
     } else if (action === 'verify' || action === 'reject') {
-      if (!values.id) {
-        console.error(`Usage: brand:evidence ${action} --id ev-0001 [--reason <text>]. The proof is read from BRAND_OS_APPROVAL_PROOF, piped stdin, or a hidden prompt.`)
+      // One proof for one or several ids: --id ev-0001,ev-0002 or --ids ev-0001,ev-0002.
+      const ids = [...new Set([values.id, values.ids].filter((entry): entry is string => Boolean(entry)).flatMap((entry) => entry.split(',')).map((entry) => entry.trim()).filter(Boolean))]
+      if (ids.length === 0) {
+        console.error(`Usage: brand:evidence ${action} --id ev-0001[,ev-0002…] (or --ids) [--reason <text>]. The proof is read from BRAND_OS_APPROVAL_PROOF, piped stdin, or a hidden prompt.`)
         process.exit(2)
       }
       if (process.env.BRAND_OS_AGENT_TOKEN) {
         console.error('Evidence review is a human action. Run it from a shell without an agent token.')
         process.exit(2)
       }
-      const result = engine.approvals().reviewEvidence(values.id, action === 'verify' ? 'verified' : 'rejected', await readApprovalProof(), values.reason ?? null)
-      console.log(result.message + (result.unpublished.length ? ` Unpublished: ${result.unpublished.join(', ')}.` : ''))
-      if (!result.ok) process.exit(1)
+      const proof = await readApprovalProof()
+      let failed = false
+      for (const id of ids) {
+        try {
+          const result = engine.approvals().reviewEvidence(id, action === 'verify' ? 'verified' : 'rejected', proof, values.reason ?? null)
+          console.log(result.message + (result.unpublished.length ? ` Unpublished: ${result.unpublished.join(', ')}.` : ''))
+          if (!result.ok) {
+            failed = true
+            // A rejected proof fails every id the same way; stop instead of repeating it.
+            break
+          }
+        } catch (error) {
+          failed = true
+          console.error(`${id}: ${error instanceof Error ? error.message : String(error)}`)
+        }
+      }
+      if (failed) process.exit(1)
     } else if (action === 'withdraw') {
       if (!values.id || !values.reason) {
         console.error('Usage: brand:evidence withdraw --id ev-0001 --reason <why>')

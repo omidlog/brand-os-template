@@ -25,8 +25,9 @@ export function tagBadge(i: I18n, tag: ItemTag): SafeHtml {
 
 export function verificationBadge(i: I18n, value: DocumentItem['verification']): SafeHtml {
   if (!value) return html``
-  const tone: Tone = value === 'verified' ? 'success' : value === 'owner_stated' ? 'accent' : value === 'unverified' ? 'warning' : 'neutral'
-  const name: IconName = value === 'verified' ? 'shield' : value === 'unverified' ? 'alert' : 'user'
+  // Only `verified` gets the success tone. A partly verified claim is a warning: part of it is the owner's word.
+  const tone: Tone = value === 'verified' ? 'success' : value === 'owner_stated' || value === 'owner_published' ? 'accent' : value === 'unverified' || value === 'partly_verified' ? 'warning' : 'neutral'
+  const name: IconName = value === 'verified' ? 'shield' : value === 'unverified' || value === 'partly_verified' ? 'alert' : 'user'
   return badge(i.t(`doc.verification.${value}` as MessageKey), tone, name)
 }
 

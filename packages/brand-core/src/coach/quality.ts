@@ -125,7 +125,8 @@ export function assessAnswer(ctx: CoachContext, question: FieldQuestion, locale:
     const verification = verificationOf(ctx, question)
     if (verification === 'unverified') {
       findings.push({ code: 'evidence_not_verified', criterion: 'evidence_support', status: 'evidence_missing', vars: { question: question.id }, relatedIds: [], sourceRefs: [...answerRef(), { kind: 'evidence', id: question.id }] })
-    } else if (verification === 'owner_stated') {
+    } else if (verification === 'owner_stated' || verification === 'owner_published') {
+      // The owner's own website or company is the owner's word too: not independent verification.
       findings.push({ code: 'evidence_owner_stated_only', criterion: 'evidence_support', status: 'evidence_missing', vars: { question: question.id }, relatedIds: [], sourceRefs: [...answerRef(), { kind: 'evidence', id: question.id }] })
     }
   }

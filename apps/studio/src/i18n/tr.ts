@@ -250,6 +250,8 @@ export const tr: Messages = {
   'doc.section.partial': 'Kısmi',
   'doc.section.missing': 'Eksik',
   'doc.verification.verified': 'Doğrulandı',
+  'doc.verification.partly_verified': 'Kısmen doğrulandı',
+  'doc.verification.owner_published': 'Sahibi tarafından yayımlandı',
   'doc.verification.owner_stated': 'Sahibin beyanı',
   'doc.verification.unverified': 'Doğrulanmadı',
   'doc.verification.not_required': 'Kanıt gerekmiyor',

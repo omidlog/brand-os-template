@@ -9,7 +9,7 @@ const TAG_LABEL: Record<ItemTag, string> = {
   missing: 'Missing',
 }
 
-const VERIFICATION_LABEL = { verified: 'Verified', owner_stated: 'Owner-stated', unverified: 'Unverified' } as const
+const VERIFICATION_LABEL = { verified: 'Verified', partly_verified: 'Partly verified', owner_published: 'Owner-published', owner_stated: 'Owner-stated', unverified: 'Unverified' } as const
 
 function escape(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\|/g, '\\|')
