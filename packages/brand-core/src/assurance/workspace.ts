@@ -62,7 +62,7 @@ import { appendReview, AssuranceReviewError, assertOwnerReview, basisDigest, JUD
 
 export const SNAPSHOT_SCHEMA = 'brand-os.assurance-snapshot/1'
 /** Version of the mapping from a workspace to assessment inputs. A changed mapping is a visible change. */
-export const BRIDGE_VERSION = 'brand-os.assurance-bridge/3'
+export const BRIDGE_VERSION = 'brand-os.assurance-bridge/4'
 /** The revision written for a restricted fact the audience may not see. Never a hash of anything. */
 export const WITHHELD_REVISION = 'withheld'
 /** Bound on a `--pin` / `verify` snapshot file, so a hostile file cannot exhaust memory. */
@@ -107,7 +107,8 @@ export interface BridgeOptions {
   audience?: Audience
   /**
    * Deprecated: the old `--paid-media` statement. The answer now comes from the approved interview
-   * question `business.marketing.paid_media`; this is only a fallback while that has no approved answer.
+   * question `business.marketing.paid_media`; this is only a fallback while that has no approved answer
+   * (an approved `undecided` is an answer: the statement is then ignored).
    */
   paidMedia?: PaidMediaStatement
   pins?: SnapshotPins | null
@@ -348,11 +349,13 @@ function deriveSubject(w: Workspace, paidMedia: PaidMediaStatement): { subject: 
   }
   provenance.push({ field: 'stage', value: stage, source: stageSource ? 'approved_fact' : 'none', question_id: stageSource })
 
-  // The approved interview answer wins. The deprecated statement only fills a gap the interview left.
+  // The approved interview answer wins, `undecided` included (owner decision, 2026-11-24): an approved
+  // `undecided` keeps paid media `unknown` and the deprecated statement is ignored. The statement only
+  // fills the gap while the question has no approved answer at all.
   let runsPaid: PaidMediaStatement = 'unknown'
   const answered = approvedChoice(w, PAID_MEDIA_QUESTION)
-  if (answered === 'yes' || answered === 'no') {
-    runsPaid = answered
+  if (answered === 'yes' || answered === 'no' || answered === 'undecided') {
+    runsPaid = answered === 'undecided' ? 'unknown' : answered
     provenance.push({ field: 'runs_paid_media', value: runsPaid, source: 'approved_fact', question_id: PAID_MEDIA_QUESTION })
   } else {
     runsPaid = paidMedia
@@ -686,7 +689,8 @@ export function linkEvidence(root: string, input: LinkEvidenceInput, opts: { now
     ...(input.linked_on !== undefined ? { linked_on: input.linked_on } : {}),
     ...(input.expected_revision !== undefined ? { expected_revision: input.expected_revision } : {}),
   })
-  return { note_id: note.id, revision, state: linkState(revision, note, entry, revision.linked_on), authorizes: [] }
+  // The state reported is today's, also for a backdated link (`--date`): that is what the owner acts on.
+  return { note_id: note.id, revision, state: linkState(revision, note, entry, w.ws.now().toISOString().slice(0, 10)), authorizes: [] }
 }
 
 /** Removes a note's link (a new `unlink` revision; history stays). The note is owner-stated again. */

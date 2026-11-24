@@ -1793,6 +1793,178 @@ fields:
     related_ids:
       - business.finance.costs
       - business.finance.economics_note
+  - id: business.swot.strengths
+    module: business-company
+    field_path: business.swot.strengths
+    label: Strengths
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.swot.strengths
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - brand.strategy.differentiation
+      - business.model.defensibility
+  - id: business.swot.weaknesses
+    module: business-company
+    field_path: business.swot.weaknesses
+    label: Weaknesses
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.swot.weaknesses
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.plan.risks
+      - business.ops.roles
+  - id: business.swot.opportunities
+    module: business-company
+    field_path: business.swot.opportunities
+    label: Opportunities
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.swot.opportunities
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.market.geography
+      - business.growth.hypothesis
+  - id: business.swot.threats
+    module: business-company
+    field_path: business.swot.threats
+    label: Threats
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.swot.threats
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.plan.risks
+      - business.partners.risk_process
+  - id: business.swot.tows
+    module: business-company
+    field_path: business.swot.tows
+    label: TOWS strategies
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.swot.tows
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.goals.quarter
+      - business.plan.risks
+  - id: business.fit.jobs
+    module: business-company
+    field_path: business.fit.jobs
+    label: Customer jobs
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.fit.jobs
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.product.jobs
+      - business.model.segments
+  - id: business.fit.pains
+    module: business-company
+    field_path: business.fit.pains
+    label: Customer pains
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.fit.pains
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.problem.pains
+  - id: business.fit.gains
+    module: business-company
+    field_path: business.fit.gains
+    label: Customer gains
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.fit.gains
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.offer.value_proposition
+  - id: business.fit.products
+    module: business-company
+    field_path: business.fit.products
+    label: Products and services
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.fit.products
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.offer.summary
+      - business.offer.value_proposition
+  - id: business.fit.relievers
+    module: business-company
+    field_path: business.fit.relievers
+    label: Pain relievers
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.fit.relievers
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.offer.value_proposition
+  - id: business.fit.creators
+    module: business-company
+    field_path: business.fit.creators
+    label: Gain creators
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.fit.creators
+    documents:
+      - brand/generated/drafts/business-company.md
+      - brand/generated/drafts/brand-strategy.md
+    validator: structured
+    related_ids:
+      - business.offer.value_proposition
   - id: business.marketing.objective
     module: business-marketing
     field_path: business.marketing.objective
@@ -1912,6 +2084,21 @@ fields:
       - brand/generated/drafts/business-marketing.md
     validator: one_of
     related_ids: []
+  - id: business.marketing.journey_stages
+    module: business-marketing
+    field_path: business.marketing.journey_stages
+    label: Customer journey stages
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.marketing.journey_stages
+    documents:
+      - brand/generated/drafts/business-marketing.md
+    validator: structured
+    related_ids:
+      - business.marketing.journey
+      - business.model.segments
   - id: business.product.portfolio
     module: business-product
     field_path: business.product.portfolio
@@ -2734,6 +2921,36 @@ fields:
       - brand/generated/drafts/business-goals.md
     validator: non_empty
     related_ids: []
+  - id: business.goals.objectives
+    module: business-goals
+    field_path: business.goals.objectives
+    label: Objectives (OKR)
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.goals.objectives
+    documents:
+      - brand/generated/drafts/business-goals.md
+    validator: structured
+    related_ids:
+      - business.goals.annual
+      - business.goals.quarter
+  - id: business.goals.key_results
+    module: business-goals
+    field_path: business.goals.key_results
+    label: Key results (OKR)
+    required: false
+    weight: 1
+    sensitivity: internal
+    question_ids:
+      - business.goals.key_results
+    documents:
+      - brand/generated/drafts/business-goals.md
+    validator: structured
+    related_ids:
+      - business.goals.sources
+      - business.goals.plan_vs_actual
   - id: business.partners.channels
     module: business-partnerships
     field_path: business.partners.channels

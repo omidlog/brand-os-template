@@ -804,6 +804,7 @@ a.cc-tile:hover { background: var(--studio-color-bg-hover); }
 .cc-tile-label { font: var(--studio-type-label); display: flex; align-items: center; gap: var(--studio-space-1); color: var(--studio-color-text-secondary); }
 .cc-tile-value { font: var(--studio-type-display); font-size: 28px; font-variant-numeric: tabular-nums; }
 .cc-sub { font: var(--studio-type-overline); text-transform: uppercase; letter-spacing: 0.06em; color: var(--studio-color-text-secondary); }
+[dir="rtl"] .cc-sub { letter-spacing: 0; text-transform: none; }
 .cc-map { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--studio-space-2); }
 .cc-map-row { display: grid; grid-template-columns: minmax(9rem, 14rem) minmax(0, 1fr) auto; align-items: center; gap: var(--studio-space-3); }
 .cc-map-name { font: var(--studio-type-label); }
@@ -812,6 +813,7 @@ a.cc-tile:hover { background: var(--studio-color-bg-hover); }
 .cc-cell { display: inline-block; inline-size: 14px; block-size: 14px; border-radius: 3px; border: 1px solid var(--studio-color-border-strong); background: transparent; flex: none; }
 .cc-cell--complete { background: var(--studio-color-status-approved); border-color: var(--studio-color-status-approved); }
 .cc-cell--partial { background: linear-gradient(135deg, var(--studio-color-status-draft) 50%, transparent 50%); border-color: var(--studio-color-status-draft); }
+[dir="rtl"] .cc-cell--partial { background: linear-gradient(225deg, var(--studio-color-status-draft) 50%, transparent 50%); }
 .cc-cell--withheld { background: repeating-linear-gradient(45deg, var(--studio-color-status-neutral) 0 2px, transparent 2px 5px); }
 .cc-cell--not_applicable { border-style: dashed; opacity: 0.6; }
 .cc-legend { display: flex; flex-wrap: wrap; gap: var(--studio-space-4); }

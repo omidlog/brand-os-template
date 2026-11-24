@@ -27,8 +27,10 @@ import {
  * - A source under `.private` is never cited outside the internal profile, and an entry that cites one loses its value.
  * - Public and investor show approved values only (stale = approved but review overdue still counts). Drafts,
  *   estimates and suggestions lose their value.
- * - Draft marks never leave the owner: an asset still tagged `draft` is not drawn in public or investor, and no badge
- *   survives outside the internal profile (owner decision 2026-11-23).
+ * - Draft marks never leave the owner (owner decision 2026-11-23): no badge survives outside the internal profile. The
+ *   investor profile (built from the internal edition) does not draw an asset still tagged `draft`; the public edition
+ *   comes from the public builders, which draw only published assets and never attach a draft mark, so a published
+ *   asset that still carries a `draft` tag is drawn there without the mark.
  * - An entry whose question is unknown to the bank fails closed outside the internal profile.
  * - A document type a profile does not permit (competitor analysis outside internal; business and marketing plans in
  *   public) is refused: the redactor returns null.
@@ -197,11 +199,19 @@ function redactEvolution(block: Mutable<MascotEvolutionBlock>): void {
   })
 }
 
-const VISUAL_TYPE: Record<VisualDocument['document_kind'], PublishingDocumentType> = {
+/**
+ * Document kinds the gallery publishes. Visual V3.2's SWOT / TOWS and Value Proposition Canvas are not gallery types
+ * yet (their lists are internal); a kind without an entry is never redacted for a profile, so it is never exported.
+ */
+const VISUAL_TYPE: Partial<Record<VisualDocument['document_kind'], PublishingDocumentType>> = {
   business_model_canvas: 'business_model_canvas',
   visual_identity: 'visual_identity',
   competitor_comparison: 'competitor_comparison',
   mascot_atlas: 'mascot_atlas',
+  // Visual V3.3: the journey map and SOSTAC overview are views of the marketing plan, the OKR tree of the business plan.
+  customer_journey: 'marketing_plan',
+  sostac_overview: 'marketing_plan',
+  okr_tree: 'business_plan',
 }
 
 export interface RedactedVisual {
@@ -218,7 +228,8 @@ export interface RedactedVisual {
  */
 export function redactVisualDocument(doc: VisualDocument, profile: ExportProfile, classify: QuestionClassifier): RedactedVisual | null {
   const spec = EXPORT_PROFILE_SPECS[profile]
-  if (!profilePermits(profile, VISUAL_TYPE[doc.document_kind])) return null
+  const type = VISUAL_TYPE[doc.document_kind]
+  if (!type || !profilePermits(profile, type)) return null
   if (spec.edition === 'public' && doc.audience !== 'public') return null
   const tally: RedactionTally = { redacted: 0, moves: [] }
   const blocks = (walk(doc.blocks, spec, classify, tally) as VisualDocument['blocks']).map((block) => {

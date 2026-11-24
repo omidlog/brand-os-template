@@ -128,6 +128,16 @@ test('a linked note counts as independent only once its register entry is verifi
   assert.deepEqual(after.snapshot.authorizes, [])
 })
 
+test('a backdated link (--date) reports the state it has today (audit O-7)', () => {
+  const { brand, note } = company('link-backdated')
+  const entry = register(brand)
+  verify(brand, entry.id)
+  const linked = link(brand, note.id, entry.id, { linked_on: dayOffset(-30) })
+  assert.equal(linked.revision.linked_on, dayOffset(-30))
+  assert.equal(linked.state, 'qualifies', 'verified today, so it counts today, though it did not on the backdated day')
+  assert.equal(result(brand).snapshot.evidence_links[0]!.state, 'qualifies')
+})
+
 test('a link verifies one question: a note about two questions is independent only for the controls of the verified one', () => {
   const DIFF = 'brand.strategy.differentiation'
   const brand = coachBrand({ slug: 'link-two-questions' })
@@ -269,7 +279,7 @@ test('reproducible: same input, same bytes; a snapshot as of yesterday ignores t
 
   const kept = owner(() => buildAssuranceSnapshot(brand.root, OPTS))
   assert.equal(canonicalSnapshot(owner(() => buildAssuranceSnapshot(brand.root, OPTS))), canonicalSnapshot(kept))
-  assert.equal(kept.bridge_version, 'brand-os.assurance-bridge/3')
+  assert.equal(kept.bridge_version, 'brand-os.assurance-bridge/4')
 
   brand.engine.approvals().withdrawEvidence(entry.id, 'SYNTHETIC DEMO')
   const checked = owner(() => verifyAssuranceSnapshot(brand.root, JSON.stringify(kept)))
