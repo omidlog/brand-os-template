@@ -146,7 +146,7 @@ test('the validator refuses what a list cannot hold', () => {
   refuse(act, 'Roasting | links: nonsense', /not an item id/)
   refuse(seg, Array.from({ length: 13 }, (_, i) => `Segment ${i + 1}`).join('\n'), /At most 12 items/)
   // Cost items name what costs money, never how much, in any script or digit system.
-  for (const amount of ['Rent | $2000 a month', 'Green coffee | 1,200 EUR', 'Rent | ۵۰۰ تومان', 'Kira | 3000 TL', 'Wages | USD 900']) refuse(cost, amount, /money amount/)
+  for (const amount of ['Rent | $2000 a month', 'Green coffee | 1,200 EUR', 'Rent | ۵۰۰ تومان', 'Kira | 3000 TL', 'Wages | USD 900', 'Hosting | ۵۰۰ تومن', 'Kira | 2000 lirası', 'Hosting | 500 dolar', 'Rent | 300 avro']) refuse(cost, amount, /money amount/)
   assert.ok(normalizeEntityAnswer(cost, 'Green coffee | rises with volume | variable | links: act-1').ok, 'a description without an amount is fine')
   // Canonical JSON is checked as strictly as lines.
   const bad = (items: unknown, extra: Record<string, unknown> = {}) => JSON.stringify({ schema: ENTITY_LIST_SCHEMA, question: SEGMENTS, items, ...extra })
