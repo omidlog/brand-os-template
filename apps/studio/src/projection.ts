@@ -18,6 +18,7 @@ import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/br
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
 import { buildCompetitorComparison, buildMascotAtlas, type MascotAssetCandidate } from '@brand-os/brand-core/visual'
 import { buildBook, type BookDocument } from '@brand-os/brand-core/visual'
+import { buildSwotTows, buildValueProposition } from '@brand-os/brand-core/visual'
 import { readSharedLandscape } from '@brand-os/brand-core/competitive'
 import type { DashboardContradiction, DashboardModule, DocumentKind, DocumentModel, InternalDashboard, StudioKnowledgeProjection } from '@brand-os/brand-core'
 import { inspectAssetForPublication } from '@brand-os/asset-catalog'
@@ -180,6 +181,11 @@ export interface StudioVisualProjection {
    * written before it existed; sync rebuilds those.
    */
   books?: { brand_book: { internal: BookDocument; public: BookDocument }; business_report: { internal: BookDocument; public: BookDocument } }
+  /**
+   * SWOT / TOWS and the Value Proposition Canvas (V3.2), in both editions, from the list questions with their item
+   * sources (knowledge notes resolve to shared notes only). Absent in caches written before it existed; sync rebuilds.
+   */
+  strategy?: { swot: { internal: VisualDocument; public: VisualDocument }; value_proposition: { internal: VisualDocument; public: VisualDocument } }
 }
 
 /**
@@ -314,7 +320,7 @@ function projectCreative(root: string, slug: string): StudioCreativeProjection |
 }
 
 /** The visual documents; a failure here must not take down the brand view either. */
-function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], assets: MascotAssetCandidate[]): StudioVisualProjection | null {
+function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], assets: MascotAssetCandidate[], knowledge: StudioKnowledgeProjection | null = null): StudioVisualProjection | null {
   try {
     const visual: StudioVisualProjection = {
       bmc: { applies: canvasApplies(engine), internal: buildBusinessModelCanvas(engine, 'internal'), public: buildBusinessModelCanvas(engine, 'public') },
@@ -327,6 +333,12 @@ function projectVisual(engine: InterviewEngine, masters: LogoMasterCandidate[], 
     visual.books = {
       brand_book: { internal: book('brand_book', 'internal'), public: book('brand_book', 'public') },
       business_report: { internal: book('business_report', 'internal'), public: book('business_report', 'public') },
+    }
+    // V3.2: item sources may cite shared knowledge notes by id; only their titles are carried, never a body.
+    const sharedNotes = new Map((knowledge?.notes ?? []).map((note) => [note.id, note.title] as const))
+    visual.strategy = {
+      swot: { internal: buildSwotTows(engine, 'internal', { sharedNotes }), public: buildSwotTows(engine, 'public', { sharedNotes }) },
+      value_proposition: { internal: buildValueProposition(engine, 'internal', { sharedNotes }), public: buildValueProposition(engine, 'public', { sharedNotes }) },
     }
     assertNoSecrets(visual)
     return visual
@@ -526,6 +538,7 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     }
   }
 
+  const knowledge = projectKnowledge(engine)
   const projection: StudioProjection = {
     schema_version: 1,
     brand: {
@@ -572,11 +585,11 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     assets,
     mascot,
     personal: personal ? { facets, documents: personalDocs } : null,
-    knowledge: projectKnowledge(engine),
+    knowledge,
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
     template: templateRecord(root),
-    visual: projectVisual(engine, logoCandidates, assetCandidates),
+    visual: projectVisual(engine, logoCandidates, assetCandidates, knowledge),
     coach: projectCoach(engine, dashboard.review_queue.items),
   }
   assertNoSecrets(projection)

@@ -34,6 +34,8 @@ export type BrandSection =
   | 'visual'
   | 'competitors'
   | 'coach'
+  | 'swot'
+  | 'value-proposition'
 
 export interface BrandView {
   record: BrandRecord
@@ -56,6 +58,8 @@ const SECTIONS: Array<{ id: BrandSection; group: NavGroup; key: MessageKey; icon
   { id: 'coach', group: 'command', key: 'nav.coach', icon: 'info', path: '#coach-title' },
   { id: 'visual', group: 'strategy', key: 'nav.visual', icon: 'layers', path: '/strategy/business-model' },
   { id: 'business', group: 'strategy', key: 'nav.businessPlan', icon: 'briefcase', path: '/strategy/business-plan' },
+  { id: 'swot', group: 'strategy', key: 'nav.swot', icon: 'layers', path: '/strategy/swot-tows' },
+  { id: 'value-proposition', group: 'strategy', key: 'nav.valueProposition', icon: 'layers', path: '/strategy/value-proposition' },
   { id: 'brand-book', group: 'studio', key: 'nav.brandBook', icon: 'book', path: '/brand/book' },
   { id: 'design', group: 'studio', key: 'nav.design', icon: 'palette', path: '/brand/design-system' },
   { id: 'assets', group: 'studio', key: 'nav.assets', icon: 'image', path: '/brand/assets' },
@@ -77,7 +81,7 @@ export function brandPath(slug: string, section: BrandSection, rest = ''): strin
 
 /** Page sections served by the brand page handler: stable path segment (after the slug) -> section. */
 export const PAGE_SECTION_PATHS: ReadonlyArray<readonly [string, BrandSection]> = SECTIONS.filter(
-  (item) => item.path.startsWith('/') && !['visual', 'competitors'].includes(item.id),
+  (item) => item.path.startsWith('/') && !['visual', 'competitors', 'swot', 'value-proposition'].includes(item.id),
 ).map((item) => [item.path.slice(1), item.id] as const)
 
 /**
@@ -117,6 +121,8 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'calendar') return Boolean(projection?.calendar && (projection.calendar.total > 0 || projection.calendar.withheld.length > 0))
     // Listed when the merged commit has a canvas that applies to this profile (a business, or a founder/consultant facet).
     if (section.id === 'visual') return projection?.visual?.bmc.applies !== false
+    // V3.2: listed with the canvas (same profile rule) once the merged commit has the documents.
+    if (section.id === 'swot' || section.id === 'value-proposition') return Boolean(projection?.visual?.strategy) && projection?.visual?.bmc.applies !== false
     // Listed when the merged commit has a competitor comparison document (a designed empty state until one is shared).
     if (section.id === 'competitors') return Boolean(projection?.visual?.competitors)
     // An anchor on the overview, listed only when the Strategic Coach card has notes.

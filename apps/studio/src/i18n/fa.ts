@@ -701,4 +701,7 @@ export const fa: Messages = {
   "reader.ch.logo.lead": "نسخه‌ها، کمترین اندازه، فضای خالی اطراف و کاربرد نادرست.",
   "reader.ch.governance.title": "حاکمیت",
   "reader.ch.governance.lead": "چه کسی تغییرات برند را تأیید می‌کند، نسخه‌ها و کنارگذاشتن‌ها چطور کار می‌کنند، و قواعد استفاده از هوش مصنوعی.",
+  // Visual V3.2: Strategy Lab pages.
+  "nav.swot": "SWOT / TOWS",
+  "nav.valueProposition": "بوم ارزش پیشنهادی",
 }

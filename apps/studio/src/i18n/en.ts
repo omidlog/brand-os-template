@@ -702,4 +702,7 @@ export const en = {
   "reader.ch.logo.lead": "Variants, minimum size, clear space and misuse.",
   "reader.ch.governance.title": "Governance",
   "reader.ch.governance.lead": "Who approves brand changes, how versions and deprecations work, and the rules for AI use.",
+  // Visual V3.2: Strategy Lab pages.
+  "nav.swot": "SWOT / TOWS",
+  "nav.valueProposition": "Value Proposition Canvas",
 } as const
