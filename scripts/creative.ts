@@ -36,7 +36,8 @@ import {
 
 const HELP = `brand:creative <command> [options]
 
-  project   --id <project> --title <t> --surface reel|post|carousel|story|logo --series <name> [--lang fa]
+  project   --id <project> --title <t> --surface reel|post|carousel|story|logo|caption|script|thread|article
+            --series <name> [--lang fa]
             [--inspiration kn_…[:own|licensed|unknown]]…
   variant   --project <project> --variant <A> --asset <manifest-asset-id|missing> [--describe <short label>]
   feedback  --project <project> --variant <A> (--text <owner words> | --file <path|-> | --note kn_…)
@@ -59,7 +60,7 @@ const HELP = `brand:creative <command> [options]
   Suggestions never apply on their own: retrieval and agents ignore them until the owner approves.
 
 Aspects: camera_angle, lighting, text_density, tone, typography, layout, color, mascot_pose, mascot_anatomy, hook,
-cta, duration, pacing, music. Add --json for machine-readable output. Refused while ${AGENT_TOKEN_ENV} is set.`
+cta, duration, pacing, music, length, humour, clarity, jargon, structure, hashtags, caption, script_delivery. Add --json for machine-readable output. Refused while ${AGENT_TOKEN_ENV} is set.`
 
 const [command, ...argv] = process.argv.slice(2)
 // `aspects <sub>` takes one positional subcommand; every other command takes options only.

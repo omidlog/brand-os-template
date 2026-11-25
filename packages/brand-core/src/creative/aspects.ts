@@ -48,6 +48,16 @@ const LEXICON: Lexicon = {
   duration: [['too long', 'avoid'], ['too short', 'avoid'], 'duration', 'length', 'مدت', ['طولانی', 'avoid'], 'süre', ['çok uzun', 'avoid']],
   pacing: ['pacing', 'pace', 'rhythm', 'ریتم', 'سرعت', 'tempo', 'ritim'],
   music: ['music', 'song', 'soundtrack', 'audio', 'موسیقی', 'آهنگ', 'müzik', 'şarkı'],
+  // Copy aspects. Their terms are new words or longer phrases only, so text that matched before still matches the
+  // same aspect (a longer phrase wins: "caption too long" is length, not text_density + duration).
+  length: [['caption too long', 'avoid'], ['script too long', 'avoid'], ['too wordy', 'avoid'], ['wordy', 'avoid'], 'word count', 'shorter', ['کپشن طولانی', 'avoid'], ['متن طولانی', 'avoid'], 'کوتاه تر', 'تعداد کلمات', ['metin çok uzun', 'avoid'], ['uzun metin', 'avoid'], 'daha kısa', 'kelime sayısı'],
+  humour: ['humour', 'humor', 'funny', 'joke', 'witty', 'شوخی', 'شوخ', 'طنز', 'خنده دار', 'mizah', 'komik', 'espri', 'eğlenceli'],
+  clarity: ['clarity', 'clear', ['unclear', 'avoid'], ['confusing', 'avoid'], ['vague', 'avoid'], 'واضح', 'شفاف', ['مبهم', 'avoid'], ['گنگ', 'avoid'], 'anlaşılır', ['karışık', 'avoid'], ['belirsiz', 'avoid']],
+  jargon: ['jargon', 'technical terms', 'buzzword', 'اصطلاحات تخصصی', 'اصطلاح', 'ژارگون', 'teknik terim'],
+  structure: ['structure', 'outline', 'flow', 'ساختار', 'ترتیب', 'akış', 'sıralama'],
+  hashtags: ['hashtag', 'هشتگ', 'etiket'],
+  caption: ['کپشن', 'açıklama metni'],
+  script_delivery: ['script', 'voiceover', 'voice over', 'narration', 'delivery', 'اسکریپت', 'گویندگی', 'صداگذاری', 'متن ویدیو', 'senaryo', 'seslendirme', 'anlatım'],
 }
 
 const NEGATIVE = ['too', 'not', 'bad', 'ugly', 'wrong', 'hate', 'dislike', 'less', 'remove', 'avoid', 'boring', 'weak', 'زیاد', 'بد', 'زشت', 'نیست', 'کم کن', 'حذف', 'اشتباه', 'ضعیف', 'خسته کننده', 'دوست ندارم', 'نمی', 'fazla', 'kötü', 'değil', 'beğenmedim', 'sevmedim', 'kaldır', 'yanlış', 'zayıf', 'sıkıcı']

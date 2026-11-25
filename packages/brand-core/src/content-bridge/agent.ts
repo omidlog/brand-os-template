@@ -1,8 +1,8 @@
 import { appendAccessLog } from '../access-log.js'
 import type { AuthContext } from '../auth.js'
 import { preferenceView } from '../creative/context.js'
-import { SURFACES } from '../creative/model.js'
 import { scanPreferences } from '../creative/store.js'
+import { safetyBlocksSharing, safetyReport } from '../knowledge/safety.js'
 import { readFacts, type CanonicalFact } from '../facts.js'
 import { openWorkspace, type KnowledgeWorkspace } from '../knowledge/workspace.js'
 import { cleanPin, strategyAccess, type StaleInfo, type StrategyPin } from '../strategy/feed.js'
@@ -11,7 +11,8 @@ import { AGENT_NOTICE, AGENT_TEXT, REPORT_NOTICE } from './agent-i18n.js'
 import { isoDate, parseDate, slotFactIds, validateWeekId, type ContentSlot, type SlotResearch, type WeekEntry } from './calendar-model.js'
 import { approvedWeekEntry, buildCalendar, evaluateWeek, loadWeekRecord, type CalendarWeekView } from './calendar-store.js'
 import { CONTENT_LANGS, fill, type ContentLang } from './i18n.js'
-import { appendObservation, latestBySlot, OBSERVATION_LIMITS, OBSERVATION_STATUSES, readObservations, urlProblem, type ContentObservation, type ObservationStatus } from './observations.js'
+import { slotLearnings, slotProjectId, surfaceForFormat, type SlotLearning } from './feedback.js'
+import { appendObservation, latestBySlot, latestMetricsBySlot, OBSERVATION_LIMITS, OBSERVATION_STATUSES, readMetrics, readObservations, urlProblem, type ContentMetrics, type ContentMetricsObservation, type ContentObservation, type ObservationStatus } from './observations.js'
 import type { ContentStrategyView, ResolvedSource, SourcedRule } from './projection.js'
 
 /**
@@ -44,10 +45,13 @@ const RTL = new Set(['fa', 'ar', 'he', 'ur', 'ps', 'ckb'])
 
 export interface SlotReport {
   slot_id: string
-  status: ObservationStatus
+  /** `measured`: the slot has owner-reported metrics but no produced/published report. */
+  status: ObservationStatus | 'measured'
   url: string | null
   reported_at: string
   observation_id: string
+  /** The latest owner-reported metrics for this slot and revision, when there are any. Not verified, not a claim. */
+  metrics?: { metrics_id: string; measured_at: string; source: string; label: 'owner_reported'; verification: 'not_verified'; values: ContentMetrics }
 }
 
 export interface AgentCalendarWeek extends CalendarWeekView {
@@ -131,9 +135,14 @@ export interface ContentBriefDocument {
   creative: {
     /** The creative surface for this format, or null when creative memory has none (for example email or article). */
     surface: string | null
-    /** Owner-approved series preferences for this surface, by id. Read them with creative_context (creative-read). */
-    preferences: Array<{ preference_id: string; series: string }>
+    /**
+     * Owner-approved preferences for this surface: series scope, plus project scope for this slot's own project. The
+     * statement is the owner-approved text (at most 200 characters); never a draft, never note text.
+     */
+    preferences: Array<{ preference_id: string; series: string; scope: 'series' | 'project'; statement: string }>
   }
+  /** Recent slots of the same channel and format with owner-reported metrics: ids and numbers only. */
+  learnings: SlotLearning[]
   /** The latest produced/published observation for this slot of this revision. */
   report: SlotReport | null
   sources: { facts: Array<{ id: string; revision: string }>; research: string[] }
@@ -205,6 +214,14 @@ function valueText(fact: CanonicalFact): string {
 
 function toReport(item: ContentObservation): SlotReport {
   return { slot_id: item.slot_id, status: item.status, url: item.url, reported_at: item.reported_at, observation_id: item.observation_id }
+}
+
+/** The latest report of a slot with its latest owner-reported metrics attached; a metrics-only slot reads `measured`. */
+function withMetrics(report: SlotReport | null, metrics: ContentMetricsObservation | undefined): SlotReport | null {
+  if (!metrics) return report
+  const attached = { metrics_id: metrics.metrics_id, measured_at: metrics.measured_at, source: metrics.source, label: metrics.label, verification: metrics.verification, values: metrics.metrics }
+  if (report) return { ...report, metrics: attached }
+  return { slot_id: metrics.slot_id, status: 'measured', url: null, reported_at: metrics.recorded_at, observation_id: metrics.metrics_id, metrics: attached }
 }
 
 // ---- arguments -------------------------------------------------------------------------------------------
@@ -289,14 +306,23 @@ function lookupWeek(ws: KnowledgeWorkspace, weekId: string, pin: StrategyPin | u
 
 // ---- the brief -------------------------------------------------------------------------------------------
 
-function creativeFor(ws: KnowledgeWorkspace, format: ContentSlot['format']): ContentBriefDocument['creative'] {
-  const surface = format && (SURFACES as readonly string[]).includes(format) ? format : null
+/**
+ * Approved creative preferences for a slot: series scope for its surface, and project scope for the slot's own
+ * feedback project (content-bridge/feedback.ts). Statements are owner-approved and short; one that looks like a
+ * credential or private data is left out, as creative_context does.
+ */
+function creativeFor(ws: KnowledgeWorkspace, slot: Pick<ContentSlot, 'format'> & { week_id?: string; id?: string }): ContentBriefDocument['creative'] {
+  const surface = surfaceForFormat(slot.format)
   if (!surface) return { surface: null, preferences: [] }
+  const ownProject = slot.week_id && slot.id ? slotProjectId(slot.week_id, slot.id) : null
   const preferences: ContentBriefDocument['creative']['preferences'] = []
   for (const pref of scanPreferences(ws)) {
-    if (pref.scope.level !== 'series' || pref.scope.surface !== surface) continue
+    const series = pref.scope.level === 'series' && pref.scope.surface === surface ? pref.scope.series : null
+    const project = pref.scope.level === 'project' && ownProject !== null && pref.scope.project_id === ownProject
+    if (series === null && !project) continue
     if (preferenceView(ws, pref).state !== 'approved') continue
-    preferences.push({ preference_id: pref.preference_id, series: pref.scope.series })
+    if (safetyBlocksSharing(safetyReport(pref.statement)).length) continue
+    preferences.push({ preference_id: pref.preference_id, series: series ?? ownProject!, scope: series !== null ? 'series' : 'project', statement: pref.statement })
   }
   return { surface, preferences }
 }
@@ -378,7 +404,8 @@ export function buildBrief(ws: KnowledgeWorkspace, served: Served, slot: Content
     ),
     must_avoid: mustAvoid,
     competitive_angle: slot.research,
-    creative: creativeFor(ws, slot.format),
+    creative: creativeFor(ws, { format: slot.format, week_id: c.week_id, id: slot.id }),
+    learnings: slotLearnings(ws, { week_id: c.week_id, slot_id: slot.id, channel: slot.channel, format: slot.format }),
     report,
     sources: { facts: c.fact_refs.filter((ref) => ids.includes(ref.id) && !redacted.some((item) => item.field === ref.id)), research: slot.research ? [slot.research.ref] : [] },
     redacted,
@@ -432,7 +459,11 @@ export function runContentTool(root: string, brandSlug: string, ctx: AuthContext
     const view = buildCalendar(ws, { lang, from, to, channel, now: at })
     const weeks: AgentCalendarWeek[] = view.weeks.map((week) => {
       const latest = latestBySlot(readObservations(ws, week.week_id), week.revision, week.digests.content_sha256)
-      return { ...week, reports: week.slots.flatMap((slot) => (latest.has(slot.id) ? [toReport(latest.get(slot.id)!)] : [])) }
+      const measured = latestMetricsBySlot(readMetrics(ws, week.week_id), week.revision, week.digests.content_sha256)
+      return { ...week, reports: week.slots.flatMap((slot) => {
+        const report = withMetrics(latest.has(slot.id) ? toReport(latest.get(slot.id)!) : null, measured.get(slot.id))
+        return report ? [report] : []
+      }) }
     })
     const doc: Omit<AgentCalendarDocument, 'digests'> & { digests: Omit<AgentCalendarDocument['digests'], 'feed_sha256'> } = {
       schema: CONTENT_FEED_SCHEMA,
@@ -510,7 +541,8 @@ export function runContentTool(root: string, brandSlug: string, ctx: AuthContext
 
   if (tool === 'content_brief') {
     const facts = readFacts(root, 'approved', ws.brandSlug)
-    const doc = buildBrief(ws, served, slot, facts, latest ? toReport(latest) : null, lang)
+    const measured = latestMetricsBySlot(readMetrics(ws, weekId), served.revision.revision, served.revision.content_sha256).get(slotId)
+    const doc = buildBrief(ws, served, slot, facts, withMetrics(latest ? toReport(latest) : null, measured), lang)
     log('allow', 'allowed', [`${weekId}:${doc.week_revision}:${slotId}`], doc.redacted.map((item) => item.field))
     return { ...base, status: 'ok', data: doc }
   }

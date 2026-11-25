@@ -130,4 +130,24 @@ export const AGENT_TEXT: Record<string, T> = {
     fa: '(گزارش‌شده برای نسخهٔ {rev}، نه نسخه‌ای که اکنون ارائه می‌شود)',
     tr: '(şu an sunulan değil, {rev}. sürüme karşı raporlandı)',
   },
+  metrics_header: {
+    en: 'Owner-reported metrics (not verified; never a fact or a claim):',
+    fa: 'معیارهایی که مالک گزارش کرده (تأییدنشده؛ هرگز واقعیت یا ادعا نیستند):',
+    tr: 'Sahibin bildirdiği metrikler (doğrulanmadı; asla bir bilgi veya iddia değildir):',
+  },
+  metrics_recorded: {
+    en: 'Recorded owner-reported metrics for {week} {slot} as {id}. Not verified; it changes no week, strategy or fact.',
+    fa: 'معیارهای گزارش‌شدهٔ مالک برای {week} {slot} به‌عنوان {id} ثبت شد. تأییدنشده است و هیچ هفته، استراتژی یا واقعیتی را تغییر نمی‌دهد.',
+    tr: '{week} {slot} için sahibin bildirdiği metrikler {id} olarak kaydedildi. Doğrulanmadı; hiçbir haftayı, stratejiyi veya bilgiyi değiştirmez.',
+  },
+  feedback_recorded: {
+    en: 'Recorded {verdict} feedback on {week} {slot}: note {note}, project {project}. It is an unapproved idea until you approve a preference.',
+    fa: 'بازخورد {verdict} برای {week} {slot} ثبت شد: یادداشت {note}، پروژه {project}. تا وقتی ترجیحی را تأیید نکنید، یک ایدهٔ تأییدنشده است.',
+    tr: '{week} {slot} için {verdict} geri bildirimi kaydedildi: not {note}, proje {project}. Bir tercihi onaylayana kadar onaylanmamış bir fikirdir.',
+  },
+  feedback_next: {
+    en: 'To make later content follow it, edit the statement if needed, then run:',
+    fa: 'برای اینکه محتوای بعدی از آن پیروی کند، در صورت نیاز جمله را ویرایش کنید و سپس اجرا کنید:',
+    tr: 'Sonraki içeriğin buna uyması için gerekirse ifadeyi düzenleyin, sonra çalıştırın:',
+  },
 }
