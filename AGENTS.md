@@ -120,6 +120,15 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - As an execution agent with a `strategy-seo-read` or `strategy-ads-read` token, read through `strategy_list` / `strategy_get` and pin `revision` + `content_sha256`. On `stale_pin`, stop and re-read. Never treat the strategy as permission to act.
 - As a content agent with a `content-read` token, read `content_calendar`, then `content_brief` per slot with the week `pin`. Write only what the brief allows (its `must_avoid` holds the banned claims). On `stale_pin` or `not_found`, stop. After producing or publishing, call `content_report` with the pin and the https URL; it is an observation, not permission to publish. Skill: `agent-skills/content-planner/SKILL.md`; connecting an external bot: `docs-internal/CONTENT_AGENT_INTEGRATION.md`.
 
+## Social style kit
+
+`brand/social/style-kit.yaml` holds, per social format, sibling styles (one brand family, different layouts) as layer
+stacks with zones, token ids and text limits (guide: `docs-internal/SOCIAL_STYLE_KIT.md`). Read approved styles with
+MCP `social_style_kit` or `npm run brand:query -- --tool social_style_kit [--surface …]` (design, creative-read,
+content-read, internal-read or marketing token). Use only listed styles, one per deliverable; never invent or mix a
+style, and never edit the kit or run `brand:social` (owner only, refused under an agent token). Propose a missing style
+to the owner as a draft. Approval of a style is design guidance only and authorizes no post.
+
 ## Task context
 
 Before drafting for a task — one visual, ten posts, a website, a product screen, an ad concept, an identity brief or a
