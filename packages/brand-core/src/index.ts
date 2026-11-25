@@ -15,7 +15,7 @@ export { allModules, allQuestions, moduleById } from './content/index.js'
 export { buildMascotCatalog, CANONICAL_ANGLES, CORE_MOTIONS, EXAMPLE_STAGES, catalogCounts } from './content/mascot-catalog.js'
 export { InterviewEngine, applyInit, dispositionFor, emptySession, assertSlug, upgradeCore, syncManifest, personalInit } from './engine.js'
 export { completenessScope, listProfiles, loadProfile, profileErrors, UNIVERSAL_PROFILE } from './profiles.js'
-export { PERSONAL_BRAND, PERSONAL_SHARED_QUESTIONS, STARTER_PROFILES } from './content/profiles.js'
+export { PERSONAL_BRAND, PERSONAL_PRACTICE_QUESTIONS, PERSONAL_SHARED_QUESTIONS, STARTER_PROFILES } from './content/profiles.js'
 export { addPersonalStrategyQuestions, addProfileAdditions, addProfileQuestions, PROFILE_ADDITIONS, canonicalReferenceErrors, ensureStarterProfiles, migratePersonal, PERSONAL_CANONICAL_REFERENCES, PERSONAL_STRATEGY_QUESTIONS } from './personal.js'
 export type { CanonicalReference } from './personal.js'
 export {

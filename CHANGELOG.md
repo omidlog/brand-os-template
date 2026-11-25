@@ -5,6 +5,16 @@
 
 
 
+
+## Unreleased — more of a personal brand, and four shared brand questions
+
+### Added
+
+- **Every brand:** signature stories (`brand.verbal.stories`), formats and cadence per channel (`brand.social.cadence`), an online presence audit (`brand.presence.audit`) and community (`brand.community.strategy`).
+- **Businesses:** an offer ladder (`business.offer.ladder`) and customer stories with results and permission (`business.cx.case_studies`).
+- **Personal brands:** an offer ladder (`personal.services.ladder`), client case studies (`personal.portfolio.case_studies`, published only with verified evidence and permission) and a collaboration and sponsorship policy (`personal.collaboration.policy`, skipped with the creator-educator facet). The first two stand in for their business counterparts in the frameworks.
+- **A personal brand with a business facet** is now asked the 13 practice questions (partners, customer relationships, resources, costs, risks, SWOT/TOWS, customer journey), so those framework parts are filled instead of "not applicable". Profiles can add questions for selected facets (`facet_questions`), and conditions understand `facets has_any|lacks_all a,b`.
+
 ## Unreleased — Studio starts engine updates (engine + data, part D)
 
 ### Changed

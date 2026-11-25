@@ -63,6 +63,8 @@ export const PERSONAL_FRAMEWORK_SOURCES: readonly FrameworkSourceRow[] = [
   { target: 'business.goals.annual', sources: ['personal.goals.outcomes'], scope: 'practice' },
   { target: 'business.goals.north_star', sources: ['personal.goals.kpis'], scope: 'practice' },
   { target: 'business.goals.key_results', sources: ['personal.goals.kpis'], scope: 'practice' },
+  { target: 'business.offer.ladder', sources: ['personal.services.ladder'], scope: 'practice' },
+  { target: 'business.cx.case_studies', sources: ['personal.portfolio.case_studies'], scope: 'practice' },
 ]
 
 /** How one framework question is shown for this brand. */

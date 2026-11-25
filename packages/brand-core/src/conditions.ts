@@ -61,6 +61,7 @@ function configValue(config: BrandConfig, path: string): string | null {
  * - config.modules.personal == true|false
  * - config.brand.profile == <profile-id>
  * - config.modules.personal.facets has|lacks <facet>
+ * - config.modules.personal.facets has_any|lacks_all <facet>,<facet>
  * - answers[<question-id>] == value
  * - answers[<question-id>] != value
  * - answers[<question-id>] in a,b
@@ -78,6 +79,15 @@ export function evaluateCondition(expression: string | undefined, ctx: Condition
   if (!expression || expression.trim() === '' || expression.trim() === 'always') return true
   const expr = expression.trim()
   if (expr === 'never') return false
+
+  const facets = expr.match(/^config\.modules\.personal\.facets\s+(has_any|lacks_all)\s+([a-z-]+(?:\s*,\s*[a-z-]+)+)$/)
+  if (facets) {
+    const names = (facets[2] ?? '').split(',').map((name) => name.trim())
+    for (const name of names) if (!(PERSONAL_FACETS as readonly string[]).includes(name)) throw new Error(`Unknown personal facet in condition: ${name}`)
+    const selected = personalConfig(ctx.config).facets
+    const any = names.some((name) => selected.includes(name as PersonalFacet))
+    return facets[1] === 'has_any' ? any : !any
+  }
 
   const facet = expr.match(/^config\.modules\.personal\.facets\s+(has|lacks)\s+([a-z-]+)$/)
   if (facet) {

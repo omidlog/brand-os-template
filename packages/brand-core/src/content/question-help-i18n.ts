@@ -104,6 +104,42 @@ export const QUESTION_HELP_I18N: Record<string, { fa: QuestionHelpLocale; tr: Qu
     fa: { why: "نام نقش‌های رنگی مال خودتان است. هر نقش تأییدشده یک توکن پیش‌نویس زیر color.brand-role می‌شود؛ این جواب می‌گوید جایگاه‌های تمپلیت (primary، canvas، text …) از کدام نقش استفاده کنند. هیچ‌وقت حدس زده نمی‌شود: نگاشت پیشنهادی تا تأیید شما فقط پیشنهاد می‌ماند.", example: "primary = brand-blue; onPrimary = white; canvas = paper; text = ink" },
     tr: { why: "Rol adları size aittir. Onaylanan her rol color.brand-role altında taslak bir token olur; bu yanıt şablon yuvalarının (primary, canvas, text …) hangi rolü kullanacağını söyler. Asla tahmin edilmez: önerilen eşleme siz onaylayana kadar yalnızca öneridir.", example: "primary = brand-blue; onPrimary = white; canvas = paper; text = ink" },
   },
+  "brand.verbal.stories": {
+    fa: { why: "یک بانک کوچک از داستان‌های واقعی و تکرارپذیر، پست‌ها، سخنرانی‌ها و گفت‌وگوهای فروش را یکدست نگه می‌دارد و کسی مجبور نمی‌شود حکایتی بسازد.", example: "از طراحی تا کسب‌وکار: چرا از طراحی به استراتژی رفتم | لانچی که به من یاد داد اول با مشتری حرف بزنم" },
+    tr: { why: "Küçük bir gerçek ve tekrarlanabilir hikâye bankası gönderileri, konuşmaları ve satış görüşmelerini tutarlı tutar; kimsenin anekdot uydurması gerekmez.", example: "Tasarımdan işe: neden tasarımdan stratejiye geçtim | Bana önce müşteriyle konuşmayı öğreten lansman" },
+  },
+  "brand.social.cadence": {
+    fa: { why: "برنامهٔ کانال بدون قالب و تناوب قابل زمان‌بندی یا اندازه‌گیری نیست. آنچه امروز واقعی است را جدا از هدف ثبت کنید.", example: "اینستاگرام: هفته‌ای سه ریل و یک کاروسل (الان یک ریل) | لینکدین: هفته‌ای دو پست" },
+    tr: { why: "Format ve sıklığı olmayan bir kanal planı ne zamanlanabilir ne ölçülebilir. Bugün gerçek olanı hedeften ayrı kaydedin.", example: "Instagram: haftada üç reel ve bir karusel (bugün bir reel) | LinkedIn: haftada iki gönderi" },
+  },
+  "brand.community.strategy": {
+    fa: { why: "کامیونیتی دنبال‌کننده‌ها را به ارتباط تکراری و معرفی تبدیل می‌کند، ولی فقط با مخاطب روشن و وعده‌ای که برند بتواند به آن عمل کند.", example: "هنوز نه. بعداً: یک تماس ماهانه برای مشتری‌های فعلی." },
+    tr: { why: "Topluluk takipçileri tekrar eden temaslara ve tavsiyelere dönüştürür; ama yalnızca net bir kitle ve markanın tutabileceği bir sözle.", example: "Henüz değil. Daha sonra: mevcut müşteriler için aylık bir görüşme." },
+  },
+  "brand.presence.audit": {
+    fa: { why: "مردم پیش از تماس، نتایج جست‌وجو و پروفایل‌ها را نگاه می‌کنند. ناهماهنگی اعتماد را کم می‌کند و وقتی فهرست شود، رفعش ارزان است.", example: "تیتر لینکدین قدیمی است؛ سایت نمونه‌کار قدیمی هنوز در جست‌وجوی نام اول می‌آید." },
+    tr: { why: "İnsanlar iletişime geçmeden önce arama sonuçlarına ve profillere bakar. Tutarsızlıklar güveni azaltır ve listelendiğinde düzeltmesi ucuzdur.", example: "LinkedIn başlığı eski; eski portfolyo sitesi ad aramasında hâlâ ilk sırada." },
+  },
+  "business.offer.ladder": {
+    fa: { why: "پلکان پیشنهاد نشان می‌دهد بین جلب توجه و فروش کدام قدم کم است؛ دعوت به اقدام و کمپین‌ها از آن می‌آیند.", example: "جلسهٔ آزمایشی رایگان ← طرح ماهانه ← طرح سالانه با جلسهٔ معلم" },
+    tr: { why: "Teklif merdiveni ilgi ile satış arasında eksik olan adımı gösterir; harekete geçirici mesajlar ve kampanyalar ondan çıkar.", example: "Ücretsiz deneme dersi → aylık plan → eğitmen oturumlu yıllık plan" },
+  },
+  "business.cx.case_studies": {
+    fa: { why: "داستان مشتری قوی‌ترین مدرک فروش و ساده‌ترین ادعا برای اغراق است: هر نتیجه منبع می‌خواهد و پیش از عمومی شدن، اجازه.", example: "یک شبکهٔ مدارس (بی‌نام): ۳۰٪ جلسهٔ ازدست‌رفتهٔ کمتر در یک ترم؛ منبع: گزارش ترم خودشان؛ اجازه در انتظار." },
+    tr: { why: "Müşteri hikâyeleri en güçlü satış kanıtıdır ve abartılması en kolay iddiadır: her sonucun bir kaynağı, yayından önce de izni olmalı.", example: "Bir okul ağı (anonim): bir dönemde %30 daha az kaçırılan ders; kaynak: kendi dönem raporları; izin bekleniyor." },
+  },
+  "personal.services.ladder": {
+    fa: { why: "پلکان پیشنهاد نشان می‌دهد بین جلب توجه و کار پولی کدام قدم کم است؛ محتوا و دعوت به اقدام از آن می‌آیند.", example: "پست‌های اینستاگرام ← چک‌لیست رایگان ← یک جلسهٔ منتورینگ ← همکاری استراتژی سه‌ماهه" },
+    tr: { why: "Teklif merdiveni ilgi ile ücretli iş arasında eksik olan adımı gösterir; içerik ve harekete geçirici mesajlar ondan çıkar.", example: "Instagram gönderileri → ücretsiz kontrol listesi → bir mentorluk oturumu → üç aylık strateji çalışması" },
+  },
+  "personal.collaboration.policy": {
+    fa: { why: "اعتبار عمومی به نه گفتنِ یکدست بستگی دارد. قاعده‌ای که پیش از رسیدن پیشنهادها نوشته شده، اعلام همکاری را هم صادقانه نگه می‌دارد.", example: "بله به ابزارهای کسب‌وکاری که خودم استفاده می‌کنم؛ نه به ترید، قمار و پیشنهادهای پولدار شدن سریع؛ هر پست پولی با برچسب تبلیغ." },
+    tr: { why: "Kamusal itibar tutarlı biçimde hayır demeye bağlıdır. Teklifler gelmeden yazılmış bir kural, ücretli iş birliğinin açıkça belirtilmesini de sağlar.", example: "Kendi kullandığım iş araçlarına evet; trading, kumar ve çabuk zengin olma tekliflerine hayır; her ücretli gönderi reklam olarak etiketlenir." },
+  },
+  "personal.portfolio.case_studies": {
+    fa: { why: "مطالعهٔ موردی قوی‌ترین مدرک برای مشاوره و منتورینگ است و ادعایی که بیشتر از همه اغراق می‌شود. هر نتیجه پیش از عمومی شدن منبع و اجازهٔ مشتری می‌خواهد.", example: "یک بنیان‌گذار مرحلهٔ اول (بی‌نام): جایگاه‌یابی نامشخص ← استراتژی برند سه‌هفته‌ای ← ۲۰ مشتری پولی اول؛ منبع: یادداشت مکتوب بنیان‌گذار." },
+    tr: { why: "Vaka çalışmaları danışmanlık ve mentorluk için en güçlü kanıttır ve en sık abartılan iddiadır. Bir sonucun yayından önce kaynağı ve müşterinin izni olmalı.", example: "Erken aşamadaki bir kurucu (anonim): belirsiz konumlandırma → üç haftalık marka stratejisi → ilk 20 ücretli müşteri; kaynak: kurucunun yazılı notu." },
+  },
   "brand.color.themes": {
     fa: { why: "فایل‌های توکن، روشن و تیره را گروه‌بندی می‌کنند، چون تصمیم محصول این را می‌گوید.", example: "both" },
     tr: { why: "Token dosyaları açık ve koyu temayı ürün kararı öyle dediği için gruplar.", example: "both" },

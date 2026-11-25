@@ -15,6 +15,7 @@ import {
   latestAnswers,
   nextReport,
   PERSONAL_FRAMEWORK_SOURCES,
+  PERSONAL_PRACTICE_QUESTIONS,
   STARTER_PROFILES,
   writeStarterWorkspace,
 } from '@brand-os/brand-core'
@@ -229,7 +230,11 @@ test('(b) personal brand with business facets: the frameworks describe the perso
   assert.equal(audience?.value, 'Founders of example studios')
   const value = zones.find((zone) => zone.zone_id === 'value_propositions')!
   assert.deepEqual(value.entries.map((entry) => entry.id), ['personal.positioning.outcome', 'personal.services.offers', 'personal.consulting.engagements'])
-  assert.equal(zones.find((zone) => zone.zone_id === 'key_partners')!.state, 'not_applicable', 'ventures stay relationships, never key partners')
+  // Key partners are asked for the practice (business.partners.channels); ventures stay relationships, never partners.
+  const partners = zones.find((zone) => zone.zone_id === 'key_partners')!
+  assert.equal(partners.state, 'missing', 'the practice question is asked, not hidden')
+  assert.ok(partners.next_questions.some((question) => question.id === 'business.partners.channels'))
+  assert.ok(partners.entries.every((entry) => !entry.id.startsWith('personal.experience.')), 'ventures stay relationships, never key partners')
   assert.ok(zones.every((zone) => zone.next_questions.every((question) => applicability.applies(question.id))), 'every next question is one brand:next asks')
   // Public edition: an unpublished personal answer is never shown, mapped or not.
   for (const entry of entriesOf(v.bmc.public.blocks)) if (entry.stands_for) assert.equal(entry.value, null, `${entry.id} is not published`)
@@ -242,11 +247,12 @@ test('(b) personal brand with business facets: the frameworks describe the perso
   const pillars = marketing.sections.flatMap((section) => section.items).find((item) => item.id === 'personal.content.pillars')
   assert.equal(pillars?.stands_for, 'business.marketing.pillars')
   assert.equal(marketing.sections.find((section) => section.id === 'measurement')?.status, 'not_applicable')
-  // Command Center: business modules are not applicable; the canvas row counts only what applies.
-  assert.ok(projection.modules.filter((module) => module.group === 'business').every((module) => module.applicable === 0))
+  // Command Center: only the business modules holding the practice questions apply; they count what applies.
+  const practice = new Set(PERSONAL_PRACTICE_QUESTIONS)
+  assert.ok(projection.modules.filter((module) => module.group === 'business').some((module) => module.applicable > 0))
   const { missing, mapped, notApplicable } = assertAgreement(engine, projection)
   assert.ok(mapped.length > 0 && notApplicable.length > 0)
-  assert.ok(missing.every((item) => !item.id.startsWith('business.')), 'no business question is missing for a personal profile')
+  assert.ok(missing.filter((item) => item.id.startsWith('business.')).every((item) => practice.has(item.id)), 'only the practice questions are missing for a personal profile')
 
   // Answer every open question (synthetic "unknown" is a real answer): open = 0 and nothing is missing unanswered.
   for (const question of engine.queue(1000)) engine.answerQuestion(question.id, 'unknown')
