@@ -20,7 +20,7 @@ const BRAND_SUBCOMMANDS = [
 ] as const
 
 const OWN_SCRIPTS = [
-  'coach', 'knowledge', 'creative', 'seo', 'strategy', 'competitive', 'identity', 'visual-dna', 'content', 'runtime',
+  'coach', 'knowledge', 'creative', 'seo', 'strategy', 'competitive', 'identity', 'visual-dna', 'content', 'social', 'runtime',
   'acceptance', 'assurance', 'assurance-review', 'assurance-link',
 ] as const
 
