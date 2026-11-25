@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — a new brand works end to end
+
+Found by creating a business brand and a personal brand from scratch and running every step.
+
+### Added
+
+- `npm run brand:share` (`brand:content -- share --all`): every approved content strategy, current calendar week and the style kit approval summary for Studio, in one step.
+- Content briefs carry `to_draft` (`slot.hook`, `slot.angle`): copy the agent writes. `missing` keeps only facts the agent must not invent.
+
+### Changed
+
+- `brand-os scaffold --new` creates the approval secret (never inside a cloud-synced folder) and prints the next steps; an approval in a checkout without a secret says how to create or copy one.
+- Social style rotation runs across the whole approved calendar, so consecutive slots of one channel and format never repeat a layout at a week boundary.
+- A brand without a mascot gets no mascot style or layer; a spare reel cover archetype ("Question cover") keeps four siblings.
+
 ## Unreleased — approve everything at once, cloud-sync guard, approval-secret rotation
 
 ### Added

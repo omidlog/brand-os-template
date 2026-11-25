@@ -199,6 +199,8 @@ values, notes or quotes). The owner commits and merges it. Studio's read-only "C
 files from the merged commit (`buildStudioCalendar`); malformed, other-brand, misnamed, symlinked or secret-looking
 files are withheld with a reason. No approve button, no write route.
 
+`npm run brand:share` (`brand:content -- share --all`) shares everything approved in one step: each served content strategy, each current week and the style kit summary (`brand/social/shared/approvals.json`). Commit and push what it writes.
+
 `brand:content share-strategy [--id content-main] [--dry-run]` does the same for the content strategy: it writes the
 approved revision the Strategy Feed serves now (`current` or `review_due`) to
 `brand/content-strategy/shared/<id>.json` (`shareStrategy`, `content-bridge/strategy-share.ts`). The file holds the
