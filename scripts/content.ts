@@ -6,6 +6,8 @@ import { AGENT_TOKEN_ENV, KnowledgeError, openWorkspace, type KnowledgeWorkspace
 import {
   AGENT_TEXT,
   approvedWeekEntry,
+  BATCH_TEXT,
+  batchConflicts,
   approveWeek,
   brandSettings,
   buildContentStrategy,
@@ -19,10 +21,16 @@ import {
   listObservations,
   listWeeks,
   loadWeekRecord,
+  MIX_LABELS,
+  OBJECTIVE_LABELS,
+  parseBatchItem,
   parseCadence,
   parseChannels,
   parseFormats,
+  planBatch,
   planCalendar,
+  PLAYBOOK_TEXT,
+  playbookDocument,
   problemText,
   proposeWeek,
   rejectWeek,
@@ -30,13 +38,17 @@ import {
   ROLE_LABELS,
   scanWeeks,
   shareWeek,
+  storeBatch,
   validateWeekId,
+  type BatchItem,
+  type BatchResult,
   type CalendarView,
   type ContentObservation,
   type ContentLang,
   type ContentStrategyDraft,
   type ContentStrategyView,
   type PlanResult,
+  type PlaybookDocument,
   type WeekReview,
   type WeekSummary,
 } from '@brand-os/brand-core/content-bridge'
@@ -62,10 +74,13 @@ import { CONTENT_CHANNELS, proposeRevision, StrategyError, validateRevisionNumbe
 const HELP = `brand:content <command> [options]
 
   strategy [--id content-main] [--channels instagram,linkedin] [--cadence instagram=3/week]
-           [--formats instagram=reel+carousel] [--languages en,fa] [--markets tr]
+           [--formats instagram=reel+carousel] [--languages en,fa] [--markets tr] [--playbook]
            [--out <proposal.json>] [--store]
                                   propose a content strategy from approved facts, with explicit gaps.
+                                  --playbook fills role, formats, cadence, objective, mix and KPI names from
+                                  the general-practice channel playbook (explicit --formats/--cadence win).
                                   Without --out or --store nothing is written.
+  playbook [--channel instagram]  the general-practice channel playbook (not measured for this brand)
   show [--id <id>]                the approved content strategy with its voice rules, resolved from
                                   approved facts (drafts are never shown)
 
@@ -73,6 +88,11 @@ const HELP = `brand:content <command> [options]
        [--out <weeks.json>] [--store]
                                   draft calendar weeks (Monday to Sunday) from the served content strategy.
                                   Without --out or --store nothing is written.
+  batch --channel instagram --format reel --count 10 | --item instagram:reel:10 [--item …]
+        [--from YYYY-MM-DD] [--pillar <id>] [--strategy <id>] [--research] [--out <weeks.json>] [--store]
+                                  draft N slots per channel and format, dated by the approved cadence from
+                                  --from (default: next Monday), grouped into weeks. --store refuses when a
+                                  target week already has a stored draft or approved week.
   week propose --file <week.json> store one week (an item of the --out weeks list) as a draft
   week review  --week wk-YYYY-MM-DD --revision <n>
   week approve --week wk-YYYY-MM-DD --revision <n> --expect-sha <sha256>
@@ -110,6 +130,11 @@ const OPTIONS = {
   'expect-sha': { type: 'string' },
   channel: { type: 'string' },
   'dry-run': { type: 'boolean', default: false },
+  playbook: { type: 'boolean', default: false },
+  format: { type: 'string' },
+  count: { type: 'string' },
+  item: { type: 'string', multiple: true },
+  pillar: { type: 'string' },
 } as const
 
 type Values = ReturnType<typeof parseArgs<{ args: string[]; options: typeof OPTIONS; allowPositionals: false; strict: true }>>['values']
@@ -138,7 +163,11 @@ function draftText(draft: ContentStrategyDraft, lang: ContentLang): string {
   for (const source of draft.sources) lines.push(`  [${source.state}] ${source.fact_id} (${ROLE_LABELS[source.role]![lang]})`)
   lines.push('', `${t('pillars')}: ${block.pillars.map((p) => `${p.id} ${p.name}`).join(' · ') || '—'}`)
   lines.push(`${t('channels')}:`)
-  for (const c of block.channels) lines.push(`  ${c.channel}: ${c.formats.join('+') || t('not_decided')}, ${c.cadence ? `${c.cadence.target}/${c.cadence.per}` : t('not_decided')}`)
+  for (const c of block.channels) {
+    lines.push(`  ${c.channel}: ${c.formats.join('+') || t('not_decided')}, ${c.cadence ? `${c.cadence.target}/${c.cadence.per}` : t('not_decided')}`)
+    if (c.role) lines.push(`    ${c.role}`)
+    if (c.objective) lines.push(`    ${OBJECTIVE_LABELS[c.objective]![lang]}${c.mix ? ` · ${c.mix.map((m) => `${MIX_LABELS[m.type]![lang]} ${m.share}%`).join(', ')}` : ''}`)
+  }
   if (!block.channels.length) lines.push('  —')
   lines.push('', `${t('gaps')}:`)
   if (!draft.gaps.length) lines.push(`  ${t('no_gaps')}`)
@@ -171,6 +200,43 @@ function viewText(view: ContentStrategyView, lang: ContentLang): string {
     '',
     ...view.notice.map((line) => `note: ${line}`),
   ]
+  return lines.join('\n')
+}
+
+function playbookText(doc: PlaybookDocument, lang: ContentLang): string {
+  const t = (key: string) => PLAYBOOK_TEXT[key]![lang]
+  const lines = [t('header'), '']
+  for (const e of doc.entries) {
+    lines.push(`${e.channel}`, `  ${t('role')}: ${e.role}`, `  ${t('formats')}: ${e.formats.join(', ')}`)
+    lines.push(`  ${t('cadence')}: ${fill(t('cadence_value'), { min: e.cadence.min, max: e.cadence.max, start: e.cadence.start, per: t(e.cadence.per) })}`)
+    lines.push(`  ${t('objective')}: ${e.objective.label}`, `  ${t('mix')}: ${e.mix.map((m) => `${m.label} ${m.share}%`).join(', ')}`, `  ${t('kpis')}: ${e.kpis.map((k) => k.label).join(', ')}`)
+    lines.push(`  ${t('windows')}: ${e.posting_windows_note}`, `  ${t('craft')}:`, ...e.craft.map((note) => `    - ${note}`), '')
+  }
+  lines.push(...doc.notice.map((line) => `note: ${line}`))
+  return lines.join('\n')
+}
+
+function batchItems(values: Values): BatchItem[] {
+  const items = (values.item ?? []).map(parseBatchItem)
+  if (values.format || values.count) {
+    if (!values.channel || !values.format || !values.count) usage('batch needs --channel, --format and --count together (or --item channel:format:count).')
+    items.push(parseBatchItem(`${values.channel}:${values.format}:${values.count}`))
+  } else if (values.channel) usage('batch needs --format and --count with --channel.')
+  if (!items.length) usage('batch needs --channel, --format and --count, or --item channel:format:count.')
+  return items
+}
+
+function batchText(result: BatchResult, lang: ContentLang): string {
+  const t = (key: string) => (BATCH_TEXT[key] ?? CAL_TEXT[key] ?? CLI_TEXT[key])![lang]
+  const lines = [fill(t('header'), { id: result.strategy.strategy_id, rev: result.strategy.revision, from: result.from })]
+  for (const item of result.items) lines.push(`  ${fill(t('item'), { ...item, first: item.first ?? '—', last: item.last ?? '—' })}`)
+  lines.push(...result.notes.map((note) => `${t('notes')}: ${note}`))
+  for (const week of result.weeks) {
+    const c = week.content
+    lines.push('', `${t('week')} ${c.week_id} (${c.week_start} → ${c.week_end}): ${c.slots.length}`)
+    for (const slot of c.slots) lines.push(slotLine(slot, t))
+    for (const gap of week.gaps) lines.push(`  - ${gap}`)
+  }
   return lines.join('\n')
 }
 
@@ -291,6 +357,7 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
         channels: values.channels ? parseChannels(values.channels) : undefined,
         cadence: values.cadence ? parseCadence(values.cadence) : undefined,
         formats: values.formats ? parseFormats(values.formats) : undefined,
+        playbook: values.playbook,
         languages: codes(values.languages, '--languages'),
         markets: codes(values.markets, '--markets'),
       })
@@ -347,6 +414,39 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       }
       if (!values.out && !values.store) after.push(CAL_TEXT.plan_store_hint![lang])
       print({ ok: true, stored, ...plan }, () => [planText(plan, lang), '', ...after].join('\n'))
+      return
+    }
+    case 'playbook': {
+      const doc = playbookDocument(lang, values.channel ? channelOf(values.channel) : undefined)
+      print({ ok: true, ...doc }, () => playbookText(doc, lang))
+      return
+    }
+    case 'batch': {
+      const result = planBatch(ws, {
+        lang,
+        items: batchItems(values),
+        from: values.from,
+        pillar: values.pillar,
+        strategy_id: values.strategy ? validateStrategyId(values.strategy) : undefined,
+        research: values.research,
+      })
+      const after: string[] = []
+      let stored: Array<{ week_id: string; revision: number; content_sha256: string }> = []
+      if (values.out) {
+        const out = path.resolve(values.out)
+        if (fs.existsSync(out)) throw new StrategyError('exists', 'The --out file exists. Choose a new path; nothing was overwritten.')
+        fs.writeFileSync(out, `${JSON.stringify({ weeks: result.weeks.map((w) => w.content) }, null, 2)}\n`, { mode: 0o600, flag: 'wx' })
+        after.push(fill(CAL_TEXT.written_plan![lang], { list: values.out }))
+      }
+      if (values.store) {
+        stored = storeBatch(ws, result, lang)
+        for (const week of stored) after.push(fill(BATCH_TEXT.stored![lang], { id: week.week_id, n: week.revision }))
+      } else {
+        const conflicts = batchConflicts(ws, result.weeks.map((w) => w.content.week_id))
+        if (conflicts.length) after.push(fill(BATCH_TEXT.conflict_preview![lang], { list: [...new Set(conflicts.map((c) => c.week_id))].join(', ') }))
+      }
+      if (!values.out && !values.store) after.push(BATCH_TEXT.store_hint![lang])
+      print({ ok: true, stored, ...result }, () => [batchText(result, lang), '', ...after].join('\n'))
       return
     }
     case 'week': {

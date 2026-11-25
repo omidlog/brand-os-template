@@ -10,6 +10,7 @@ import { canonicalJson, CONTENT_CHANNELS, sha256Hex, StrategyError, type Content
 import { AGENT_NOTICE, AGENT_TEXT, REPORT_NOTICE } from './agent-i18n.js'
 import { isoDate, parseDate, slotFactIds, validateWeekId, type ContentSlot, type SlotResearch, type WeekEntry } from './calendar-model.js'
 import { approvedWeekEntry, buildCalendar, evaluateWeek, loadWeekRecord, type CalendarWeekView } from './calendar-store.js'
+import { deliverableSpec, type DeliverableSpec } from './deliverables.js'
 import { CONTENT_LANGS, fill, type ContentLang } from './i18n.js'
 import { appendObservation, latestBySlot, OBSERVATION_LIMITS, OBSERVATION_STATUSES, readObservations, urlProblem, type ContentObservation, type ObservationStatus } from './observations.js'
 import type { ContentStrategyView, ResolvedSource, SourcedRule } from './projection.js'
@@ -115,7 +116,10 @@ export interface ContentBriefDocument {
     notes: string | null
     status: 'approved' | 'idea' | 'skipped'
   }
-  channel_plan: Pick<ContentChannelPlan, 'role' | 'formats' | 'cadence'> | null
+  /** Role, formats and cadence, plus objective / audience / mix / kpis / posting_windows / rules when the strategy sets them. */
+  channel_plan: Pick<ContentChannelPlan, 'role' | 'formats' | 'cadence' | 'objective' | 'audience' | 'mix' | 'kpis' | 'posting_windows' | 'rules'> | null
+  /** What to produce for this format (script, carousel, post, story, thread, article, email): general practice, no copy. */
+  deliverable: DeliverableSpec | null
   objective: BriefFact[]
   key_message: BriefFact | null
   offer: BriefFact | null
@@ -301,6 +305,12 @@ function creativeFor(ws: KnowledgeWorkspace, format: ContentSlot['format']): Con
   return { surface, preferences }
 }
 
+/** The channel plan a brief carries. Optional fields appear only when the approved strategy sets them. */
+function channelPlanOf(plan: ContentChannelPlan): NonNullable<ContentBriefDocument['channel_plan']> {
+  const { role, formats, cadence, objective, audience, mix, kpis, posting_windows, rules } = plan
+  return { role, formats, cadence, ...(objective ? { objective } : {}), ...(audience ? { audience } : {}), ...(mix ? { mix } : {}), ...(kpis ? { kpis } : {}), ...(posting_windows ? { posting_windows } : {}), ...(rules ? { rules } : {}) }
+}
+
 /** Builds one slot's brief. Pure apart from reading creative preferences; restricted facts are never resolved. */
 export function buildBrief(ws: KnowledgeWorkspace, served: Served, slot: ContentSlot, facts: Record<string, CanonicalFact>, report: SlotReport | null, lang: ContentLang): ContentBriefDocument {
   const { entry, revision, view } = served
@@ -364,7 +374,8 @@ export function buildBrief(ws: KnowledgeWorkspace, served: Served, slot: Content
       notes: slot.notes,
       status: slot.status === 'planned' ? 'approved' : slot.status,
     },
-    channel_plan: plan ? { role: plan.role, formats: plan.formats, cadence: plan.cadence } : null,
+    channel_plan: plan ? channelPlanOf(plan) : null,
+    deliverable: deliverableSpec({ format: slot.format, channel: slot.channel, language: slot.language, lang }),
     objective,
     key_message: keyMessage,
     offer,

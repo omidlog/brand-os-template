@@ -19,6 +19,7 @@ import {
 } from '../strategy/model.js'
 import { assertOwnerProcess, scanRecords } from '../strategy/store.js'
 import { servable } from '../strategy/feed.js'
+import { playbookFor } from './channel-playbook.js'
 import { CHANNEL_PARTS, fill, GAP_TEXT, NOTES, PROPOSAL_TEXT, ROLE_LABELS, type ContentLang } from './i18n.js'
 import { brandSettings, detectChannels, readSources, roleGaps, splitItems, type SourceReport } from './sources.js'
 
@@ -45,6 +46,11 @@ export interface ContentStrategyOptions {
   /** Owner decisions per channel: `instagram=3/week`. */
   cadence?: Partial<Record<ContentChannel, { per: 'week' | 'month'; target: number }>>
   formats?: Partial<Record<ContentChannel, ContentFormat[]>>
+  /**
+   * Fill role, formats, cadence, objective, mix and KPI names (no targets) from the general-practice channel playbook
+   * for channels that have an entry. Explicit --formats / --cadence win. Still a proposal the owner reviews.
+   */
+  playbook?: boolean
   valid_days?: number
   review_days?: number
 }
@@ -142,15 +148,29 @@ export function buildContentStrategy(ws: KnowledgeWorkspace, opts: ContentStrate
   if (!opts.channels?.length && detected.length) notes.push(fill(NOTES.channels_detected![lang], { list: detected.join(', ') }))
   // Name the channel questions whatever their state, so the message always says what to answer.
   if (!chosen.length) gaps.push({ field: 'channels', reason: 'owner_decision', fact_ids: reports.filter((r) => r.role === 'channels' && r.state !== 'restricted').map((r) => r.fact_id) })
+  const fromPlaybook: ContentChannel[] = []
   const channels: ContentChannelPlan[] = chosen.map((channel) => {
     const refs = mentions.get(channel) ?? []
     if (opts.channels?.length && !refs.length) notes.push(fill(NOTES.channel_not_in_facts![lang], { channel }))
-    const formats = [...new Set(opts.formats?.[channel] ?? [])]
-    const cadence = opts.cadence?.[channel] ?? null
-    gaps.push({ field: `channels[${channel}].role`, reason: 'owner_decision', fact_ids: [] })
+    // General practice only when asked, and only where the owner gave no value of their own.
+    const entry = opts.playbook ? playbookFor(channel) : null
+    if (opts.playbook && !entry) notes.push(fill(PLAYBOOK_NOTES.none[lang], { channel }))
+    const formats = [...new Set(opts.formats?.[channel] ?? entry?.formats ?? [])]
+    const cadence = opts.cadence?.[channel] ?? (entry ? { per: entry.cadence.per, target: entry.cadence.start } : null)
+    const role = entry ? entry.role[lang] : null
+    if (!role) gaps.push({ field: `channels[${channel}].role`, reason: 'owner_decision', fact_ids: [] })
     if (!formats.length) gaps.push({ field: `channels[${channel}].formats`, reason: 'owner_decision', fact_ids: [] })
     if (!cadence) gaps.push({ field: `channels[${channel}].cadence`, reason: 'owner_decision', fact_ids: [] })
-    return { channel, role: null, formats, cadence, languages: [], pillars: [], fact_refs: refs }
+    const plan: ContentChannelPlan = { channel, role, formats, cadence, languages: [], pillars: [], fact_refs: refs }
+    if (entry) {
+      const filled = ['role', ...(opts.formats?.[channel] ? [] : ['formats']), ...(opts.cadence?.[channel] ? [] : ['cadence']), 'objective', 'mix', 'kpis']
+      notes.push(fill(PLAYBOOK_NOTES.filled[lang], { channel, list: filled.join(', ') }))
+      fromPlaybook.push(channel)
+      plan.objective = entry.objective
+      plan.mix = entry.mix.map((m) => ({ ...m }))
+      plan.kpis = entry.kpis.map((k) => ({ metric: k.metric, target: null, per: k.per }))
+    }
+    return plan
   })
 
   const languages = opts.languages?.length ? [...new Set(opts.languages)] : [settings.default_locale]
@@ -195,7 +215,7 @@ export function buildContentStrategy(ws: KnowledgeWorkspace, opts: ContentStrate
     recommendations: [],
     fact_refs: factIds,
     evidence_refs: [],
-    assumptions: [],
+    assumptions: fromPlaybook.length ? [fill(PLAYBOOK_NOTES.assumption[lang], { list: fromPlaybook.join(', ') })] : [],
     open_questions: [],
     restricted: null,
     origin: { kind: 'manual' },
@@ -205,6 +225,24 @@ export function buildContentStrategy(ws: KnowledgeWorkspace, opts: ContentStrate
   parseProposal(proposal)
   return { proposal, block, sources: reports, gaps: block.gaps.map((gap) => ({ ...gap, text: gapText(gap, lang) })), detected_channels: detected, notes }
 }
+
+const PLAYBOOK_NOTES = {
+  filled: {
+    en: '{channel}: {list} come from the general-practice channel playbook, not from this brand’s results. Review them before approving.',
+    fa: '{channel}: {list} از راهنمای کانال‌ها (روال رایج) آمده، نه از نتایج این برند. پیش از تأیید بررسی‌شان کنید.',
+    tr: '{channel}: {list} genel uygulama kanal rehberinden geliyor, bu markanın sonuçlarından değil. Onaylamadan önce gözden geçirin.',
+  },
+  none: {
+    en: '{channel}: the channel playbook has no entry; its role, formats and cadence stay owner decisions.',
+    fa: '{channel}: راهنمای کانال‌ها برای این کانال موردی ندارد؛ نقش، قالب‌ها و تناوب آن را مالک تعیین می‌کند.',
+    tr: '{channel}: kanal rehberinde kayıt yok; rolü, formatları ve sıklığı sahibin kararı olarak kalır.',
+  },
+  assumption: {
+    en: 'Channel plans for {list} start from the general-practice playbook, not from measured results of this brand.',
+    fa: 'برنامهٔ کانال‌های {list} از راهنمای روال رایج شروع شده، نه از نتایج اندازه‌گیری‌شدهٔ این برند.',
+    tr: '{list} kanal planları bu markanın ölçülmüş sonuçlarından değil, genel uygulama rehberinden başlar.',
+  },
+} satisfies Record<string, Record<ContentLang, string>>
 
 /** Parses `instagram=3/week,linkedin=1/month`. */
 export function parseCadence(value: string): NonNullable<ContentStrategyOptions['cadence']> {
