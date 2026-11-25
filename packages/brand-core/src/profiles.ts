@@ -23,6 +23,11 @@ export interface InterviewProfile {
    * keeps scoring the whole bank as before.
    */
   exclusive?: boolean
+  /**
+   * Questions that join the profile only when the brand selected one of these personal facets, for example the
+   * practice questions (partners, resources, costs, risks, SWOT, customer journey) for a founder or consultant.
+   */
+  facet_questions?: Array<{ facets: string[]; question_ids: string[] }>
 }
 
 const PROFILE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -90,8 +95,36 @@ function baseProfile(root: string, id: string): InterviewProfile | null {
   return { id, title: starter.title, description: starter.description, question_ids: [...starter.question_ids], exclusive: starter.exclusive === true }
 }
 
+/** The brand's selected personal facets (empty when the personal module is off or not configured). */
+function selectedFacets(root: string): string[] {
+  const file = path.join(root, 'brand', 'brand.config.yaml')
+  if (!fs.existsSync(file)) return []
+  const config = readYaml<{ modules?: { personal?: { enabled?: unknown; facets?: unknown } } }>(file)
+  const personal = config?.modules?.personal
+  return personal?.enabled === true && Array.isArray(personal.facets) ? personal.facets.filter((facet): facet is string => typeof facet === 'string') : []
+}
+
+/** Adds the facet questions of the engine's starter profile when the brand selected one of their facets. */
+function withFacetQuestions(root: string, profile: InterviewProfile | null): InterviewProfile | null {
+  if (!profile) return profile
+  const starter = STARTER_PROFILES.find((item) => item.id === profile.id)
+  const rules = starter?.facet_questions ?? []
+  if (!rules.length) return profile
+  const facets = selectedFacets(root)
+  const ids = [...profile.question_ids]
+  for (const rule of rules) {
+    if (!rule.facets.some((facet) => facets.includes(facet))) continue
+    for (const questionId of rule.question_ids) if (!ids.includes(questionId)) ids.push(questionId)
+  }
+  return { ...profile, question_ids: ids }
+}
+
 /** The profile's question subset, or null when the profile means "every question". */
 export function loadProfile(root: string, id: string | null | undefined): InterviewProfile | null {
+  return withFacetQuestions(root, resolveProfile(root, id))
+}
+
+function resolveProfile(root: string, id: string | null | undefined): InterviewProfile | null {
   if (!id || id === UNIVERSAL_PROFILE || !PROFILE_ID.test(id)) return null
   const base = baseProfile(root, id)
   const override = readOverride(root, id)

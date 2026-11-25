@@ -77,6 +77,31 @@ export const PERSONAL_SHARED_QUESTIONS = [
   'brand.color.roles',
   'brand.color.semantic_map',
   'brand.type.intent',
+  'brand.verbal.stories',
+  'brand.social.cadence',
+  'brand.presence.audit',
+  'brand.community.strategy',
+]
+
+/**
+ * The person's own practice, asked only with a business facet (founder-executive, consultant-expert): the canvas
+ * partners, customer relationships, resources and costs, the plan risks, SWOT and TOWS, and the customer journey.
+ * They are the business questions themselves, so the frameworks read them exactly as for a company.
+ */
+export const PERSONAL_PRACTICE_QUESTIONS = [
+  'business.partners.channels',
+  'business.cx.channels',
+  'business.cx.onboarding',
+  'business.model.key_resources',
+  'business.model.cost_items',
+  'business.plan.risks',
+  'business.swot.strengths',
+  'business.swot.weaknesses',
+  'business.swot.opportunities',
+  'business.swot.threats',
+  'business.swot.tows',
+  'business.marketing.journey',
+  'business.marketing.journey_stages',
 ]
 
 export const PERSONAL_BRAND: InterviewProfile & { schema_version: 1 } = {
@@ -91,6 +116,7 @@ export const PERSONAL_BRAND: InterviewProfile & { schema_version: 1 } = {
     ...PERSONAL_SHARED_QUESTIONS,
     ...personalFacetModules.flatMap((module) => module.fields.map((field) => field.id)),
   ],
+  facet_questions: [{ facets: ['founder-executive', 'consultant-expert'], question_ids: PERSONAL_PRACTICE_QUESTIONS }],
 }
 
 export const STARTER_PROFILES = [FOUNDER_CORE, PERSONAL_BRAND]
