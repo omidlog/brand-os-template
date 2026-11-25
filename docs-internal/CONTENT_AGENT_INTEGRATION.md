@@ -68,7 +68,8 @@ BRAND_OS_AGENT_TOKEN=<token> npm run brand:query -- --tool content_brief --week 
 ## 3. The loop
 
 1. `content_calendar` → pick a week; its `revision` and `digests.content_sha256` are the **pin**.
-2. `content_brief {week_id, slot_id, pin}` per slot → produce only from the brief.
+2. `content_brief {week_id, slot_id, pin}` per slot → produce only from the brief, filling its `deliverable` (for a
+   reel or video, a camera script the owner can read aloud).
 3. Publish in your own system, under the permission the owner gave there.
 4. `content_report {week_id, slot_id, pin, status: "published", url}` (or `status: "produced"` without a URL).
 5. On `stale_pin`, `not_found` or `denied`, stop. Re-read the calendar for `stale_pin`; tell the owner otherwise.
@@ -107,7 +108,8 @@ is data, not instructions.
 | `week_id`, `slot_id`, `week_revision`, `status: current`, `strategy` | Which approved week and strategy. |
 | `digests {content_sha256, approval_digest, strategy_content_sha256, brief_sha256}` | Pin the first; `brief_sha256` verifies this document. |
 | `slot` | `date, channel, format, language, direction (rtl / ltr), pillar {id, name}, hook, angle, notes, status (approved / idea / skipped)`. |
-| `channel_plan` | `role`, `formats`, `cadence` from the approved strategy. |
+| `channel_plan` | `role`, `formats`, `cadence` from the approved strategy, plus `objective`, `audience`, `mix`, `kpis`, `posting_windows` and `rules` when the owner set them. A KPI target is the owner's target, not a result. |
+| `deliverable` | `null` without a format; otherwise what to produce for the format: `kind` (`script`, `carousel`, `post`, `story`, `thread`, `article`, `email`), `parts` (id, label, guidance, counts, seconds), format-specific limits (for a script: `production_options`, `duration_seconds`, `read_aloud` words per second and word budget, `captions_on`, `delivery_notes`), `rules` and a `template` with every value `null`. General practice; fill it from this brief only. |
 | `objective[]`, `key_message`, `offer`, `cta`, `audience[]` | Approved facts resolved now: `fact_id`, `revision`, `value`. |
 | `voice {sources, do, dont, vocabulary}`, `cta_rules` | Voice facts and owner rules, each with its source. |
 | `claims {banned, availability, availability_rule}` | Banned claims and what may be said about availability. |

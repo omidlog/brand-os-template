@@ -6,6 +6,16 @@
 
 
 
+## Unreleased — channel playbook, batch planning and deliverable specs (Content Bridge)
+
+### Added
+
+- **Per-channel strategy:** a content strategy channel may now carry `objective`, `audience`, `mix` (shares summing to 100), `kpis` (metric, owner target or `null`, per post/week/month), `posting_windows` and owner-written `rules`. All optional; a field that is not set is absent, so every revision approved before this hashes exactly as before.
+- **Channel playbook** (`npm run brand:content -- playbook [--channel instagram] [--lang fa|tr]`): general practice for Instagram, LinkedIn, X, TikTok, YouTube, Threads, Telegram, Facebook, Pinterest, newsletter and blog in en/fa/tr — suggested role, formats, cadence range, objective, mix, KPIs to watch (no targets), posting-window note and craft notes. Labelled `general_practice`, not measured for the brand, `authorizes: []`.
+- **`brand:content strategy --playbook`** fills role, formats, cadence, objective, mix and KPI names from the playbook (explicit `--formats` / `--cadence` win). Notes and one assumption line in the proposal say which values came from the playbook; the owner reviews and approves with `brand:strategy` as before.
+- **Batch planning** (`npm run brand:content -- batch --channel instagram --format reel --count 10`, or several `--item instagram:reel:10 --item linkedin:post:8`): N slots per channel and format, dated by the approved cadence from `--from` (default next Monday), grouped into calendar weeks with the planner's rotation and pins. `--store` refuses, writing nothing, when a target week already has a draft or approved revision. At most 50 per item.
+- **Deliverable specs in content briefs** (`deliverable`): what to fill for the slot's format — a camera/voice script for reels, short videos, videos and lives (hook 0–3 s, setup, 3–5 beats with on-screen text and b-roll, payoff, CTA, captions on, duration and a read-aloud word budget per language), carousel slide roles, post headline and caption structure with per-channel hashtag guidance, story frames with one interaction, thread, article and email structure. General practice; it writes no copy. `channel_plan` in a brief also carries the optional channel fields when set.
+
 ## Unreleased — more of a personal brand, and four shared brand questions
 
 ### Added

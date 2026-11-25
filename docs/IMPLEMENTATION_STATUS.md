@@ -291,6 +291,19 @@ Branch `feat/content-bridge-slice-d`. Guides: `docs-internal/CONTENT_BRIDGE.md`,
 | CLI journey demo (real output) | Done | Owner journey, mock agent via `brand:query`, report over MCP, `reports`, revoke. `tests/content-journey.test.ts` runs it and checks the documents name only real commands, tools and schemas. |
 | Hosted API, per-channel tokens, Studio view of reports | Not started | Not in the brief. |
 
+## Channel playbook, batch planning and deliverable specs (Content Bridge)
+
+Branch `feat/content-channel-playbook`. Guide: `docs-internal/CONTENT_BRIDGE.md` ("Channel playbook, batch and deliverables").
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Optional channel fields (`objective`, `audience`, `mix`, `kpis`, `posting_windows`, `rules`) | Done | Strict parse; unset fields absent, so old revisions hash the same (fixture digest). `tests/content-playbook.test.ts`. |
+| Channel playbook (en/fa/tr) and `brand:content playbook` | Done | 11 channels; `general_practice`, KPI names without targets, `authorizes: []`. Website, podcast and other have no entry. |
+| `brand:content strategy --playbook` | Done | Explicit `--formats` / `--cadence` win; notes and an assumption line name the playbook values. |
+| `brand:content batch` | Done | `--channel/--format/--count` or repeated `--item`; cadence-dated, grouped into weeks via `planWeek`; `--store` refuses into stored weeks. |
+| `deliverable` in content briefs | Done | Script, carousel, post, story, thread, article, email. No JSON schema file exists for briefs under `schemas/`, so none was added. |
+| Measured results feeding the playbook | Not started | The playbook is static general practice; no metrics are collected. |
+
 ## Assurance registry and assessable controls (Trust v2 PR-A)
 
 Branch `feat/trust-v2-pr-a`. Guide: `docs-internal/ASSURANCE.md`. A pure library; no command, route, store, approval or agent scope.
