@@ -24,7 +24,7 @@ npm run brand:pack -- --profile content-read --lang fa --out ~/Desktop/brand-pac
 
 - It writes `00-README.md`, `01-instructions.md` (paste it into the project instructions), `02-brand.md` (approved
   facts by section: identity, voice, audience, positioning, offers, with fact ids), `03-content-strategy.md`,
-  `04-calendar.md` (approved current weeks and one brief per slot) and `05-creative-preferences.md`. Strategy,
+  `04-calendar.md` (approved current weeks and one brief per slot) `05-creative-preferences.md` and `06-social-style-kit.md` (approved styles only). Strategy,
   calendar and preferences are filled for `content-read` only; other profiles get facts.
 - It is built from the readers a token of that profile uses (`brand_retrieve`, the served content strategy view,
   `content_calendar`, pinned `content_brief`), with an in-process context of that profile logged as

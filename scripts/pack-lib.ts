@@ -26,6 +26,7 @@ import {
   type ContentStrategyView,
 } from '@brand-os/brand-core/content-bridge'
 import { preferenceView, scanPreferences, scopeLabel } from '@brand-os/brand-core/creative'
+import { SOCIAL_KIT_PROFILES, socialKitView, type SocialKitView } from '@brand-os/brand-core/social-kit'
 
 /**
  * brand:pack: a read-only brand pack for chat products that cannot run the local MCP server (ChatGPT, Grok,
@@ -41,7 +42,7 @@ import { preferenceView, scanPreferences, scopeLabel } from '@brand-os/brand-cor
 
 export const PACK_PROFILES = ['content-read', 'marketing', 'design', 'internal-read'] as const satisfies readonly AgentProfile[]
 export type PackProfile = (typeof PACK_PROFILES)[number]
-export const PACK_FILES = ['00-README.md', '01-instructions.md', '02-brand.md', '03-content-strategy.md', '04-calendar.md', '05-creative-preferences.md'] as const
+export const PACK_FILES = ['00-README.md', '01-instructions.md', '02-brand.md', '03-content-strategy.md', '04-calendar.md', '05-creative-preferences.md', '06-social-style-kit.md'] as const
 export const PACK_PRINCIPAL = 'owner-export:pack'
 
 export class PackError extends Error {
@@ -198,6 +199,8 @@ function briefLines(brief: ContentBriefDocument): string[] {
   if (brief.must_include.length) lines.push(`- Must include: ${brief.must_include.map((item) => `${item.field} (\`${item.fact_id}\`)`).join(', ')}`)
   if (brief.must_avoid.length) lines.push(`- Must avoid: ${brief.must_avoid.map((item) => `${oneLine(item.text)} [${item.kind}]`).join('; ')}`)
   if (brief.creative.preferences.length) lines.push(`- Owner-approved preferences: ${brief.creative.preferences.map((p) => `${oneLine(p.statement)} (${p.preference_id}, ${p.scope})`).join('; ')}`)
+  const assigned = Object.entries(brief.styles?.assigned ?? {}).filter(([, id]) => id)
+  if (assigned.length) lines.push(`- Style: ${assigned.map(([surface, id]) => `${surface} → \`${id}\``).join(', ')} (see 06-social-style-kit.md)`)
   if (brief.learnings.length) {
     lines.push('- Recent results, same channel and format (owner-reported, not verified; never quote them as claims):')
     for (const item of brief.learnings) lines.push(`  - ${item.week_id} ${item.slot_id} (${item.date}, measured ${item.measured_at}): ${Object.entries(item.metrics).map(([key, value]) => `${key} ${value}`).join(', ')}`)
@@ -246,9 +249,42 @@ function preferencesFor(ws: KnowledgeWorkspace, profile: PackProfile): PackPrefe
   return out.sort((a, b) => a.scope.localeCompare(b.scope) || a.preference_id.localeCompare(b.preference_id))
 }
 
-/** TODO(social-kit): when packages/brand-core/src/social-kit exports an approved social style kit reader, render it here. */
-function socialKitSection(): string[] {
-  return ['## Social style kit', '', 'Not available in this engine.', '']
+const pct = (n: number): string => `${Math.round(n * 10) / 10}%`
+
+/** The owner-approved social style kit (06): only approved styles, as the social_style_kit tool serves them. */
+function socialKitMarkdown(view: SocialKitView | null): string {
+  const lines = ['# Social style kit (owner-approved styles)', '']
+  if (view === null) {
+    lines.push('Not included for this profile.', '')
+    return lines.join('\n')
+  }
+  lines.push(
+    'Each format has sibling styles that share the family rules below and differ in layout. Use the style a brief assigns (`styles.assigned`); otherwise rotate through the approved styles so consecutive pieces never repeat a layout. Never invent a new style: describe a proposal to the owner instead. Zones are percentages of the canvas; colours and fonts are design-token names.',
+    '',
+  )
+  if (!view.surfaces.length) lines.push(view.kit_state === 'ok' ? 'No style is approved yet.' : 'No style kit in this brand yet (`npm run brand:social -- kit init`).', '')
+  if (view.family) lines.push('## Family rules (constant across every style)', '', '```yaml', JSON.stringify(view.family, null, 2), '```', '')
+  for (const surface of view.surfaces) {
+    lines.push(`## ${surface.label} (\`${surface.surface}\`)`, '')
+    lines.push(`- Canvases: ${surface.canvases.map((c) => `${c.width}×${c.height} (${c.id})`).join(', ')}`)
+    if (surface.safe_zones.length) lines.push(`- Safe zones: ${surface.safe_zones.map((z) => JSON.stringify(z)).join('; ')}`)
+    lines.push('')
+    for (const style of surface.styles) {
+      lines.push(`### ${oneLine(style.name)} (\`${style.style_id}\`)`, '', `- Use when: ${oneLine(style.use_when)}`, `- Differs from its siblings: ${oneLine(style.variation)}`)
+      if (style.content_types.length) lines.push(`- Content types: ${style.content_types.join(', ')}`)
+      lines.push('- Layers, bottom to top:')
+      for (const layer of style.layers) {
+        const limits = [layer.max_words ? `≤${layer.max_words} words` : '', layer.max_lines ? `≤${layer.max_lines} lines` : ''].filter(Boolean).join(', ')
+        lines.push(`  - ${layer.role}${layer.optional ? ' (optional)' : ''}: x ${pct(layer.zone.x)}, y ${pct(layer.zone.y)}, w ${pct(layer.zone.w)}, h ${pct(layer.zone.h)}${layer.color ? `; colour \`${layer.color}\`` : ''}${layer.font ? `; font \`${layer.font}\`` : ''}${limits ? `; ${limits}` : ''}${layer.rules.length ? `; ${layer.rules.map(oneLine).join(' / ')}` : ''}`)
+      }
+      if (style.do.length) lines.push(`- Do: ${style.do.map(oneLine).join('; ')}`)
+      if (style.dont.length) lines.push(`- Don't: ${style.dont.map(oneLine).join('; ')}`)
+      lines.push(`- Reference assets: ${style.reference_assets === 'missing' ? 'none yet' : style.reference_assets.join(', ')}`, '')
+    }
+  }
+  const held = view.withheld.draft + view.withheld.rejected + view.withheld.invalid_approval
+  if (held) lines.push(`${held} style(s) are not approved and are not included.`, '')
+  return lines.join('\n')
 }
 
 function preferencesMarkdown(prefs: PackPreference[] | null): string {
@@ -260,7 +296,6 @@ function preferencesMarkdown(prefs: PackPreference[] | null): string {
     for (const pref of prefs) lines.push(`- ${oneLine(pref.statement)} (${pref.scope}; ${pref.preference_id})`)
     lines.push('')
   }
-  lines.push(...socialKitSection())
   return lines.join('\n')
 }
 
@@ -292,6 +327,7 @@ function readme(brandName: string, profile: PackProfile, lang: ContentLang, now:
     '| `03-content-strategy.md` | Approved content strategy and channel plans |',
     '| `04-calendar.md` | Approved current calendar weeks with per-slot briefs |',
     '| `05-creative-preferences.md` | Owner-approved creative preferences |',
+    '| `06-social-style-kit.md` | Owner-approved social style kit: sibling styles per format with their layers |',
     '',
     ...(LOCALIZED_README[lang] ? [LOCALIZED_README[lang], ''] : []),
   ].join('\n')
@@ -439,6 +475,7 @@ export function buildPack(root: string, options: PackOptions): { profile: PackPr
     { name: '03-content-strategy.md', text: strategyMarkdown(views, strategyWithheld) },
     { name: '04-calendar.md', text: calendarMarkdown(calendar, briefs) },
     { name: '05-creative-preferences.md', text: preferencesMarkdown(prefs) },
+    { name: '06-social-style-kit.md', text: socialKitMarkdown((SOCIAL_KIT_PROFILES as readonly string[]).includes(profile) ? socialKitView(root, brandId, { lang }).view : null) },
   ]
   const problems = scanPack(files, forbiddenStrings(engine, root, brandId))
   if (problems.length) throw new PackError('scan_failed', `The pack was not written: ${[...new Set(problems)].join('; ')}.`)

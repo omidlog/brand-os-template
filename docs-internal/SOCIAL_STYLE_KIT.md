@@ -128,6 +128,12 @@ MCP `social_style_kit {surface?, lang?}` or `npm run brand:query -- --tool socia
 - `stylesForFormat(root, format, channel?, brandSlug?)`: approved, verified style ids per surface (owner-local read).
   Serve its result to an agent only through a gate that already authorized the caller (the content brief).
 
+Wired: every `content_brief` carries `styles {state, surfaces, assigned, approved}`. `assigned` is
+`rotateStyles(approved, slotStyleIndex(week slots, slot))`, where the index is the week number times the number of
+slots of that channel and format in the week plus the slot's position, so ten posts over several weeks walk through
+the approved siblings in order and week N+1 continues week N (`tests/content-style-rotation.test.ts`). `brand:pack`
+writes the approved kit to `06-social-style-kit.md` and names each brief's assigned style.
+
 ## Known limitations
 
 - The safe zones are fixed general-practice values; platforms change their UI.

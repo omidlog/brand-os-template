@@ -73,7 +73,7 @@ test('content-read pack: approved facts, strategy, calendar briefs and preferenc
   assert.ok(!calendar.includes('wk-2026-11-30'), 'the draft week is not listed')
   assert.match(calendar, /Keep reel captions under 120 characters/)
   assert.match(read('05-creative-preferences.md'), /Keep reel captions under 120 characters \(series instagram \(reel\)/)
-  assert.match(read('05-creative-preferences.md'), /## Social style kit\n\nNot available in this engine\./)
+  assert.match(read('06-social-style-kit.md'), /No style kit in this brand yet/)
   assert.ok(result.counts.slots >= 1 && result.counts.preferences === 1)
 
   // Same inputs, same bytes.
