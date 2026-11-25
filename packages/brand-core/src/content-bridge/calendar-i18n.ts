@@ -199,6 +199,11 @@ export const CAL_TEXT: Record<string, T> = {
     fa: '{list} نوشته شد. برای نمایش این هفته در Studio آن را کامیت و ادغام کنید. Studio آن را مطابق همین تأیید نشان می‌دهد؛ brand:content calendar همچنان منبع فعلی است.',
     tr: '{list} yazıldı. Bu haftayı Studio’da göstermek için commit edip birleştirin. Studio onu bu onay itibarıyla gösterir; güncel doğru brand:content calendar olarak kalır.',
   },
+  shared_strategy: {
+    en: 'Wrote {list}. Commit and merge it to show this approved content strategy revision in Studio. It authorizes nothing; brand:content show stays the current truth.',
+    fa: '{list} نوشته شد. برای نمایش این نسخهٔ تأییدشدهٔ راهبرد محتوا در Studio آن را کامیت و ادغام کنید. این فایل مجوز هیچ کاری نیست؛ brand:content show همچنان منبع فعلی است.',
+    tr: '{list} yazıldı. Bu onaylı içerik stratejisi sürümünü Studio’da göstermek için commit edip birleştirin. Hiçbir şeye yetki vermez; güncel doğru brand:content show olarak kalır.',
+  },
   shared_preview: { en: 'Preview only (--dry-run). Nothing was written.', fa: 'فقط پیش‌نمایش (--dry-run). چیزی نوشته نشد.', tr: 'Yalnızca önizleme (--dry-run). Hiçbir şey yazılmadı.' },
 }
 

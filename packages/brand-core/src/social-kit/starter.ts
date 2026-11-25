@@ -253,7 +253,7 @@ export const STARTER_ARCHETYPES: Record<SocialSurface, Archetype[]> = {
       types: ['educate'],
       name: t('Quick tip', 'نکتهٔ سریع', 'Hızlı ipucu'),
       use: t('One practical tip people can use today.', 'یک نکتهٔ کاربردی که همین امروز بشود به کار برد.', 'Bugün uygulanabilecek tek bir pratik ipucu.'),
-      variation: t('Light canvas, a tip number, headline and short body; room for the mascot.', 'زمینهٔ روشن، شمارهٔ نکته، تیتر و متن کوتاه؛ با جا برای کاراکتر برند.', 'Açık zemin, ipucu numarası, başlık ve kısa metin; maskot için yer.'),
+      variation: t('Light canvas, a tip number, headline and short body; room for the mascot when the brand has one.', 'زمینهٔ روشن، شمارهٔ نکته، تیتر و متن کوتاه؛ اگر برند کاراکتر دارد، با جا برای آن.', 'Açık zemin, ipucu numarası, başlık ve kısa metin; markanın maskotu varsa onun için yer.'),
       layers: [
         L('background', 'full', 'canvas'),
         L('data', r(8, 16, 30, 10), 'canvas', { color: P.primary, words: 2, lines: 1 }),
@@ -405,6 +405,21 @@ export const STARTER_ARCHETYPES: Record<SocialSurface, Archetype[]> = {
         L('brand_mark', r(8, 70, 14, 4), 'secondary'),
       ],
       do: ['mascot_approved_pose_only', 'readable_at_thumb_size'],
+      dont: ['no_more_than_three_colors'],
+    },
+    {
+      slug: 'question',
+      types: ['educate', 'community'],
+      name: t('Question cover', 'کاور سؤالی', 'Soru kapağı'),
+      use: t('Reels that answer one question the audience asks.', 'ریلزهایی که به یک سؤالِ مخاطب جواب می‌دهند.', 'Kitlenin sorduğu tek bir soruyu yanıtlayan reels.'),
+      variation: t('Dark canvas, the question as the headline and a short answer teaser.', 'زمینهٔ تیره، خودِ سؤال به‌عنوان تیتر و یک اشارهٔ کوتاه به جواب.', 'Koyu zemin, başlık olarak soru ve kısa bir cevap ipucu.'),
+      layers: [
+        L('background', 'full', 'dark'),
+        L('headline', r(8, 30, 84, 28), 'dark', { words: 8, lines: 3 }),
+        L('subhead', r(8, 60, 84, 8), 'dark', { color: P.primary, words: 5, lines: 1 }),
+        L('brand_mark', r(8, 72, 14, 4), 'dark'),
+      ],
+      do: ['one_message', 'readable_at_thumb_size'],
       dont: ['no_more_than_three_colors'],
     },
   ],
@@ -608,6 +623,21 @@ export interface StarterOptions {
   surfaces?: readonly SocialSurface[]
   stylesPerSurface?: number
   personal?: boolean
+  /** False when the brand has no mascot: archetypes that need one are skipped and optional mascot layers dropped. */
+  mascot?: boolean
+}
+
+/** Archetypes this brand can use: without a mascot, none that needs one, and no optional mascot layer. */
+function eligible(archetypes: readonly Archetype[], mascot: boolean): Archetype[] {
+  if (mascot) return [...archetypes]
+  return archetypes
+    .filter((archetype) => !archetype.layers.some((layer) => layer.role === 'mascot' && !layer.optional))
+    .map((archetype) => ({
+      ...archetype,
+      layers: archetype.layers.filter((layer) => layer.role !== 'mascot'),
+      do: archetype.do.filter((rule) => rule !== 'mascot_approved_pose_only'),
+      dont: archetype.dont.filter((rule) => rule !== 'mascot_approved_pose_only'),
+    }))
 }
 
 export function starterFamily(personal = false): SocialFamily {
@@ -650,6 +680,6 @@ export function buildStarterKit(options: StarterOptions): SocialKit {
     kind: 'social_style_kit',
     brand_slug: options.brandSlug,
     family: starterFamily(options.personal === true),
-    styles: SURFACES.filter((surface) => surfaces.includes(surface)).flatMap((surface) => STARTER_ARCHETYPES[surface].slice(0, per).map((archetype) => starterStyle(surface, archetype))),
+    styles: SURFACES.filter((surface) => surfaces.includes(surface)).flatMap((surface) => eligible(STARTER_ARCHETYPES[surface], options.mascot !== false).slice(0, per).map((archetype) => starterStyle(surface, archetype))),
   }
 }

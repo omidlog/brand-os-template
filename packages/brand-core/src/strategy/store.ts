@@ -365,12 +365,20 @@ export function readApprovalSecret(ws: KnowledgeWorkspace): string | null {
 
 /** True when the approval on this entry was made by the approval flow for exactly these bytes. */
 export function approvalVerifies(ws: KnowledgeWorkspace, record: StrategyRecord, entry: RevisionEntry): boolean {
+  const secret = readApprovalSecret(ws)
+  return secret !== null && strategySealVerifies(record, entry, secret)
+}
+
+/**
+ * The seal check behind `approvalVerifies`, for a given secret. Secret rotation (`brand:doctor --rotate-approval-secret`)
+ * uses it to find the approvals made under the old secret before it re-seals exactly those.
+ */
+export function strategySealVerifies(record: StrategyRecord, entry: RevisionEntry, secret: string): boolean {
   const approval = entry.approval
   if (!approval || typeof approval.digest !== 'string' || typeof approval.seal !== 'string') return false
   const digest = approvalDigest({ strategy_id: record.strategy_id, brand_slug: record.brand_slug, revision: entry.revision, content_sha256: entry.content_sha256, event_id: approval.event_id, approved_at: approval.approved_at })
   if (digest !== approval.digest) return false
-  const secret = readApprovalSecret(ws)
-  return secret !== null && approvalSeal(secret, digest) === approval.seal
+  return approvalSeal(secret, digest) === approval.seal
 }
 
 export interface Evaluation {

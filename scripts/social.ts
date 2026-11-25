@@ -10,6 +10,8 @@ import {
   previewFiles,
   readKit,
   rejectKit,
+  shareKitApprovals,
+  SHARED_SOCIAL_APPROVALS_FILE,
   repoTokenLookup,
   reviewKit,
   ruleText,
@@ -49,7 +51,12 @@ const HELP = `brand:social kit <command> [options]   (owner only; all take --jso
   kit reject --style <id> | --surface <s>
       Decline styles. They stay in the file and are never served.
   kit preview [--surface <s>] --out <dir>
-      Deterministic SVG wireframes per style and one index.html contact sheet per surface.
+      Deterministic SVG wireframes per style and one index.html contact sheet per surface. Fonts show the
+      brand family for the --lang (display-fa for fa when it exists), labelled draft or template EXAMPLE
+      until the font token is approved.
+  kit share [--dry-run]
+      Write ${SHARED_SOCIAL_APPROVALS_FILE}: which styles are approved here, with their digest and
+      approval time (no seals or secrets), so Studio can show them. You commit and merge it.
 
 Surfaces: ${SURFACES.join(', ')}.
 Nothing here publishes, schedules or approves a post. Approval of a style is design guidance only.`
@@ -62,6 +69,7 @@ const OPTIONS = {
   'expect-sha': { type: 'string' },
   out: { type: 'string' },
   force: { type: 'boolean', default: false },
+  'dry-run': { type: 'boolean', default: false },
   json: { type: 'boolean', default: false },
   lang: { type: 'string' },
 } as const
@@ -146,7 +154,7 @@ async function main(): Promise<void> {
   switch (command) {
     case 'init': {
       const styles = values.styles === undefined ? undefined : Number(values.styles)
-      const result = initKit(ws, { surfaces: surfacesOf(values.surfaces), styles, force: values.force, personal: engine.config().modules.personal?.enabled === true })
+      const result = initKit(ws, { surfaces: surfacesOf(values.surfaces), styles, force: values.force, personal: engine.config().modules.personal?.enabled === true, mascot: engine.config().modules.mascot?.enabled === true })
       print({ ok: true, ...result }, () => `${t.labels.init_done}\n${t.labels.wrote}: ${result.path} (${result.written.length} drafts${result.kept.length ? `, kept ${result.kept.join(', ')}` : ''})`)
       return
     }
@@ -196,6 +204,13 @@ async function main(): Promise<void> {
         fs.writeFileSync(target, file.contents)
       }
       print({ ok: true, out, files: files.map((file) => file.path) }, () => `${t.labels.preview_done}\n${files.filter((file) => file.path.endsWith('index.html')).map((file) => `  ${path.join(out, file.path)}`).join('\n')}`)
+      return
+    }
+    case 'share': {
+      const result = shareKitApprovals(ws, { dryRun: values['dry-run'] })
+      print({ ok: true, ...result, authorizes: [] }, () =>
+        result.written ? `${t.labels.shared}: ${result.path} (${result.summary.styles.length})` : `${t.labels.share_preview}.\n${JSON.stringify(result.summary, null, 2)}`,
+      )
       return
     }
     default:

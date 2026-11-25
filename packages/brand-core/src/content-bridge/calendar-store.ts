@@ -273,12 +273,17 @@ export function proposeWeek(ws: KnowledgeWorkspace, input: { week: unknown; lang
 // ---- evaluation ----------------------------------------------------------------------------------------
 
 function approvalVerifies(ws: KnowledgeWorkspace, record: ContentWeekRecord, entry: WeekEntry): boolean {
+  const secret = readApprovalSecret(ws)
+  return secret !== null && weekSealVerifies(record, entry, secret)
+}
+
+/** The seal check behind a week's approval, for a given secret (also used by approval-secret rotation). */
+export function weekSealVerifies(record: ContentWeekRecord, entry: WeekEntry, secret: string): boolean {
   const approval = entry.approval
   if (!approval || typeof approval.digest !== 'string' || typeof approval.seal !== 'string') return false
   const digest = weekApprovalDigest({ week_id: record.week_id, brand_slug: record.brand_slug, revision: entry.revision, content_sha256: entry.content_sha256, event_id: approval.event_id, approved_at: approval.approved_at })
   if (digest !== approval.digest) return false
-  const secret = readApprovalSecret(ws)
-  return secret !== null && approvalSeal(secret, digest, WEEK_APPROVAL_DOMAIN) === approval.seal
+  return approvalSeal(secret, digest, WEEK_APPROVAL_DOMAIN) === approval.seal
 }
 
 export interface WeekEvaluation {

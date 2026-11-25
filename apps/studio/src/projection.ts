@@ -15,7 +15,8 @@ import {
   readMascotStages,
   readMascotStates,
 } from '@brand-os/brand-core'
-import { buildStudioCalendar, type StudioCalendarProjection } from '@brand-os/brand-core/content-bridge'
+import { buildStudioCalendar, buildStudioStrategy, type StudioCalendarProjection, type StudioStrategyProjection } from '@brand-os/brand-core/content-bridge'
+import { buildStudioSocialKit, type StudioSocialKitProjection } from '@brand-os/brand-core/social-kit'
 import { coachBeforeApproval, coachNoteText, type CoachCriterion, type CoachStatus } from '@brand-os/brand-core/coach'
 import { buildStudioCreative, type StudioCreativeProjection } from '@brand-os/brand-core/creative'
 import { buildBusinessModelCanvas, buildVisualIdentity, canvasApplies, imageSize, LOGO_ICON_TAGS, logoChapterStatus, type LogoMasterCandidate, type VisualDocument } from '@brand-os/brand-core/visual'
@@ -152,6 +153,17 @@ export interface StudioProjection {
    * Null when they could not be read. Absent in caches written before this field existed; sync rebuilds those.
    */
   calendar?: StudioCalendarProjection | null
+  /**
+   * Approved content strategy revisions the owner shared (`brand/content-strategy/shared/<id>.json`) on this commit.
+   * Null when they could not be read. Absent in caches written before this field existed; sync rebuilds those.
+   */
+  strategy?: StudioStrategyProjection | null
+  /**
+   * The committed social style kit (`brand/social/style-kit.yaml`) with the approval summary the owner shared
+   * (`brand/social/shared/approvals.json`). Null when the commit has neither, or they could not be read. A style is
+   * approved here only when its digest matches the shared summary. Absent in older caches; sync rebuilds those.
+   */
+  socialKit?: StudioSocialKitProjection | null
   /**
    * Strategic Coach notes on the merged drafts awaiting approval (docs-internal/COACH_UX_DECISION.md, moment
    * `studio_overview`). Advisory, `authorizes: []`, question ids and closed-vocabulary text only — never an
@@ -331,6 +343,28 @@ function projectCalendar(root: string, slug: string): StudioCalendarProjection |
     const calendar = buildStudioCalendar(root, slug)
     assertNoSecrets(calendar)
     return calendar
+  } catch {
+    return null
+  }
+}
+
+/** Shared content strategy revisions; a malformed folder must not take down the brand view either. */
+function projectStrategy(root: string, slug: string): StudioStrategyProjection | null {
+  try {
+    const strategy = buildStudioStrategy(root, slug)
+    assertNoSecrets(strategy)
+    return strategy
+  } catch {
+    return null
+  }
+}
+
+/** The social style kit and its shared approval summary; null when there is none or it cannot be read safely. */
+function projectSocialKit(root: string, slug: string): StudioSocialKitProjection | null {
+  try {
+    const kit = buildStudioSocialKit(root, slug)
+    assertNoSecrets(kit)
+    return kit
   } catch {
     return null
   }
@@ -661,6 +695,8 @@ export function buildProjection(root: string, expectedSlug: string): { projectio
     knowledge,
     creative: projectCreative(root, engine.config().brand.slug),
     calendar: projectCalendar(root, engine.config().brand.slug),
+    strategy: projectStrategy(root, engine.config().brand.slug),
+    socialKit: projectSocialKit(root, engine.config().brand.slug),
     template: templateRecord(root),
     engine: engineRecord(root),
     visual,

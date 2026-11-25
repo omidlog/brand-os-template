@@ -12,6 +12,17 @@ import { readKeychainProof, resolveApprovalProof } from '@brand-os/brand-core'
  * piped-stdin step and keep every other one.
  */
 export async function readOwnerProof(options: { slug?: string; prompt?: string; stdin?: boolean } = {}): Promise<string | undefined> {
+  // A brand cloned from GitHub (or made before this check) has no approval secret yet: say how to make one instead of
+  // only failing later with "proof rejected".
+  if (!fs.existsSync(path.join(process.cwd(), 'brand', '.private', 'approval-secret')) && fs.existsSync(path.join(process.cwd(), 'brand', 'brand.config.yaml'))) {
+    console.error(
+      'This checkout has no approval secret yet (brand/.private/approval-secret), so nothing can be approved here.\n' +
+        '  First time on this computer:  npm run brand:doctor -- --create-approval-secret\n' +
+        '  Then (macOS) keep it in the Keychain so approvals stop asking:  npm run brand:doctor -- --store-proof-keychain\n' +
+        '  Moving from another computer? Copy brand/.private/approval-secret from there instead; a new secret does not verify approvals sealed with the old one.',
+    )
+    return undefined
+  }
   const { proof } = await resolveApprovalProof({
     isTTY: Boolean(input.isTTY),
     readStdin: options.stdin === false ? undefined : readFirstStdinLine,

@@ -89,6 +89,14 @@ test('brand:social: init, show, review, approve with the env proof only, preview
   assert.equal(fs.readFileSync(path.join(again, 'reel/reel.talking-head-captions.svg'), 'utf8'), svg, 'deterministic')
   assert.match(svg, /data-safe-zone="right_actions"/)
 
+  // Share the approval state for Studio: a public summary, no seals; refused under an agent token.
+  assert.equal(social(root, ['kit', 'share', '--json'], { BRAND_OS_AGENT_TOKEN: 'agt_fake.x' }).json?.ok, false)
+  const kitShare = social(root, ['kit', 'share', '--json'])
+  assert.equal(kitShare.status, 0, kitShare.stderr)
+  const summary = fs.readFileSync(path.join(root, 'brand/social/shared/approvals.json'), 'utf8')
+  assert.match(summary, /"style_id": "post.photo-headline"/)
+  assert.doesNotMatch(summary, /seal|event_id/)
+
   // Agents: brand:query and the stdio MCP server serve approved styles only.
   const design = issueAgentToken(root, { brandId: 'kit-cli', profile: 'design', label: 'designer' }).token
   const finance = issueAgentToken(root, { brandId: 'kit-cli', profile: 'finance', label: 'finance' }).token

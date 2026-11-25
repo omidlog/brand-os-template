@@ -189,6 +189,28 @@ export function studioCompetitivePathAllowed(relative: string): boolean {
   return SHARED_LANDSCAPE.test(relative)
 }
 
+/**
+ * `brand/content-strategy/` may only contribute the approved strategy revisions the owner shared with
+ * `brand:content share-strategy`: `brand/content-strategy/shared/<strategy-id>.json`, one level deep. Strategy records,
+ * drafts and approvals live under `brand/.private/strategy` (excluded above); anything else here stays out.
+ */
+const SHARED_STRATEGY = /^brand\/content-strategy\/shared\/[a-z0-9][a-z0-9-]{2,47}\.json$/
+
+export function studioStrategyPathAllowed(relative: string): boolean {
+  return SHARED_STRATEGY.test(relative)
+}
+
+/**
+ * `brand/social/` may only contribute the committed style kit (`brand/social/style-kit.yaml`) and the public approval
+ * summary the owner wrote with `brand:social kit share` (`brand/social/shared/approvals.json`). The approval seals stay
+ * in `brand/.private/social` (excluded above); anything else committed under `brand/social/` stays out.
+ */
+const SOCIAL_FILES = /^brand\/social\/(?:style-kit\.yaml|shared\/approvals\.json)$/
+
+export function studioSocialPathAllowed(relative: string): boolean {
+  return SOCIAL_FILES.test(relative)
+}
+
 /** The one file outside brand/ Studio reads: the engine version of a data-only brand (a short text, never code). */
 export const ENGINE_VERSION_PATH = '.brand-os/engine/VERSION'
 
@@ -197,6 +219,8 @@ export function studioPathAllowed(relative: string): boolean {
   if (!relative.startsWith('brand/')) return false
   if (relative.toLowerCase().startsWith('brand/competitive/') || relative.toLowerCase() === 'brand/competitive') return studioCompetitivePathAllowed(relative)
   if (relative.toLowerCase().startsWith('brand/content-calendar/') || relative.toLowerCase() === 'brand/content-calendar') return studioCalendarPathAllowed(relative)
+  if (relative.toLowerCase().startsWith('brand/content-strategy/') || relative.toLowerCase() === 'brand/content-strategy') return studioStrategyPathAllowed(relative)
+  if (relative.toLowerCase().startsWith('brand/social/') || relative.toLowerCase() === 'brand/social') return studioSocialPathAllowed(relative)
   if (relative.toLowerCase().startsWith('brand/creative/') || relative.toLowerCase() === 'brand/creative') return studioCreativePathAllowed(relative)
   // Checked first: nothing below may re-admit a knowledge path.
   if (relative.toLowerCase().startsWith('brand/knowledge/') || relative.toLowerCase() === 'brand/knowledge') return studioKnowledgePathAllowed(relative)

@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parse } from 'yaml'
 import { dataKey } from '../private-store.js'
+import { hardLinkAdvice } from '../cloud-sync.js'
 import { writeAtomic } from '../fsutil.js'
 import { isNoteId, KNOWLEDGE_LIMITS, KnowledgeError, type NoteScope } from './model.js'
 
@@ -132,7 +133,7 @@ export function safeRead(file: string, maxBytes: number = KNOWLEDGE_LIMITS.maxNo
   try {
     const stat = fs.fstatSync(fd)
     if (!stat.isFile()) throw new KnowledgeError('unsafe_path', `${path.basename(file)} is not a regular file.`)
-    if (stat.nlink > 1) throw new KnowledgeError('unsafe_path', `${path.basename(file)} has more than one hard link. Refusing to read it.`)
+    if (stat.nlink > 1) throw new KnowledgeError('unsafe_path', `${path.basename(file)} has more than one hard link. Refusing to read it. ${hardLinkAdvice(file)}`)
     if (stat.size > maxBytes) throw new KnowledgeError('too_large', `${path.basename(file)} is larger than ${maxBytes} bytes.`)
     return fs.readFileSync(fd)
   } finally {

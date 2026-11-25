@@ -53,6 +53,8 @@ export interface BrandOsExtension {
   generated?: boolean
   source_fact?: string
   source_version?: number
+  /** A stable font id (type.fontFamily.display …) generated as a copy of this per-role token. */
+  alias_of?: string
 }
 
 export interface TokenNode {

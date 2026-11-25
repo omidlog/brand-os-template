@@ -29,6 +29,8 @@ export type BrandSection =
   | 'knowledge'
   | 'creative'
   | 'calendar'
+  | 'content-strategy'
+  | 'social-kit'
   | 'history'
   | 'handoff'
   | 'visual'
@@ -84,7 +86,9 @@ const SECTIONS: Array<{ id: BrandSection; group: NavGroup; key: MessageKey; icon
   { id: 'personal', group: 'studio', key: 'nav.personal', icon: 'user', path: '/brand/personal' },
   { id: 'marketing', group: 'market', key: 'nav.marketingPlan', icon: 'globe', path: '/market/marketing-plan' },
   { id: 'competitors', group: 'market', key: 'nav.competitors', icon: 'shield', path: '/market/competitors' },
+  { id: 'content-strategy', group: 'market', key: 'nav.contentStrategy', icon: 'layers', path: '/market/content-strategy' },
   { id: 'calendar', group: 'market', key: 'nav.calendar', icon: 'clock', path: '/market/content-calendar' },
+  { id: 'social-kit', group: 'market', key: 'nav.socialKit', icon: 'image', path: '/market/social-style-kit' },
   { id: 'knowledge', group: 'market', key: 'nav.knowledge', icon: 'idea', path: '/market/knowledge' },
   { id: 'publishing', group: 'governance', key: 'nav.publishing', icon: 'book', path: '/governance/documents' },
   { id: 'history', group: 'governance', key: 'nav.history', icon: 'history', path: '/governance/history' },
@@ -144,6 +148,10 @@ export function brandSections(view: BrandView): typeof SECTIONS {
     if (section.id === 'creative') return Boolean(projection?.creative && (projection.creative.total > 0 || projection.creative.withheld.length > 0))
     // Listed once the merged branch has shared calendar weeks (or files Studio withheld).
     if (section.id === 'calendar') return Boolean(projection?.calendar && (projection.calendar.total > 0 || projection.calendar.withheld.length > 0))
+    // Listed once the merged branch has a shared content strategy revision (or files Studio withheld).
+    if (section.id === 'content-strategy') return Boolean(projection?.strategy && (projection.strategy.total > 0 || projection.strategy.withheld.length > 0))
+    // Listed once the merged branch has a social style kit or a shared approval summary.
+    if (section.id === 'social-kit') return Boolean(projection?.socialKit)
     // Listed when the merged commit has a canvas that applies to this profile (a business, or a founder/consultant facet).
     if (section.id === 'visual') return projection?.visual?.bmc.applies !== false
     // V3.2: listed with the canvas (same profile rule) once the merged commit has the documents.

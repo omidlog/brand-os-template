@@ -4,6 +4,7 @@ import { approvalProofMatches } from '../private-store.js'
 import { dirUsable, withLock, type KnowledgeWorkspace } from '../knowledge/workspace.js'
 import {
   ASPECT_SIDES,
+  aspectProposalDigest,
   CREATIVE_LIMITS,
   CREATIVE_SCHEMA_VERSION,
   CreativeError,
@@ -252,7 +253,7 @@ export function parseAspectChoices(value: string): Array<{ aspect: string; side:
  */
 export function approveAspects(
   ws: KnowledgeWorkspace,
-  input: { proposal_id: string; proof: string | undefined; only?: Array<{ aspect: string; side: string | null }> },
+  input: { proposal_id: string; proof: string | undefined; only?: Array<{ aspect: string; side: string | null }>; expected_digest?: string },
 ): { proposal: AspectProposal; feedback: FeedbackEvent } {
   assertOwnerProcess()
   const id = validateAspectProposalId(input.proposal_id)
@@ -260,6 +261,8 @@ export function approveAspects(
   return withLock(ws, 'creative-aspects', () => {
     const proposal = readAspectProposal(ws, id)
     if (proposal.state !== 'pending') throw new CreativeError('refused', `${id} is ${proposal.state}. Only a pending proposal can be approved.`)
+    // Optional TOCTOU guard (brand:approve --all-pending): the proposal must still be the one the owner was shown.
+    if (input.expected_digest !== undefined && aspectProposalDigest(proposal) !== input.expected_digest) throw new CreativeError('stale', `${id} changed since it was shown for approval. Review it again. Nothing was applied.`)
     const status = sourceStatus(ws, proposal.note)
     if (!status.current) throw new CreativeError('stale_source', `Note ${proposal.note.id} is ${status.state} since these aspects were suggested. Run aspects suggest again. Nothing was applied.`)
     let chosen: Array<{ aspect: Aspect; side: AspectSide }>

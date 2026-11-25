@@ -12,6 +12,7 @@
     "./creative": "./src/creative/index.ts",
     "./content-bridge": "./src/content-bridge/index.ts",
     "./identity": "./src/identity/index.ts",
+    "./pending": "./src/pending/index.ts",
     "./research": "./src/research/index.ts",
     "./runtime": "./src/runtime/index.ts",
     "./seo": "./src/seo/index.ts",

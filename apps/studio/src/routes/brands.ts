@@ -5,6 +5,8 @@ import type { BrandRecord } from '../registry.js'
 import { brandIsReady, withDisplayName } from '../sync.js'
 import type { UpdateStatus } from '../template-update.js'
 import { calendarPage } from '../views/calendar.js'
+import { contentStrategyPage } from '../views/content-strategy.js'
+import { socialKitPage } from '../views/social-kit.js'
 import { creativePage } from '../views/creative.js'
 import { knowledgeNotePage, knowledgePage, parseKnowledgeQuery } from '../views/knowledge.js'
 import { LEGACY_SECTION_PATHS, PAGE_SECTION_PATHS, syncFlash, type BrandSection, type BrandView } from '../views/layout.js'
@@ -197,6 +199,12 @@ export function brandRoutes(core: StudioCore): BrandRoutes {
       case 'calendar':
         // Read only: approved weeks the owner shared and merged. No query parameter changes anything.
         return render(ctx, 200, calendarPage(v, brand, flashValue))
+      case 'content-strategy':
+        // Read only: the approved strategy revisions the owner shared and merged. No query parameter changes anything.
+        return render(ctx, 200, contentStrategyPage(v, brand, flashValue))
+      case 'social-kit':
+        // Read only: the committed kit; a style is approved only when its digest matches the shared summary.
+        return render(ctx, 200, socialKitPage(v, brand, flashValue))
       case 'publishing':
         // Read only: the gallery is counts measured at sync time; nothing here exports, renders a file or writes.
         return render(ctx, 200, publishingPage(v, brand, flashValue))

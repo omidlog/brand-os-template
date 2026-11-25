@@ -206,6 +206,7 @@ function briefLines(brief: ContentBriefDocument): string[] {
     for (const item of brief.learnings) lines.push(`  - ${item.week_id} ${item.slot_id} (${item.date}, measured ${item.measured_at}): ${Object.entries(item.metrics).map(([key, value]) => `${key} ${value}`).join(', ')}`)
   }
   if (brief.missing.length) lines.push(`- Not decided (ask the owner, do not invent): ${brief.missing.join(', ')}`)
+  if (brief.to_draft?.length) lines.push(`- You write: ${brief.to_draft.join(', ')} (copy, inside the voice and must-avoid list)`)
   if (brief.redacted.length) lines.push(`- ${brief.redacted.length} cited field(s) withheld.`)
   lines.push(`- Pin: week revision ${brief.week_revision}, content_sha256 \`${brief.digests.content_sha256}\``, '')
   return lines
@@ -275,7 +276,7 @@ function socialKitMarkdown(view: SocialKitView | null): string {
       lines.push('- Layers, bottom to top:')
       for (const layer of style.layers) {
         const limits = [layer.max_words ? `≤${layer.max_words} words` : '', layer.max_lines ? `≤${layer.max_lines} lines` : ''].filter(Boolean).join(', ')
-        lines.push(`  - ${layer.role}${layer.optional ? ' (optional)' : ''}: x ${pct(layer.zone.x)}, y ${pct(layer.zone.y)}, w ${pct(layer.zone.w)}, h ${pct(layer.zone.h)}${layer.color ? `; colour \`${layer.color}\`` : ''}${layer.font ? `; font \`${layer.font}\`` : ''}${limits ? `; ${limits}` : ''}${layer.rules.length ? `; ${layer.rules.map(oneLine).join(' / ')}` : ''}`)
+        lines.push(`  - ${layer.role}${layer.optional ? ' (optional)' : ''}: x ${pct(layer.zone.x)}, y ${pct(layer.zone.y)}, w ${pct(layer.zone.w)}, h ${pct(layer.zone.h)}${layer.color ? `; colour \`${layer.color}\`` : ''}${layer.font ? `; font \`${layer.font_resolved?.token ?? layer.font}\`${layer.font_resolved?.family ? ` (${oneLine(layer.font_resolved.family)})` : layer.font_resolved ? ` (${layer.font_resolved.state}, no approved family)` : ''}` : ''}${limits ? `; ${limits}` : ''}${layer.rules.length ? `; ${layer.rules.map(oneLine).join(' / ')}` : ''}`)
       }
       if (style.do.length) lines.push(`- Do: ${style.do.map(oneLine).join('; ')}`)
       if (style.dont.length) lines.push(`- Don't: ${style.dont.map(oneLine).join('; ')}`)

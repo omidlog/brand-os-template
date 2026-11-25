@@ -119,6 +119,14 @@ test('journey: plan, store drafts, approve one week with proof, calendar shows o
   assert.ok(!doc.includes('Speak from day one'), 'fact values are not copied')
   assert.equal(cli(s.root, 'content', ['share', '--week', drafts[1]!.week_id]).status, 1, 'a draft week is not shared')
 
+  // Share the approved content strategy revision for Studio: channels and pillars, never fact values or drafts.
+  const strategyShared = cli(s.root, 'content', ['share-strategy', '--json'])
+  assert.equal(strategyShared.status, 0, strategyShared.stdout + strategyShared.stderr)
+  const strategyDoc = fs.readFileSync(path.join(s.root, 'brand/content-strategy/shared/content-main.json'), 'utf8')
+  assert.match(strategyDoc, /"kind": "content_strategy"/)
+  assert.ok(!strategyDoc.includes('Speak from day one'), 'fact values are not copied')
+  assert.equal(cli(s.root, 'content', ['share-strategy'], { BRAND_OS_AGENT_TOKEN: 'bos_at_x' }).status, 1, 'owner only')
+
   // Refusals: agent token, unknown week command.
   assert.equal(cli(s.root, 'content', ['calendar'], { BRAND_OS_AGENT_TOKEN: 'bos_at_x' }).status, 1)
   assert.equal(cli(s.root, 'content', ['week', 'publish']).status, 2)

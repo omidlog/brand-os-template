@@ -19,6 +19,7 @@ import {
   type SocialLang,
   type SocialSurface,
 } from './model.js'
+import { kitTokenRefs, repoTokenLookup, type FontState, type TokenLookup } from './preview.js'
 import { evaluateKit, kitSafetyProblems, readKit, type StyleState } from './store.js'
 
 /**
@@ -30,6 +31,9 @@ import { evaluateKit, kitSafetyProblems, readKit, type StyleState } from './stor
  * - Only approved styles whose digest and seal verify are returned. Drafts, rejected styles and invalid approvals are
  *   counted under `withheld`, never shown, never named.
  * - The family is returned only when at least one style is approved (its approval covers the family).
+ * - Fonts are resolved for the requested language (`type.fontFamily.display` → `display-fa` for fa when the brand has
+ *   it). A family name is returned only when that token is hash-approved; a draft token or a template EXAMPLE is
+ *   named by state with `family: null`, the same rule as get_brand_tokens.
  * - `authorizes: []`. One access-log line per call, ids only.
  */
 
@@ -41,10 +45,19 @@ export interface AgentLayer {
   zone_name: string | null
   color: string | null
   font: string | null
+  /** The token used for this language, its approved family (null unless approved) and its state. */
+  font_resolved: AgentFont | null
   max_words: number | null
   max_lines: number | null
   rules: string[]
   optional: boolean
+}
+
+export interface AgentFont {
+  ref: string
+  token: string
+  family: string | null
+  state: FontState
 }
 
 export interface AgentStyle {
@@ -80,6 +93,8 @@ export interface SocialKitView {
   kit_state: 'ok' | 'missing' | 'invalid'
   notice: string[]
   family: SocialFamily | null
+  /** Every font token id the returned styles and family name, resolved for `lang` (approved families only). */
+  fonts: AgentFont[]
   surfaces: AgentSurface[]
   withheld: { draft: number; rejected: number; invalid_approval: number }
   missing: Array<{ surface: SocialSurface; reason: 'no_kit' | 'invalid_kit' | 'no_approved_style' }>
@@ -109,7 +124,13 @@ export function socialKitAccess(ctx: AuthContext, brandSlug: string): { allow: b
   return { allow: true, reason: 'allowed' }
 }
 
-function agentStyle(state: StyleState, lang: SocialLang): AgentStyle {
+function agentFont(tokens: TokenLookup, ref: string | null | undefined, lang: SocialLang): AgentFont | null {
+  const info = tokens.fontInfo(ref ?? null, lang)
+  if (!info) return null
+  return { ref: info.ref, token: info.token, family: info.state === 'approved' ? info.family : null, state: info.state }
+}
+
+function agentStyle(state: StyleState, lang: SocialLang, tokens: TokenLookup): AgentStyle {
   const style = state.style
   return {
     style_id: style.id,
@@ -126,6 +147,7 @@ function agentStyle(state: StyleState, lang: SocialLang): AgentStyle {
       zone_name: typeof layer.zone === 'string' ? layer.zone : null,
       color: layer.color ?? null,
       font: layer.font ?? null,
+      font_resolved: agentFont(tokens, layer.font, lang),
       max_words: layer.max_words ?? null,
       max_lines: layer.max_lines ?? null,
       rules: (layer.rules ?? []).map((rule) => ruleText(rule, lang)),
@@ -155,6 +177,7 @@ export function socialKitView(root: string, brandSlug: string, options: { lang?:
     kit_state: 'ok',
     notice: [...text.notice],
     family: null,
+    fonts: [],
     surfaces: [],
     withheld: { draft: 0, rejected: 0, invalid_approval: 0 },
     missing: [],
@@ -181,10 +204,11 @@ export function socialKitView(root: string, brandSlug: string, options: { lang?:
     }
   }
   const approvedAnywhere = evaluateKit(root, read.kit).some((state) => state.status === 'approved')
+  const tokens = repoTokenLookup(root)
   const surfaces: AgentSurface[] = []
   const missing: SocialKitView['missing'] = []
   for (const surface of wanted) {
-    const styles = states.filter((state) => state.style.surface === surface && state.status === 'approved').map((state) => agentStyle(state, lang))
+    const styles = states.filter((state) => state.style.surface === surface && state.status === 'approved').map((state) => agentStyle(state, lang, tokens))
     if (styles.length === 0) {
       missing.push({ surface, reason: 'no_approved_style' })
       continue
@@ -192,7 +216,11 @@ export function socialKitView(root: string, brandSlug: string, options: { lang?:
     const spec = SURFACE_SPECS[surface]
     surfaces.push({ surface, label: text.surfaces[surface], canvases: spec.canvases.map((canvas) => ({ ...canvas })), safe_zones: spec.safe_zones.map((zone) => ({ ...zone })), styles })
   }
-  return { view: { ...base, family: approvedAnywhere ? read.kit.family : null, surfaces, missing }, returned, withheld }
+  // Fonts of what is returned: the family (only when a style is approved) and the returned styles' layers.
+  const shown = { ...read.kit, styles: states.filter((state) => state.status === 'approved').map((state) => state.style) }
+  const refs = approvedAnywhere ? kitTokenRefs(shown).fonts : []
+  const fonts = refs.map((ref) => agentFont(tokens, ref, lang)).filter((item): item is AgentFont => item !== null)
+  return { view: { ...base, family: approvedAnywhere ? read.kit.family : null, fonts, surfaces, missing }, returned, withheld }
 }
 
 export function runSocialKitTool(engine: InterviewEngine, ctx: AuthContext, args: SocialKitToolArgs = {}): SocialKitToolResult {
