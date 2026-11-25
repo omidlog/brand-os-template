@@ -1,11 +1,5 @@
 # Changelog
 
-
-
-
-
-
-
 ## Unreleased — channel playbook, batch planning and deliverable specs (Content Bridge)
 
 ### Added
@@ -15,6 +9,20 @@
 - **`brand:content strategy --playbook`** fills role, formats, cadence, objective, mix and KPI names from the playbook (explicit `--formats` / `--cadence` win). Notes and one assumption line in the proposal say which values came from the playbook; the owner reviews and approves with `brand:strategy` as before.
 - **Batch planning** (`npm run brand:content -- batch --channel instagram --format reel --count 10`, or several `--item instagram:reel:10 --item linkedin:post:8`): N slots per channel and format, dated by the approved cadence from `--from` (default next Monday), grouped into calendar weeks with the planner's rotation and pins. `--store` refuses, writing nothing, when a target week already has a draft or approved revision. At most 50 per item.
 - **Deliverable specs in content briefs** (`deliverable`): what to fill for the slot's format — a camera/voice script for reels, short videos, videos and lives (hook 0–3 s, setup, 3–5 beats with on-screen text and b-roll, payoff, CTA, captions on, duration and a read-aloud word budget per language), carousel slide roles, post headline and caption structure with per-channel hashtag guidance, story frames with one interaction, thread, article and email structure. General practice; it writes no copy. `channel_plan` in a brief also carries the optional channel fields when set.
+
+## Unreleased — content feedback loop, and a brand pack for chat products without MCP
+
+### Added
+
+- `npm run brand:content -- feedback --week … --slot … --text "…" [--verdict] [--keep] [--avoid]` (owner only): the words become an `owner_note` Knowledge note linked to one Creative Learning project per slot; it prints the exact `brand:creative suggest` line, and an approved series preference then shows up in later briefs.
+- `npm run brand:content -- metrics --week … --slot … [--views …] [--completion-rate …]` (owner only): owner-reported numbers stored as `owner_reported` / `not_verified` observations, listed by `brand:content reports` and carried in `content_calendar` `reports[]`. Never a fact or a claim.
+- Creative aspects for copy (`length`, `humour`, `clarity`, `jargon`, `structure`, `hashtags`, `caption`, `script_delivery`) with fa/en/tr lexicon entries, and surfaces `caption`, `script`, `thread`, `article`. Appended; earlier ids and digests are unchanged.
+- `npm run brand:pack -- --profile content-read|marketing|design|internal-read [--lang] [--out] [--json]` (owner only): six Markdown files of approved context for ChatGPT, Grok or Claude.ai Projects, built from the same readers as the agent profile, with a restricted/secret scan; default out `brand/.private/exports/`. Engine command `pack`.
+- Docs: "Chat products without MCP" and "Claude Desktop / Cowork via local MCP" in `docs-internal/AI_CONNECTORS.md`, with short en/fa/tr sections in the onboarding guides.
+
+### Changed
+
+- `content-read` sees a little more: `content_brief` carries the owner-approved statement and scope of applicable creative preferences (not only ids) and `learnings[]` (ids and owner-reported numbers of recent same channel+format slots). Never note text or drafts. An email slot now maps to the `article` surface.
 
 ## Unreleased — more of a personal brand, and four shared brand questions
 

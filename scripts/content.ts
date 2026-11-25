@@ -18,7 +18,11 @@ import {
   contentLang,
   contentStrategyView,
   fill,
+  listMetrics,
   listObservations,
+  METRIC_KEYS,
+  recordSlotFeedback,
+  recordSlotMetrics,
   listWeeks,
   loadWeekRecord,
   MIX_LABELS,
@@ -43,6 +47,8 @@ import {
   type BatchItem,
   type BatchResult,
   type CalendarView,
+  type ContentMetrics,
+  type ContentMetricsObservation,
   type ContentObservation,
   type ContentLang,
   type ContentStrategyDraft,
@@ -103,7 +109,17 @@ const HELP = `brand:content <command> [options]
                                   approved, current weeks only (drafts are never shown)
   share --week wk-YYYY-MM-DD [--dry-run]
                                   copy an approved week's summary to brand/content-calendar/shared (you commit it)
-  reports [--week wk-YYYY-MM-DD]  produced/published reports from content agents (observations only)
+  reports [--week wk-YYYY-MM-DD]  produced/published reports and owner-reported metrics (observations only)
+
+  feedback --week wk-YYYY-MM-DD --slot s01 --text "<your words>" [--verdict like|change_request|reject]
+           [--keep hook,tone] [--avoid length,jargon] [--lang fa]
+                                  your feedback on a produced slot: a Knowledge note linked to the slot's creative
+                                  project. Prints the brand:creative suggest line that turns it into a preference.
+  metrics --week wk-YYYY-MM-DD --slot s01 [--views N] [--reach N] [--likes N] [--comments N] [--shares N]
+          [--saves N] [--follows N] [--link-clicks N] [--watch-time-s N] [--completion-rate P]
+          [--measured-at YYYY-MM-DD] [--source manual|platform_export]
+                                  numbers you read off the platform: stored as an owner_reported, not_verified
+                                  observation. Never a fact or a claim.
 
 Review and approve with: npm run brand:strategy -- review / approve (owner proof).
 Options: --lang en|fa|tr (default: the brand default locale), --json. Refused while ${AGENT_TOKEN_ENV} is set.`
@@ -135,6 +151,23 @@ const OPTIONS = {
   count: { type: 'string' },
   item: { type: 'string', multiple: true },
   pillar: { type: 'string' },
+  slot: { type: 'string' },
+  text: { type: 'string' },
+  verdict: { type: 'string' },
+  keep: { type: 'string' },
+  avoid: { type: 'string' },
+  views: { type: 'string' },
+  reach: { type: 'string' },
+  likes: { type: 'string' },
+  comments: { type: 'string' },
+  shares: { type: 'string' },
+  saves: { type: 'string' },
+  follows: { type: 'string' },
+  'link-clicks': { type: 'string' },
+  'watch-time-s': { type: 'string' },
+  'completion-rate': { type: 'string' },
+  'measured-at': { type: 'string' },
+  source: { type: 'string' },
 } as const
 
 type Values = ReturnType<typeof parseArgs<{ args: string[]; options: typeof OPTIONS; allowPositionals: false; strict: true }>>['values']
@@ -245,7 +278,7 @@ async function ownerProof(): Promise<string | undefined> {
   return readOwnerProof({ prompt: 'Owner approval proof (input hidden): ' })
 }
 
-function need(values: Values, key: 'from' | 'weeks' | 'file' | 'week' | 'revision' | 'expect-sha'): string {
+function need(values: Values, key: 'from' | 'weeks' | 'file' | 'week' | 'revision' | 'expect-sha' | 'slot' | 'text'): string {
   const value = values[key]
   if (!value) usage(`--${key} is required.`)
   return value
@@ -319,30 +352,60 @@ function calendarText(view: CalendarView, lang: ContentLang): string {
   return lines.join('\n')
 }
 
-function reportsText(items: Array<ContentObservation & { current: boolean }>, lang: ContentLang): string {
+function metricsLine(metrics: ContentMetrics): string {
+  return METRIC_KEYS.filter((key) => metrics[key] !== undefined).map((key) => `${key}=${metrics[key]}${key === 'completion_rate' ? '%' : ''}`).join(' ')
+}
+
+function reportsText(items: Array<ContentObservation & { current: boolean }>, measured: Array<ContentMetricsObservation & { current: boolean }>, lang: ContentLang): string {
   const t = (key: string) => AGENT_TEXT[key]![lang]
-  if (!items.length) return t('reports_none')
+  if (!items.length && !measured.length) return t('reports_none')
   const lines = [t('reports_header'), '']
   for (const item of items) {
     const old = item.current ? '' : ` ${fill(t('reports_old_revision'), { rev: item.week_revision })}`
     lines.push(`${item.week_id} ${item.slot_id} r${item.week_revision} ${item.status} ${item.url ?? '—'} · ${item.reported_at} · ${item.reporter}${old}`)
   }
+  if (measured.length) lines.push('', t('metrics_header'))
+  for (const item of measured) {
+    const old = item.current ? '' : ` ${fill(t('reports_old_revision'), { rev: item.week_revision })}`
+    lines.push(`${item.week_id} ${item.slot_id} r${item.week_revision} ${metricsLine(item.metrics)} · ${item.measured_at} · ${item.source} · owner_reported, not_verified${old}`)
+  }
   return lines.join('\n')
 }
 
+function metricsFrom(values: Values): ContentMetrics {
+  const out: ContentMetrics = {}
+  const flags = { views: 'views', reach: 'reach', likes: 'likes', comments: 'comments', shares: 'shares', saves: 'saves', follows: 'follows', link_clicks: 'link-clicks', watch_time_s: 'watch-time-s', completion_rate: 'completion-rate' } as const
+  for (const key of METRIC_KEYS) {
+    const raw = values[flags[key]]
+    if (raw === undefined) continue
+    const clean = raw.trim().replace(/%$/, '')
+    if (!/^\d+(?:\.\d+)?$/.test(clean)) throw new StrategyError('invalid_input', `--${flags[key]} takes a number (got ${raw.slice(0, 20)}).`)
+    out[key] = Number(clean)
+  }
+  return out
+}
+
+function list(value: string | undefined): string[] | undefined {
+  return value === undefined ? undefined : value.split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+/** Is this observation tied to the week revision served as approved now? */
+function currentRevision(ws: KnowledgeWorkspace, item: { week_id: string; week_revision: number; week_content_sha256: string }): boolean {
+  try {
+    const entry = approvedWeekEntry(loadWeekRecord(ws, item.week_id))
+    return entry !== null && entry.revision === item.week_revision && entry.content_sha256 === item.week_content_sha256
+  } catch {
+    return false
+  }
+}
+
 /** Observations with a flag: reported against the week revision served as approved now, or an older one. */
-function reportsOf(ws: KnowledgeWorkspace, week: string | undefined): Array<ContentObservation & { current: boolean }> {
+function reportsOf(ws: KnowledgeWorkspace, week: string | undefined): { reports: Array<ContentObservation & { current: boolean }>; metrics: Array<ContentMetricsObservation & { current: boolean }> } {
   const ids = week ? [validateWeekId(week)] : scanWeeks(ws).map((record) => record.week_id)
-  return listObservations(ws, ids).map((item) => {
-    let current = false
-    try {
-      const entry = approvedWeekEntry(loadWeekRecord(ws, item.week_id))
-      current = entry !== null && entry.revision === item.week_revision && entry.content_sha256 === item.week_content_sha256
-    } catch {
-      current = false
-    }
-    return { ...item, current }
-  })
+  return {
+    reports: listObservations(ws, ids).map((item) => ({ ...item, current: currentRevision(ws, item) })),
+    metrics: listMetrics(ws, ids).map((item) => ({ ...item, current: currentRevision(ws, item) })),
+  }
 }
 
 async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
@@ -503,7 +566,26 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
     }
     case 'reports': {
       const items = reportsOf(ws, values.week)
-      print({ ok: true, reports: items }, () => reportsText(items, lang))
+      print({ ok: true, reports: items.reports, metrics: items.metrics }, () => reportsText(items.reports, items.metrics, lang))
+      return
+    }
+    case 'feedback': {
+      const result = recordSlotFeedback(ws, { week_id: need(values, 'week'), slot_id: need(values, 'slot'), text: need(values, 'text'), verdict: values.verdict, keep: list(values.keep), avoid: list(values.avoid), language: values.lang ?? null })
+      print({ ok: true, ...result }, () =>
+        [
+          fill(AGENT_TEXT.feedback_recorded![lang], { verdict: result.feedback.verdict, week: result.week_id, slot: result.slot_id, note: result.note.id, project: result.project.project_id }),
+          `  ${result.project.created ? 'new' : 'existing'} project ${result.project.project_id} (${result.project.surface}, series ${result.project.series})`,
+          '',
+          AGENT_TEXT.feedback_next![lang],
+          `  ${result.next.suggest}`,
+          `  ${result.next.approve}`,
+        ].join('\n'),
+      )
+      return
+    }
+    case 'metrics': {
+      const item = recordSlotMetrics(ws, { week_id: need(values, 'week'), slot_id: need(values, 'slot'), metrics: metricsFrom(values), measured_at: values['measured-at'], source: values.source })
+      print({ ok: true, metrics: item }, () => `${fill(AGENT_TEXT.metrics_recorded![lang], { week: item.week_id, slot: item.slot_id, id: item.metrics_id })}\n  ${metricsLine(item.metrics)} · ${item.measured_at} · ${item.source}`)
       return
     }
     default:

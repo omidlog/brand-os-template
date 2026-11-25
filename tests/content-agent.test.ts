@@ -199,7 +199,8 @@ test('a brief carries voice, claims, audience, the resolved message, the cited a
   assert.equal(brief.competitive_angle?.competitor_id, wf)
   assert.ok(['high', 'medium', 'low'].includes(brief.competitive_angle!.confidence))
   assert.deepEqual(brief.sources.research, [brief.competitive_angle!.ref])
-  assert.deepEqual(brief.creative, { surface: 'reel', preferences: [{ preference_id: pref.preference_id, series: 'onboarding' }] })
+  assert.deepEqual(brief.creative, { surface: 'reel', preferences: [{ preference_id: pref.preference_id, series: 'onboarding', scope: 'series', statement: 'Use dynamic camera angles on onboarding reels' }] })
+  assert.deepEqual(brief.learnings, [], 'no owner-reported metrics yet')
   assert.deepEqual(brief.redacted, [])
   assert.equal(brief.report, null)
   assert.deepEqual([brief.authorizes, brief.publication_permission, brief.schedule_permission, brief.spend_permission], [[], false, false, false])
@@ -210,9 +211,9 @@ test('a brief carries voice, claims, audience, the resolved message, the cited a
   const faBrief = briefOf(call(s, contentCtx(), 'content_brief', { week_id: week.week_id, slot_id: fa.id, lang: 'fa' }))
   assert.equal(faBrief.slot.direction, 'rtl')
   assert.match(faBrief.notice[3]!, /داده است/)
-  // A newsletter email has no creative surface.
+  // A newsletter email is copy: the article surface, with no preferences yet.
   const email = week.slots.find((slot) => slot.format === 'email')
-  if (email) assert.deepEqual(briefOf(call(s, contentCtx(), 'content_brief', { week_id: week.week_id, slot_id: email.id })).creative, { surface: null, preferences: [] })
+  if (email) assert.deepEqual(briefOf(call(s, contentCtx(), 'content_brief', { week_id: week.week_id, slot_id: email.id })).creative, { surface: 'article', preferences: [] })
 
   // Restricted: if a cited fact were restricted, it would be redacted and never resolved (pure builder, canary value).
   const record = loadWeekRecord(s.ws, week.week_id)

@@ -422,3 +422,34 @@ language) and a `template` whose values are all `null`. Labels and guidance foll
 | Batch dating, interleaving, refusals, store refused into stored weeks | `content-playbook` "batch: …" |
 | Deliverable specs and the brief | `content-playbook` "briefs carry a deliverable spec…" |
 | CLI journey | `content-playbook` "CLI: …" |
+## Content feedback loop
+
+The owner says what worked and what did not on a produced slot, and later briefs follow it once the owner approves a
+rule. Nothing new decides anything: feedback reuses Creative Learning, metrics reuse the observation file.
+
+| Existing module | Reused for | Why it is not a second truth |
+| --- | --- | --- |
+| Knowledge `captureNote` | The feedback words: one `owner_note` note, tags `content-feedback`, `slot-<week>-<slot>`, `proj-<project>`, `source.ref = content:<week>/<slot>`. | The words live only in the note. |
+| Creative Learning (`createProject`, `addVariant`, `recordFeedback`, `suggestPreference`, `approvePreference`) | One project per slot, `content-<week>-<slot>`: surface from the slot format (`reel`, `carousel`, `post`, `story`, `thread`; `email`/`article` → `article`; `short_video` → `reel`; `video`/`live` → `script`), series = the slot's style id when it has one, else its channel (`channel-x` for X). Variant `A`, asset `missing`. | The project stores the note id + revision, verdict and closed-vocabulary aspects. A rule exists only after `brand:creative suggest` and the owner's `approve` (proof). |
+| `observations.ts` | Owner-reported metrics in the same per-week file, a separate `metrics` list. | Labelled `owner_reported` / `not_verified`; pinned to the approved week revision; changes no week, strategy or fact. |
+| `content_brief` (`agent.ts`) | `creative.preferences[]` with statements; `learnings[]`. | Only approved, currently valid preferences; numbers and ids only. |
+
+```bash
+npm run brand:content -- feedback --week wk-2026-11-23 --slot s01 --text "Caption too long, hook weak" --verdict change_request --keep tone --avoid length,hook
+# prints: npm run brand:creative -- suggest --project content-wk-2026-11-23-s01 --statement '…' --source kn_…
+npm run brand:creative -- suggest --project content-wk-2026-11-23-s01 --statement "Keep reel captions under 120 characters" --source kn_…
+BRAND_OS_APPROVAL_PROOF=… npm run brand:creative -- approve --id cp_… --scope series
+npm run brand:content -- metrics --week wk-2026-11-23 --slot s01 --views 1200 --likes 80 --completion-rate 42 [--measured-at 2026-11-25] [--source manual|platform_export]
+npm run brand:content -- reports
+```
+
+- Feedback and metrics need an approved week revision and a slot in it; a skipped slot has no metrics. Both refuse while
+  `BRAND_OS_AGENT_TOKEN` is set.
+- Copy aspects were appended to the closed vocabulary (`length`, `humour`, `clarity`, `jargon`, `structure`,
+  `hashtags`, `caption`, `script_delivery`; `hook`, `tone`, `cta`, `pacing` already existed) with fa/en/tr lexicon
+  entries, and surfaces `caption`, `script`, `thread`, `article`. Existing ids and their meaning are unchanged.
+- Metrics: counts are whole numbers, `watch_time_s` seconds, `completion_rate` a percent (0–100); `measured_at` not in
+  the future. They are never fetched from a platform.
+- A brief's `learnings[]`: up to 5 other slots of the same channel and format, latest metrics each, newest first. A
+  content agent uses them to choose an approach, never as a claim.
+- Tests: `tests/content-feedback.test.ts`.

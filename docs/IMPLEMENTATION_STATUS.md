@@ -303,6 +303,19 @@ Branch `feat/content-channel-playbook`. Guide: `docs-internal/CONTENT_BRIDGE.md`
 | `brand:content batch` | Done | `--channel/--format/--count` or repeated `--item`; cadence-dated, grouped into weeks via `planWeek`; `--store` refuses into stored weeks. |
 | `deliverable` in content briefs | Done | Script, carousel, post, story, thread, article, email. No JSON schema file exists for briefs under `schemas/`, so none was added. |
 | Measured results feeding the playbook | Not started | The playbook is static general practice; no metrics are collected. |
+## Content feedback loop and chat-product pack
+
+Branch `feat/content-feedback-pack`. Guides: `docs-internal/CONTENT_BRIDGE.md` (Content feedback loop), `docs-internal/AI_CONNECTORS.md` (Chat products without MCP).
+
+| Item | Status | Note |
+| --- | --- | --- |
+| `brand:content feedback` | Done | Owner only. The words become an `owner_note` Knowledge note (tags `content-feedback`, `slot-<week>-<slot>`) linked to one creative project per slot (surface from the format, series = style id or channel, variant `A` with asset `missing`); prints the exact `brand:creative suggest` line. Approval stays `brand:creative approve`. `tests/content-feedback.test.ts`. |
+| Copy aspects and surfaces | Done | Appended `length, humour, clarity, jargon, structure, hashtags, caption, script_delivery` and surfaces `caption, script, thread, article`; fa/en/tr lexicon entries are new words or longer phrases only. Earlier ids, meanings and digests unchanged. |
+| `brand:content metrics` | Done | Owner only. `owner_reported` / `not_verified` observations next to the calendar; `reports` lists them; `content_calendar` `reports[]` carries the latest per slot (`status: measured` without a report). Never a fact or claim. |
+| Brief widening (`content-read`) | Done | `creative.preferences[]` now carries the owner-approved statement and scope (series for the surface, project for the slot's own project); `learnings[]`: up to 5 same channel+format slots with owner-reported numbers. Never note text or drafts. |
+| `brand:pack` | Done | Owner only; `content-read`, `marketing`, `design`, `internal-read`. Six Markdown files from the token readers; restricted/secret scan; default out `brand/.private/exports/`; non-ignored out refused. Engine command `pack`. `tests/brand-pack.test.ts`. |
+| Social style kit section in the pack | Not started | Placeholder "not available in this engine" until the social-kit reader lands (TODO in `scripts/pack-lib.ts`). |
+| Metrics from platform APIs, verification | Not started | Out of scope: numbers are the owner's word. |
 
 ## Assurance registry and assessable controls (Trust v2 PR-A)
 

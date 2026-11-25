@@ -118,6 +118,7 @@ When `modules.personal.enabled` is true in `brand/brand.config.yaml`, also follo
 - Propose and review only. Never run `approve` or `withdraw` for the owner, and never pass a guessed `--expect-sha`. Show the owner the `review` output and let them run the approve command it prints.
 - Cite approved facts and research notes only. Put budgets and amounts in `restricted`, which no agent receives. Do not hand-edit files under `brand/.private/strategy/records/`; an edit makes the revision `integrity_failed`.
 - As an execution agent with a `strategy-seo-read` or `strategy-ads-read` token, read through `strategy_list` / `strategy_get` and pin `revision` + `content_sha256`. On `stale_pin`, stop and re-read. Never treat the strategy as permission to act.
+- `brand:content feedback`, `brand:content metrics` and `brand:pack` are owner commands and refuse under an agent token. Ask the owner for feedback at the end of a deliverable; never write it, and never present owner-reported metrics (`owner_reported`, `not_verified`) as a claim.
 - As a content agent with a `content-read` token, read `content_calendar`, then `content_brief` per slot with the week `pin`. Write only what the brief allows (its `must_avoid` holds the banned claims). On `stale_pin` or `not_found`, stop. After producing or publishing, call `content_report` with the pin and the https URL; it is an observation, not permission to publish. Skill: `agent-skills/content-planner/SKILL.md`; connecting an external bot: `docs-internal/CONTENT_AGENT_INTEGRATION.md`.
 
 ## Task context
