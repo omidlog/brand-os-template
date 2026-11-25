@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — approve everything at once, cloud-sync guard, approval-secret rotation
+
+### Added
+
+- **One review, one approval:** `brand:approve -- --all-pending` (with `--dry-run`, `--exclude`, `--json`, and new `--lang en|fa|tr` and `--only <kind,…>`) also lists and approves strategy draft revisions (newest draft per strategy), content calendar week drafts, social style kit styles per surface, creative preference drafts and pending aspect proposals. The plan shows a short summary and the digest each kind's own review prints; approval passes exactly that digest to the existing store function (`approveRevision`, `approveWeek`, `approveKit`, `approvePreference`, `approveAspects`). An item changed after planning is `stale`. One proof read per run. Existing kinds behave and print as before. Core: `@brand-os/brand-core/pending`.
+- **`npm run brand:pending`** (engine command `pending`): the dry run in plain words (en/fa/tr) with the exact one command that approves it. Read-only, refused under an agent token.
+- **Cloud-sync guard:** `detectCloudSync(root)` (macOS CloudStorage and iCloud folders, `.tmp.driveupload`, `.dropbox`, `OneDrive - …`, iCloud Desktop & Documents as "likely"). The `unsafe_path … has more than one hard link` refusal now says which provider likely caused it and how to fix it. `brand:doctor` has a `cloud_sync` check and `--fix-links [--dry-run]`; `brand:init` and `brand-os scaffold --new` warn.
+- **`brand:doctor -- --rotate-approval-secret`** (owner only): verifies every strategy, calendar-week and social-style seal under the current proof, writes a new secret, re-seals exactly those that verified (others listed, still invalid), stages and swaps atomically with rollback, updates a stored Keychain entry, prints the new proof once only when it is not in the Keychain, and appends an audit line without secret material.
+
+### Changed
+
+- `approvePreference` and `approveAspects` take an optional `expected_digest` (refused with code `stale` when the record changed); `aspectProposalDigest` added. Seal checks are exported for rotation (`strategySealVerifies`, `weekSealVerifies`, social `sealFor`); behaviour is unchanged.
+
 ## Unreleased — channel playbook, batch planning and deliverable specs (Content Bridge)
 
 ### Added
