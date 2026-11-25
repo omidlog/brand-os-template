@@ -41,6 +41,7 @@ import {
   reviewWeek,
   ROLE_LABELS,
   scanWeeks,
+  shareStrategy,
   shareWeek,
   storeBatch,
   validateWeekId,
@@ -109,6 +110,10 @@ const HELP = `brand:content <command> [options]
                                   approved, current weeks only (drafts are never shown)
   share --week wk-YYYY-MM-DD [--dry-run]
                                   copy an approved week's summary to brand/content-calendar/shared (you commit it)
+  share-strategy [--id content-main] [--dry-run]
+                                  copy the approved, served content strategy revision (channels, pillars, mix,
+                                  KPIs, cadence; no drafts, restricted data or fact values) to
+                                  brand/content-strategy/shared/<id>.json for Studio (you commit it)
   reports [--week wk-YYYY-MM-DD]  produced/published reports and owner-reported metrics (observations only)
 
   feedback --week wk-YYYY-MM-DD --slot s01 --text "<your words>" [--verdict like|change_request|reject]
@@ -562,6 +567,11 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
     case 'share': {
       const result = shareWeek(ws, { week_id: need(values, 'week'), dryRun: values['dry-run'] })
       print({ ok: true, ...result }, () => (result.written ? fill(CAL_TEXT.shared_week![lang], { list: result.path }) : `${CAL_TEXT.shared_preview![lang]}\n${JSON.stringify(result.week, null, 2)}`))
+      return
+    }
+    case 'share-strategy': {
+      const result = shareStrategy(ws, { strategy_id: values.id ?? 'content-main', dryRun: values['dry-run'] })
+      print({ ok: true, ...result, authorizes: [] }, () => (result.written ? fill(CAL_TEXT.shared_strategy![lang], { list: result.path }) : `${CAL_TEXT.shared_preview![lang]}\n${JSON.stringify(result.strategy, null, 2)}`))
       return
     }
     case 'reports': {

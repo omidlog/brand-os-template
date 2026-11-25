@@ -37,7 +37,7 @@ export interface ConvertReport {
 const LEGACY_DEFINITIONS = /^brand\/interview\/(question-bank\/[^/]+\.yaml|field-registry\.yaml|knowledge-graph\.yaml)$/
 const DOCS_OUTPUTS = /^(llms\.txt|llms-full\.txt|apps\/.*)$/
 const TEMPLATE_ROOT_FILES = new Set(['package.json', 'package-lock.json', 'CHANGELOG.md', 'README.md', 'AGENTS.md', 'CLAUDE.md'])
-const BRAND_DATA_GUARD = /^brand\/(instance|interview\/(answer-ledger|session-state|contradictions|evidence-|intake-log)|assets\/|tokens\/(generated|approvals)|knowledge|strategy|\.private|restricted\/facts)/
+const BRAND_DATA_GUARD = /^brand\/(instance|interview\/(answer-ledger|session-state|contradictions|evidence-|intake-log)|assets\/|tokens\/(generated|approvals)|knowledge|strategy|content-strategy\/|content-calendar\/|social\/|creative\/|competitive\/|\.private|restricted\/facts)/
 
 function trackedFiles(root: string): string[] {
   return execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean)

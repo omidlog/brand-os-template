@@ -15,6 +15,8 @@ export { approvedWeekEntry, approveWeek, buildCalendar, CALENDAR_VIEW_SCHEMA, Ca
 export type { CalendarOptions, CalendarProblem, CalendarSlotView, CalendarView, CalendarWeekView, WeekEvaluation, WeekProposeResult, WeekReview, WeekSummary } from './calendar-store.js'
 export { buildStudioCalendar, SHARED_CALENDAR_DIR, shareWeek, STUDIO_CALENDAR_LIMITS, validSharedWeek } from './calendar-share.js'
 export type { SharedContentWeek, SharedSlot, StudioCalendarProjection, WithheldWeekReason } from './calendar-share.js'
+export { buildStudioStrategy, SHARED_STRATEGY_DIR, shareStrategy, STUDIO_STRATEGY_LIMITS, validSharedStrategy } from './strategy-share.js'
+export type { SharedContentStrategy, StudioStrategyProjection, WithheldStrategyReason } from './strategy-share.js'
 export { appendMetrics, appendObservation, latestBySlot, latestMetricsBySlot, listMetrics, listObservations, METRIC_KEYS, METRIC_SOURCES, metricProblem, OBSERVATION_LIMITS, OBSERVATION_STATUSES, OBSERVATIONS_DIR, observationWeekIds, readMetrics, readObservations, urlProblem } from './observations.js'
 export type { AppendInput, AppendMetricsInput, ContentMetrics, ContentMetricsObservation, ContentObservation, MetricKey, MetricSource, ObservationStatus, UrlProblem } from './observations.js'
 export { approvedSlot, MAX_LEARNINGS, recordSlotFeedback, recordSlotMetrics, shellQuote, slotLearnings, slotProjectId, slotSeries, surfaceForFormat } from './feedback.js'
