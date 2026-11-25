@@ -20,6 +20,8 @@ import { openWorkspace, type KnowledgeWorkspace } from '../knowledge/workspace.j
 import { approvalProofMatches } from '../private-store.js'
 import { SURFACES, type SocialLang } from '../social-kit/model.js'
 import { approveKit, readKit, reviewKit } from '../social-kit/store.js'
+import { compileTokens, tokenDigest } from '@brand-os/design-tokens'
+import { approveTokens, readTokenApprovals } from '../token-generate.js'
 import { approveRevision, loadRevision, reviewRevision, scanRecords } from '../strategy/store.js'
 
 /**
@@ -34,10 +36,10 @@ import { approveRevision, loadRevision, reviewRevision, scanRecords } from '../s
  * newer revision, a new blocker) is `stale` and is not approved. Refused while BRAND_OS_AGENT_TOKEN is set.
  */
 
-export type ExtraKind = 'strategy' | 'week' | 'social_style' | 'creative_preference' | 'aspect_proposal'
+export type ExtraKind = 'strategy' | 'week' | 'design_token' | 'social_style' | 'creative_preference' | 'aspect_proposal'
 export type AnyKind = PendingKind | ExtraKind
 
-export const EXTRA_KINDS: readonly ExtraKind[] = ['strategy', 'week', 'social_style', 'creative_preference', 'aspect_proposal']
+export const EXTRA_KINDS: readonly ExtraKind[] = ['strategy', 'week', 'design_token', 'social_style', 'creative_preference', 'aspect_proposal']
 export const ALL_KINDS: readonly AnyKind[] = [...PENDING_KINDS, ...EXTRA_KINDS]
 /** Kinds the owner usually reads in full before approving. They are always listed; `--only` narrows a run. */
 export const LOOK_FIRST_KINDS: readonly ExtraKind[] = ['strategy', 'week']
@@ -52,6 +54,7 @@ const KIND_ALIASES: Record<string, AnyKind> = {
   social: 'social_style', social_style: 'social_style', style: 'social_style', styles: 'social_style',
   creative: 'creative_preference', creative_preference: 'creative_preference', preference: 'creative_preference', preferences: 'creative_preference',
   aspect: 'aspect_proposal', aspects: 'aspect_proposal', aspect_proposal: 'aspect_proposal',
+  token: 'design_token', tokens: 'design_token', design_token: 'design_token',
 }
 
 /** Parses `--only strategy,week`. Throws with the accepted names on an unknown kind. */
@@ -61,7 +64,7 @@ export function parseOnlyKinds(value: string | undefined): AnyKind[] | undefined
   const out: AnyKind[] = []
   for (const name of kinds) {
     const kind = KIND_ALIASES[name]
-    if (!kind) throw new Error(`--only does not know "${name}". Use: fact, change, evidence, asset, strategy, week, social, creative, aspect.`)
+    if (!kind) throw new Error(`--only does not know "${name}". Use: fact, change, evidence, asset, strategy, week, token, social, creative, aspect.`)
     if (!out.includes(kind)) out.push(kind)
   }
   if (out.length === 0) throw new Error('--only needs at least one kind.')
@@ -104,6 +107,7 @@ const fill = (text: string, vars: Record<string, string | number>): string => te
 export const EXTRA_TITLES: Record<ExtraKind, Text> = {
   strategy: { en: 'Strategies (read these first)', fa: 'استراتژی‌ها (اول این‌ها را بخوانید)', tr: 'Stratejiler (önce bunları okuyun)' },
   week: { en: 'Content calendar weeks (read these first)', fa: 'هفته‌های تقویم محتوا (اول این‌ها را بخوانید)', tr: 'İçerik takvimi haftaları (önce bunları okuyun)' },
+  design_token: { en: 'Design tokens generated from approved answers', fa: 'توکن‌های طراحی ساخته‌شده از جواب‌های تأییدشده', tr: 'Onaylı yanıtlardan üretilen tasarım tokenları' },
   social_style: { en: 'Social style kit, per format', fa: 'کیت سبک شبکه‌های اجتماعی، برای هر قالب', tr: 'Sosyal stil kiti, biçim başına' },
   creative_preference: { en: 'Creative preferences (project scope)', fa: 'ترجیحات خلاقانه (در سطح پروژه)', tr: 'Yaratıcı tercihler (proje kapsamı)' },
   aspect_proposal: { en: 'Feedback aspects (keep / avoid)', fa: 'جنبه‌های بازخورد (نگه‌دار / پرهیز)', tr: 'Geri bildirim yönleri (koru / kaçın)' },
@@ -132,6 +136,16 @@ const T = {
     en: '"{statement}" for project {project}. Approved at project scope (for a series use brand:creative approve --scope series).',
     fa: '«{statement}» برای پروژهٔ {project}. در سطح پروژه تأیید می‌شود (برای یک سری از brand:creative approve --scope series استفاده کنید).',
     tr: '{project} projesi için "{statement}". Proje kapsamında onaylanır (bir seri için brand:creative approve --scope series kullanın).',
+  },
+  token: {
+    en: '{id} = {value} (from {source}).',
+    fa: '{id} = {value} (از {source}).',
+    tr: '{id} = {value} ({source} kaynağından).',
+  },
+  tokenChanged: {
+    en: 'Already approved with a different value. Remove the old approval in a reviewed edit first (brand/tokens/approvals.yaml).',
+    fa: 'قبلاً با مقدار دیگری تأیید شده است. اول تأیید قبلی را در یک ویرایش بررسی‌شده بردارید (brand/tokens/approvals.yaml).',
+    tr: 'Farklı bir değerle zaten onaylı. Önce eski onayı incelenmiş bir düzenlemeyle kaldırın (brand/tokens/approvals.yaml).',
   },
   aspect: {
     en: 'Keep: {keep}. Avoid: {avoid}. From feedback {feedback} on project {project} (machine suggestion; unclear sides are not applied).',
@@ -287,9 +301,36 @@ function aspectEntries(ws: KnowledgeWorkspace, lang: PendingLang): ExtraEntry[] 
   return out
 }
 
+function tokenEntries(ws: KnowledgeWorkspace, lang: PendingLang): ExtraEntry[] {
+  const compiled = compileTokens(ws.root)
+  if (compiled.errors.length) return []
+  const approved = readTokenApprovals(ws.root)
+  const out: ExtraEntry[] = []
+  for (const [id, token] of Object.entries(compiled.flat).sort(([a], [b]) => a.localeCompare(b))) {
+    if (token.source !== 'generated') continue
+    const digest = tokenDigest(token)
+    const prior = approved[id]
+    if (prior?.value_sha256 === digest) continue
+    const value = typeof token.value === 'string' ? token.value : JSON.stringify(token.value)
+    out.push({
+      kind: 'design_token',
+      id,
+      revision: null,
+      digest,
+      decision: prior ? 'skip' : 'approve',
+      summary: fill(T.token[lang], { id, value: short(value, 60), source: token.sourceFact ?? 'generated' }),
+      reason: prior ? T.tokenChanged[lang] : T.approveReason[lang],
+      review_with: 'npm run brand:tokens:generate',
+      look_first: false,
+    })
+  }
+  return out
+}
+
 const COLLECTORS: Record<ExtraKind, (ws: KnowledgeWorkspace, lang: PendingLang) => ExtraEntry[]> = {
   strategy: strategyEntries,
   week: weekEntries,
+  design_token: tokenEntries,
   social_style: socialEntries,
   creative_preference: creativeEntries,
   aspect_proposal: aspectEntries,
@@ -363,6 +404,12 @@ function approveExtra(ws: KnowledgeWorkspace, entry: ExtraEntry, proof: string, 
       case 'week': {
         const done = approveWeek(ws, { week_id: entry.id, revision: entry.revision!, expected_sha256: entry.digest, proof, lang })
         return { outcome: 'approved', reason: `Approved revision ${done.approved.revision}${done.superseded ? `; revision ${done.superseded.revision} is superseded` : ''}. Nothing was posted or scheduled.` }
+      }
+      case 'design_token': {
+        const done = approveTokens(ws.root, [entry.id], proof)
+        const item = done.results[0]
+        if (!done.ok || !item || (item.outcome !== 'approved' && item.outcome !== 'unchanged')) return { outcome: 'refused', reason: item?.reason ?? done.errors.join('; ') }
+        return { outcome: 'approved', reason: 'Value hash recorded. Not published.' }
       }
       case 'social_style': {
         const done = approveKit(ws, { surface: entry.id, expected_sha256: entry.digest, proof })
