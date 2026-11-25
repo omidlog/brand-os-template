@@ -24,6 +24,15 @@
 
 - `content-read` sees a little more: `content_brief` carries the owner-approved statement and scope of applicable creative preferences (not only ids) and `learnings[]` (ids and owner-reported numbers of recent same channel+format slots). Never note text or drafts. An email slot now maps to the `article` surface.
 
+## Unreleased — social style kit
+
+### Added
+
+- **Social style kit** (`brand/social/style-kit.yaml`, `docs-internal/SOCIAL_STYLE_KIT.md`): per social format (post, carousel, story, reel, reel cover, YouTube thumbnail, LinkedIn post and document) sibling styles that share one brand family and differ in layout. Each style is a layer stack back to front, with zones in % of the canvas, colour and font as design-token ids, text limits, do/don't and platform safe zones. Four engine starter archetypes per surface, named and described in en, fa and tr, always drafts.
+- `npm run brand:social -- kit init|show|review|approve|reject|preview` (owner only; refused under an agent token). Approval needs the owner's approval proof and the reviewed digest, and is sealed privately in `brand/.private/social/approvals.json`; a style edited after approval is `invalid_approval` and is not served. `kit preview` writes deterministic SVG wireframes and one contact sheet per surface.
+- MCP `social_style_kit` and `brand:query --tool social_style_kit` for design, creative-read, content-read, internal-read and marketing tokens: approved styles only, drafts counted. `task_context` lists approved styles for `social_batch`, `visual_design` and `personal_content`. Rotation helpers (`rotateStyles`, `stylesForFormat`) for the content brief.
+- `schemas/social-style-kit.schema.json`; `validate` / `brand-os check` check the kit when it exists.
+
 ## Unreleased — more of a personal brand, and four shared brand questions
 
 ### Added

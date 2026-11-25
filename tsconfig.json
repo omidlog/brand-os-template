@@ -26,6 +26,7 @@
       "@brand-os/brand-core/research": ["packages/brand-core/src/research/index.ts"],
       "@brand-os/brand-core/runtime": ["packages/brand-core/src/runtime/index.ts"],
       "@brand-os/brand-core/seo": ["packages/brand-core/src/seo/index.ts"],
+      "@brand-os/brand-core/social-kit": ["packages/brand-core/src/social-kit/index.ts"],
       "@brand-os/brand-core/strategy": ["packages/brand-core/src/strategy/index.ts"],
       "@brand-os/brand-core/visual": ["packages/brand-core/src/visual/index.ts"],
       "@brand-os/brand-core/visual-dna": ["packages/brand-core/src/visual-dna/index.ts"],

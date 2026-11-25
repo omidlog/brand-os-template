@@ -70,6 +70,7 @@
     "brand:identity": "tsx scripts/identity.ts",
     "brand:visual-dna": "tsx scripts/visual-dna.ts",
     "brand:content": "tsx scripts/content.ts",
+    "brand:social": "tsx scripts/social.ts",
     "brand:runtime": "tsx scripts/runtime.ts",
     "brand:pack": "tsx scripts/pack.ts",
     "brand:acceptance": "tsx scripts/acceptance.ts",

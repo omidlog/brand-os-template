@@ -15,6 +15,7 @@
     "./research": "./src/research/index.ts",
     "./runtime": "./src/runtime/index.ts",
     "./seo": "./src/seo/index.ts",
+    "./social-kit": "./src/social-kit/index.ts",
     "./strategy": "./src/strategy/index.ts",
     "./visual": "./src/visual/index.ts",
     "./visual/pilot": "./src/visual/pilot.ts",

@@ -9,6 +9,8 @@ import { SERIES_ID } from '../creative/model.js'
 import type { InterviewEngine } from '../engine.js'
 import { readYaml } from '../fsutil.js'
 import { brandRetrieve, type RetrievedItem } from '../query.js'
+import { runSocialKitTool } from '../social-kit/agent.js'
+import type { SocialSurface } from '../social-kit/model.js'
 import { runStrategyTool, STRATEGY_PROFILES, type StrategyFeedDocument } from '../strategy/feed.js'
 import type { AgentKind, StrategyType } from '../strategy/model.js'
 import { taskText } from './i18n.js'
@@ -334,6 +336,43 @@ function addCreativePreferences(builder: Builder, engine: InterviewEngine, ctx: 
   }
 }
 
+/** Task types that carry the social style kit (docs-internal/SOCIAL_STYLE_KIT.md). */
+const SOCIAL_KIT_TASKS: ReadonlySet<TaskType> = new Set<TaskType>(['social_batch', 'visual_design', 'personal_content'])
+
+/** The kit surfaces a channel uses; no channel (or an unknown one) lists every surface. */
+function socialSurfacesFor(channel: string | undefined): SocialSurface[] | null {
+  if (channel === 'linkedin') return ['linkedin_post', 'linkedin_document']
+  if (channel === 'youtube') return ['thumbnail', 'reel', 'reel_cover']
+  if (channel === 'tiktok') return ['reel', 'reel_cover']
+  if (channel === 'instagram' || channel === 'facebook' || channel === 'threads') return ['post', 'carousel', 'story', 'reel', 'reel_cover']
+  return null
+}
+
+/**
+ * Approved social styles as pointers (id, surface, name, intent, digest): the full layer stack comes from the
+ * `social_style_kit` tool. Read with the caller's own context; drafts are never listed, a missing kit stays missing.
+ */
+function addSocialStyles(builder: Builder, engine: InterviewEngine, ctx: AuthContext, channel: string | undefined, locale: TaskLocale): void {
+  const result = runSocialKitTool(engine, ctx, { lang: locale })
+  if (result.status !== 'ok' || result.data === null) {
+    builder.gap('creative', 'social_styles', { id: 'social_styles', reason: result.status === 'denied' ? 'not_authorized' : 'not_approved', blocking: false, suggested_question_id: null }, 'withheld')
+    return
+  }
+  const wanted = socialSurfacesFor(channel)
+  const styles = result.data.surfaces.filter((surface) => !wanted || wanted.includes(surface.surface)).flatMap((surface) => surface.styles).slice(0, MAX_ITEMS_PER_KIND)
+  for (const style of styles) {
+    builder.item('creative', {
+      key: 'social_styles',
+      value: { style_id: style.style_id, surface: style.surface, name: style.name, use_when: style.use_when, content_types: style.content_types },
+      state: 'approved',
+      source_id: `social-style:${style.style_id}`,
+      source_revision: style.approval.digest,
+    })
+    builder.source({ id: `social-style:${style.style_id}`, revision: style.approval.digest, classification: 'internal', status: 'approved' })
+  }
+  if (styles.length === 0) builder.gap('creative', 'social_styles', { id: 'social_styles', reason: 'not_approved', blocking: false, suggested_question_id: null })
+}
+
 /** Builds one pack. `ctx` is the resolved caller; nothing in `args` can change who that is. */
 export function buildTaskContext(engine: InterviewEngine, ctx: AuthContext, args: TaskContextArgs): TaskContextResult {
   const config = engine.config()
@@ -391,6 +430,7 @@ export function buildTaskContext(engine: InterviewEngine, ctx: AuthContext, args
   if (recipe.mascot_artwork && flags.mascot) addMascotArtwork(builder, engine, ctx)
   const strategyRules = recipe.strategy ? addStrategy(builder, engine, ctx, recipe.strategy) : []
   if (recipe.surface && scopeId) addCreativePreferences(builder, engine, ctx, recipe.surface, scopeId)
+  if (SOCIAL_KIT_TASKS.has(taskType)) addSocialStyles(builder, engine, ctx, channel ?? undefined, locale ?? 'en')
 
   // The caller's own task inputs. Not brand facts, so they carry no source and are labelled owner_stated.
   for (const [key, value] of [

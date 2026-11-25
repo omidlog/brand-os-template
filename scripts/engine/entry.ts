@@ -25,6 +25,7 @@ const loaders: Record<string, () => Promise<unknown>> = {
   identity: () => import('../identity.js'),
   'visual-dna': () => import('../visual-dna.js'),
   content: () => import('../content.js'),
+  social: () => import('../social.js'),
   runtime: () => import('../runtime.js'),
   pack: () => import('../pack.js'),
   acceptance: () => import('../acceptance.js'),
