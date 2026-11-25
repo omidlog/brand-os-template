@@ -128,7 +128,9 @@ stacks with zones, token ids and text limits (guide: `docs-internal/SOCIAL_STYLE
 MCP `social_style_kit` or `npm run brand:query -- --tool social_style_kit [--surface …]` (design, creative-read,
 content-read, internal-read or marketing token). Use only listed styles, one per deliverable; never invent or mix a
 style, and never edit the kit or run `brand:social` (owner only, refused under an agent token). Propose a missing style
-to the owner as a draft. Approval of a style is design guidance only and authorizes no post.
+to the owner as a draft. Approval of a style is design guidance only and authorizes no post. Each layer's
+`font_resolved` names the token for your language and a `family` only when that token is approved; `family: null`
+with state `draft` or `example` means there is no approved brand font yet, so never use an EXAMPLE family as the brand's.
 
 ## Task context
 
