@@ -192,13 +192,13 @@ export interface InitResult {
  * Writes the starter draft kit. Refuses an existing file unless `force`; with `force`, approved and rejected styles
  * (and the family, while any style is approved) are kept exactly as they are, and only drafts are replaced.
  */
-export function initKit(ws: KnowledgeWorkspace, input: { surfaces?: readonly SocialSurface[]; styles?: number; force?: boolean; personal?: boolean }): InitResult {
+export function initKit(ws: KnowledgeWorkspace, input: { surfaces?: readonly SocialSurface[]; styles?: number; force?: boolean; personal?: boolean; mascot?: boolean }): InitResult {
   assertOwnerProcess()
   const per = input.styles ?? 4
   if (!Number.isInteger(per) || per < 1 || per > 4) throw new SocialKitError('invalid_input', '--styles is 1 to 4 (the engine has four starter archetypes per surface).')
   const surfaces = input.surfaces ?? SURFACES
   return withLock(ws, 'social-kit', () => {
-    const starter = buildStarterKit({ brandSlug: ws.brandSlug, surfaces, stylesPerSurface: per, personal: input.personal })
+    const starter = buildStarterKit({ brandSlug: ws.brandSlug, surfaces, stylesPerSurface: per, personal: input.personal, mascot: input.mascot })
     const existing = readKit(ws.root, ws.brandSlug)
     if (existing.state !== 'missing' && !input.force) throw new SocialKitError('exists', `${SOCIAL_KIT_FILE} already exists. Nothing was changed. Use --force to replace draft styles; approved and rejected styles are always kept.`)
     if (existing.state === 'invalid') throw new SocialKitError('invalid_kit', `${existing.error} Fix or remove the file first; --force never rewrites a kit it cannot read, so no approved style is lost.`)

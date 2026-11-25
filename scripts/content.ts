@@ -41,6 +41,7 @@ import {
   reviewWeek,
   ROLE_LABELS,
   scanWeeks,
+  servedContentViews,
   shareStrategy,
   shareWeek,
   storeBatch,
@@ -59,6 +60,7 @@ import {
   type WeekReview,
   type WeekSummary,
 } from '@brand-os/brand-core/content-bridge'
+import { readKit, shareKitApprovals } from '@brand-os/brand-core/social-kit'
 import { CONTENT_CHANNELS, proposeRevision, StrategyError, validateRevisionNumber, validateStrategyId, type ContentChannel } from '@brand-os/brand-core/strategy'
 
 /**
@@ -110,6 +112,7 @@ const HELP = `brand:content <command> [options]
                                   approved, current weeks only (drafts are never shown)
   share --week wk-YYYY-MM-DD [--dry-run]
                                   copy an approved week's summary to brand/content-calendar/shared (you commit it)
+  share --all [--dry-run]                           approved strategies, current weeks and the style kit summary for Studio, in one step
   share-strategy [--id content-main] [--dry-run]
                                   copy the approved, served content strategy revision (channels, pillars, mix,
                                   KPIs, cadence; no drafts, restricted data or fact values) to
@@ -151,6 +154,7 @@ const OPTIONS = {
   'expect-sha': { type: 'string' },
   channel: { type: 'string' },
   'dry-run': { type: 'boolean', default: false },
+  all: { type: 'boolean', default: false },
   playbook: { type: 'boolean', default: false },
   format: { type: 'string' },
   count: { type: 'string' },
@@ -565,6 +569,33 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       return
     }
     case 'share': {
+      if (values.all) {
+        // Everything approved and current, in one step: content strategies, calendar weeks, the style kit summary.
+        const written: string[] = []
+        const skipped: string[] = []
+        const attempt = (label: string, run: () => { path: string; written: boolean }) => {
+          try {
+            const result = run()
+            ;(result.written ? written : skipped).push(result.written ? result.path : `${label} (dry run)`)
+          } catch (error) {
+            skipped.push(`${label}: ${error instanceof Error ? error.message : String(error)}`)
+          }
+        }
+        for (const view of servedContentViews(ws, { lang }).views) attempt(`strategy ${view.strategy_id}`, () => shareStrategy(ws, { strategy_id: view.strategy_id, dryRun: values['dry-run'] }))
+        for (const week of listWeeks(ws, lang)) if (week.current !== null) attempt(`week ${week.week_id}`, () => shareWeek(ws, { week_id: week.week_id, dryRun: values['dry-run'] }))
+        if (readKit(ws.root, ws.brandSlug).state === 'ok') attempt('social style kit', () => shareKitApprovals(ws, { dryRun: values['dry-run'] }))
+        print({ ok: true, written, skipped, authorizes: [] }, () =>
+          [
+            written.length ? `Wrote ${written.length} file(s) for Studio:` : 'Nothing approved to share yet.',
+            ...written.map((item) => `  ${item}`),
+            ...(skipped.length ? ['Not shared:', ...skipped.map((item) => `  ${item}`)] : []),
+            written.length ? 'Commit and push them (git add brand && git commit -m "Share approved content" && git push), then refresh Studio. Sharing publishes nothing and authorizes nothing.' : '',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        )
+        return
+      }
       const result = shareWeek(ws, { week_id: need(values, 'week'), dryRun: values['dry-run'] })
       print({ ok: true, ...result }, () => (result.written ? fill(CAL_TEXT.shared_week![lang], { list: result.path }) : `${CAL_TEXT.shared_preview![lang]}\n${JSON.stringify(result.week, null, 2)}`))
       return

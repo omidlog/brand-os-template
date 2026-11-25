@@ -9,7 +9,7 @@ import { cleanPin, strategyAccess, type StaleInfo, type StrategyPin } from '../s
 import { canonicalJson, CONTENT_CHANNELS, sha256Hex, StrategyError, type ContentChannel, type ContentChannelPlan, type StrategyRef } from '../strategy/model.js'
 import { AGENT_NOTICE, AGENT_TEXT, REPORT_NOTICE } from './agent-i18n.js'
 import { isoDate, parseDate, slotFactIds, validateWeekId, type ContentSlot, type SlotResearch, type WeekEntry } from './calendar-model.js'
-import { approvedWeekEntry, buildCalendar, evaluateWeek, loadWeekRecord, type CalendarWeekView } from './calendar-store.js'
+import { approvedWeekEntry, buildCalendar, evaluateWeek, loadWeekRecord, loadWeekRevision, scanWeeks, type CalendarWeekView } from './calendar-store.js'
 import { deliverableSpec, type DeliverableSpec } from './deliverables.js'
 import { rotateStyles, stylesForFormat } from '../social-kit/rotation.js'
 import type { SocialSurface } from '../social-kit/model.js'
@@ -159,6 +159,11 @@ export interface ContentBriefDocument {
   sources: { facts: Array<{ id: string; revision: string }>; research: string[] }
   redacted: Array<{ field: string; reason: 'restricted' }>
   missing: string[]
+  /**
+   * Copy the owner left open for the content agent to write: `slot.hook` and `slot.angle` when the approved week has
+   * none. Drafting these is the agent's job (they are copy, not facts); everything in `missing` stays missing.
+   */
+  to_draft: string[]
   authorizes: []
   publication_permission: false
   schedule_permission: false
@@ -357,8 +362,9 @@ export interface SlotStyles {
 const DAY_MS = 86_400_000
 
 /**
- * Deterministic rotation index for a slot: the week number since the epoch times the number of slots of this
- * channel and format in the week, plus the slot's position among them. Week N+1 continues where week N stopped.
+ * Deterministic rotation index for a slot within one week: the week number since the epoch times the number of
+ * slots of this channel and format in the week, plus the slot's position among them. Used only when the approved
+ * calendar cannot be read; `calendarStyleIndex` is the normal path.
  */
 export function slotStyleIndex(slots: readonly ContentSlot[], slot: ContentSlot): number {
   const same = slots.filter((s) => s.channel === slot.channel && s.format === slot.format).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
@@ -367,10 +373,37 @@ export function slotStyleIndex(slots: readonly ContentSlot[], slot: ContentSlot)
   return week * Math.max(1, same.length) + position
 }
 
-function slotStyles(ws: KnowledgeWorkspace, slots: readonly ContentSlot[], slot: ContentSlot): SlotStyles {
+/** Every slot of one channel and format in the brand's approved weeks, in date order (week id, slot id break ties). */
+export function orderedSlots(weeks: ReadonlyArray<{ week_id: string; slots: readonly ContentSlot[] }>, channel: string, format: string): Array<{ week_id: string; slot_id: string }> {
+  return weeks
+    .flatMap((week) => week.slots.filter((s) => s.channel === channel && s.format === format).map((s) => ({ week_id: week.week_id, slot_id: s.id, date: s.date })))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.week_id.localeCompare(b.week_id) || a.slot_id.localeCompare(b.slot_id))
+    .map(({ week_id, slot_id }) => ({ week_id, slot_id }))
+}
+
+/**
+ * Rotation index across the whole approved calendar, so consecutive slots of one channel and format never repeat a
+ * layout, whatever the number of slots per week. Null when this slot is not in an approved week that can be read.
+ */
+function calendarStyleIndex(ws: KnowledgeWorkspace, weekId: string, slot: ContentSlot): number | null {
+  const weeks: Array<{ week_id: string; slots: ContentSlot[] }> = []
+  try {
+    for (const record of scanWeeks(ws)) {
+      const entry = approvedWeekEntry(record)
+      if (!entry) continue
+      weeks.push({ week_id: record.week_id, slots: loadWeekRevision(ws, record.week_id, entry.revision, entry).content.slots })
+    }
+  } catch {
+    return null
+  }
+  const index = orderedSlots(weeks, slot.channel, slot.format ?? '').findIndex((item) => item.week_id === weekId && item.slot_id === slot.id)
+  return index >= 0 ? index : null
+}
+
+function slotStyles(ws: KnowledgeWorkspace, weekId: string, slots: readonly ContentSlot[], slot: ContentSlot): SlotStyles {
   if (!slot.format) return { state: 'not_applicable', surfaces: [], assigned: {}, approved: {} }
   const found = stylesForFormat(ws.root, slot.format, slot.channel, ws.brandSlug)
-  const index = slotStyleIndex(slots, slot)
+  const index = calendarStyleIndex(ws, weekId, slot) ?? slotStyleIndex(slots, slot)
   const assigned: SlotStyles['assigned'] = {}
   for (const surface of found.surfaces) assigned[surface] = rotateStyles(found.styles[surface] ?? [], index)
   return { state: found.state, surfaces: found.surfaces, assigned, approved: found.styles }
@@ -409,7 +442,9 @@ export function buildBrief(ws: KnowledgeWorkspace, served: Served, slot: Content
   if (slot.pillar === null) missing.push('slot.pillar')
   if (!keyMessage && !offer) missing.push('slot.key_message')
   if (!cta && !view.cta.rules.length) missing.push('slot.cta')
-  if (slot.hook === null) missing.push('slot.hook')
+  const toDraft: string[] = []
+  if (slot.hook === null) toDraft.push('slot.hook')
+  if (slot.angle === null) toDraft.push('slot.angle')
   if (!view.audience.length) missing.push('audience')
   if (!view.voice.sources.length && !view.voice.do.length && !view.voice.dont.length) missing.push('voice')
   if (plan && plan.role === null) missing.push('channel_plan.role')
@@ -455,11 +490,12 @@ export function buildBrief(ws: KnowledgeWorkspace, served: Served, slot: Content
     competitive_angle: slot.research,
     creative: creativeFor(ws, { format: slot.format, week_id: c.week_id, id: slot.id }),
     learnings: slotLearnings(ws, { week_id: c.week_id, slot_id: slot.id, channel: slot.channel, format: slot.format }),
-    styles: slotStyles(ws, c.slots, slot),
+    styles: slotStyles(ws, c.week_id, c.slots, slot),
     report,
     sources: { facts: c.fact_refs.filter((ref) => ids.includes(ref.id) && !redacted.some((item) => item.field === ref.id)), research: slot.research ? [slot.research.ref] : [] },
     redacted,
     missing,
+    to_draft: toDraft,
     authorizes: [],
     publication_permission: false,
     schedule_permission: false,

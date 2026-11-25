@@ -206,6 +206,7 @@ function briefLines(brief: ContentBriefDocument): string[] {
     for (const item of brief.learnings) lines.push(`  - ${item.week_id} ${item.slot_id} (${item.date}, measured ${item.measured_at}): ${Object.entries(item.metrics).map(([key, value]) => `${key} ${value}`).join(', ')}`)
   }
   if (brief.missing.length) lines.push(`- Not decided (ask the owner, do not invent): ${brief.missing.join(', ')}`)
+  if (brief.to_draft?.length) lines.push(`- You write: ${brief.to_draft.join(', ')} (copy, inside the voice and must-avoid list)`)
   if (brief.redacted.length) lines.push(`- ${brief.redacted.length} cited field(s) withheld.`)
   lines.push(`- Pin: week revision ${brief.week_revision}, content_sha256 \`${brief.digests.content_sha256}\``, '')
   return lines

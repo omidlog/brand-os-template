@@ -154,7 +154,7 @@ async function main(): Promise<void> {
   switch (command) {
     case 'init': {
       const styles = values.styles === undefined ? undefined : Number(values.styles)
-      const result = initKit(ws, { surfaces: surfacesOf(values.surfaces), styles, force: values.force, personal: engine.config().modules.personal?.enabled === true })
+      const result = initKit(ws, { surfaces: surfacesOf(values.surfaces), styles, force: values.force, personal: engine.config().modules.personal?.enabled === true, mascot: engine.config().modules.mascot?.enabled === true })
       print({ ok: true, ...result }, () => `${t.labels.init_done}\n${t.labels.wrote}: ${result.path} (${result.written.length} drafts${result.kept.length ? `, kept ${result.kept.join(', ')}` : ''})`)
       return
     }

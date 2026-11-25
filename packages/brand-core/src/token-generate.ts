@@ -313,7 +313,7 @@ export function generateTokens(root: string, brandId: string, options: { dryRun?
     tokens: [],
     sources,
     semantic: semantic.report,
-    note: 'Generated tokens are drafts. Approve them with brand:tokens:approve and publish them with brand:tokens:publish before any agent or public build can read them.',
+    note: 'Generated tokens are drafts. Approve them with npm run brand:approve -- --all-pending (or brand:tokens:approve by id) and publish them with brand:tokens:publish before any agent or public build can read them.',
   }
   const docs = new Map<string, TokenNode>()
   for (const [file, { sources: fileSources, drafts }] of byFile) {

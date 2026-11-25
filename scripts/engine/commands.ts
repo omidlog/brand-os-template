@@ -30,6 +30,7 @@ export const ENGINE_COMMANDS: Record<string, EngineCommand> = {
   'brand-validate': { script: 'brand', prefix: ['validate'], npm: 'brand:validate' },
   ...Object.fromEntries(OWN_SCRIPTS.map((name) => [name, { script: name, prefix: [], npm: `brand:${name}` }])),
   'export-visual': { script: 'export-visual', prefix: [], npm: 'brand:export-visual', entry: 'export-visual' },
+  share: { script: 'content', prefix: ['share', '--all'], npm: 'brand:share' },
   mcp: { script: 'mcp', prefix: [], npm: 'mcp:serve' },
   validate: { script: 'validate', prefix: [], npm: 'validate' },
   // The docs portal is built from the template (its Docusaurus app); a data-only brand gets no script for these yet.

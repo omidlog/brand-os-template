@@ -1422,7 +1422,9 @@ async function approveAllPendingCommand(options: { dryRun: boolean; json: boolea
   if (coachNotes) console.error(`${coachNotes}\n`)
   if (!options.json) {
     const extra = plan.extras.filter((entry) => entry.decision === 'approve').length
-    console.error(`About to approve ${count} item(s) as ${options.actor}: facts, change proposals, evidence and assets${extra ? `, plus ${extra} strategy, calendar, social-style or creative item(s) at the exact digests listed in the dry run` : ''}. Approval does not publish.`)
+    const base = count - extra
+    const parts = [base ? `${base} fact, change, evidence or asset item(s)` : '', extra ? `${extra} strategy, calendar, design-token, social-style or creative item(s) at the exact digests listed in the dry run` : ''].filter(Boolean)
+    console.error(`About to approve ${count} item(s) as ${options.actor}: ${parts.join(', plus ')}. Approval does not publish.`)
   }
   const proof = await readApprovalProof()
   const result = pending.approveEverything(approvals, root, plan, proof, options.actor)

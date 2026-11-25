@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
-import { applyInit, cloudSyncAdvice, detectCloudSync, writeStarterWorkspace } from '@brand-os/brand-core'
+import { applyInit, cloudSyncAdvice, detectCloudSync, ensureApprovalSecret, writeStarterWorkspace } from '@brand-os/brand-core'
 import { scaffoldBrand } from './scaffold.js'
 
 /**
@@ -51,6 +51,24 @@ if (values.new) {
   // A warning, never a refusal: a brand inside a cloud-synced folder uploads brand/.private once it exists.
   const synced = detectCloudSync(root)
   if (synced) console.error(`WARNING: ${cloudSyncAdvice(synced, root)}`)
+  else {
+    // The owner's approval secret for this computer (0600, git-ignored). Not made inside a synced folder: it would upload.
+    ensureApprovalSecret(root)
+  }
 }
 const result = scaffoldBrand(root, { slug: values.slug })
 console.log(values.json ? JSON.stringify(result, null, 2) : result.written.length ? `Wrote ${result.written.join(', ')}.` : 'Engine-owned root files are current.')
+if (values.new && !values.json) {
+  console.log(
+    [
+      '',
+      'Next steps:',
+      fs.existsSync(path.join(root, 'brand', '.private', 'approval-secret'))
+        ? '  1. Keep the approval secret in the Keychain (macOS): npm run brand:doctor -- --store-proof-keychain'
+        : '  1. Move this folder out of the synced folder, then: npm run brand:doctor -- --create-approval-secret',
+      '  2. Answer the interview:              npm run brand:next',
+      '  3. See and approve what is waiting:   npm run brand:pending, then npm run brand:approve -- --all-pending',
+      '  4. Commit and push brand/ (brand/.private stays on this computer).',
+    ].join('\n'),
+  )
+}

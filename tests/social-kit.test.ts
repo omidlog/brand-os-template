@@ -80,7 +80,7 @@ test('the starter kit has four sibling styles per surface: one family, distinct 
   for (const surface of SURFACES) {
     const styles = kit.styles.filter((style) => style.surface === surface)
     assert.equal(styles.length, 4, surface)
-    assert.equal(STARTER_ARCHETYPES[surface].length, 4)
+    assert.ok(STARTER_ARCHETYPES[surface].length >= 4, 'at least four archetypes; a spare one replaces a mascot style for brands without a mascot')
     const signatures = styles.map((style) => style.layers.map((layer) => `${layer.role}@${JSON.stringify(zoneRect(layer.zone))}`).join('|'))
     assert.equal(new Set(signatures).size, 4, `${surface}: four distinct layouts`)
     const roleSets = styles.map((style) => style.layers.map((layer) => layer.role).join(','))
@@ -344,4 +344,14 @@ test('en, fa and tr text is complete and every starter rule code is translated',
   }
   // Persian strings are Persian, not a copy of English.
   for (const surface of SURFACES) for (const archetype of STARTER_ARCHETYPES[surface]) assert.match(archetype.name.fa + archetype.use.fa, /[؀-ۿ]/, archetype.slug)
+})
+
+test('a brand without a mascot gets no mascot style or layer; the spare archetype keeps four siblings', () => {
+  const kit = buildStarterKit({ brandSlug: 'no-mascot', mascot: false })
+  assert.equal(kit.styles.length, SURFACES.length * 4)
+  for (const style of kit.styles) {
+    assert.ok(!style.layers.some((layer) => layer.role === 'mascot'), `${style.id} has no mascot layer`)
+  }
+  assert.ok(kit.styles.some((style) => style.id === 'reel_cover.question'))
+  assert.ok(buildStarterKit({ brandSlug: 'with-mascot' }).styles.some((style) => style.id === 'reel_cover.mascot-hook'))
 })
