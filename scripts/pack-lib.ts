@@ -275,7 +275,7 @@ function socialKitMarkdown(view: SocialKitView | null): string {
       lines.push('- Layers, bottom to top:')
       for (const layer of style.layers) {
         const limits = [layer.max_words ? `≤${layer.max_words} words` : '', layer.max_lines ? `≤${layer.max_lines} lines` : ''].filter(Boolean).join(', ')
-        lines.push(`  - ${layer.role}${layer.optional ? ' (optional)' : ''}: x ${pct(layer.zone.x)}, y ${pct(layer.zone.y)}, w ${pct(layer.zone.w)}, h ${pct(layer.zone.h)}${layer.color ? `; colour \`${layer.color}\`` : ''}${layer.font ? `; font \`${layer.font}\`` : ''}${limits ? `; ${limits}` : ''}${layer.rules.length ? `; ${layer.rules.map(oneLine).join(' / ')}` : ''}`)
+        lines.push(`  - ${layer.role}${layer.optional ? ' (optional)' : ''}: x ${pct(layer.zone.x)}, y ${pct(layer.zone.y)}, w ${pct(layer.zone.w)}, h ${pct(layer.zone.h)}${layer.color ? `; colour \`${layer.color}\`` : ''}${layer.font ? `; font \`${layer.font_resolved?.token ?? layer.font}\`${layer.font_resolved?.family ? ` (${oneLine(layer.font_resolved.family)})` : layer.font_resolved ? ` (${layer.font_resolved.state}, no approved family)` : ''}` : ''}${limits ? `; ${limits}` : ''}${layer.rules.length ? `; ${layer.rules.map(oneLine).join(' / ')}` : ''}`)
       }
       if (style.do.length) lines.push(`- Do: ${style.do.map(oneLine).join('; ')}`)
       if (style.dont.length) lines.push(`- Don't: ${style.dont.map(oneLine).join('; ')}`)

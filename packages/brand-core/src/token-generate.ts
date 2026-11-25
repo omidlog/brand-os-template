@@ -3,6 +3,7 @@ import path from 'node:path'
 import { parse } from 'yaml'
 import { compileTokens, GENERATED_TOKEN_DIR, tokenDigest, type TokenNode } from '@brand-os/design-tokens'
 import { readFacts, type CanonicalFact } from './facts.js'
+import { fontAliasSources } from './font-roles.js'
 import { writeAtomic, writeYaml } from './fsutil.js'
 import { approvalProofMatches } from './private-store.js'
 import { parseStructured, type ColorEntry, type StructuredType } from './structured.js'
@@ -97,6 +98,8 @@ interface Draft {
   value: unknown
   description: string
   fact: CanonicalFact
+  /** For a stable font alias: the per-role token it copies. */
+  alias_of?: string
 }
 
 interface ApprovalEntry {
@@ -113,7 +116,20 @@ export function readTokenApprovals(root: string): Record<string, ApprovalEntry> 
   return doc?.approved ?? {}
 }
 
-function draftsFrom(question_id: string, type: StructuredType, file: string, fact: CanonicalFact): Draft[] | null {
+/** The brand's default locale from brand/brand.config.yaml, or null. Font aliases follow it (font-roles.ts). */
+export function brandDefaultLocale(root: string): string | null {
+  try {
+    const file = path.join(root, 'brand', 'brand.config.yaml')
+    if (!fs.existsSync(file)) return null
+    const doc = parse(fs.readFileSync(file, 'utf8')) as { brand?: { default_locale?: unknown } } | null
+    const locale = doc?.brand?.default_locale
+    return typeof locale === 'string' && /^[a-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})?$/.test(locale) ? locale : null
+  } catch {
+    return null
+  }
+}
+
+function draftsFrom(question_id: string, type: StructuredType, file: string, fact: CanonicalFact, defaultLocale: string | null = null): Draft[] | null {
   const parsed = parseStructured(type, fact.value)
   if (!parsed) return null
   const base = { file, fact }
@@ -129,7 +145,15 @@ function draftsFrom(question_id: string, type: StructuredType, file: string, fac
     }))
   }
   if (parsed.type === 'font') {
-    return parsed.fonts.flatMap((font) => [
+    // Stable ids (type.fontFamily.display / body / mono) for semantic consumers, carrying the family of the role for
+    // the brand's default locale. Each is its own draft token: approving display-fa does not approve display.
+    const aliases = fontAliasSources(parsed.fonts.map((font) => font.role), defaultLocale).flatMap((source) => {
+      const font = parsed.fonts.find((item) => item.role === source.role)
+      if (!font) return []
+      const why = source.reason === 'default_locale' ? `the default locale ${defaultLocale}` : source.reason === 'synonym' ? 'the same role' : 'the first listed role'
+      return [{ ...base, id: `type.fontFamily.${source.alias}`, type: 'fontFamily', value: [font.family, ...font.fallback], description: `Draft alias of type.fontFamily.${font.role} (${why}) from approved ${question_id}.`, alias_of: `type.fontFamily.${font.role}` }]
+    })
+    const own = parsed.fonts.flatMap((font) => [
       { ...base, id: `type.fontFamily.${font.role}`, type: 'fontFamily', value: [font.family, ...font.fallback], description: `Draft from approved ${question_id} (${font.role}).` },
       ...(font.size_px === null
         ? []
@@ -138,6 +162,7 @@ function draftsFrom(question_id: string, type: StructuredType, file: string, fac
         ? []
         : [{ ...base, id: `type.lineHeight.${font.role}`, type: 'number', value: font.line_height, description: `Draft line height from approved ${question_id}.` }]),
     ])
+    return [...own, ...aliases]
   }
   if (parsed.type === 'logo_spec') {
     const logo = parsed.logo
@@ -251,6 +276,7 @@ function semanticDrafts(facts: Record<string, CanonicalFact>, roles: ColorEntry[
 export function generateTokens(root: string, brandId: string, options: { dryRun?: boolean } = {}): TokenGenerateReport {
   const facts = readFacts(root, 'approved', brandId)
   const approvals = readTokenApprovals(root)
+  const defaultLocale = brandDefaultLocale(root)
   // Draft tokens per file, in source order. The color file carries the owner roles and the semantic map.
   const byFile = new Map<string, { sources: string[]; drafts: Draft[] }>()
   const group = (file: string) => {
@@ -265,7 +291,7 @@ export function generateTokens(root: string, brandId: string, options: { dryRun?
     const entry = group(source.file)
     entry.sources.push(source.question_id)
     if (state === 'used' && fact) {
-      const made = draftsFrom(source.question_id, source.type, source.file, fact)
+      const made = draftsFrom(source.question_id, source.type, source.file, fact, defaultLocale)
       if (made === null) state = 'invalid'
       else entry.drafts.push(...made)
       if (source.type === 'color') {
@@ -303,7 +329,7 @@ export function generateTokens(root: string, brandId: string, options: { dryRun?
         $type: draft.type,
         $value: draft.value,
         $description: draft.description,
-        $extensions: { 'brand.os': { status: 'draft', generated: true, source_fact: sourceFact, source_version: draft.fact.version } },
+        $extensions: { 'brand.os': { status: 'draft', generated: true, source_fact: sourceFact, source_version: draft.fact.version, ...(draft.alias_of ? { alias_of: draft.alias_of } : {}) } },
       }
       const prior = getPath(old, draft.id)
       const approval = approvals[draft.id]

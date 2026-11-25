@@ -1,4 +1,8 @@
-import { compileTokens, type FlatToken } from '@brand-os/design-tokens'
+import fs from 'node:fs'
+import path from 'node:path'
+import { parse } from 'yaml'
+import { compileTokens, tokenDigest, type FlatToken } from '@brand-os/design-tokens'
+import { localizedFontRef } from '../font-roles.js'
 import { socialKitText } from './i18n.js'
 import { localize, SURFACE_SPECS, SURFACES, TEXT_ROLES, zoneRect, type SocialKit, type SocialLang, type SocialStyle, type SocialSurface } from './model.js'
 import type { StyleState } from './store.js'
@@ -7,31 +11,122 @@ import type { StyleState } from './store.js'
  * Deterministic SVG wireframes of the kit, so the owner can see sibling styles side by side. Pure text: no network,
  * no fonts loaded, no images embedded, no timestamps. Each layer is a labelled rectangle filled with its token colour
  * at low opacity; text layers get placeholder lines and the token's font family name; safe zones are dashed.
+ *
+ * Fonts resolve per kit language (`type.fontFamily.display` → `display-fa` in a Persian sheet when the brand has
+ * one) and always say what they are: the brand's approved family, a draft token (generated from an approved answer,
+ * not yet hash-approved), a template EXAMPLE, or a missing token. The owner's preview shows drafts labelled as drafts;
+ * the agent view (`agent.ts`) names only approved families.
  */
 
 const FALLBACK = '#9AA0A6'
 
-export interface TokenLookup {
-  color: (id: string | null | undefined) => { hex: string; resolved: boolean }
-  font: (id: string | null | undefined) => string
+export type FontState = 'approved' | 'draft' | 'example' | 'missing'
+
+export interface FontResolution {
+  /** The token id the kit names. */
+  ref: string
+  /** The token id used for this language (the per-locale token when there is one). */
+  token: string
+  /** The first family of the stack, or null when the token is missing. */
+  family: string | null
+  state: FontState
 }
 
-export function tokenLookup(flat: Record<string, FlatToken>): TokenLookup {
-  return {
-    color: (id) => {
-      const hex = id ? flat[id]?.hex : undefined
-      return typeof hex === 'string' && /^#[0-9A-Fa-f]{6}$/.test(hex) ? { hex: hex.toUpperCase(), resolved: true } : { hex: FALLBACK, resolved: false }
-    },
-    font: (id) => {
-      const value = id ? flat[id]?.value : undefined
-      const first = Array.isArray(value) ? value[0] : value
-      return typeof first === 'string' ? first : id ? `${id} (unresolved)` : 'n/a'
-    },
+export interface TokenLookup {
+  color: (id: string | null | undefined) => { hex: string; resolved: boolean }
+  /** Null for a layer without a font. */
+  fontInfo: (id: string | null | undefined, lang?: SocialLang) => FontResolution | null
+  /** The label printed in a wireframe: the family, with its state unless it is approved. */
+  font: (id: string | null | undefined, lang?: SocialLang) => string
+}
+
+/** brand/tokens/approvals.yaml, as `{id: value_sha256}`. Missing or unreadable is empty. */
+export function readTokenApprovalDigests(root: string): Record<string, string> {
+  try {
+    const file = path.join(root, 'brand', 'tokens', 'approvals.yaml')
+    if (!fs.existsSync(file)) return {}
+    const doc = parse(fs.readFileSync(file, 'utf8')) as { approved?: Record<string, { value_sha256?: unknown }> } | null
+    const out: Record<string, string> = {}
+    for (const [id, entry] of Object.entries(doc?.approved ?? {})) if (typeof entry?.value_sha256 === 'string') out[id] = entry.value_sha256
+    return out
+  } catch {
+    return {}
   }
 }
 
+export function fontLabel(info: FontResolution | null, lang: SocialLang = 'en'): string {
+  if (!info) return 'n/a'
+  const states = socialKitText(lang).font_states
+  if (info.state === 'missing' || info.family === null) return `${info.ref} (${states.missing})`
+  return info.state === 'approved' ? info.family : `${info.family} (${states[info.state]})`
+}
+
+function lookupFrom(color: TokenLookup['color'], fontInfo: TokenLookup['fontInfo']): TokenLookup {
+  return { color, fontInfo, font: (id, lang = 'en') => fontLabel(fontInfo(id, lang), lang) }
+}
+
+/**
+ * A lookup over compiled tokens. `approvals` (token id → approved value hash) decides `approved` vs `draft`; without
+ * it every generated token is a draft. Base template tokens are EXAMPLE unless hash-approved.
+ */
+export function tokenLookup(flat: Record<string, FlatToken>, approvals: Record<string, string> = {}): TokenLookup {
+  const fontInfo: TokenLookup['fontInfo'] = (id, lang = 'en') => {
+    if (!id) return null
+    const token = localizedFontRef(id, lang, (candidate) => flat[candidate] !== undefined)
+    const entry = flat[token]
+    if (!entry) return { ref: id, token, family: null, state: 'missing' }
+    const first = Array.isArray(entry.value) ? entry.value[0] : entry.value
+    const family = typeof first === 'string' ? first : String(first)
+    const approved = approvals[token] !== undefined && approvals[token] === tokenDigest(entry)
+    return { ref: id, token, family, state: approved ? 'approved' : entry.source === 'generated' ? 'draft' : 'example' }
+  }
+  return lookupFrom((id) => {
+    const hex = id ? flat[id]?.hex : undefined
+    return typeof hex === 'string' && /^#[0-9A-Fa-f]{6}$/.test(hex) ? { hex: hex.toUpperCase(), resolved: true } : { hex: FALLBACK, resolved: false }
+  }, fontInfo)
+}
+
 export function repoTokenLookup(root: string): TokenLookup {
-  return tokenLookup(compileTokens(root).flat)
+  return tokenLookup(compileTokens(root).flat, readTokenApprovalDigests(root))
+}
+
+/** Plain data a lookup can be rebuilt from (Studio keeps it in its projection and draws the SVGs per request). */
+export interface TokenSnapshot {
+  colors: Record<string, { hex: string; resolved: boolean }>
+  fonts: Record<SocialLang, Record<string, FontResolution>>
+}
+
+/** Every colour and font token id a kit names. */
+export function kitTokenRefs(kit: SocialKit): { colors: string[]; fonts: string[] } {
+  const colors = new Set<string>(Object.values(kit.family.palette))
+  const fonts = new Set<string>([kit.family.type.headline, kit.family.type.body, ...(kit.family.type.accent ? [kit.family.type.accent] : [])])
+  for (const style of kit.styles) {
+    for (const layer of style.layers) {
+      if (layer.color) colors.add(layer.color)
+      if (layer.font) fonts.add(layer.font)
+    }
+    if (style.caption_style) {
+      fonts.add(style.caption_style.font)
+      colors.add(style.caption_style.color)
+      if (style.caption_style.background) colors.add(style.caption_style.background)
+    }
+  }
+  return { colors: [...colors].sort(), fonts: [...fonts].sort() }
+}
+
+/** Every token the kit names, resolved once (fonts once per language). */
+export function tokenSnapshot(kit: SocialKit, lookup: TokenLookup): TokenSnapshot {
+  const refs = kitTokenRefs(kit)
+  const fonts = { en: {}, fa: {}, tr: {} } as TokenSnapshot['fonts']
+  for (const lang of ['en', 'fa', 'tr'] as const) for (const ref of refs.fonts) fonts[lang][ref] = lookup.fontInfo(ref, lang) as FontResolution
+  return { colors: Object.fromEntries(refs.colors.map((ref) => [ref, lookup.color(ref)])), fonts }
+}
+
+export function snapshotLookup(snapshot: TokenSnapshot): TokenLookup {
+  return lookupFrom(
+    (id) => (id && Object.prototype.hasOwnProperty.call(snapshot.colors, id) ? (snapshot.colors[id] as { hex: string; resolved: boolean }) : { hex: FALLBACK, resolved: false }),
+    (id, lang = 'en') => (id ? (snapshot.fonts[lang]?.[id] ?? { ref: id, token: id, family: null, state: 'missing' }) : null),
+  )
 }
 
 export function escapeXml(value: string): string {
@@ -78,7 +173,7 @@ export function styleSvg(style: SocialStyle, tokens: TokenLookup, options: { sta
         out.push(`<rect x="${round(x + w * 0.04)}" y="${round(y + step * (line + 0.6))}" width="${round(width)}" height="${round(thickness)}" fill="${color.hex}" fill-opacity="0.55"/>`)
       }
       const limit = [layer.max_words ? `${layer.max_words}w` : null, layer.max_lines ? `${layer.max_lines}l` : null].filter(Boolean).join(' ')
-      out.push(`<text x="${round(x + 8)}" y="${round(y + h - 8)}" font-size="${Math.round(label * 0.8)}" fill="#202124">${escapeXml(`Aa ${tokens.font(layer.font ?? null)}${limit ? ` · ${limit}` : ''}`)}</text>`)
+      out.push(`<text x="${round(x + 8)}" y="${round(y + h - 8)}" font-size="${Math.round(label * 0.8)}" fill="#202124">${escapeXml(`Aa ${tokens.font(layer.font ?? null, lang)}${limit ? ` · ${limit}` : ''}`)}</text>`)
     }
     out.push(`<text x="${round(x + 8)}" y="${round(y + label + 4)}" font-size="${label}" font-weight="bold" fill="#202124">${escapeXml(`${index + 1}. ${layer.role}${color.resolved || !layer.color ? '' : ' (token unresolved)'}`)}</text>`)
     out.push('</g>')
@@ -100,7 +195,7 @@ export interface PreviewFile {
   contents: string
 }
 
-function sheet(kit: SocialKit, surface: SocialSurface, states: StyleState[], lang: SocialLang): string {
+function sheet(kit: SocialKit, surface: SocialSurface, states: StyleState[], lang: SocialLang, tokens: TokenLookup): string {
   const text = socialKitText(lang)
   const dir = lang === 'fa' ? 'rtl' : 'ltr'
   const rows = states
@@ -126,6 +221,7 @@ function sheet(kit: SocialKit, surface: SocialSurface, states: StyleState[], lan
     '</head><body>',
     `<h1>${escapeXml(text.surfaces[surface])}</h1>`,
     `<p>${escapeXml(kit.brand_slug)} · ${escapeXml(text.labels.safe_zones)}: ${escapeXml(zones)}</p>`,
+    `<p>${escapeXml(text.labels.font)}: ${escapeXml([kit.family.type.headline, kit.family.type.body].map((ref) => `${ref} → ${tokens.font(ref, lang)}`).join(' · '))}</p>`,
     `<main>${rows.join('\n')}</main>`,
     '</body></html>',
     '',
@@ -142,7 +238,7 @@ export function previewFiles(kit: SocialKit, states: StyleState[], tokens: Token
     for (const state of states.filter((item) => item.style.surface === surface)) {
       files.push({ path: `${surface}/${state.style.id}.svg`, contents: styleSvg(state.style, tokens, { status: text.statuses[state.status], lang }) })
     }
-    files.push({ path: `${surface}/index.html`, contents: sheet(kit, surface, states, lang) })
+    files.push({ path: `${surface}/index.html`, contents: sheet(kit, surface, states, lang, tokens) })
   }
   const links = surfaces.map((surface) => `<li><a href="${surface}/index.html">${escapeXml(text.surfaces[surface])}</a></li>`).join('')
   files.push({ path: 'index.html', contents: `<!doctype html>\n<html lang="${lang}" dir="${lang === 'fa' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${escapeXml(text.labels.kit)}</title></head><body><h1>${escapeXml(text.labels.kit)}</h1><ul>${links}</ul></body></html>\n` })

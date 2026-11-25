@@ -13,6 +13,21 @@
 
 - `approvePreference` and `approveAspects` take an optional `expected_digest` (refused with code `stale` when the record changed); `aspectProposalDigest` added. Seal checks are exported for rotation (`strategySealVerifies`, `weekSealVerifies`, social `sealFor`); behaviour is unchanged.
 
+## Unreleased — brand fonts in the social kit, Studio pages for the content strategy and the social style kit
+
+### Added
+
+- `npm run brand:content -- share-strategy [--id content-main] [--dry-run]` (owner only): writes the approved, served content strategy revision to `brand/content-strategy/shared/<id>.json` for Studio — channels with role, objective, audience, formats, cadence, mix, KPI targets, posting windows and rules; pillars; languages; validity; revision and content digest. Never a draft, the restricted block or a fact value. The owner commits and merges it.
+- `npm run brand:social -- kit share [--dry-run]` (owner only): writes `brand/social/shared/approvals.json`, a public summary of the approved style ids with their content digest and approval time. No HMAC seal, event id or secret.
+- Studio: **Content strategy** (`/brands/<slug>/market/content-strategy`: per-channel cards, the content mix as a bar, KPI targets) and **Social style kit** (`/brands/<slug>/market/social-style-kit`: per surface, the core preview wireframes inline with approved / draft / not verified badges, layers, do / don't and fonts). Read only, listed only when the merged commit has the data, en/fa/tr, RTL for fa. A style is approved in Studio only when its digest matches the shared summary.
+- `social_style_kit` returns `font_resolved` per layer and a `fonts` list: the token for the requested language (`display-fa` for fa when the brand has it), its state (`approved`, `draft`, `example`, `missing`) and the family name only when the token is hash-approved.
+
+### Changed
+
+- `brand:tokens:generate` also emits the stable ids `type.fontFamily.display` and `type.fontFamily.body` (and `mono` only when the approved type scale has one) from the brand's default-locale roles, so semantic consumers no longer fall back to the template's EXAMPLE families. They are draft tokens with their own approval hash; the per-locale tokens are unchanged.
+- `brand:social kit preview` shows the brand's family per `--lang` and labels a draft token or a template EXAMPLE instead of printing "EXAMPLE Display" silently. The contact sheet lists the family fonts.
+- Studio reads only `brand/social/style-kit.yaml` and `brand/social/shared/approvals.json` under `brand/social/`, and only `brand/content-strategy/shared/<id>.json` under `brand/content-strategy/`.
+
 ## Unreleased — channel playbook, batch planning and deliverable specs (Content Bridge)
 
 ### Added
