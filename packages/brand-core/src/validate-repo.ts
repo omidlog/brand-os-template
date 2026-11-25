@@ -16,6 +16,8 @@ import { checkLogoMastersInRepo } from './logo-masters.js'
 import { approvalGrantErrors } from './permissions.js'
 import { canonicalReferenceErrors } from './personal.js'
 import { profileErrors, profileExists } from './profiles.js'
+import { SOCIAL_KIT_FILE, styleDigest } from './social-kit/model.js'
+import { kitSafetyProblems, readKit } from './social-kit/store.js'
 import { llmConfigErrors } from './llm/provider.js'
 import type { BrandConfig, FieldQuestion } from './types.js'
 import { frameworkRegistryErrors } from './visual/framework-registry.js'
@@ -64,6 +66,9 @@ export function validateRepo(root: string): ValidationReport {
   warnings.push(...registry.warnings)
   const compiled = compileTokens(root)
   errors.push(...compiled.errors)
+  const social = socialKitFindings(root, new Set(Object.keys(compiled.flat)))
+  errors.push(...social.errors)
+  warnings.push(...social.warnings)
   // A missing build output is not a brand problem: brand work never needs it, so validate stays quiet and the docs
   // build prints `tokenCssBuildNote` instead. A stale one that exists is still an error, since it would ship old values.
   const builtCss = tokenCssPath(root)
@@ -223,6 +228,49 @@ function validateMascot(root: string, errors: string[]): void {
   if (angles.angles.length !== 8) errors.push('Expected 8 angles')
   const motions = readYamlIfExists<{ motions: unknown[] }>(path.join(root, 'brand', 'mascot', 'motions.yaml')) ?? { motions: CORE_MOTIONS }
   if (motions.motions.length !== 15) errors.push(`Expected 15 motions, found ${motions.motions.length}`)
+}
+
+/**
+ * brand/social/style-kit.yaml, when present: the JSON schema, then the parser's cross-field rules, then a safety scan
+ * (the file is committed). Unknown token ids and an approved style edited after approval are warnings. Absent: nothing.
+ * The owner's seals are private, so a clone without them is not reported here (agents simply get no approved style).
+ */
+export function socialKitFindings(root: string, tokenIds: ReadonlySet<string>): { errors: string[]; warnings: string[] } {
+  const errors: string[] = []
+  const warnings: string[] = []
+  const file = path.join(root, ...SOCIAL_KIT_FILE.split('/'))
+  if (!fs.existsSync(file)) return { errors, warnings }
+  let doc: unknown
+  try {
+    doc = readYaml<unknown>(file)
+  } catch (error) {
+    return { errors: [`${SOCIAL_KIT_FILE} is not valid YAML: ${(error as Error).message.split('\n')[0]}`], warnings }
+  }
+  const ajv = new Ajv({ allErrors: true, strict: false })
+  const validate = ajv.compile(JSON.parse(fs.readFileSync(engineSchemaPath('social-style-kit.schema.json'), 'utf8')) as object)
+  if (!(validate(doc) as boolean)) return { errors: [`${SOCIAL_KIT_FILE}: ${ajv.errorsText(validate.errors)}`], warnings }
+  let slug: string | undefined
+  try {
+    slug = readYaml<BrandConfig>(path.join(root, 'brand', 'brand.config.yaml')).brand?.slug
+  } catch {
+    slug = undefined
+  }
+  const read = readKit(root, slug)
+  if (read.state === 'invalid') return { errors: [read.error], warnings }
+  if (read.state !== 'ok') return { errors, warnings }
+  const kit = read.kit
+  for (const problem of kitSafetyProblems(kit)) errors.push(`${SOCIAL_KIT_FILE} holds text that looks like ${problem}. It is committed design guidance: remove it.`)
+  const refs = new Set<string>([kit.family.type.headline, kit.family.type.body, ...(kit.family.type.accent ? [kit.family.type.accent] : []), ...Object.values(kit.family.palette), kit.family.corner_radius])
+  for (const style of kit.styles) {
+    for (const layer of style.layers) for (const ref of [layer.color, layer.font]) if (ref) refs.add(ref)
+    if (style.caption_style) for (const ref of [style.caption_style.font, style.caption_style.color, style.caption_style.background]) if (ref) refs.add(ref)
+    if (style.status === 'approved' && style.approval && style.approval.digest !== styleDigest(kit.brand_slug, kit.family, style)) {
+      warnings.push(`${SOCIAL_KIT_FILE}: ${style.id} changed after approval (invalid approval, not served). Review and approve it again with npm run brand:social -- kit review --style ${style.id}.`)
+    }
+  }
+  const unknown = [...refs].filter((ref) => !tokenIds.has(ref)).sort()
+  if (unknown.length) warnings.push(`${SOCIAL_KIT_FILE} names token ids the token files do not define: ${unknown.join(', ')}.`)
+  return { errors, warnings }
 }
 
 function scanSecrets(root: string, errors: string[]): void {

@@ -6,6 +6,8 @@ import { AGENT_TOKEN_ENV, KnowledgeError, openWorkspace, type KnowledgeWorkspace
 import {
   AGENT_TEXT,
   approvedWeekEntry,
+  BATCH_TEXT,
+  batchConflicts,
   approveWeek,
   brandSettings,
   buildContentStrategy,
@@ -16,13 +18,23 @@ import {
   contentLang,
   contentStrategyView,
   fill,
+  listMetrics,
   listObservations,
+  METRIC_KEYS,
+  recordSlotFeedback,
+  recordSlotMetrics,
   listWeeks,
   loadWeekRecord,
+  MIX_LABELS,
+  OBJECTIVE_LABELS,
+  parseBatchItem,
   parseCadence,
   parseChannels,
   parseFormats,
+  planBatch,
   planCalendar,
+  PLAYBOOK_TEXT,
+  playbookDocument,
   problemText,
   proposeWeek,
   rejectWeek,
@@ -30,13 +42,19 @@ import {
   ROLE_LABELS,
   scanWeeks,
   shareWeek,
+  storeBatch,
   validateWeekId,
+  type BatchItem,
+  type BatchResult,
   type CalendarView,
+  type ContentMetrics,
+  type ContentMetricsObservation,
   type ContentObservation,
   type ContentLang,
   type ContentStrategyDraft,
   type ContentStrategyView,
   type PlanResult,
+  type PlaybookDocument,
   type WeekReview,
   type WeekSummary,
 } from '@brand-os/brand-core/content-bridge'
@@ -62,10 +80,13 @@ import { CONTENT_CHANNELS, proposeRevision, StrategyError, validateRevisionNumbe
 const HELP = `brand:content <command> [options]
 
   strategy [--id content-main] [--channels instagram,linkedin] [--cadence instagram=3/week]
-           [--formats instagram=reel+carousel] [--languages en,fa] [--markets tr]
+           [--formats instagram=reel+carousel] [--languages en,fa] [--markets tr] [--playbook]
            [--out <proposal.json>] [--store]
                                   propose a content strategy from approved facts, with explicit gaps.
+                                  --playbook fills role, formats, cadence, objective, mix and KPI names from
+                                  the general-practice channel playbook (explicit --formats/--cadence win).
                                   Without --out or --store nothing is written.
+  playbook [--channel instagram]  the general-practice channel playbook (not measured for this brand)
   show [--id <id>]                the approved content strategy with its voice rules, resolved from
                                   approved facts (drafts are never shown)
 
@@ -73,6 +94,11 @@ const HELP = `brand:content <command> [options]
        [--out <weeks.json>] [--store]
                                   draft calendar weeks (Monday to Sunday) from the served content strategy.
                                   Without --out or --store nothing is written.
+  batch --channel instagram --format reel --count 10 | --item instagram:reel:10 [--item …]
+        [--from YYYY-MM-DD] [--pillar <id>] [--strategy <id>] [--research] [--out <weeks.json>] [--store]
+                                  draft N slots per channel and format, dated by the approved cadence from
+                                  --from (default: next Monday), grouped into weeks. --store refuses when a
+                                  target week already has a stored draft or approved week.
   week propose --file <week.json> store one week (an item of the --out weeks list) as a draft
   week review  --week wk-YYYY-MM-DD --revision <n>
   week approve --week wk-YYYY-MM-DD --revision <n> --expect-sha <sha256>
@@ -83,7 +109,17 @@ const HELP = `brand:content <command> [options]
                                   approved, current weeks only (drafts are never shown)
   share --week wk-YYYY-MM-DD [--dry-run]
                                   copy an approved week's summary to brand/content-calendar/shared (you commit it)
-  reports [--week wk-YYYY-MM-DD]  produced/published reports from content agents (observations only)
+  reports [--week wk-YYYY-MM-DD]  produced/published reports and owner-reported metrics (observations only)
+
+  feedback --week wk-YYYY-MM-DD --slot s01 --text "<your words>" [--verdict like|change_request|reject]
+           [--keep hook,tone] [--avoid length,jargon] [--lang fa]
+                                  your feedback on a produced slot: a Knowledge note linked to the slot's creative
+                                  project. Prints the brand:creative suggest line that turns it into a preference.
+  metrics --week wk-YYYY-MM-DD --slot s01 [--views N] [--reach N] [--likes N] [--comments N] [--shares N]
+          [--saves N] [--follows N] [--link-clicks N] [--watch-time-s N] [--completion-rate P]
+          [--measured-at YYYY-MM-DD] [--source manual|platform_export]
+                                  numbers you read off the platform: stored as an owner_reported, not_verified
+                                  observation. Never a fact or a claim.
 
 Review and approve with: npm run brand:strategy -- review / approve (owner proof).
 Options: --lang en|fa|tr (default: the brand default locale), --json. Refused while ${AGENT_TOKEN_ENV} is set.`
@@ -110,6 +146,28 @@ const OPTIONS = {
   'expect-sha': { type: 'string' },
   channel: { type: 'string' },
   'dry-run': { type: 'boolean', default: false },
+  playbook: { type: 'boolean', default: false },
+  format: { type: 'string' },
+  count: { type: 'string' },
+  item: { type: 'string', multiple: true },
+  pillar: { type: 'string' },
+  slot: { type: 'string' },
+  text: { type: 'string' },
+  verdict: { type: 'string' },
+  keep: { type: 'string' },
+  avoid: { type: 'string' },
+  views: { type: 'string' },
+  reach: { type: 'string' },
+  likes: { type: 'string' },
+  comments: { type: 'string' },
+  shares: { type: 'string' },
+  saves: { type: 'string' },
+  follows: { type: 'string' },
+  'link-clicks': { type: 'string' },
+  'watch-time-s': { type: 'string' },
+  'completion-rate': { type: 'string' },
+  'measured-at': { type: 'string' },
+  source: { type: 'string' },
 } as const
 
 type Values = ReturnType<typeof parseArgs<{ args: string[]; options: typeof OPTIONS; allowPositionals: false; strict: true }>>['values']
@@ -138,7 +196,11 @@ function draftText(draft: ContentStrategyDraft, lang: ContentLang): string {
   for (const source of draft.sources) lines.push(`  [${source.state}] ${source.fact_id} (${ROLE_LABELS[source.role]![lang]})`)
   lines.push('', `${t('pillars')}: ${block.pillars.map((p) => `${p.id} ${p.name}`).join(' · ') || '—'}`)
   lines.push(`${t('channels')}:`)
-  for (const c of block.channels) lines.push(`  ${c.channel}: ${c.formats.join('+') || t('not_decided')}, ${c.cadence ? `${c.cadence.target}/${c.cadence.per}` : t('not_decided')}`)
+  for (const c of block.channels) {
+    lines.push(`  ${c.channel}: ${c.formats.join('+') || t('not_decided')}, ${c.cadence ? `${c.cadence.target}/${c.cadence.per}` : t('not_decided')}`)
+    if (c.role) lines.push(`    ${c.role}`)
+    if (c.objective) lines.push(`    ${OBJECTIVE_LABELS[c.objective]![lang]}${c.mix ? ` · ${c.mix.map((m) => `${MIX_LABELS[m.type]![lang]} ${m.share}%`).join(', ')}` : ''}`)
+  }
   if (!block.channels.length) lines.push('  —')
   lines.push('', `${t('gaps')}:`)
   if (!draft.gaps.length) lines.push(`  ${t('no_gaps')}`)
@@ -174,12 +236,49 @@ function viewText(view: ContentStrategyView, lang: ContentLang): string {
   return lines.join('\n')
 }
 
+function playbookText(doc: PlaybookDocument, lang: ContentLang): string {
+  const t = (key: string) => PLAYBOOK_TEXT[key]![lang]
+  const lines = [t('header'), '']
+  for (const e of doc.entries) {
+    lines.push(`${e.channel}`, `  ${t('role')}: ${e.role}`, `  ${t('formats')}: ${e.formats.join(', ')}`)
+    lines.push(`  ${t('cadence')}: ${fill(t('cadence_value'), { min: e.cadence.min, max: e.cadence.max, start: e.cadence.start, per: t(e.cadence.per) })}`)
+    lines.push(`  ${t('objective')}: ${e.objective.label}`, `  ${t('mix')}: ${e.mix.map((m) => `${m.label} ${m.share}%`).join(', ')}`, `  ${t('kpis')}: ${e.kpis.map((k) => k.label).join(', ')}`)
+    lines.push(`  ${t('windows')}: ${e.posting_windows_note}`, `  ${t('craft')}:`, ...e.craft.map((note) => `    - ${note}`), '')
+  }
+  lines.push(...doc.notice.map((line) => `note: ${line}`))
+  return lines.join('\n')
+}
+
+function batchItems(values: Values): BatchItem[] {
+  const items = (values.item ?? []).map(parseBatchItem)
+  if (values.format || values.count) {
+    if (!values.channel || !values.format || !values.count) usage('batch needs --channel, --format and --count together (or --item channel:format:count).')
+    items.push(parseBatchItem(`${values.channel}:${values.format}:${values.count}`))
+  } else if (values.channel) usage('batch needs --format and --count with --channel.')
+  if (!items.length) usage('batch needs --channel, --format and --count, or --item channel:format:count.')
+  return items
+}
+
+function batchText(result: BatchResult, lang: ContentLang): string {
+  const t = (key: string) => (BATCH_TEXT[key] ?? CAL_TEXT[key] ?? CLI_TEXT[key])![lang]
+  const lines = [fill(t('header'), { id: result.strategy.strategy_id, rev: result.strategy.revision, from: result.from })]
+  for (const item of result.items) lines.push(`  ${fill(t('item'), { ...item, first: item.first ?? '—', last: item.last ?? '—' })}`)
+  lines.push(...result.notes.map((note) => `${t('notes')}: ${note}`))
+  for (const week of result.weeks) {
+    const c = week.content
+    lines.push('', `${t('week')} ${c.week_id} (${c.week_start} → ${c.week_end}): ${c.slots.length}`)
+    for (const slot of c.slots) lines.push(slotLine(slot, t))
+    for (const gap of week.gaps) lines.push(`  - ${gap}`)
+  }
+  return lines.join('\n')
+}
+
 /** The shared owner-proof resolver (scripts/proof.ts): env, piped stdin, macOS Keychain, hidden prompt. Never argv. */
 async function ownerProof(): Promise<string | undefined> {
   return readOwnerProof({ prompt: 'Owner approval proof (input hidden): ' })
 }
 
-function need(values: Values, key: 'from' | 'weeks' | 'file' | 'week' | 'revision' | 'expect-sha'): string {
+function need(values: Values, key: 'from' | 'weeks' | 'file' | 'week' | 'revision' | 'expect-sha' | 'slot' | 'text'): string {
   const value = values[key]
   if (!value) usage(`--${key} is required.`)
   return value
@@ -253,30 +352,60 @@ function calendarText(view: CalendarView, lang: ContentLang): string {
   return lines.join('\n')
 }
 
-function reportsText(items: Array<ContentObservation & { current: boolean }>, lang: ContentLang): string {
+function metricsLine(metrics: ContentMetrics): string {
+  return METRIC_KEYS.filter((key) => metrics[key] !== undefined).map((key) => `${key}=${metrics[key]}${key === 'completion_rate' ? '%' : ''}`).join(' ')
+}
+
+function reportsText(items: Array<ContentObservation & { current: boolean }>, measured: Array<ContentMetricsObservation & { current: boolean }>, lang: ContentLang): string {
   const t = (key: string) => AGENT_TEXT[key]![lang]
-  if (!items.length) return t('reports_none')
+  if (!items.length && !measured.length) return t('reports_none')
   const lines = [t('reports_header'), '']
   for (const item of items) {
     const old = item.current ? '' : ` ${fill(t('reports_old_revision'), { rev: item.week_revision })}`
     lines.push(`${item.week_id} ${item.slot_id} r${item.week_revision} ${item.status} ${item.url ?? '—'} · ${item.reported_at} · ${item.reporter}${old}`)
   }
+  if (measured.length) lines.push('', t('metrics_header'))
+  for (const item of measured) {
+    const old = item.current ? '' : ` ${fill(t('reports_old_revision'), { rev: item.week_revision })}`
+    lines.push(`${item.week_id} ${item.slot_id} r${item.week_revision} ${metricsLine(item.metrics)} · ${item.measured_at} · ${item.source} · owner_reported, not_verified${old}`)
+  }
   return lines.join('\n')
 }
 
+function metricsFrom(values: Values): ContentMetrics {
+  const out: ContentMetrics = {}
+  const flags = { views: 'views', reach: 'reach', likes: 'likes', comments: 'comments', shares: 'shares', saves: 'saves', follows: 'follows', link_clicks: 'link-clicks', watch_time_s: 'watch-time-s', completion_rate: 'completion-rate' } as const
+  for (const key of METRIC_KEYS) {
+    const raw = values[flags[key]]
+    if (raw === undefined) continue
+    const clean = raw.trim().replace(/%$/, '')
+    if (!/^\d+(?:\.\d+)?$/.test(clean)) throw new StrategyError('invalid_input', `--${flags[key]} takes a number (got ${raw.slice(0, 20)}).`)
+    out[key] = Number(clean)
+  }
+  return out
+}
+
+function list(value: string | undefined): string[] | undefined {
+  return value === undefined ? undefined : value.split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+/** Is this observation tied to the week revision served as approved now? */
+function currentRevision(ws: KnowledgeWorkspace, item: { week_id: string; week_revision: number; week_content_sha256: string }): boolean {
+  try {
+    const entry = approvedWeekEntry(loadWeekRecord(ws, item.week_id))
+    return entry !== null && entry.revision === item.week_revision && entry.content_sha256 === item.week_content_sha256
+  } catch {
+    return false
+  }
+}
+
 /** Observations with a flag: reported against the week revision served as approved now, or an older one. */
-function reportsOf(ws: KnowledgeWorkspace, week: string | undefined): Array<ContentObservation & { current: boolean }> {
+function reportsOf(ws: KnowledgeWorkspace, week: string | undefined): { reports: Array<ContentObservation & { current: boolean }>; metrics: Array<ContentMetricsObservation & { current: boolean }> } {
   const ids = week ? [validateWeekId(week)] : scanWeeks(ws).map((record) => record.week_id)
-  return listObservations(ws, ids).map((item) => {
-    let current = false
-    try {
-      const entry = approvedWeekEntry(loadWeekRecord(ws, item.week_id))
-      current = entry !== null && entry.revision === item.week_revision && entry.content_sha256 === item.week_content_sha256
-    } catch {
-      current = false
-    }
-    return { ...item, current }
-  })
+  return {
+    reports: listObservations(ws, ids).map((item) => ({ ...item, current: currentRevision(ws, item) })),
+    metrics: listMetrics(ws, ids).map((item) => ({ ...item, current: currentRevision(ws, item) })),
+  }
 }
 
 async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
@@ -291,6 +420,7 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
         channels: values.channels ? parseChannels(values.channels) : undefined,
         cadence: values.cadence ? parseCadence(values.cadence) : undefined,
         formats: values.formats ? parseFormats(values.formats) : undefined,
+        playbook: values.playbook,
         languages: codes(values.languages, '--languages'),
         markets: codes(values.markets, '--markets'),
       })
@@ -349,6 +479,39 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       print({ ok: true, stored, ...plan }, () => [planText(plan, lang), '', ...after].join('\n'))
       return
     }
+    case 'playbook': {
+      const doc = playbookDocument(lang, values.channel ? channelOf(values.channel) : undefined)
+      print({ ok: true, ...doc }, () => playbookText(doc, lang))
+      return
+    }
+    case 'batch': {
+      const result = planBatch(ws, {
+        lang,
+        items: batchItems(values),
+        from: values.from,
+        pillar: values.pillar,
+        strategy_id: values.strategy ? validateStrategyId(values.strategy) : undefined,
+        research: values.research,
+      })
+      const after: string[] = []
+      let stored: Array<{ week_id: string; revision: number; content_sha256: string }> = []
+      if (values.out) {
+        const out = path.resolve(values.out)
+        if (fs.existsSync(out)) throw new StrategyError('exists', 'The --out file exists. Choose a new path; nothing was overwritten.')
+        fs.writeFileSync(out, `${JSON.stringify({ weeks: result.weeks.map((w) => w.content) }, null, 2)}\n`, { mode: 0o600, flag: 'wx' })
+        after.push(fill(CAL_TEXT.written_plan![lang], { list: values.out }))
+      }
+      if (values.store) {
+        stored = storeBatch(ws, result, lang)
+        for (const week of stored) after.push(fill(BATCH_TEXT.stored![lang], { id: week.week_id, n: week.revision }))
+      } else {
+        const conflicts = batchConflicts(ws, result.weeks.map((w) => w.content.week_id))
+        if (conflicts.length) after.push(fill(BATCH_TEXT.conflict_preview![lang], { list: [...new Set(conflicts.map((c) => c.week_id))].join(', ') }))
+      }
+      if (!values.out && !values.store) after.push(BATCH_TEXT.store_hint![lang])
+      print({ ok: true, stored, ...result }, () => [batchText(result, lang), '', ...after].join('\n'))
+      return
+    }
     case 'week': {
       switch (sub) {
         case 'propose': {
@@ -403,7 +566,26 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
     }
     case 'reports': {
       const items = reportsOf(ws, values.week)
-      print({ ok: true, reports: items }, () => reportsText(items, lang))
+      print({ ok: true, reports: items.reports, metrics: items.metrics }, () => reportsText(items.reports, items.metrics, lang))
+      return
+    }
+    case 'feedback': {
+      const result = recordSlotFeedback(ws, { week_id: need(values, 'week'), slot_id: need(values, 'slot'), text: need(values, 'text'), verdict: values.verdict, keep: list(values.keep), avoid: list(values.avoid), language: values.lang ?? null })
+      print({ ok: true, ...result }, () =>
+        [
+          fill(AGENT_TEXT.feedback_recorded![lang], { verdict: result.feedback.verdict, week: result.week_id, slot: result.slot_id, note: result.note.id, project: result.project.project_id }),
+          `  ${result.project.created ? 'new' : 'existing'} project ${result.project.project_id} (${result.project.surface}, series ${result.project.series})`,
+          '',
+          AGENT_TEXT.feedback_next![lang],
+          `  ${result.next.suggest}`,
+          `  ${result.next.approve}`,
+        ].join('\n'),
+      )
+      return
+    }
+    case 'metrics': {
+      const item = recordSlotMetrics(ws, { week_id: need(values, 'week'), slot_id: need(values, 'slot'), metrics: metricsFrom(values), measured_at: values['measured-at'], source: values.source })
+      print({ ok: true, metrics: item }, () => `${fill(AGENT_TEXT.metrics_recorded![lang], { week: item.week_id, slot: item.slot_id, id: item.metrics_id })}\n  ${metricsLine(item.metrics)} · ${item.measured_at} · ${item.source}`)
       return
     }
     default:

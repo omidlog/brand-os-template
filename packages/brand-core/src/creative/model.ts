@@ -10,8 +10,12 @@ import crypto from 'node:crypto'
 
 export const CREATIVE_SCHEMA_VERSION = 1
 
-/** `logo` holds logo/identity concept rounds (Identity Slice D); selection there is never an approved mark. */
-export const SURFACES = ['reel', 'post', 'carousel', 'story', 'logo'] as const
+/**
+ * `logo` holds logo/identity concept rounds (Identity Slice D); selection there is never an approved mark.
+ * `caption`, `script`, `thread` and `article` hold copy (content feedback from brand:content feedback). Append only:
+ * stored projects and preference scopes name these strings.
+ */
+export const SURFACES = ['reel', 'post', 'carousel', 'story', 'logo', 'caption', 'script', 'thread', 'article'] as const
 export const VARIANT_STATUSES = ['draft', 'selected', 'rejected'] as const
 export const VERDICTS = ['like', 'reject', 'change_request', 'observation'] as const
 /** Owner-words source kinds a feedback note may have. Third-party material is never feedback. */
@@ -33,6 +37,16 @@ export const ASPECTS = [
   'duration',
   'pacing',
   'music',
+  // Copy aspects (content feedback). Appended: the earlier ids and their meaning are unchanged. `hook`, `tone`,
+  // `cta` and `pacing` above already cover copy too.
+  'length',
+  'humour',
+  'clarity',
+  'jargon',
+  'structure',
+  'hashtags',
+  'caption',
+  'script_delivery',
 ] as const
 export const PREFERENCE_STATES = ['draft', 'approved', 'superseded'] as const
 export const PREFERENCE_SCOPES = ['project', 'series'] as const

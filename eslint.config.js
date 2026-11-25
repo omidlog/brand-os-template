@@ -5,6 +5,7 @@ export default tseslint.config(
   {
     ignores: [
       '**/node_modules/**',
+      '.claude/**',
       'apps/docs/build/**',
       'apps/docs/.docusaurus/**',
       'apps/docs/docs/**',

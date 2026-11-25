@@ -547,6 +547,7 @@ if (command === 'init') {
       from: { type: 'string' },
       to: { type: 'string' },
       channel: { type: 'string' },
+      surface: { type: 'string' },
       week: { type: 'string' },
       slot: { type: 'string' },
       lang: { type: 'string' },
@@ -642,6 +643,8 @@ if (command === 'init') {
       const pin = values['pin-revision'] || values['pin-sha'] ? { revision: values['pin-revision'] ? Number(values['pin-revision']) : undefined, content_sha256: values['pin-sha'] } : undefined
       return (await import('@brand-os/brand-core/content-bridge')).runContentTool(root, engine.config().brand.slug, ctx, 'content_brief', { week_id: values.week, slot_id: values.slot, pin, lang: values.lang })
     },
+    // Social style kit (design, creative-read, content-read, internal-read, marketing tokens): the same gate as the MCP tool.
+    social_style_kit: async () => (await import('@brand-os/brand-core/social-kit')).runSocialKitTool(engine, ctx, { surface: values.surface, lang: values.lang }),
   }
   const handler = handlers[tool]
   if (!handler) {

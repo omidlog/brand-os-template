@@ -1,0 +1,41 @@
+{
+  "title": "Content strategy",
+  "type": "content",
+  "locale": "en",
+  "scope": { "markets": ["en"], "channel": "content", "period": null },
+  "valid_from": "2026-11-01",
+  "valid_until": "2027-05-01",
+  "review_due_at": "2027-02-01",
+  "objective": { "statement": "Plan content that serves the approved facts cited here.", "status": "hypothesis" },
+  "success_metrics": [],
+  "guardrails": ["Say only what approved facts support."],
+  "constraints": [],
+  "must_do": [],
+  "must_not_do": [],
+  "non_goals": ["Publishing or scheduling posts."],
+  "alternatives": [],
+  "selection_rationale": "Derived from approved facts by brand:content strategy.",
+  "recommendations": [],
+  "fact_refs": ["brand.verbal.voice", "business.marketing.pillars", "business.marketing.channels"],
+  "evidence_refs": [],
+  "assumptions": [],
+  "open_questions": [],
+  "restricted": null,
+  "origin": { "kind": "manual" },
+  "content_strategy": {
+    "schema": 1,
+    "languages": ["en", "fa"],
+    "pillars": [{ "id": "p1", "name": "Learning stories", "fact_refs": ["business.marketing.pillars"] }],
+    "channels": [
+      { "channel": "instagram", "role": "Discovery for new learners", "formats": ["reel", "carousel"], "cadence": { "per": "week", "target": 3 }, "languages": [], "pillars": [], "fact_refs": ["business.marketing.channels"] },
+      { "channel": "linkedin", "role": null, "formats": [], "cadence": null, "languages": ["en"], "pillars": ["p1"], "fact_refs": [] }
+    ],
+    "sources": { "voice": ["brand.verbal.voice"], "pillars": ["business.marketing.pillars"], "channels": ["business.marketing.channels"] },
+    "voice_rules": { "do": [], "dont": [] },
+    "vocabulary": { "prefer": [], "avoid": [] },
+    "banned_claims": [],
+    "cta_rules": [],
+    "strategy_refs": [],
+    "gaps": [{ "field": "channels[linkedin].cadence", "reason": "owner_decision", "fact_ids": [] }]
+  }
+}

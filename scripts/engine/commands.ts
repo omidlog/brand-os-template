@@ -20,8 +20,8 @@ const BRAND_SUBCOMMANDS = [
 ] as const
 
 const OWN_SCRIPTS = [
-  'coach', 'knowledge', 'creative', 'seo', 'strategy', 'competitive', 'identity', 'visual-dna', 'content', 'runtime',
-  'acceptance', 'assurance', 'assurance-review', 'assurance-link',
+  'coach', 'knowledge', 'creative', 'seo', 'strategy', 'competitive', 'identity', 'visual-dna', 'content', 'social', 'runtime',
+  'acceptance', 'assurance', 'assurance-review', 'assurance-link', 'pack',
 ] as const
 
 export const ENGINE_COMMANDS: Record<string, EngineCommand> = {

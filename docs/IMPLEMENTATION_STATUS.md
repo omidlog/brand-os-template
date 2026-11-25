@@ -291,6 +291,32 @@ Branch `feat/content-bridge-slice-d`. Guides: `docs-internal/CONTENT_BRIDGE.md`,
 | CLI journey demo (real output) | Done | Owner journey, mock agent via `brand:query`, report over MCP, `reports`, revoke. `tests/content-journey.test.ts` runs it and checks the documents name only real commands, tools and schemas. |
 | Hosted API, per-channel tokens, Studio view of reports | Not started | Not in the brief. |
 
+## Channel playbook, batch planning and deliverable specs (Content Bridge)
+
+Branch `feat/content-channel-playbook`. Guide: `docs-internal/CONTENT_BRIDGE.md` ("Channel playbook, batch and deliverables").
+
+| Item | Status | Note |
+| --- | --- | --- |
+| Optional channel fields (`objective`, `audience`, `mix`, `kpis`, `posting_windows`, `rules`) | Done | Strict parse; unset fields absent, so old revisions hash the same (fixture digest). `tests/content-playbook.test.ts`. |
+| Channel playbook (en/fa/tr) and `brand:content playbook` | Done | 11 channels; `general_practice`, KPI names without targets, `authorizes: []`. Website, podcast and other have no entry. |
+| `brand:content strategy --playbook` | Done | Explicit `--formats` / `--cadence` win; notes and an assumption line name the playbook values. |
+| `brand:content batch` | Done | `--channel/--format/--count` or repeated `--item`; cadence-dated, grouped into weeks via `planWeek`; `--store` refuses into stored weeks. |
+| `deliverable` in content briefs | Done | Script, carousel, post, story, thread, article, email. No JSON schema file exists for briefs under `schemas/`, so none was added. |
+| Measured results feeding the playbook | Not started | The playbook is static general practice; no metrics are collected. |
+## Content feedback loop and chat-product pack
+
+Branch `feat/content-feedback-pack`. Guides: `docs-internal/CONTENT_BRIDGE.md` (Content feedback loop), `docs-internal/AI_CONNECTORS.md` (Chat products without MCP).
+
+| Item | Status | Note |
+| --- | --- | --- |
+| `brand:content feedback` | Done | Owner only. The words become an `owner_note` Knowledge note (tags `content-feedback`, `slot-<week>-<slot>`) linked to one creative project per slot (surface from the format, series = style id or channel, variant `A` with asset `missing`); prints the exact `brand:creative suggest` line. Approval stays `brand:creative approve`. `tests/content-feedback.test.ts`. |
+| Copy aspects and surfaces | Done | Appended `length, humour, clarity, jargon, structure, hashtags, caption, script_delivery` and surfaces `caption, script, thread, article`; fa/en/tr lexicon entries are new words or longer phrases only. Earlier ids, meanings and digests unchanged. |
+| `brand:content metrics` | Done | Owner only. `owner_reported` / `not_verified` observations next to the calendar; `reports` lists them; `content_calendar` `reports[]` carries the latest per slot (`status: measured` without a report). Never a fact or claim. |
+| Brief widening (`content-read`) | Done | `creative.preferences[]` now carries the owner-approved statement and scope (series for the surface, project for the slot's own project); `learnings[]`: up to 5 same channel+format slots with owner-reported numbers. Never note text or drafts. |
+| `brand:pack` | Done | Owner only; `content-read`, `marketing`, `design`, `internal-read`. Six Markdown files from the token readers; restricted/secret scan; default out `brand/.private/exports/`; non-ignored out refused. Engine command `pack`. `tests/brand-pack.test.ts`. |
+| Social style kit section in the pack | Not started | Placeholder "not available in this engine" until the social-kit reader lands (TODO in `scripts/pack-lib.ts`). |
+| Metrics from platform APIs, verification | Not started | Out of scope: numbers are the owner's word. |
+
 ## Assurance registry and assessable controls (Trust v2 PR-A)
 
 Branch `feat/trust-v2-pr-a`. Guide: `docs-internal/ASSURANCE.md`. A pure library; no command, route, store, approval or agent scope.
@@ -608,3 +634,8 @@ Guide: `docs-internal/VISUAL.md` (SWOT / TOWS and the Value Proposition Canvas).
 
 - **Done:** profile URLs and handles are not emails; `personal.privacy.*` may name categories of data; refusals name the pattern and its line and word (`tests/personal-privacy-guard.test.ts`). The coach picks its clarifying question by question family and stays silent on `evidence_support` once a claim has verified evidence; `coach-rules/6` (`tests/coach-question-family.test.ts`). Every question has fa and tr `why_it_matters` and examples, shown by the interview with English fallback; three prompts reworded; drift checked for all three locales; `brand:migrate` refreshes question text (`tests/question-help-i18n.test.ts`). `npm run validate` no longer warns about unbuilt token CSS; the docs build prints the note.
 - **Not done:** the fa/tr help text was translated by an agent and has not been reviewed by a native speaker. Category names are still refused in notes and outside `personal.privacy.*`, and family phrases ("my children") are refused even in privacy answers. Labels and the field registry were not reworded.
+
+## Social style kit
+
+- **Done:** `packages/brand-core/src/social-kit/`, `brand:social kit init|show|review|approve|reject|preview`, MCP `social_style_kit`, `brand:query --tool social_style_kit`, `social_styles` in `task_context` (`social_batch`, `visual_design`, `personal_content`), schema `social-style-kit`, validation in `validate` / `brand-os check`, rotation helpers `rotateStyles` / `stylesForFormat`. Four draft starter siblings per surface (8 surfaces) with en/fa/tr names and intents; HMAC-sealed owner approval; hand edits become `invalid_approval`. Guide `docs-internal/SOCIAL_STYLE_KIT.md`. Tests: `social-kit`, `social-kit-cli`.
+- **Not done:** a `style` on content-calendar slots and in `content_brief` (helpers exist, not wired), Studio view of the kit, rendering real posts from a style in `brand:runtime`, platform-verified safe zones.

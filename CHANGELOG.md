@@ -1,10 +1,37 @@
 # Changelog
 
+## Unreleased — channel playbook, batch planning and deliverable specs (Content Bridge)
 
+### Added
 
+- **Per-channel strategy:** a content strategy channel may now carry `objective`, `audience`, `mix` (shares summing to 100), `kpis` (metric, owner target or `null`, per post/week/month), `posting_windows` and owner-written `rules`. All optional; a field that is not set is absent, so every revision approved before this hashes exactly as before.
+- **Channel playbook** (`npm run brand:content -- playbook [--channel instagram] [--lang fa|tr]`): general practice for Instagram, LinkedIn, X, TikTok, YouTube, Threads, Telegram, Facebook, Pinterest, newsletter and blog in en/fa/tr — suggested role, formats, cadence range, objective, mix, KPIs to watch (no targets), posting-window note and craft notes. Labelled `general_practice`, not measured for the brand, `authorizes: []`.
+- **`brand:content strategy --playbook`** fills role, formats, cadence, objective, mix and KPI names from the playbook (explicit `--formats` / `--cadence` win). Notes and one assumption line in the proposal say which values came from the playbook; the owner reviews and approves with `brand:strategy` as before.
+- **Batch planning** (`npm run brand:content -- batch --channel instagram --format reel --count 10`, or several `--item instagram:reel:10 --item linkedin:post:8`): N slots per channel and format, dated by the approved cadence from `--from` (default next Monday), grouped into calendar weeks with the planner's rotation and pins. `--store` refuses, writing nothing, when a target week already has a draft or approved revision. At most 50 per item.
+- **Deliverable specs in content briefs** (`deliverable`): what to fill for the slot's format — a camera/voice script for reels, short videos, videos and lives (hook 0–3 s, setup, 3–5 beats with on-screen text and b-roll, payoff, CTA, captions on, duration and a read-aloud word budget per language), carousel slide roles, post headline and caption structure with per-channel hashtag guidance, story frames with one interaction, thread, article and email structure. General practice; it writes no copy. `channel_plan` in a brief also carries the optional channel fields when set.
 
+## Unreleased — content feedback loop, and a brand pack for chat products without MCP
 
+### Added
 
+- `npm run brand:content -- feedback --week … --slot … --text "…" [--verdict] [--keep] [--avoid]` (owner only): the words become an `owner_note` Knowledge note linked to one Creative Learning project per slot; it prints the exact `brand:creative suggest` line, and an approved series preference then shows up in later briefs.
+- `npm run brand:content -- metrics --week … --slot … [--views …] [--completion-rate …]` (owner only): owner-reported numbers stored as `owner_reported` / `not_verified` observations, listed by `brand:content reports` and carried in `content_calendar` `reports[]`. Never a fact or a claim.
+- Creative aspects for copy (`length`, `humour`, `clarity`, `jargon`, `structure`, `hashtags`, `caption`, `script_delivery`) with fa/en/tr lexicon entries, and surfaces `caption`, `script`, `thread`, `article`. Appended; earlier ids and digests are unchanged.
+- `npm run brand:pack -- --profile content-read|marketing|design|internal-read [--lang] [--out] [--json]` (owner only): six Markdown files of approved context for ChatGPT, Grok or Claude.ai Projects, built from the same readers as the agent profile, with a restricted/secret scan; default out `brand/.private/exports/`. Engine command `pack`.
+- Docs: "Chat products without MCP" and "Claude Desktop / Cowork via local MCP" in `docs-internal/AI_CONNECTORS.md`, with short en/fa/tr sections in the onboarding guides.
+
+### Changed
+
+- `content-read` sees a little more: `content_brief` carries the owner-approved statement and scope of applicable creative preferences (not only ids) and `learnings[]` (ids and owner-reported numbers of recent same channel+format slots). Never note text or drafts. An email slot now maps to the `article` surface.
+
+## Unreleased — social style kit
+
+### Added
+
+- **Social style kit** (`brand/social/style-kit.yaml`, `docs-internal/SOCIAL_STYLE_KIT.md`): per social format (post, carousel, story, reel, reel cover, YouTube thumbnail, LinkedIn post and document) sibling styles that share one brand family and differ in layout. Each style is a layer stack back to front, with zones in % of the canvas, colour and font as design-token ids, text limits, do/don't and platform safe zones. Four engine starter archetypes per surface, named and described in en, fa and tr, always drafts.
+- `npm run brand:social -- kit init|show|review|approve|reject|preview` (owner only; refused under an agent token). Approval needs the owner's approval proof and the reviewed digest, and is sealed privately in `brand/.private/social/approvals.json`; a style edited after approval is `invalid_approval` and is not served. `kit preview` writes deterministic SVG wireframes and one contact sheet per surface.
+- MCP `social_style_kit` and `brand:query --tool social_style_kit` for design, creative-read, content-read, internal-read and marketing tokens: approved styles only, drafts counted. `task_context` lists approved styles for `social_batch`, `visual_design` and `personal_content`. Rotation helpers (`rotateStyles`, `stylesForFormat`) for the content brief.
+- `schemas/social-style-kit.schema.json`; `validate` / `brand-os check` check the kit when it exists.
 
 ## Unreleased — more of a personal brand, and four shared brand questions
 

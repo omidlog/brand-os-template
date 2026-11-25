@@ -164,7 +164,33 @@ export const CONTENT_SOURCE_ROLES = ['voice', 'claims', 'audience', 'messaging',
  */
 export const CONTENT_GAP_REASONS = ['not_approved', 'placeholder', 'owner_decision'] as const
 
+/** What a channel is mainly for (optional, owner-decided; the channel playbook can suggest one). */
+export const CHANNEL_OBJECTIVES = ['awareness', 'engagement', 'community', 'leads', 'sales', 'authority', 'retention'] as const
+/** Kinds of content in a channel's mix. Shares are whole percentages summing to 100. */
+export const CONTENT_MIX_TYPES = ['educate', 'inspire', 'connect', 'promote', 'entertain'] as const
+/** Metrics a channel plan may name. A target is the owner's target, never a measured result. */
+export const CHANNEL_KPI_METRICS = ['reach', 'saves', 'shares', 'comments', 'follows', 'profile_visits', 'link_clicks', 'leads', 'watch_time', 'completion_rate', 'replies', 'subscribers'] as const
+export const CHANNEL_KPI_PERIODS = ['post', 'week', 'month'] as const
+export const CHANNEL_PLAN_LIMITS = { maxKpis: 6, maxPostingWindows: 7, maxPostingWindowChars: 40, maxRules: 10, maxRuleChars: 200, maxAudienceChars: 200 } as const
+
 export type ContentChannel = (typeof CONTENT_CHANNELS)[number]
+export type ChannelObjective = (typeof CHANNEL_OBJECTIVES)[number]
+export type ContentMixType = (typeof CONTENT_MIX_TYPES)[number]
+export type ChannelKpiMetric = (typeof CHANNEL_KPI_METRICS)[number]
+export type ChannelKpiPeriod = (typeof CHANNEL_KPI_PERIODS)[number]
+
+export interface ChannelMixShare {
+  type: ContentMixType
+  /** Whole percent, 1–100. The shares of one channel sum to 100. */
+  share: number
+}
+
+export interface ChannelKpi {
+  metric: ChannelKpiMetric
+  /** The owner's target. Null means named but no target set; never a measured result. */
+  target: number | null
+  per: ChannelKpiPeriod
+}
 export type ContentFormat = (typeof CONTENT_FORMATS)[number]
 export type ContentSourceRole = (typeof CONTENT_SOURCE_ROLES)[number]
 export type ContentGapReason = (typeof CONTENT_GAP_REASONS)[number]
@@ -188,6 +214,17 @@ export interface ContentChannelPlan {
   /** Pillar ids this channel carries; empty means all of them. */
   pillars: string[]
   fact_refs: string[]
+  // Optional channel strategy (Content Bridge channel playbook). Absent when not set, never null or [], so revisions
+  // written before these fields existed hash exactly as before.
+  objective?: ChannelObjective
+  /** Who this channel reaches, in the owner's words. Not a persona: the audience facts stay the truth. */
+  audience?: string
+  mix?: ChannelMixShare[]
+  kpis?: ChannelKpi[]
+  /** Short owner-written windows such as `tue 19:00-21:00`. */
+  posting_windows?: string[]
+  /** Owner-written rules for this channel. */
+  rules?: string[]
 }
 
 /** An approved SEO or paid-media strategy revision this content strategy builds on, pinned like a fact. */
@@ -429,6 +466,42 @@ function cadenceOf(value: unknown, field: string): ContentChannelPlan['cadence']
   return { per: oneOf(c.per, ['week', 'month'] as const, `${field}.per`), target }
 }
 
+const CHANNEL_PLAN_OPTIONAL = ['objective', 'audience', 'mix', 'kpis', 'posting_windows', 'rules'] as const
+
+/** The optional channel strategy fields. A field that is not set (absent, null or an empty list) is left out. */
+function channelExtras(c: Raw, field: string): Partial<Pick<ContentChannelPlan, (typeof CHANNEL_PLAN_OPTIONAL)[number]>> {
+  const out: Partial<Pick<ContentChannelPlan, (typeof CHANNEL_PLAN_OPTIONAL)[number]>> = {}
+  if (c.objective !== undefined && c.objective !== null) out.objective = oneOf(c.objective, CHANNEL_OBJECTIVES, `${field}.objective`)
+  if (c.audience !== undefined && c.audience !== null && c.audience !== '') out.audience = text(c.audience, `${field}.audience`, CHANNEL_PLAN_LIMITS.maxAudienceChars)
+  const mix = list(c.mix, `${field}.mix`, CONTENT_MIX_TYPES.length).map((item, i) => {
+    const m = objectOf(item, `${field}.mix[${i}]`, ['type', 'share'])
+    const share = m.share
+    if (typeof share !== 'number' || !Number.isInteger(share) || share < 1 || share > 100) throw new StrategyError('invalid_input', `${field}.mix[${i}].share must be a whole percent from 1 to 100.`)
+    return { type: oneOf(m.type, CONTENT_MIX_TYPES, `${field}.mix[${i}].type`), share }
+  })
+  if (mix.length) {
+    if (new Set(mix.map((m) => m.type)).size !== mix.length) throw new StrategyError('invalid_input', `${field}.mix names one type twice.`)
+    const total = mix.reduce((sum, m) => sum + m.share, 0)
+    if (total !== 100) throw new StrategyError('invalid_input', `${field}.mix shares add up to ${total}; they must add up to 100.`)
+    out.mix = mix
+  }
+  const kpis = list(c.kpis, `${field}.kpis`, CHANNEL_PLAN_LIMITS.maxKpis).map((item, i) => {
+    const k = objectOf(item, `${field}.kpis[${i}]`, ['metric', 'target', 'per'])
+    const target = finiteOrNull(k.target, `${field}.kpis[${i}].target`)
+    if (target !== null && target < 0) throw new StrategyError('invalid_input', `${field}.kpis[${i}].target must not be negative.`)
+    return { metric: oneOf(k.metric, CHANNEL_KPI_METRICS, `${field}.kpis[${i}].metric`), target, per: oneOf(k.per, CHANNEL_KPI_PERIODS, `${field}.kpis[${i}].per`) }
+  })
+  if (kpis.length) {
+    if (new Set(kpis.map((k) => `${k.metric}/${k.per}`)).size !== kpis.length) throw new StrategyError('invalid_input', `${field}.kpis names one metric and period twice.`)
+    out.kpis = kpis
+  }
+  const windows = [...new Set(list(c.posting_windows, `${field}.posting_windows`, CHANNEL_PLAN_LIMITS.maxPostingWindows).map((item, i) => text(item, `${field}.posting_windows[${i}]`, CHANNEL_PLAN_LIMITS.maxPostingWindowChars)))]
+  if (windows.length) out.posting_windows = windows
+  const rules = [...new Set(list(c.rules, `${field}.rules`, CHANNEL_PLAN_LIMITS.maxRules).map((item, i) => text(item, `${field}.rules[${i}]`, CHANNEL_PLAN_LIMITS.maxRuleChars)))]
+  if (rules.length) out.rules = rules
+  return out
+}
+
 function localeList(value: unknown, field: string, max = 10): string[] {
   return [
     ...new Set(
@@ -462,7 +535,7 @@ export function parseContentStrategy(raw: unknown): ContentStrategyBlock {
   const seen = new Set<string>()
   const channels = list(b.channels, 'content_strategy.channels', STRATEGY_LIMITS.maxChannels).map((item, i) => {
     const field = `content_strategy.channels[${i}]`
-    const c = objectOf(item, field, ['channel', 'role', 'formats', 'cadence', 'languages', 'pillars', 'fact_refs'])
+    const c = objectOf(item, field, ['channel', 'role', 'formats', 'cadence', 'languages', 'pillars', 'fact_refs', ...CHANNEL_PLAN_OPTIONAL])
     const channel = oneOf(c.channel, CONTENT_CHANNELS, `${field}.channel`)
     if (seen.has(channel)) throw new StrategyError('invalid_input', `content_strategy.channels has ${channel} twice.`)
     seen.add(channel)
@@ -478,6 +551,7 @@ export function parseContentStrategy(raw: unknown): ContentStrategyBlock {
       languages: langs,
       pillars: pillarIds,
       fact_refs: factIds(c.fact_refs, `${field}.fact_refs`),
+      ...channelExtras(c, field),
     }
   })
   const rawSources = b.sources === undefined || b.sources === null ? {} : objectOf(b.sources, 'content_strategy.sources', CONTENT_SOURCE_ROLES)

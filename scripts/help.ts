@@ -52,6 +52,7 @@ export const SCRIPT_GROUPS: ScriptGroup[] = [
       ['brand:tokens:generate', 'Draft design tokens from approved answers.'],
       ['brand:tokens:approve', 'Approve generated tokens by hash (owner step).'],
       ['brand:tokens:publish', 'Publish approved tokens.'],
+      ['brand:social', 'Owner-only: start, review, approve and preview the social style kit (sibling layouts per social format).'],
       ['build', 'Build the design tokens and the docs site.'],
       ['docs:start', 'Start the internal docs site locally.'],
     ],
