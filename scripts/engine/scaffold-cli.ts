@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
-import { applyInit, writeStarterWorkspace } from '@brand-os/brand-core'
+import { applyInit, cloudSyncAdvice, detectCloudSync, writeStarterWorkspace } from '@brand-os/brand-core'
 import { scaffoldBrand } from './scaffold.js'
 
 /**
@@ -46,6 +46,11 @@ if (values.new) {
     ...(values.profile ? { profile: values.profile } : {}),
     ...(values.facets ? { facets: values.facets.split(',').map((item) => item.trim()).filter(Boolean) } : {}),
   })
+}
+if (values.new) {
+  // A warning, never a refusal: a brand inside a cloud-synced folder uploads brand/.private once it exists.
+  const synced = detectCloudSync(root)
+  if (synced) console.error(`WARNING: ${cloudSyncAdvice(synced, root)}`)
 }
 const result = scaffoldBrand(root, { slug: values.slug })
 console.log(values.json ? JSON.stringify(result, null, 2) : result.written.length ? `Wrote ${result.written.join(', ')}.` : 'Engine-owned root files are current.')

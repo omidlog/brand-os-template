@@ -2,12 +2,13 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { parse } from 'yaml'
+import { cloudSyncAdvice, detectCloudSync, type SyncLang } from './cloud-sync.js'
 import { approvalSecretPath } from './private-store.js'
 
 export type DoctorStatus = 'pass' | 'warn' | 'fail'
 
 export interface DoctorCheck {
-  id: 'node' | 'data_key' | 'approval_secret' | 'config' | 'publication_policy' | 'env_ignored'
+  id: 'node' | 'data_key' | 'approval_secret' | 'cloud_sync' | 'config' | 'publication_policy' | 'env_ignored'
   status: DoctorStatus
   message: string
   hint?: string
@@ -24,6 +25,9 @@ export interface DoctorOptions {
   /** Defaults to process.versions.node. */
   nodeVersion?: string
   platform?: NodeJS.Platform
+  /** Home folder for the cloud-sync check. Defaults to os.homedir(); tests pass a temp folder. */
+  home?: string
+  lang?: SyncLang
 }
 
 export const MIN_NODE_MAJOR = 22
@@ -39,6 +43,7 @@ export function runDoctor(root: string, options: DoctorOptions = {}): DoctorRepo
     checkNode(options.nodeVersion ?? process.versions.node),
     checkDataKey(env.BRAND_OS_DATA_KEY),
     checkApprovalSecret(root, options.platform ?? process.platform),
+    checkCloudSync(root, options.home, options.lang ?? 'en'),
     ...checkConfigAndPolicy(root),
     checkEnvIgnored(root),
   ]
@@ -110,6 +115,24 @@ function checkApprovalSecret(root: string, platform: NodeJS.Platform): DoctorChe
     }
   }
   return { id: 'approval_secret', status: 'pass', message: `${relative} exists${platform === 'win32' ? '' : ' with mode 0600'}. The value is not shown.` }
+}
+
+/**
+ * A repository inside a cloud-synced folder uploads brand/.private (the approval secret, sealed approvals, owner
+ * drafts), and some uploaders hard-link files while they upload, which Brand OS then refuses to read. Fail when
+ * brand/.private exists there; warn when it does not exist yet.
+ */
+function checkCloudSync(root: string, home: string | undefined, lang: SyncLang): DoctorCheck {
+  const found = detectCloudSync(root, { home })
+  if (!found) return { id: 'cloud_sync', status: 'pass', message: 'No cloud-sync folder detected (Google Drive, iCloud, Dropbox, OneDrive).' }
+  const advice = cloudSyncAdvice(found, path.resolve(root), lang)
+  const hasPrivate = fs.existsSync(path.join(root, 'brand', '.private'))
+  return {
+    id: 'cloud_sync',
+    status: hasPrivate ? 'fail' : 'warn',
+    message: `${advice} (evidence: ${found.evidence})`,
+    hint: hasPrivate ? 'After moving, treat the approval secret as leaked: npm run brand:doctor -- --rotate-approval-secret' : 'Move the repository before you create brand/.private (brand:doctor --create-approval-secret).',
+  }
 }
 
 function checkConfigAndPolicy(root: string): DoctorCheck[] {

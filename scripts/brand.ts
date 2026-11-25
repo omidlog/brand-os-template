@@ -5,9 +5,10 @@ import readline from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { stdin as input, stdout as output } from 'node:process'
 import { applyInit, backupBrand, CHANGE_DEPTHS, IDENTITY_INTENTS, InterviewEngine, LOGO_PRESENCE, migrateBrand, readSyncManifest, RESET_CONFIRMATION, resetInterviewState, restoreBrand, tokenNextStep, validateIdentityChoice } from '@brand-os/brand-core'
-import { checkLogoMastersInRepo } from '@brand-os/brand-core'
+import { checkLogoMastersInRepo, cloudSyncAdvice, detectCloudSync } from '@brand-os/brand-core'
 import type { BatchResult, IntakeReport, LogoMastersCheck, NextReport, ReviewQueue, Selection } from '@brand-os/brand-core'
 import { coachAfterAnswer, coachBeforeApproval, renderAfterAnswer, renderBeforeApproval, type CoachMomentResult } from '@brand-os/brand-core/coach'
+import type { AnyKind } from '@brand-os/brand-core/pending'
 import { readOwnerProof } from './proof.js'
 
 const [command, ...rest] = process.argv.slice(2)
@@ -96,6 +97,7 @@ if (command === 'init') {
   const identity = config.onboarding?.identity
   if (identity) console.log(`Identity intake (unapproved owner hint, not a brand fact): logo ${identity.logo_presence}, intent ${identity.identity_intent}${identity.change_depth ? `, depth ${identity.change_depth}` : ''}.`)
   console.log(engine.statusText())
+  warnCloudSync()
 } else if (command === 'interview' || command === 'resume') {
   const { values } = parseArgs({
     args: rest,
@@ -429,6 +431,33 @@ if (command === 'init') {
   const step = engine.approvals().retract(values.question, await readApprovalProof(), values.reason)
   console.log(step.message)
   if (step.kind === 'error') process.exit(1)
+} else if (command === 'pending') {
+  // `brand:pending`: everything waiting for the owner, in plain words, and the one command that approves it.
+  const { values } = parseArgs({
+    args: rest,
+    options: {
+      only: { type: 'string' },
+      exclude: { type: 'string' },
+      lang: { type: 'string' },
+      json: { type: 'boolean', default: false },
+      proof: { type: 'string' },
+    },
+  })
+  if (values.proof !== undefined) {
+    console.error('--proof is not accepted, and brand:pending never needs a proof: it only lists. Nothing was changed.')
+    process.exit(2)
+  }
+  if (process.env.BRAND_OS_AGENT_TOKEN) {
+    console.error('brand:pending lists the owner\'s drafts. It refuses to run while BRAND_OS_AGENT_TOKEN is set.')
+    process.exit(2)
+  }
+  const pending = await import('@brand-os/brand-core/pending')
+  const lang = pendingLang(values.lang)
+  const only = await parseOnly(values.only)
+  const exclude = values.exclude ? values.exclude.split(',').map((id) => id.trim()).filter(Boolean) : []
+  const plan = pending.planEverything(engine.approvals(), root, { exclude, only, lang })
+  const report = pending.everythingDryRun(plan, exclude)
+  console.log(values.json ? JSON.stringify(report, null, 2) : pending.formatPending(report, lang))
 } else if (command === 'approve' || command === 'publish') {
   const { values } = parseArgs({
     args: rest,
@@ -443,6 +472,9 @@ if (command === 'init') {
       // BOS-01: everything pending (facts, change proposals, evidence, draft assets) with one proof.
       'all-pending': { type: 'boolean', default: false },
       exclude: { type: 'string' },
+      // One review, one approval: narrow --all-pending to some kinds, and the language of the summaries.
+      only: { type: 'string' },
+      lang: { type: 'string' },
       // Declared only so it can be refused without echoing its value.
       proof: { type: 'string' },
     },
@@ -465,11 +497,11 @@ if (command === 'init') {
       console.error('--all-pending takes no --module, --ids or --question. Use --exclude id,… to leave items out.')
       process.exit(2)
     }
-    await approveAllPendingCommand({ dryRun: values['dry-run'], json: values.json, exclude: values.exclude, actor: values.actor ?? 'owner' })
+    await approveAllPendingCommand({ dryRun: values['dry-run'], json: values.json, exclude: values.exclude, only: values.only, lang: values.lang, actor: values.actor ?? 'owner' })
     process.exit(process.exitCode ?? 0)
   }
-  if (values.exclude !== undefined) {
-    console.error('--exclude works with --all-pending only.')
+  if (values.exclude !== undefined || values.only !== undefined) {
+    console.error('--exclude and --only work with --all-pending only.')
     process.exit(2)
   }
   const ids = [values.ids, values.question].filter(Boolean).join(',')
@@ -477,7 +509,7 @@ if (command === 'init') {
   if (!selection.module && !selection.ids?.length) {
     console.error(
       command === 'approve'
-        ? 'Usage: brand:approve --module MODULE_ID | --ids ID,chg-… | --all-pending [--exclude ID,…] [--actor owner] [--dry-run] [--json]'
+        ? 'Usage: brand:approve --module MODULE_ID | --ids ID,chg-… | --all-pending [--only KIND,…] [--exclude ID,…] [--lang en|fa|tr] [--actor owner] [--dry-run] [--json]'
         : 'Usage: brand:publish --module MODULE_ID | --ids ID,… [--unpublish] [--dry-run] [--json]',
     )
     console.error(PROOF_HELP)
@@ -708,9 +740,64 @@ if (command === 'init') {
       // Opt-in macOS Keychain storage of the approval proof (BOS-01). The value is never printed.
       'store-proof-keychain': { type: 'boolean', default: false },
       'forget-proof-keychain': { type: 'boolean', default: false },
+      // Cloud-sync recovery: replace hard-linked files with independent copies (after moving out of the synced folder).
+      'fix-links': { type: 'boolean', default: false },
+      'dry-run': { type: 'boolean', default: false },
+      // After a leak: new approval secret, every verifying seal re-sealed, Keychain entry updated. Owner proof needed.
+      'rotate-approval-secret': { type: 'boolean', default: false },
+      lang: { type: 'string' },
+      proof: { type: 'string' },
     },
   })
-  const { ensureApprovalSecret, forgetKeychainProof, formatDoctor, runDoctor, storeKeychainProof } = await import('@brand-os/brand-core')
+  if (values.proof !== undefined) {
+    console.error('--proof is not accepted: a secret on the command line leaks into shell history and the process list. Nothing was changed.')
+    console.error(PROOF_HELP)
+    process.exit(2)
+  }
+  const { ensureApprovalSecret, fixHardLinks, forgetKeychainProof, formatDoctor, rotateApprovalSecret, runDoctor, storeKeychainProof } = await import('@brand-os/brand-core')
+  if (values['fix-links'] || values['rotate-approval-secret']) {
+    if (values['fix-links'] && values['rotate-approval-secret']) {
+      console.error('Run --fix-links first, then --rotate-approval-secret, as two commands.')
+      process.exit(2)
+    }
+    if (process.env.BRAND_OS_AGENT_TOKEN) {
+      console.error(`${values['fix-links'] ? '--fix-links' : '--rotate-approval-secret'} is an owner action. Refusing while BRAND_OS_AGENT_TOKEN is set. Nothing was changed.`)
+      process.exit(2)
+    }
+  }
+  if (values['fix-links']) {
+    const fixed = fixHardLinks(root, { dryRun: values['dry-run'] })
+    if (values.json) console.log(JSON.stringify({ fix_links: fixed }, null, 2))
+    else if (fixed.refused) console.log(`Refused: ${fixed.refused}\nNothing was changed.`)
+    else {
+      console.log(`${fixed.dry_run ? 'DRY RUN: would replace' : 'Replaced'} ${fixed.fixed.length} hard-linked file(s) with independent copies (${fixed.scanned} files scanned, .git and node_modules skipped).`)
+      for (const file of fixed.fixed.slice(0, 50)) console.log(`  ${file}`)
+      if (fixed.fixed.length > 50) console.log(`  … and ${fixed.fixed.length - 50} more`)
+      for (const item of fixed.failed) console.log(`  FAILED ${item.path}: ${item.reason}`)
+      if (fixed.fixed.some((file) => file.startsWith('brand/.private/'))) console.log('brand/.private was hard-linked: treat the approval secret as leaked and run npm run brand:doctor -- --rotate-approval-secret.')
+    }
+    process.exit(fixed.ok ? 0 : 1)
+  }
+  if (values['rotate-approval-secret']) {
+    const slug = engine.config().brand.slug
+    const proof = await readOwnerProof({ slug, prompt: 'CURRENT approval proof (input hidden): ' })
+    const rotated = rotateApprovalSecret(root, proof, { keychain: { slug } })
+    if (values.json) console.log(JSON.stringify({ rotation: { ...rotated, new_proof: rotated.new_proof ? '(printed on stderr once)' : null } }, null, 2))
+    else {
+      console.log(rotated.message)
+      if (rotated.not_resealed.length) console.log(`Not re-sealed (did not verify before rotation, stay invalid): ${rotated.not_resealed.map((ref) => `${ref.kind} ${ref.id}${ref.revision ? `@${ref.revision}` : ''}`).join(', ')}`)
+    }
+    if (rotated.ok) {
+      if (rotated.keychain === 'updated') console.error('The new proof is stored in the macOS Keychain (the old entry was replaced). It is not printed.')
+      else if (rotated.new_proof) {
+        if (rotated.keychain === 'failed') console.error('The Keychain entry could not be updated; remove it with --forget-proof-keychain.')
+        console.error(`New approval proof (shown once; it is also the content of brand/.private/approval-secret):\n${rotated.new_proof}`)
+        console.error('Keep it in your password manager, or store it with: npm run brand:doctor -- --store-proof-keychain. Update BRAND_OS_APPROVAL_PROOF wherever you set it.')
+      }
+      console.error('Agent tokens stay valid (they are not keyed by the approval secret). If a token may also have leaked, revoke it with brand:agent-token -- revoke --id <agt_…>.')
+    }
+    process.exit(rotated.ok ? 0 : 1)
+  }
   if (values['create-approval-secret']) {
     // Creates the file only when absent. The value is never printed; read it locally when you approve.
     ensureApprovalSecret(root)
@@ -732,7 +819,7 @@ if (command === 'init') {
     if (!stored.ok) process.exit(1)
     process.exit(0)
   }
-  const report = runDoctor(root)
+  const report = runDoctor(root, { lang: pendingLang(values.lang) })
   console.log(values.json ? JSON.stringify(report, null, 2) : formatDoctor(report))
   if (!report.ok) process.exit(1)
 } else if (command === 'document') {
@@ -1282,32 +1369,63 @@ async function changeCommand(values: { question?: string; change?: string; reaso
   console.log(lines.join('\n'))
 }
 
-/** BOS-01 and BOS-07: `brand:approve --all-pending [--exclude …] [--dry-run] [--json]`. */
-async function approveAllPendingCommand(options: { dryRun: boolean; json: boolean; exclude?: string; actor: string }): Promise<void> {
-  const { approveAllPending, dryRunReport, formatAllPending, formatDryRun, planAllPending } = await import('@brand-os/brand-core')
+/** The owner's language for summaries (en, fa, tr). Anything else falls back to English. */
+function pendingLang(value: string | undefined): 'en' | 'fa' | 'tr' {
+  return value === 'fa' || value === 'tr' ? value : 'en'
+}
+
+/** `--only` as kinds; an unknown kind stops the command before anything is read. */
+async function parseOnly(value: string | undefined): Promise<AnyKind[] | undefined> {
+  const { parseOnlyKinds } = await import('@brand-os/brand-core/pending')
+  try {
+    return parseOnlyKinds(value)
+  } catch (error) {
+    console.error((error as Error).message)
+    process.exit(2)
+  }
+}
+
+/** A warning, never a refusal: a brand created inside a cloud-synced folder uploads brand/.private. */
+function warnCloudSync(): void {
+  const found = detectCloudSync(root)
+  if (found) console.error(`WARNING: ${cloudSyncAdvice(found, root)}`)
+}
+
+/**
+ * BOS-01 and BOS-07: `brand:approve --all-pending [--only …] [--exclude …] [--lang …] [--dry-run] [--json]`. Facts,
+ * changes, evidence and assets as before, plus strategy, calendar-week, social-style, creative-preference and
+ * aspect drafts, each approved through its own store with the digest the plan showed. One proof for the run.
+ */
+async function approveAllPendingCommand(options: { dryRun: boolean; json: boolean; exclude?: string; only?: string; lang?: string; actor: string }): Promise<void> {
+  const pending = await import('@brand-os/brand-core/pending')
   const approvals = engine.approvals()
+  const lang = pendingLang(options.lang)
+  const only = await parseOnly(options.only)
   const exclude = options.exclude ? options.exclude.split(',').map((id) => id.trim()).filter(Boolean) : []
-  const plan = planAllPending(approvals, root, { exclude, actor: options.actor })
+  const plan = pending.planEverything(approvals, root, { exclude, only, lang, actor: options.actor })
   const queue = approvals.reviewQueue({}, { includeSettled: false })
-  const approving = new Set(plan.entries.filter((entry) => entry.decision === 'approve' && entry.kind === 'fact').map((entry) => entry.id))
+  const approving = new Set(plan.base.entries.filter((entry) => entry.decision === 'approve' && entry.kind === 'fact').map((entry) => entry.id))
   const coachNotes = options.json ? '' : beforeApprovalCoach({ ...queue, items: queue.items.filter((item) => approving.has(item.question_id)) })
   if (options.dryRun) {
-    const report = dryRunReport(plan.entries, plan.unmatched_excludes)
-    console.log(options.json ? JSON.stringify(report, null, 2) : formatDryRun(report))
+    const report = pending.everythingDryRun(plan, exclude)
+    console.log(options.json ? JSON.stringify(report, null, 2) : pending.formatEverythingDryRun(report, lang))
     if (coachNotes) console.error(coachNotes)
     return
   }
-  const count = plan.entries.filter((entry) => entry.decision === 'approve').length
+  const count = plan.base.entries.filter((entry) => entry.decision === 'approve').length + plan.extras.filter((entry) => entry.decision === 'approve').length
   if (count === 0) {
     // Nothing to approve: no proof is read and nothing is written. The skips are still reported.
-    const result = approveAllPending(approvals, root, plan, undefined, options.actor)
-    console.log(options.json ? JSON.stringify(result, null, 2) : formatAllPending(result))
+    const result = pending.approveEverything(approvals, root, plan, undefined, options.actor)
+    console.log(options.json ? JSON.stringify(result, null, 2) : pending.formatEverything(result, lang))
     return
   }
   if (coachNotes) console.error(`${coachNotes}\n`)
-  if (!options.json) console.error(`About to approve ${count} item(s) as ${options.actor}: facts, change proposals, evidence and assets. Approval does not publish.`)
+  if (!options.json) {
+    const extra = plan.extras.filter((entry) => entry.decision === 'approve').length
+    console.error(`About to approve ${count} item(s) as ${options.actor}: facts, change proposals, evidence and assets${extra ? `, plus ${extra} strategy, calendar, social-style or creative item(s) at the exact digests listed in the dry run` : ''}. Approval does not publish.`)
+  }
   const proof = await readApprovalProof()
-  const result = approveAllPending(approvals, root, plan, proof, options.actor)
-  console.log(options.json ? JSON.stringify(result, null, 2) : formatAllPending(result))
+  const result = pending.approveEverything(approvals, root, plan, proof, options.actor)
+  console.log(options.json ? JSON.stringify(result, null, 2) : pending.formatEverything(result, lang))
   if (!result.ok) process.exitCode = 1
 }

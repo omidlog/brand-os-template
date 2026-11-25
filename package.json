@@ -45,6 +45,7 @@
     "brand:validate": "tsx scripts/brand.ts validate",
     "brand:export": "tsx scripts/brand.ts export",
     "brand:approve": "tsx scripts/brand.ts approve",
+    "brand:pending": "tsx scripts/brand.ts pending",
     "brand:publish": "tsx scripts/brand.ts publish",
     "brand:document": "tsx scripts/brand.ts document",
     "brand:tokens:generate": "tsx scripts/brand.ts tokens:generate",

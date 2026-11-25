@@ -3,7 +3,7 @@ export { buildStarterKit, starterFamily, starterStyle, STARTER_ARCHETYPES, START
 export type { StarterOptions } from './starter.js'
 export { ruleText, SOCIAL_KIT_TEXT, socialKitText } from './i18n.js'
 export type { SocialKitText } from './i18n.js'
-export { approveKit, assertOwnerProcess, evaluateKit, initKit, kitFile, kitSafetyProblems, readApprovals, readKit, rejectKit, reviewKit } from './store.js'
+export { approvalsFile, approveKit, assertOwnerProcess, evaluateKit, initKit, kitFile, kitSafetyProblems, readApprovals, readKit, rejectKit, reviewKit, sealFor } from './store.js'
 export type { ApprovalRecord, ApprovalsDoc, ApproveResult, InitResult, InvalidReason, KitRead, ReviewItem, ReviewResult, StyleState } from './store.js'
 export { escapeXml, previewFiles, repoTokenLookup, styleSvg, tokenLookup } from './preview.js'
 export type { PreviewFile, TokenLookup } from './preview.js'

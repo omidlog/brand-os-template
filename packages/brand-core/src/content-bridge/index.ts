@@ -11,7 +11,7 @@ export { availabilityConflict, claimConflicts, containsClaim, normalizeClaimText
 export type { ClaimConflict } from './claims.js'
 export { gapText, planCalendar, planWeek, researchAngles, servedStrategy } from './planner.js'
 export type { PlannedWeek, PlanOptions, PlanResult } from './planner.js'
-export { approvedWeekEntry, approveWeek, buildCalendar, CALENDAR_VIEW_SCHEMA, CalendarError, contentCalendar, evaluateWeek, listWeeks, loadWeekRecord, loadWeekRevision, problemText, proposeWeek, rejectWeek, reviewWeek, scanWeeks, weekProblems } from './calendar-store.js'
+export { approvedWeekEntry, approveWeek, buildCalendar, CALENDAR_VIEW_SCHEMA, CalendarError, contentCalendar, evaluateWeek, listWeeks, loadWeekRecord, loadWeekRevision, problemText, proposeWeek, rejectWeek, reviewWeek, scanWeeks, weekProblems, weekSealVerifies } from './calendar-store.js'
 export type { CalendarOptions, CalendarProblem, CalendarSlotView, CalendarView, CalendarWeekView, WeekEvaluation, WeekProposeResult, WeekReview, WeekSummary } from './calendar-store.js'
 export { buildStudioCalendar, SHARED_CALENDAR_DIR, shareWeek, STUDIO_CALENDAR_LIMITS, validSharedWeek } from './calendar-share.js'
 export type { SharedContentWeek, SharedSlot, StudioCalendarProjection, WithheldWeekReason } from './calendar-share.js'

@@ -22,6 +22,7 @@ export {
   reviewRevision,
   scanRecords,
   STRATEGY_RECORDS_DIR,
+  strategySealVerifies,
   strategyRefState,
   summarize,
   withdrawRevision,

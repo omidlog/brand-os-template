@@ -63,7 +63,7 @@ export function kitFile(root: string): string {
   return path.join(root, ...SOCIAL_KIT_FILE.split('/'))
 }
 
-function approvalsFile(root: string): string {
+export function approvalsFile(root: string): string {
   return path.join(root, ...SOCIAL_APPROVALS_FILE.split('/'))
 }
 
@@ -140,7 +140,8 @@ export function readApprovals(root: string, brandSlug: string): ApprovalsDoc {
   }
 }
 
-function sealFor(secret: string, brandSlug: string, styleId: string, record: Pick<ApprovalRecord, 'digest' | 'event_id' | 'approved_at'>): string {
+/** The seal of one style approval under `secret` (approval and approval-secret rotation). */
+export function sealFor(secret: string, brandSlug: string, styleId: string, record: Pick<ApprovalRecord, 'digest' | 'event_id' | 'approved_at'>): string {
   return approvalSeal(secret, approvalEventDigest({ brand_slug: brandSlug, style_id: styleId, digest: record.digest, event_id: record.event_id, approved_at: record.approved_at }), SOCIAL_APPROVAL_DOMAIN)
 }
 

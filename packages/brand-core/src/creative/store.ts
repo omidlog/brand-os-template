@@ -484,7 +484,7 @@ export const BRAND_SCOPE_ROUTE =
  * hidden prompt). Scope: project (default) or series (the origin project's surface and series), named by the owner.
  * Approving a preference that supersedes another marks the old one superseded; both stay on disk.
  */
-export function approvePreference(ws: KnowledgeWorkspace, input: { preference_id: string; proof: string | undefined; scope?: string }): { approved: CreativePreference; superseded: CreativePreference | null } {
+export function approvePreference(ws: KnowledgeWorkspace, input: { preference_id: string; proof: string | undefined; scope?: string; expected_digest?: string }): { approved: CreativePreference; superseded: CreativePreference | null } {
   assertOwnerProcess()
   if (input.scope === 'brand') throw new CreativeError('refused', BRAND_SCOPE_ROUTE)
   const level = asScopeLevel(input.scope ?? 'project')
@@ -493,6 +493,8 @@ export function approvePreference(ws: KnowledgeWorkspace, input: { preference_id
   return withLock(ws, 'creative-preferences', () => {
     const pref = readPreference(ws, id)
     if (pref.state !== 'draft') throw new CreativeError('refused', `${id} is ${pref.state}. Only a draft can be approved.`)
+    // Optional TOCTOU guard (brand:approve --all-pending): the draft must still be the one the owner was shown.
+    if (input.expected_digest !== undefined && preferenceDigest(pref) !== input.expected_digest) throw new CreativeError('stale', `${id} changed since it was shown for approval. Review it again. Nothing was approved.`)
     for (const ref of pref.sources) {
       const status = sourceStatus(ws, ref)
       if (!status.current) throw new CreativeError('stale_source', `Source ${ref.id} is ${status.state} since this preference was suggested. Review it and suggest again. Nothing was approved.`)

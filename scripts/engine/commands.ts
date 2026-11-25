@@ -14,7 +14,7 @@ export interface EngineCommand {
 }
 
 const BRAND_SUBCOMMANDS = [
-  'init', 'interview', 'resume', 'next', 'propose', 'status', 'review', 'export', 'approve', 'publish', 'document',
+  'init', 'interview', 'resume', 'next', 'propose', 'status', 'review', 'export', 'approve', 'pending', 'publish', 'document',
   'tokens:generate', 'tokens:approve', 'tokens:publish', 'assets', 'query', 'agent-token', 'doctor', 'finance', 'backup',
   'restore', 'migrate', 'evidence', 'retract', 'reset',
 ] as const

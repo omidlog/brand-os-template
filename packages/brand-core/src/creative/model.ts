@@ -194,7 +194,7 @@ export interface CreativePreference {
 
 export class CreativeError extends Error {
   constructor(
-    readonly code: 'invalid_input' | 'not_found' | 'exists' | 'wrong_brand' | 'refused' | 'proof' | 'stale_source' | 'unsafe_path' | 'invalid_record',
+    readonly code: 'invalid_input' | 'not_found' | 'exists' | 'wrong_brand' | 'refused' | 'proof' | 'stale' | 'stale_source' | 'unsafe_path' | 'invalid_record',
     message: string,
   ) {
     super(message)
@@ -290,6 +290,15 @@ export function shortText(value: unknown, max: number, field: string): string | 
  */
 export function preferenceDigest(pref: Pick<CreativePreference, 'preference_id' | 'brand_slug' | 'statement' | 'scope' | 'sources' | 'supersedes'>): string {
   const canonical = JSON.stringify([pref.preference_id, pref.brand_slug, pref.statement, pref.scope, pref.sources.map((ref) => [ref.id, ref.revision]), pref.supersedes])
+  return crypto.createHash('sha256').update(canonical).digest('hex')
+}
+
+/**
+ * What the owner is shown for one pending aspect proposal: its suggestions and the note revision they came from.
+ * `brand:approve --all-pending` plans with it and `approveAspects({ expected_digest })` refuses when it changed.
+ */
+export function aspectProposalDigest(proposal: Pick<AspectProposal, 'proposal_id' | 'brand_slug' | 'project_id' | 'feedback_id' | 'note' | 'suggestions' | 'state'>): string {
+  const canonical = JSON.stringify([proposal.proposal_id, proposal.brand_slug, proposal.project_id, proposal.feedback_id, [proposal.note.id, proposal.note.revision], proposal.suggestions.map((item) => [item.aspect, item.side]), proposal.state])
   return crypto.createHash('sha256').update(canonical).digest('hex')
 }
 
