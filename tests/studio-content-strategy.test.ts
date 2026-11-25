@@ -8,6 +8,10 @@ import { approveRevision, proposeRevision } from '@brand-os/brand-core/strategy'
 import { studioPathAllowed } from '../apps/studio/src/github/tar.js'
 import { approveFacts, AUDIENCE, BUDGET_FACT_CANARY, OFFER, PROMISE, VOICE } from './helpers/content.js'
 import { DRAFT_CANARY, strategyBrand, type StrategyBrand } from './helpers/strategy.js'
+import { useTestKey } from './helpers/knowledge.js'
+
+// Restricted fixture facts are encrypted at rest; the Studio CI job sets no data key of its own.
+useTestKey()
 
 /**
  * The read-only Studio "Content strategy" page. Only the approved, served content strategy revision the owner shared
