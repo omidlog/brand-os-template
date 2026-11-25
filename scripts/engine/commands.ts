@@ -21,7 +21,7 @@ const BRAND_SUBCOMMANDS = [
 
 const OWN_SCRIPTS = [
   'coach', 'knowledge', 'creative', 'seo', 'strategy', 'competitive', 'identity', 'visual-dna', 'content', 'runtime',
-  'acceptance', 'assurance', 'assurance-review', 'assurance-link',
+  'acceptance', 'assurance', 'assurance-review', 'assurance-link', 'pack',
 ] as const
 
 export const ENGINE_COMMANDS: Record<string, EngineCommand> = {
