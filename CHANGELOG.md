@@ -6,6 +6,20 @@
 
 
 
+## Unreleased — content feedback loop, and a brand pack for chat products without MCP
+
+### Added
+
+- `npm run brand:content -- feedback --week … --slot … --text "…" [--verdict] [--keep] [--avoid]` (owner only): the words become an `owner_note` Knowledge note linked to one Creative Learning project per slot; it prints the exact `brand:creative suggest` line, and an approved series preference then shows up in later briefs.
+- `npm run brand:content -- metrics --week … --slot … [--views …] [--completion-rate …]` (owner only): owner-reported numbers stored as `owner_reported` / `not_verified` observations, listed by `brand:content reports` and carried in `content_calendar` `reports[]`. Never a fact or a claim.
+- Creative aspects for copy (`length`, `humour`, `clarity`, `jargon`, `structure`, `hashtags`, `caption`, `script_delivery`) with fa/en/tr lexicon entries, and surfaces `caption`, `script`, `thread`, `article`. Appended; earlier ids and digests are unchanged.
+- `npm run brand:pack -- --profile content-read|marketing|design|internal-read [--lang] [--out] [--json]` (owner only): six Markdown files of approved context for ChatGPT, Grok or Claude.ai Projects, built from the same readers as the agent profile, with a restricted/secret scan; default out `brand/.private/exports/`. Engine command `pack`.
+- Docs: "Chat products without MCP" and "Claude Desktop / Cowork via local MCP" in `docs-internal/AI_CONNECTORS.md`, with short en/fa/tr sections in the onboarding guides.
+
+### Changed
+
+- `content-read` sees a little more: `content_brief` carries the owner-approved statement and scope of applicable creative preferences (not only ids) and `learnings[]` (ids and owner-reported numbers of recent same channel+format slots). Never note text or drafts. An email slot now maps to the `article` surface.
+
 ## Unreleased — more of a personal brand, and four shared brand questions
 
 ### Added
