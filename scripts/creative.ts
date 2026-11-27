@@ -21,6 +21,7 @@ import {
   readProject,
   recordFeedback,
   selectVariant,
+  learnFromCorrection,
   shareDecision,
   suggestPreference,
   type CreativeContext,
@@ -46,6 +47,11 @@ const HELP = `brand:creative <command> [options]
   select    --project <project> --variant <E>      the owner's choice for this project only
   suggest   --project <project> --statement <short rule> --source kn_… [--source kn_…] [--context <short>]
             [--counterexample B | --counterexample other-project/B]… [--supersedes cp_…]     draft only
+  learn     --surface narration|image|video|reel|caption|… --series <name> --rule <what to do next time, ≤200 chars>
+            (--text <owner words> | --file <path|->) [--before-file <path>] [--after-file <path>]
+            [--context <short>] [--verdict change_request|like|observation] [--keep aspect,…] [--avoid aspect,…]
+            [--scope series|project] [--supersedes cp_…] [--source-kind agent_capture|owner_note] [--lang fa]
+            one step: note + feedback + draft rule for the whole series; approve with brand:approve --all-pending
   approve   --id cp_… [--scope project|series]    owner proof: BRAND_OS_APPROVAL_PROOF or hidden prompt
   preferences                                       every preference with its state
   share     --id cp_… [--dry-run]   copy an approved decision's summary to brand/creative/shared (you commit it)
@@ -60,7 +66,8 @@ const HELP = `brand:creative <command> [options]
   Suggestions never apply on their own: retrieval and agents ignore them until the owner approves.
 
 Aspects: camera_angle, lighting, text_density, tone, typography, layout, color, mascot_pose, mascot_anatomy, hook,
-cta, duration, pacing, music, length, humour, clarity, jargon, structure, hashtags, caption, script_delivery. Add --json for machine-readable output. Refused while ${AGENT_TOKEN_ENV} is set.`
+cta, duration, pacing, music, length, humour, clarity, jargon, structure, hashtags, caption, script_delivery, voice, diction, composition, style.
+Surfaces: reel, post, carousel, story, logo, caption, script, thread, article, narration, image, video. Add --json for machine-readable output. Refused while ${AGENT_TOKEN_ENV} is set.`
 
 const [command, ...argv] = process.argv.slice(2)
 // `aspects <sub>` takes one positional subcommand; every other command takes options only.
@@ -97,6 +104,9 @@ const OPTIONS = {
   only: { type: 'string' },
   state: { type: 'string' },
   'dry-run': { type: 'boolean', default: false },
+  rule: { type: 'string' },
+  'before-file': { type: 'string' },
+  'after-file': { type: 'string' },
 } as const
 
 type Values = ReturnType<typeof parseArgs<{ args: string[]; options: typeof OPTIONS; allowPositionals: false; strict: true }>>['values']
@@ -174,6 +184,15 @@ function contextText(ctx: CreativeContext): string {
   return lines.join('\n')
 }
 
+function optionalFile(value: string | undefined, flag: string): string | undefined {
+  if (value === undefined) return undefined
+  const file = path.resolve(value)
+  const stat = fs.statSync(file, { throwIfNoEntry: false })
+  if (!stat?.isFile()) throw new CreativeError('invalid_input', `The ${flag} path is not a readable file.`)
+  if (stat.size > 1024 * 1024) throw new CreativeError('invalid_input', `The ${flag} file is larger than 1 MiB.`)
+  return fs.readFileSync(file, 'utf8')
+}
+
 function parseCounterexample(value: string): { project_id?: string; variant_id: string } {
   const slash = value.indexOf('/')
   return slash === -1 ? { variant_id: value } : { project_id: value.slice(0, slash), variant_id: value.slice(slash + 1) }
@@ -230,6 +249,40 @@ async function run(ws: KnowledgeWorkspace, values: Values): Promise<void> {
       })
       print(values, { ok: true, preference: pref }, () =>
         `Draft ${pref.preference_id} (project ${pref.project_id}): ${pref.statement}\nUnverified until the owner runs: npm run brand:creative -- approve --id ${pref.preference_id}${pref.supersedes ? `\nWill supersede ${pref.supersedes} on approval.` : ''}`,
+      )
+      return
+    }
+    case 'learn': {
+      const text = await feedbackText(values)
+      if (text === undefined) usage('learn needs the owner’s words: --text or --file.')
+      if (!values.rule) usage('--rule is required.')
+      const kind = values['source-kind'] ?? 'agent_capture'
+      if (kind !== 'agent_capture' && kind !== 'owner_note') usage('--source-kind is agent_capture or owner_note for learn.')
+      const result = learnFromCorrection(
+        ws,
+        {
+          surface: need(values, 'surface'),
+          series: need(values, 'series'),
+          feedback: text,
+          before: optionalFile(values['before-file'], '--before-file'),
+          after: optionalFile(values['after-file'], '--after-file'),
+          rule: values.rule,
+          context: values.context,
+          verdict: values.verdict,
+          keep: list(values.keep),
+          avoid: list(values.avoid),
+          language: values.lang,
+          scope: values.scope,
+          supersedes: values.supersedes,
+        },
+        kind,
+      )
+      print(values, { ok: true, ...result }, () =>
+        [
+          `Learned (draft) ${result.preference.preference_id} for ${result.preference.requested_scope} ${result.project_id}: ${result.preference.statement}`,
+          `Owner words: ${result.note.scope} note ${result.note.id}@${result.note.revision.slice(0, 12)}. Nothing was committed.`,
+          result.next_step,
+        ].join('\n'),
       )
       return
     }

@@ -23,7 +23,7 @@ export const CREATIVE_AGENT_TOOL = 'creative_context' as const
 
 export const CREATIVE_AGENT_NOTICE = [
   ...CONTEXT_NOTICE,
-  'Read-only. This tool cannot record feedback, approve, share, publish or post. Ask the owner to change creative memory with brand:creative.',
+  'Read-only. This tool cannot approve, share, publish or post. To record an owner correction as a draft rule, call creative_learn. withheld.preferences.draft counts rules waiting for the owner’s approval: mention them.',
 ]
 
 export type QuoteWithheld = 'local_note' | 'archived' | 'missing' | 'unsafe'

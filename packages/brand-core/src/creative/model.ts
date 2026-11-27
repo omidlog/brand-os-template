@@ -12,10 +12,11 @@ export const CREATIVE_SCHEMA_VERSION = 1
 
 /**
  * `logo` holds logo/identity concept rounds (Identity Slice D); selection there is never an approved mark.
- * `caption`, `script`, `thread` and `article` hold copy (content feedback from brand:content feedback). Append only:
- * stored projects and preference scopes name these strings.
+ * `caption`, `script`, `thread` and `article` hold copy (content feedback from brand:content feedback). `narration`
+ * (voice-over text and its delivery), `image` and `video` hold learned corrections (`brand:creative learn`, the
+ * `creative_learn` agent tool). Append only: stored projects and preference scopes name these strings.
  */
-export const SURFACES = ['reel', 'post', 'carousel', 'story', 'logo', 'caption', 'script', 'thread', 'article'] as const
+export const SURFACES = ['reel', 'post', 'carousel', 'story', 'logo', 'caption', 'script', 'thread', 'article', 'narration', 'image', 'video'] as const
 export const VARIANT_STATUSES = ['draft', 'selected', 'rejected'] as const
 export const VERDICTS = ['like', 'reject', 'change_request', 'observation'] as const
 /** Owner-words source kinds a feedback note may have. Third-party material is never feedback. */
@@ -47,6 +48,11 @@ export const ASPECTS = [
   'hashtags',
   'caption',
   'script_delivery',
+  // Learned-correction aspects (narration, voice and images). Appended.
+  'voice',
+  'diction',
+  'composition',
+  'style',
 ] as const
 export const PREFERENCE_STATES = ['draft', 'approved', 'superseded'] as const
 export const PREFERENCE_SCOPES = ['project', 'series'] as const
@@ -188,6 +194,14 @@ export interface CreativePreference {
   superseded_by: string | null
   superseded_at: string | null
   approval: { approved_at: string; digest: string; actor: 'owner' } | null
+  /**
+   * Scope the draft asks for when the owner approves it with `brand:approve --all-pending` (learned corrections ask
+   * for `series`, so the rule reaches every new piece of that surface and series). Only the owner's approval sets
+   * `scope`; this is a request, shown in the approval plan and covered by its digest there. Absent means project.
+   */
+  requested_scope?: PreferenceScopeLevel
+  /** `agent_capture` when an MCP agent drafted it through `creative_learn`; absent for owner-made drafts. */
+  origin?: 'owner' | 'agent_capture'
   created_at: string
   updated_at: string
 }

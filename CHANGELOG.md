@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — learn from the owner's corrections
+
+### Added
+
+- **`creative_learn` (MCP, `creative-read` token) and `npm run brand:creative -- learn`:** when the owner corrects a narration, a voice or delivery, wording, an image or a caption, one call stores the owner's words with the before/after text as a local note, adds a feedback event to `learn-<surface>-<series>` and drafts a rule that asks for series scope. Nothing is committed, so it works where git cannot run (for example a checkout on an online-only cloud drive). The owner approves with `brand:approve -- --all-pending`; then `creative_context` serves the rule to every later piece of that surface and series.
+- Surfaces `narration`, `image`, `video`; aspects `voice`, `diction`, `composition`, `style` (appended).
+- AGENTS.md and every creative skill: read approved corrections before drafting, and record a correction in the same turn.
+
+### Changed
+
+- `brand:approve -- --all-pending` approves a creative draft at its `requested_scope` (shown in the plan); drafts without one stay project-scoped as before.
+- `creative_context` lists a draft that asks for series scope under its series (counted for agents, never applied), so a later session can remind the owner to approve it.
+
 ## Unreleased — a new brand works end to end
 
 Found by creating a business brand and a personal brand from scratch and running every step.
