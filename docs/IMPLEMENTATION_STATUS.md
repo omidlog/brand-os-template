@@ -150,6 +150,7 @@ Branch `feat/creative-learning`, built on the Knowledge Inbox (PR #9). Guide: `d
 | Scoped preferences | Done | Draft → owner approval with the existing proof; project or series scope; brand scope refused (routed to `propose`/`approve`); supersession keeps history. |
 | Next-session context | Done | Approved facts (design reader), applied preferences, cited selected/rejected/kept references from in-scope projects, provenance and source state. |
 | Agent / MCP access | Done (Sprint 2) | `creative-read` profile, read-only `creative_context` on local stdio MCP; approved items only, local note text withheld, access-logged. `tests/creative-agent.test.ts`. |
+| Learning from corrections | Done | `brand:creative learn` and the `creative_learn` MCP tool (creative-read): local note + feedback in `learn-<surface>-<series>` + draft rule with `requested_scope`; `brand:approve --all-pending` approves at that scope. Surfaces `narration`, `image`, `video`; aspects `voice`, `diction`, `composition`, `style`. No commit needed. `tests/creative-learn.test.ts`. |
 | Aspect proposals | Done (Sprint 2) | Deterministic fa/en/tr lexicon; pending until owner approval with proof; `aspects approve/reject`. `tests/creative-aspects.test.ts`. |
 | Studio view | Done (Sprint 2) | Read-only Creative decisions page for decisions shared with `brand:creative share` and merged. `tests/creative-share.test.ts`, `tests/studio-creative.test.ts`. |
 | Remote MCP / CMO agent / campaign metrics | Not started | Backlog; local stdio only. |

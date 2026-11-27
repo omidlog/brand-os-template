@@ -88,6 +88,8 @@ export interface ExtraEntry {
   look_first: boolean
   /** Social styles approved with this surface entry. */
   styles?: string[]
+  /** Creative preference: the scope shown in the plan and used at approval (the draft's requested_scope, else project). */
+  scope?: 'project' | 'series'
 }
 
 export interface EverythingPlan {
@@ -136,6 +138,11 @@ const T = {
     en: '"{statement}" for project {project}. Approved at project scope (for a series use brand:creative approve --scope series).',
     fa: '«{statement}» برای پروژهٔ {project}. در سطح پروژه تأیید می‌شود (برای یک سری از brand:creative approve --scope series استفاده کنید).',
     tr: '{project} projesi için "{statement}". Proje kapsamında onaylanır (bir seri için brand:creative approve --scope series kullanın).',
+  },
+  creativeSeries: {
+    en: '"{statement}" (learned correction from project {project}). Approved for its whole series, as the draft asks.',
+    fa: '«{statement}» (اصلاحِ یادگرفته از پروژهٔ {project}). همان‌طور که پیش‌نویس خواسته، برای کل سری تأیید می‌شود.',
+    tr: '"{statement}" ({project} projesinden öğrenilen düzeltme). Taslağın istediği gibi tüm seri için onaylanır.',
   },
   token: {
     en: '{id} = {value} (from {source}).',
@@ -263,6 +270,7 @@ function creativeEntries(ws: KnowledgeWorkspace, lang: PendingLang): ExtraEntry[
   const out: ExtraEntry[] = []
   for (const pref of listPreferences(ws)) {
     if (pref.state !== 'draft') continue
+    const scope: 'project' | 'series' = pref.requested_scope === 'series' ? 'series' : 'project'
     const stale = pref.sources.map((ref) => ({ ref, status: sourceStatus(ws, ref) })).filter((item) => !item.status.current)
     out.push({
       kind: 'creative_preference',
@@ -270,7 +278,8 @@ function creativeEntries(ws: KnowledgeWorkspace, lang: PendingLang): ExtraEntry[
       revision: null,
       digest: preferenceDigest(pref),
       decision: stale.length ? 'skip' : 'approve',
-      summary: fill(T.creative[lang], { statement: short(pref.statement, 80), project: pref.project_id }),
+      summary: scope === 'series' ? fill(T.creativeSeries[lang], { statement: short(pref.statement, 80), project: pref.project_id }) : fill(T.creative[lang], { statement: short(pref.statement, 80), project: pref.project_id }),
+      scope,
       reason: stale.length ? `Source ${stale.map((item) => `${item.ref.id} is ${item.status.state}`).join(', ')} since it was suggested. Suggest it again.` : T.approveReason[lang],
       review_with: `npm run brand:creative -- preferences`,
       look_first: false,
@@ -416,8 +425,9 @@ function approveExtra(ws: KnowledgeWorkspace, entry: ExtraEntry, proof: string, 
         return { outcome: 'approved', reason: `Approved ${done.approved.map((item) => item.style_id).join(', ')}. Design guidance only; it authorizes no post.` }
       }
       case 'creative_preference': {
-        const done = approvePreference(ws, { preference_id: entry.id, proof, expected_digest: entry.digest })
-        return { outcome: 'approved', reason: `Approved for project ${done.approved.project_id}${done.superseded ? `; ${done.superseded.preference_id} is superseded` : ''}.` }
+        const done = approvePreference(ws, { preference_id: entry.id, proof, expected_digest: entry.digest, scope: entry.scope ?? 'project' })
+        const where = done.approved.scope.level === 'series' ? `series ${done.approved.scope.series} (${done.approved.scope.surface})` : `project ${done.approved.project_id}`
+        return { outcome: 'approved', reason: `Approved for ${where}${done.superseded ? `; ${done.superseded.preference_id} is superseded` : ''}.` }
       }
       case 'aspect_proposal': {
         const done = approveAspects(ws, { proposal_id: entry.id, proof, expected_digest: entry.digest })

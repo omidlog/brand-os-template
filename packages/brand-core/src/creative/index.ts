@@ -23,6 +23,8 @@ export {
 export type { CreateProjectInput, FeedbackInput, FeedbackResult, SuggestInput } from './store.js'
 export { buildCreativeContext, CONTEXT_NOTICE, creativeContext, preferenceView } from './context.js'
 export { agentView, CREATIVE_AGENT_NOTICE, CREATIVE_AGENT_TOOL, creativeAccess, runCreativeContextTool } from './agent.js'
+export { CREATIVE_LEARN_NOTICE, CREATIVE_LEARN_TOOL, LEARN_LIMITS, LEARN_VERDICTS, learnFromCorrection, learnProjectId, runCreativeLearnTool } from './learn.js'
+export type { CreativeLearnToolResult, LearnInput, LearnResult } from './learn.js'
 export type { AgentCreativeContext, AgentReason, CreativeToolArgs, CreativeToolResult, QuoteWithheld } from './agent.js'
 export type { CitedReason, ContextTarget, CreativeContext, PreferenceItem, ReferenceItem, SourceState } from './context.js'
 export { approveAspects, ASPECT_METHOD, deriveAspects, listAspectProposals, normalizeForAspects, parseAspectChoices, readAspectProposal, rejectAspects, suggestAspects } from './aspects.js'

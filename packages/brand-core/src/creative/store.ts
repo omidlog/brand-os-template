@@ -178,9 +178,10 @@ function lockName(projectId: string): string {
   return `creative-${projectId}`
 }
 
-export function updateProject(ws: KnowledgeWorkspace, id: string, change: (project: CreativeProject) => void): CreativeProject {
+export function updateProject(ws: KnowledgeWorkspace, id: string, change: (project: CreativeProject) => void, authorized = false): CreativeProject {
+  if (!authorized) assertOwnerProcess()
   return withLock(ws, lockName(validateProjectId(id)), () => {
-    const project = readProject(ws, id)
+    const project = loadProject(ws, id)
     change(project)
     project.updated_at = ws.now().toISOString()
     writeRecord(ws, projectFile(ws, id), project)
@@ -219,8 +220,17 @@ export interface CreateProjectInput {
   inspirations?: Array<{ note_id: string; rights?: string }>
 }
 
+/** Owner path. Refuses under an agent token. */
 export function createProject(ws: KnowledgeWorkspace, input: CreateProjectInput): CreativeProject {
   assertOwnerProcess()
+  return createProjectAuthorized(ws, input)
+}
+
+/**
+ * Without the owner-process check: only for callers that authorized the writer themselves (`creative_learn` in
+ * learn.ts, after its profile check). Not exported from the package index.
+ */
+export function createProjectAuthorized(ws: KnowledgeWorkspace, input: CreateProjectInput): CreativeProject {
   const id = validateProjectId(input.project_id)
   const title = shortText(input.title, CREATIVE_LIMITS.maxTitleChars, 'Title')
   if (!title) throw new CreativeError('invalid_input', 'A project needs a title.')
@@ -270,8 +280,17 @@ export function resolveAsset(root: string, asset: string): VariantAsset {
   return { state: 'manifest', asset_id: id, checksum_sha256: typeof row.checksum_sha256 === 'string' ? row.checksum_sha256 : null, present: row.present === true }
 }
 
+/** Owner path. Refuses under an agent token. */
 export function addVariant(ws: KnowledgeWorkspace, input: { project_id: string; variant_id: string; asset: string; describe?: string | null }): Variant {
   assertOwnerProcess()
+  return addVariantAuthorized(ws, input)
+}
+
+/**
+ * Without the owner-process check: only for callers that authorized the writer themselves (`creative_learn` in
+ * learn.ts, after its profile check). Not exported from the package index.
+ */
+export function addVariantAuthorized(ws: KnowledgeWorkspace, input: { project_id: string; variant_id: string; asset: string; describe?: string | null }): Variant {
   const variantId = validateVariantId(input.variant_id)
   const asset = resolveAsset(ws.root, input.asset)
   const describe = shortText(input.describe, CREATIVE_LIMITS.maxDescribeChars, 'Description')
@@ -281,7 +300,7 @@ export function addVariant(ws: KnowledgeWorkspace, input: { project_id: string; 
     if (project.variants.length >= CREATIVE_LIMITS.maxVariants) throw new CreativeError('invalid_input', `At most ${CREATIVE_LIMITS.maxVariants} variants.`)
     added = { variant_id: variantId, status: 'draft', asset, describe, created_at: ws.now().toISOString() }
     project.variants.push(added)
-  })
+  }, true)
   return added!
 }
 
@@ -311,8 +330,17 @@ export interface FeedbackResult {
  * Records owner feedback on one variant. The words go to the Knowledge Inbox (captureNote, local, tagged
  * creative-feedback, source.ref creative:<project>/<variant>); the project stores the note id and revision only.
  */
+/** Owner path. Refuses under an agent token. */
 export function recordFeedback(ws: KnowledgeWorkspace, input: FeedbackInput): FeedbackResult {
   assertOwnerProcess()
+  return recordFeedbackAuthorized(ws, input)
+}
+
+/**
+ * Without the owner-process check: only for callers that authorized the writer themselves (`creative_learn` in
+ * learn.ts, after its profile check). Not exported from the package index.
+ */
+export function recordFeedbackAuthorized(ws: KnowledgeWorkspace, input: FeedbackInput): FeedbackResult {
   const projectId = validateProjectId(input.project_id)
   const variantId = validateVariantId(input.variant_id)
   const verdict: Verdict = asVerdict(input.verdict ?? 'observation')
@@ -320,7 +348,7 @@ export function recordFeedback(ws: KnowledgeWorkspace, input: FeedbackInput): Fe
   const avoid: Aspect[] = asAspects(input.avoid)
   if (keep.some((aspect) => avoid.includes(aspect))) throw new CreativeError('invalid_input', 'An aspect cannot be both keep and avoid in one feedback.')
   if ((input.text === undefined) === (input.note_id === undefined)) throw new CreativeError('invalid_input', 'Give the owner’s words with --text/--file, or link an existing note with --note (not both).')
-  const project = readProject(ws, projectId)
+  const project = loadProject(ws, projectId)
   if (!project.variants.some((item) => item.variant_id === variantId)) throw new CreativeError('not_found', `No variant ${variantId} in ${projectId}.`)
   if (verdict === 'reject' && project.selection?.variant_id === variantId) throw new CreativeError('refused', `${variantId} is the selected variant. Select another variant first, then reject this one.`)
 
@@ -371,7 +399,7 @@ export function recordFeedback(ws: KnowledgeWorkspace, input: FeedbackInput): Fe
     const variant = current.variants.find((item) => item.variant_id === variantId)!
     if (verdict === 'reject') variant.status = 'rejected'
     status = variant.status
-  })
+  }, true)
   return { feedback: event, note, variant_status: status }
 }
 
@@ -397,6 +425,9 @@ export interface SuggestInput {
   sources: string[]
   counterexamples?: Array<{ project_id?: string; variant_id: string }>
   supersedes?: string | null
+  /** Scope to ask for at approval (learned corrections ask for series). Not a scope: only the owner's approval sets it. */
+  requested_scope?: 'project' | 'series'
+  origin?: 'owner' | 'agent_capture'
 }
 
 function checkSafeLabel(text: string, field: string): void {
@@ -408,9 +439,18 @@ function checkSafeLabel(text: string, field: string): void {
  * A draft, project-scoped preference. It is labelled unverified and has no effect until the owner approves it.
  * Sources must be owner-words Knowledge notes; their current revisions are recorded.
  */
+/** Owner path. Refuses under an agent token. */
 export function suggestPreference(ws: KnowledgeWorkspace, input: SuggestInput): CreativePreference {
   assertOwnerProcess()
-  const project = readProject(ws, validateProjectId(input.project_id))
+  return suggestPreferenceAuthorized(ws, input)
+}
+
+/**
+ * Without the owner-process check: only for callers that authorized the writer themselves (`creative_learn` in
+ * learn.ts, after its profile check). Not exported from the package index.
+ */
+export function suggestPreferenceAuthorized(ws: KnowledgeWorkspace, input: SuggestInput): CreativePreference {
+  const project = loadProject(ws, validateProjectId(input.project_id))
   const statement = shortText(input.statement, CREATIVE_LIMITS.maxStatementChars, 'Statement')
   if (!statement) throw new CreativeError('invalid_input', 'A preference needs a short statement.')
   const context = shortText(input.context, CREATIVE_LIMITS.maxContextChars, 'Context')
@@ -427,14 +467,14 @@ export function suggestPreference(ws: KnowledgeWorkspace, input: SuggestInput): 
   const counterexamples = (input.counterexamples ?? []).map((item) => {
     const pid = validateProjectId(item.project_id ?? project.project_id)
     const vid = validateVariantId(item.variant_id)
-    const owner = pid === project.project_id ? project : readProject(ws, pid)
+    const owner = pid === project.project_id ? project : loadProject(ws, pid)
     if (!owner.variants.some((variant) => variant.variant_id === vid)) throw new CreativeError('not_found', `No variant ${vid} in ${pid}.`)
     return { project_id: pid, variant_id: vid }
   })
   if (counterexamples.length > CREATIVE_LIMITS.maxCounterexamples) throw new CreativeError('invalid_input', `At most ${CREATIVE_LIMITS.maxCounterexamples} counterexamples.`)
   let supersedes: string | null = null
   if (input.supersedes) {
-    const old = readPreference(ws, validatePreferenceId(input.supersedes))
+    const old = loadPreference(ws, validatePreferenceId(input.supersedes))
     if (old.state !== 'approved') throw new CreativeError('refused', `${old.preference_id} is ${old.state}; only an approved preference can be superseded.`)
     supersedes = old.preference_id
   }
@@ -455,6 +495,8 @@ export function suggestPreference(ws: KnowledgeWorkspace, input: SuggestInput): 
     superseded_by: null,
     superseded_at: null,
     approval: null,
+    ...(input.requested_scope ? { requested_scope: asScopeLevel(input.requested_scope) } : {}),
+    ...(input.origin ? { origin: input.origin } : {}),
     created_at: now,
     updated_at: now,
   }

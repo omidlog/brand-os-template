@@ -231,7 +231,8 @@ test('over MCP stdio: creative_context is listed and read-only; creative-read is
   try {
     const names = (await client.listTools()).tools.map((tool) => tool.name)
     assert.ok(names.includes('creative_context'))
-    assert.ok(!names.some((name) => /^creative_/.test(name) && name !== 'creative_context'), 'one creative tool, no writes')
+    // creative_learn is the one creative write (a draft only; tests/creative-learn.test.ts). Nothing else.
+    assert.deepEqual(names.filter((name) => /^creative_/.test(name)).sort(), ['creative_context', 'creative_learn'])
     const ok = parse(await client.callTool({ name: 'creative_context', arguments: { project_id: 'pilito-reel-1' } }))
     assert.equal(ok.status, 'ok')
     assert.equal(ok.data!.preferences[0]!.preference_id, s.current.preference_id)

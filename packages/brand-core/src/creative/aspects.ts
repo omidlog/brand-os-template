@@ -59,6 +59,11 @@ const LEXICON: Lexicon = {
   hashtags: ['hashtag', 'هشتگ', 'etiket'],
   caption: ['کپشن', 'açıklama metni'],
   script_delivery: ['script', 'voiceover', 'voice over', 'narration', 'delivery', 'اسکریپت', 'گویندگی', 'صداگذاری', 'متن ویدیو', 'senaryo', 'seslendirme', 'anlatım'],
+  // Learned-correction aspects. New words only, so earlier text keeps its aspects.
+  voice: ['voice', 'timbre', 'accent', 'صدا', 'لهجه', 'ses tonu', 'aksan'],
+  diction: ['diction', 'word choice', 'wording', 'literary', 'ادبیات', 'واژه گزینی', 'انتخاب کلمات', 'sözcük seçimi', 'üslup'],
+  composition: ['focal point', 'negative space', 'visual hierarchy', 'نقطه کانونی', 'فضای خالی', 'odak noktası', 'boş alan'],
+  style: ['art style', 'visual style', 'illustration style', 'سبک', 'استایل', 'görsel stil', 'tarz'],
 }
 
 const NEGATIVE = ['too', 'not', 'bad', 'ugly', 'wrong', 'hate', 'dislike', 'less', 'remove', 'avoid', 'boring', 'weak', 'زیاد', 'بد', 'زشت', 'نیست', 'کم کن', 'حذف', 'اشتباه', 'ضعیف', 'خسته کننده', 'دوست ندارم', 'نمی', 'fazla', 'kötü', 'değil', 'beğenmedim', 'sevmedim', 'kaldır', 'yanlış', 'zayıf', 'sıkıcı']

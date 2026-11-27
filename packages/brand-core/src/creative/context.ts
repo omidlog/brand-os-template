@@ -94,8 +94,17 @@ function projectInScope(project: CreativeProject, target: CreativeContext['targe
   return project.surface === target.surface && project.series === target.series
 }
 
-function preferenceApplies(pref: CreativePreference, target: CreativeContext['target']): boolean {
-  if (pref.scope.level === 'project') return target.project_id !== null && pref.scope.project_id === target.project_id
+function preferenceApplies(pref: CreativePreference, target: CreativeContext['target'], projects: Map<string, CreativeProject>): boolean {
+  if (pref.scope.level === 'project') {
+    if (target.project_id !== null && pref.scope.project_id === target.project_id) return true
+    // A draft asking for series scope (a learned correction) is listed for its series too, never applied: drafts
+    // only ever land under not_applied (and are counted, not shown, for agents).
+    if (pref.state === 'draft' && pref.requested_scope === 'series') {
+      const origin = projects.get(pref.scope.project_id)
+      return !!origin && origin.surface === target.surface && origin.series === target.series
+    }
+    return false
+  }
   return pref.scope.surface === target.surface && pref.scope.series === target.series
 }
 
@@ -235,13 +244,14 @@ export function buildCreativeContext(ws: KnowledgeWorkspace, engine: InterviewEn
 
   const applied: PreferenceItem[] = []
   const notApplied: PreferenceItem[] = []
+  const allProjects = new Map(scanProjects(ws).map((project) => [project.project_id, project]))
   for (const pref of scanPreferences(ws)) {
-    if (!preferenceApplies(pref, target)) continue
+    if (!preferenceApplies(pref, target, allProjects)) continue
     const view = preferenceView(ws, pref)
     ;(view.state === 'approved' ? applied : notApplied).push(view)
   }
 
-  const projects = scanProjects(ws).filter((project) => projectInScope(project, target))
+  const projects = [...allProjects.values()].filter((project) => projectInScope(project, target))
   const references = projects.flatMap((project) => referencesFor(ws, project))
   const inspirations = projects.flatMap((project) =>
     project.inspirations.map((item) => {

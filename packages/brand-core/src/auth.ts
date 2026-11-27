@@ -91,12 +91,13 @@ export const AGENT_PROFILES: Record<AgentProfile, { description: string; allowsM
     allowsModule: () => true,
   },
   /**
-   * The only profile the creative_context MCP tool answers. Facts as design, plus the owner's approved creative
-   * preferences and cited selection/rejection reasons (derived records, no drafts). Verbatim note text only from
-   * shared notes. Existing tokens keep their profile, so none gains creative access.
+   * The only profile the creative_context and creative_learn MCP tools answer. Facts as design, plus the owner's
+   * approved creative preferences and cited selection/rejection reasons (derived records, no drafts). Verbatim note
+   * text only from shared notes. creative_learn records an owner correction as a local note and a DRAFT preference;
+   * it approves nothing. Existing tokens keep their profile, so none gains creative access.
    */
   'creative-read': {
-    description: 'Approved internal facts as the design profile, plus the read-only creative_context tool: owner-approved scoped creative preferences and cited selection/rejection reasons. No drafts, no local note text, no restricted values.',
+    description: 'Approved internal facts as the design profile, plus creative_context (owner-approved scoped creative preferences and cited selection/rejection reasons) and creative_learn (records an owner correction as a draft rule for the owner to approve). No drafts served, no local note text, no restricted values.',
     allowsModule: (module) => AGENT_PROFILES.design.allowsModule(module),
   },
   /**

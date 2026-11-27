@@ -34,7 +34,7 @@ import {
   TASK_LOCALES,
   TASK_TYPES,
 } from '@brand-os/brand-core'
-import { runCreativeContextTool, SURFACES } from '@brand-os/brand-core/creative'
+import { ASPECTS, LEARN_LIMITS, LEARN_VERDICTS, runCreativeContextTool, runCreativeLearnTool, SURFACES } from '@brand-os/brand-core/creative'
 import { runContentTool } from '@brand-os/brand-core/content-bridge'
 import { REQUIRABLE_ASSETS, runProductionReadinessTool } from '@brand-os/brand-core/runtime'
 import { SURFACES as SOCIAL_SURFACES, runSocialKitTool } from '@brand-os/brand-core/social-kit'
@@ -210,6 +210,35 @@ server.registerTool(
     }),
   },
   async ({ project_id, surface, series }) => text(runCreativeContextTool(engine, caller, { project_id, surface, series })),
+)
+
+// Learning from corrections (see creative/learn.ts and docs-internal/CREATIVE_LEARNING.md): the one creative write an
+// agent may make. The owner's words become a local note, the feedback joins the series' learning project, and the
+// rule is a DRAFT until the owner approves it. Nothing is committed. creative-read token only; access-logged.
+server.registerTool(
+  'creative_learn',
+  {
+    description:
+      'Call this whenever the owner corrects or edits something you made (narration script, voice or delivery, wording, an image, a caption, a reel) so the correction applies to future work. Records the owner’s words verbatim (feedback), optionally the before and after text, and a short rule for next time (rule, ≤200 chars, an instruction a later session can follow). surface + series say where it applies (for example narration / explainer-reels); scope defaults to series. The rule is a DRAFT: tell the owner to approve it with npm run brand:approve -- --all-pending; creative_context serves it after approval. Never invent feedback or record third-party text. Writes local files only; commits, publishes and approves nothing. Needs a creative-read token; others get denied.',
+    inputSchema: z
+      .object({
+        surface: z.enum(SURFACES),
+        series: z.string().min(2).max(40),
+        feedback: z.string().min(1).max(LEARN_LIMITS.maxFeedbackChars),
+        before: z.string().max(LEARN_LIMITS.maxBeforeAfterChars).optional(),
+        after: z.string().max(LEARN_LIMITS.maxBeforeAfterChars).optional(),
+        rule: z.string().min(1).max(200),
+        context: z.string().max(300).optional(),
+        verdict: z.enum(LEARN_VERDICTS).optional(),
+        keep: z.array(z.enum(ASPECTS)).max(10).optional(),
+        avoid: z.array(z.enum(ASPECTS)).max(10).optional(),
+        language: z.string().max(12).optional(),
+        scope: z.enum(['series', 'project']).optional(),
+        supersedes: z.string().max(40).optional(),
+      })
+      .strict(),
+  },
+  async (args) => text(runCreativeLearnTool(engine, caller, args)),
 )
 
 // Visual DNA (see visual-dna/agent.ts and docs-internal/VISUAL_DNA.md): read-only reference verdicts over the asset
